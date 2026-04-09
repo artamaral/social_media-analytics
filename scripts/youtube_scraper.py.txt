@@ -187,3 +187,5 @@ def run():
         "next_cursor": next_cursor,
         "total_creators": total_creators
     }
+
+run()
