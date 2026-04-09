@@ -4,146 +4,182 @@ import time
 import re
 from supabase import create_client
 
+# ----------------------------
+# ENV
+# ----------------------------
+YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY")
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+
+BATCH_SIZE = int(os.environ.get("BATCH_SIZE", 3))
+
+# ----------------------------
+# SUPABASE CLIENT
+# ----------------------------
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# ----------------------------
+# CURSOR STORAGE (SUPABASE)
+# ----------------------------
+CURSOR_KEY = "youtube_cursor"
+
+def get_cursor():
+    res = supabase.table("pipeline_state") \
+        .select("*") \
+        .eq("id", CURSOR_KEY) \
+        .execute()
+
+    if res.data:
+        return int(res.data[0]["value"])
+    return 0
+
+def save_cursor(value):
+    supabase.table("pipeline_state").upsert({
+        "id": CURSOR_KEY,
+        "value": str(value)
+    }).execute()
+
+# ----------------------------
+# YOUTUBE HELPERS
+# ----------------------------
+def parse_duration(duration):
+    try:
+        pattern = re.compile(r'PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?')
+        match = pattern.match(duration)
+        if not match:
+            return 0
+        h, m, s = match.groups()
+        return int(h or 0) * 3600 + int(m or 0) * 60 + int(s or 0)
+    except:
+        return 0
+
+def get_upload_playlist(channel_id):
+    url = "https://www.googleapis.com/youtube/v3/channels"
+    params = {
+        "part": "contentDetails",
+        "id": channel_id,
+        "key": YOUTUBE_API_KEY
+    }
+
+    res = requests.get(url, params=params).json()
+    items = res.get("items", [])
+
+    if not items:
+        return None
+
+    return items[0]["contentDetails"]["relatedPlaylists"]["uploads"]
+
+def get_videos_from_playlist(playlist_id):
+    url = "https://www.googleapis.com/youtube/v3/playlistItems"
+    videos = []
+    next_page = None
+
+    while True:
+        params = {
+            "part": "snippet",
+            "playlistId": playlist_id,
+            "maxResults": 50,
+            "pageToken": next_page,
+            "key": YOUTUBE_API_KEY
+        }
+
+        res = requests.get(url, params=params).json()
+
+        for item in res.get("items", []):
+            videos.append(item["snippet"]["resourceId"]["videoId"])
+
+        next_page = res.get("nextPageToken")
+        if not next_page:
+            break
+
+    return videos[:50]
+
+def get_video_details(video_ids):
+    url = "https://www.googleapis.com/youtube/v3/videos"
+    all_data = []
+
+    for i in range(0, len(video_ids), 50):
+        batch_ids = video_ids[i:i+50]
+
+        params = {
+            "part": "snippet,statistics,contentDetails",
+            "id": ",".join(batch_ids),
+            "key": YOUTUBE_API_KEY
+        }
+
+        res = requests.get(url, params=params).json()
+
+        for item in res.get("items", []):
+            duration_raw = item["contentDetails"].get("duration", "PT0S")
+            duration_sec = parse_duration(duration_raw)
+            title = item["snippet"]["title"].lower()
+
+            is_short = duration_sec <= 270 or "#shorts" in title
+
+            all_data.append({
+                "post_id": item["id"],
+                "title": item["snippet"]["title"],
+                "post_date": item["snippet"]["publishedAt"],
+                "views": int(item["statistics"].get("viewCount", 0)),
+                "likes": int(item["statistics"].get("likeCount", 0)),
+                "comments": int(item["statistics"].get("commentCount", 0)),
+                "duration": duration_sec,
+                "video_type": "short" if is_short else "long"
+            })
+
+    return all_data
+
+def upsert_posts(posts, creator_id):
+    if not posts:
+        return
+
+    for post in posts:
+        post["creator_id"] = creator_id
+
+    for i in range(0, len(posts), 50):
+        batch_posts = posts[i:i+50]
+
+        supabase.table("posts").upsert(
+            batch_posts,
+            on_conflict="post_id"
+        ).execute()
+
+# ----------------------------
+# MAIN PIPELINE
+# ----------------------------
 def run():
 
-    # 🔐 ENV
-    YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY")
-    SUPABASE_URL = os.environ.get("SUPABASE_URL")
-    SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+    print("🚀🚀🚀 RODANDO CÓDIGO NOVO SUPABASE 🚀🚀🚀")
+    cursor = get_cursor()
+    print(f"[DEBUG] Cursor inicial: {cursor}")
 
-    # 🧠 CONTROLE
-    BATCH_SIZE = int(os.environ.get("BATCH_SIZE", 3))
-    cursor = int(os.environ.get("CURSOR", 0))
-
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-    # ----------------------------
-    # GET CREATORS
-    # ----------------------------
+    # Get creators
     creators = supabase.table("creators") \
         .select("*") \
         .eq("platform", "youtube") \
         .execute().data
 
     total_creators = len(creators)
+    batch = creators[cursor:cursor + BATCH_SIZE]
 
-    batch = creators[cursor:cursor+BATCH_SIZE]
+    if not batch:
+      print("[DEBUG] Fim da lista atingido. Encerrando execução.")
+    
+      #opcional: reset do cursor
+      save_cursor(0)
 
-    print(f"Processando creators {cursor} até {cursor+BATCH_SIZE}")
+      return {
+        "status": "completed",
+        "message": "No more creators to process"
+      }
 
-    # ----------------------------
-    # FUNÇÕES
-    # ----------------------------
-    def parse_duration(duration):
-        try:
-            pattern = re.compile(r'PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?')
-            match = pattern.match(duration)
-            if not match:
-                return 0
-            h, m, s = match.groups()
-            return (int(h or 0)*3600 + int(m or 0)*60 + int(s or 0))
-        except:
-            return 0
+    print(f"[DEBUG] Processando creators {cursor} até {cursor + BATCH_SIZE}")
 
-    def get_upload_playlist(channel_id):
-        url = "https://www.googleapis.com/youtube/v3/channels"
-        params = {
-            "part": "contentDetails",
-            "id": channel_id,
-            "key": YOUTUBE_API_KEY
-        }
-        res = requests.get(url, params=params).json()
-        items = res.get("items", [])
-        if not items:
-            return None
-        return items[0]["contentDetails"]["relatedPlaylists"]["uploads"]
-
-    def get_videos_from_playlist(playlist_id):
-        url = "https://www.googleapis.com/youtube/v3/playlistItems"
-        videos = []
-        next_page = None
-
-        while True:
-            params = {
-                "part": "snippet",
-                "playlistId": playlist_id,
-                "maxResults": 50,
-                "pageToken": next_page,
-                "key": YOUTUBE_API_KEY
-            }
-
-            res = requests.get(url, params=params).json()
-
-            for item in res.get("items", []):
-                videos.append(item["snippet"]["resourceId"]["videoId"])
-
-            next_page = res.get("nextPageToken")
-            if not next_page:
-                break
-
-        return videos[:50]
-
-    def get_video_details(video_ids):
-        url = "https://www.googleapis.com/youtube/v3/videos"
-        all_data = []
-
-        for i in range(0, len(video_ids), 50):
-            batch_ids = video_ids[i:i+50]
-
-            params = {
-                "part": "snippet,statistics,contentDetails",
-                "id": ",".join(batch_ids),
-                "key": YOUTUBE_API_KEY
-            }
-
-            res = requests.get(url, params=params).json()
-
-            for item in res.get("items", []):
-                duration_raw = item["contentDetails"].get("duration", "PT0S")
-		duration_sec = parse_duration(duration_raw)
-                title = item["snippet"]["title"].lower()
-
-                is_short = (
-                      duration_sec <= 270
-                      or "#shorts" in title
-                )
-
-                all_data.append({
-                    "post_id": item["id"],
-                    "title": item["snippet"]["title"],
-                    "post_date": item["snippet"]["publishedAt"],
-                    "views": int(item["statistics"].get("viewCount", 0)),
-                    "likes": int(item["statistics"].get("likeCount", 0)),
-                    "comments": int(item["statistics"].get("commentCount", 0)),
-                    "duration": parse_duration(duration_raw),
-                    "video_type": "short" if is_short else "long"
-                })
-
-        return all_data
-
-    def upsert_posts(posts, creator_id):
-        if not posts:
-            return
-
-        for post in posts:
-            post["creator_id"] = creator_id
-
-        for i in range(0, len(posts), 50):
-            batch_posts = posts[i:i+50]
-
-            supabase.table("posts").upsert(
-                batch_posts,
-                on_conflict="post_id"
-            ).execute()
-
-    # ----------------------------
-    # EXECUÇÃO
-    # ----------------------------
     processed = 0
     errors = 0
 
     for creator in batch:
-        print(f"Processando: {creator['username']}")
+        print(f"[DEBUG] Processando: {creator['username']}")
 
         try:
             if not creator.get("channel_id"):
@@ -167,20 +203,19 @@ def run():
             time.sleep(0.5)
 
         except Exception as e:
-            print(f"Erro no creator {creator['username']}: {e}")
+            print(f"[ERROR] Creator {creator['username']}: {e}")
             errors += 1
 
-    # ----------------------------
-    # CURSOR
-    # ----------------------------
+    # Update cursor
     next_cursor = cursor + BATCH_SIZE
 
     if next_cursor >= total_creators:
-        next_cursor = 0  # reinicia
+        next_cursor = 0
 
-    # ----------------------------
-    # RETURN
-    # ----------------------------
+    save_cursor(next_cursor)
+
+    print(f"[DEBUG] Próximo cursor: {next_cursor}")
+
     return {
         "processed": processed,
         "errors": errors,
@@ -188,5 +223,7 @@ def run():
         "next_cursor": next_cursor,
         "total_creators": total_creators
     }
+
+# Execute
 
 run()
