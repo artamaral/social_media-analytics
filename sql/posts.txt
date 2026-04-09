@@ -1,0 +1,29 @@
+create table public.posts (
+  id serial not null,
+  creator_id integer null,
+  post_id text null,
+  title text null,
+  post_date timestamp without time zone null,
+  views integer null,
+  likes integer null,
+  comments integer null,
+  duration integer null,
+  created_at timestamp without time zone null default CURRENT_TIMESTAMP,
+  video_type text not null,
+  constraint posts_pkey primary key (id),
+  constraint posts_post_id_key unique (post_id),
+  constraint posts_creator_id_fkey foreign KEY (creator_id) references creators (id),
+  constraint video_type_check check (
+    (
+      video_type = any (array['short'::text, 'long'::text])
+    )
+  )
+) TABLESPACE pg_default;
+
+create index IF not exists idx_posts_date on public.posts using btree (post_date) TABLESPACE pg_default;
+
+create index IF not exists idx_posts_creator on public.posts using btree (creator_id) TABLESPACE pg_default;
+
+create unique INDEX IF not exists unique_post on public.posts using btree (post_id) TABLESPACE pg_default;
+
+create unique INDEX IF not exists unique_post_id on public.posts using btree (post_id) TABLESPACE pg_default;
