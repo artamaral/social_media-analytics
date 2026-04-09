@@ -100,6 +100,7 @@ def run():
 
             for item in res.get("items", []):
                 duration_raw = item["contentDetails"].get("duration", "PT0S")
+		duration_sec = parse_duration(duration_raw)
                 title = item["snippet"]["title"].lower()
 
                 is_short = (
