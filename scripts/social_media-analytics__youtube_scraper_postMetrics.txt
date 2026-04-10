@@ -16,6 +16,8 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
+TIMEOUT = 10
+
 # ==============================
 # 🔍 STEP 1 — BUSCAR FILA
 # ==============================
@@ -24,17 +26,16 @@ def fetch_queue():
     print("🔍 Buscando itens na fila...")
 
     url = f"{SUPABASE_URL}/rest/v1/post_update_queue"
-    print(SUPABASE_URL)
 
     params = {
         "select": "post_id,priority_score,next_check",
         "needs_update": "eq.true",
         "next_check": "lte.now()",
         "order": "priority_score.desc",
-        "limit": 50
+        "limit": 20
     }
 
-    response = requests.get(url, headers=HEADERS, params=params)
+    response = requests.get(url, headers=HEADERS, params=params, timeout=TIMEOUT)
 
     print("📡 Status queue:", response.status_code)
 
@@ -50,12 +51,8 @@ def fetch_queue():
 # ==============================
 
 def extract_ids(rows):
-    print("🔧 Extraindo post_ids...")
-
     ids = [r["post_id"] for r in rows]
-
     print("IDs:", ids)
-
     return ids
 
 
@@ -66,17 +63,15 @@ def extract_ids(rows):
 def fetch_youtube_stats(video_ids):
     print("🌐 Chamando YouTube API...")
 
-    ids_param = ",".join(video_ids)
-
     url = "https://www.googleapis.com/youtube/v3/videos"
 
     params = {
         "part": "statistics",
-        "id": ids_param,
+        "id": ",".join(video_ids),
         "key": YOUTUBE_API_KEY
     }
 
-    response = requests.get(url, params=params)
+    response = requests.get(url, params=params, timeout=TIMEOUT)
 
     print("📡 YouTube status:", response.status_code)
 
@@ -90,108 +85,100 @@ def fetch_youtube_stats(video_ids):
 # ==============================
 
 def normalize(items):
-    print("⚙️ Normalizando dados...")
-
     results = []
 
     for video in items:
         stats = video.get("statistics", {})
 
-        record = {
+        results.append({
             "post_id": video["id"],
             "views": int(stats.get("viewCount", 0)),
             "likes": int(stats.get("likeCount", 0)),
-            "comments": int(stats.get("commentCount", 0))
-        }
-
-        print("📊", record)
-
-        results.append(record)
+            "comments": int(stats.get("commentCount", 0)),
+            "last_checked": datetime.now(UTC).isoformat()
+        })
 
     return results
 
 
 # ==============================
-# 🗄️ STEP 5 — INSERT HISTORY
+# 🗄️ STEP 5 — INSERT HISTORY (BATCH)
 # ==============================
 
-def insert_history(record):
-    print(f"📝 Inserindo histórico: {record['post_id']}")
+def insert_history_batch(records):
+    print("📝 Inserindo histórico em batch")
 
     url = f"{SUPABASE_URL}/rest/v1/post_metrics_history"
 
-    payload = {
-        "post_id": record["post_id"],
-        "views": record["views"],
-        "likes": record["likes"],
-        "comments": record["comments"]
-    }
+    payload = [
+        {
+            "post_id": r["post_id"],
+            "views": r["views"],
+            "likes": r["likes"],
+            "comments": r["comments"]
+        }
+        for r in records
+    ]
 
-    response = requests.post(url, headers=HEADERS, json=payload)
+    response = requests.post(url, headers=HEADERS, json=payload, timeout=TIMEOUT)
 
-    print("📡 History status:", response.status_code)
-
-
-# ==============================
-# 🔄 STEP 6 — UPDATE POSTS
-# ==============================
-
-def update_post(record):
-    print(f"🔄 Atualizando post: {record['post_id']}")
-
-    url = f"{SUPABASE_URL}/rest/v1/posts?post_id=eq.{record['post_id']}"
-
-    payload = {
-        "views": record["views"],
-        "likes": record["likes"],
-        "comments": record["comments"],
-        "last_checked": datetime.now(UTC).isoformat()
-    }
-
-    response = requests.patch(url, headers=HEADERS, json=payload)
-
-    print("📡 Update post status:", response.status_code)
+    print("📡 History batch:", response.status_code)
 
 
 # ==============================
-# 🔁 STEP 7 — ATUALIZAR QUEUE
+# 🔄 STEP 6 — UPDATE POSTS (BATCH)
+# ==============================
+
+def update_posts_batch(records):
+    print("🔄 Atualizando posts (PATCH batch)")
+
+    for r in records:
+        url = f"{SUPABASE_URL}/rest/v1/posts?post_id=eq.{r['post_id']}"
+
+        payload = {
+            "views": r["views"],
+            "likes": r["likes"],
+            "comments": r["comments"]
+        }
+
+        response = requests.patch(
+            url,
+            headers=HEADERS,
+            json=payload,
+            timeout=TIMEOUT
+        )
+
+        print(f"📡 {r['post_id']}:", response.status_code)
+
+
+# ==============================
+# 🔁 STEP 7 — UPDATE QUEUE (BATCH)
 # ==============================
 
 def update_queue_batch(records):
     print("📌 Atualizando queue em batch")
-
-    updates = []
-
-    for r in records:
-    # 🔒 garante compatibilidade com qualquer formato
-      if isinstance(r, dict):
-        post_id = r.get("post_id")
-      elif isinstance(r, list):
-        post_id = r[0]
-      else:
-        post_id = r
-
-      updates.append({
-        "post_id": post_id,
-        "last_checked": datetime.now(UTC).isoformat(),
-        "needs_update": False
-    })
-
-    print("DEBUG records:", records[:3])
-    print("DEBUG type:", type(records[0]))
 
     url = f"{SUPABASE_URL}/rest/v1/post_update_queue"
 
     headers = HEADERS.copy()
     headers["Prefer"] = "resolution=merge-duplicates"
 
-    response = requests.post(url, headers=headers, json=updates)
+    payload = [
+        {
+            "post_id": r["post_id"],
+            "last_checked": r["last_checked"],
+            "needs_update": False
+        }
+        for r in records
+    ]
 
-    print("📡 Queue batch status:", response.status_code)
+    response = requests.post(url, headers=headers, json=payload, timeout=TIMEOUT)
+
+    print("📡 Queue batch:", response.status_code)
 
 
 # ==============================
-# 🚀 ENTRYPOINT (PIPEDREAM)
+# 🚀 ENTRYPOINT
 # ==============================
 
 def run():
@@ -215,18 +202,18 @@ def run():
             print("⚠️ Nenhum dado retornado do YouTube.")
             return {"status": "no_youtube_data"}
 
+        # 🔥 Early exit (dados incompletos)
+        if len(youtube_items) < len(video_ids):
+            print("⚠️ Nem todos os vídeos retornaram do YouTube")
+
         # 4. Normalizar
         normalized = normalize(youtube_items)
 
-        # 5. Persistência
+        print(f"📊 Processando {len(normalized)} registros")
 
-        
-        print("💾 Persistindo dados...")
-
-        for record in normalized:
-          insert_history(record)
-          update_post(record)
-
+        # 5. Persistência em batch
+        insert_history_batch(normalized)
+        update_posts_batch(normalized)
         update_queue_batch(normalized)
 
         print("✅ Workflow finalizado com sucesso.")
@@ -243,6 +230,7 @@ def run():
 
 
 # ==============================
-# 🧪 TESTE LOCAL
+# ▶️ EXECUÇÃO
 # ==============================
+
 run()
