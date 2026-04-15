@@ -1,12 +1,10 @@
-/*
-revisão
-Você usa uma view para enxergar:
+-- 002_create_v_entity_intake_review.sql
 
-se já existe entity
-se o subnicho existe
-se há risco de duplicidade
-*/
-  
+-- Criar view de revisão para validar o que entrou na tabela entity_intake.
+-- A view mostra:
+-- 1) se a entity já existe na tabela entities
+-- 2) se o sub_niche informado existe na tabela sub_niches
+-- 3) o status de revisão do registro antes da publicação
 CREATE OR REPLACE VIEW public.v_entity_intake_review AS
 SELECT
   ei.id,
@@ -15,11 +13,15 @@ SELECT
   ei.sub_niche_name,
   ei.niche,
   ei.creator_type,
+  ei.notes,
   ei.status,
+  ei.created_at,
   e.id AS existing_entity_id,
   e.name AS existing_entity_name,
   sn.id AS sub_niche_id,
+  sn.name AS matched_sub_niche_name,
   CASE
+    WHEN ei.normalized_name IS NULL THEN 'NORMALIZATION_MISSING'
     WHEN sn.id IS NULL THEN 'SUB_NICHE_NOT_FOUND'
     WHEN e.id IS NOT NULL THEN 'ENTITY_ALREADY_EXISTS'
     ELSE 'READY_TO_INSERT'
