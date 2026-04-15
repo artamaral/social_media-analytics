@@ -1,3 +1,14 @@
+/*
+raw_name: nome como você digitou
+normalized_name: nome normalizado para checagem
+sub_niche_name: subnicho escolhido manualmente
+niche: no seu caso, quase sempre automotivo
+creator_type: personal, media, etc.
+notes: observações de negócio
+status: estágio do cadastro
+*/
+
+
 CREATE TABLE public.entity_intake (
   id BIGSERIAL PRIMARY KEY,
   raw_name TEXT NOT NULL,
