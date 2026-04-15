@@ -1,0 +1,79 @@
+# entity_intake_process.md
+
+## Objetivo
+Controlar o cadastro manual de entities e seus respectivos sub_niches sem inserir diretamente nas tabelas finais.
+
+## Regra principal
+Nunca inserir diretamente em:
+- public.entities
+- public.entity_sub_niches
+
+Toda entrada manual deve passar por:
+- public.entity_intake
+
+## Fluxo operacional
+
+### 1. Cadastrar manualmente no Supabase UI
+Preencher linhas na tabela:
+- public.entity_intake
+
+Campos principais:
+- raw_name
+- sub_niche_name
+- niche
+- creator_type
+- notes
+- status
+
+### 2. Revisar os dados antes da publicação
+Executar:
+- sql/dml/review_entity_intake.sql
+
+Objetivo:
+- verificar se a entity já existe
+- verificar se o sub_niche existe
+- verificar se o registro está pronto para inserção
+
+### 3. Publicar os registros
+Executar:
+- sql/dml/publish_entity_intake_manual_run.sql
+
+Esse script chama a função:
+- public.publish_entity_intake()
+
+### 4. Validar resultado
+Executar:
+- sql/maintenance/validate_entity_links.sql
+
+## Objetos permanentes do banco
+
+### Tabela
+- sql/ddl/001_create_entity_intake.sql
+
+### View
+- sql/ddl/002_create_v_entity_intake_review.sql
+
+### Function
+- sql/ddl/003_create_publish_entity_intake_function.sql
+
+### Índice de proteção
+- sql/ddl/004_create_unique_index_entities_normalized_name.sql
+
+## Scripts de manutenção
+
+### Deduplicação histórica
+- sql/maintenance/deduplicate_entities.sql
+
+### Validação de vínculos
+- sql/maintenance/validate_entity_links.sql
+
+## Regra de governança de SQL
+O arquivo `.sql` salvo no repositório é a fonte oficial.
+
+O Supabase SQL Editor deve ser usado apenas para execução.
+
+## Convenção
+- `/sql/ddl` = objetos permanentes do banco
+- `/sql/dml` = operação manual do dia a dia
+- `/sql/maintenance` = auditoria, correção, reparo
+- `/sql/docs` = documentação operacional
