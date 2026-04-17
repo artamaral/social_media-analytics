@@ -9,6 +9,7 @@
 
 ## 🔴 PRIORIDADE ALTA (infra / funcionamento)
 
+- [ ] Como havaliar e garantir que os post estao sendo atualizados
 - [ ] Garantir que scraper percorre TODOS creators
 - [ ] Validar integridade de post_metrics_history
 - [ ] Criar query de auditoria de coleta
