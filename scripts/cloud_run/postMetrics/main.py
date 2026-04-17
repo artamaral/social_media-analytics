@@ -1,7 +1,6 @@
 import requests
 import os
 from datetime import datetime, UTC
-from urllib.parse import quote
 
 # ==============================
 # 🔧 CONFIG
@@ -104,33 +103,7 @@ def normalize(items):
 
 
 # ==============================
-# 💾 STEP 5 — UPDATE POSTS (SEM INSERT)
-# ==============================
-
-def update_posts(records):
-    print("🔄 Atualizando posts...")
-
-    for r in records:
-        encoded_id = quote(r["post_id"])
-
-        url = f"{SUPABASE_URL}/rest/v1/posts?post_id=eq.{encoded_id}"
-
-        payload = {
-            "views": r["views"],
-            "likes": r["likes"],
-            "comments": r["comments"]
-        }
-
-        response = requests.patch(url, headers=HEADERS, json=payload)
-
-        print(f"📡 Update post {r['post_id']}:", response.status_code)
-
-        if response.status_code >= 300:
-            print("❌ Response:", response.text)
-
-
-# ==============================
-# 📝 STEP 6 — HISTORY
+# 📝 STEP 5 — HISTORY
 # ==============================
 
 def insert_history(records):
@@ -141,35 +114,6 @@ def insert_history(records):
     response = requests.post(url, headers=HEADERS, json=records)
 
     print("📡 History batch:", response.status_code)
-
-    if response.status_code >= 300:
-        print("❌ Response:", response.text)
-
-
-# ==============================
-# 🔄 STEP 7 — UPDATE QUEUE
-# ==============================
-
-def update_queue(records):
-    print("📌 Atualizando queue...")
-
-    updates = []
-
-    for r in records:
-        updates.append({
-            "post_id": r["post_id"],
-            "last_checked": datetime.now(UTC).isoformat(),
-            "needs_update": False
-        })
-
-    url = f"{SUPABASE_URL}/rest/v1/post_update_queue"
-
-    headers = HEADERS.copy()
-    headers["Prefer"] = "resolution=merge-duplicates"
-
-    response = requests.post(url, headers=headers, json=updates)
-
-    print("📡 Queue update:", response.status_code)
 
     if response.status_code >= 300:
         print("❌ Response:", response.text)
@@ -196,9 +140,10 @@ def run_pipeline():
 
     records = normalize(yt_data)
 
+    # Regras de negócio ficam no banco:
+    # - insert em post_metrics_history dispara sync_post_latest()
+    # - insert em post_metrics_history dispara refresh_post_queue_on_metrics()
     insert_history(records)
-    update_posts(records)  # 👈 agora só UPDATE
-    update_queue(records)
 
     print(f"✅ Processados: {len(records)}")
 

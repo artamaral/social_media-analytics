@@ -1,21 +1,32 @@
-BEGIN
-  INSERT INTO post_update_queue (
+create or replace function public.add_to_queue()
+returns trigger
+language plpgsql
+as $$
+declare
+  v_priority_score double precision;
+begin
+  v_priority_score := public.calculate_post_priority(
+    new.views,
+    new.likes,
+    new.comments
+  );
+
+  insert into public.post_update_queue (
     post_id,
     priority_score,
     last_checked,
     next_check,
     needs_update
   )
-  VALUES (
-    NEW.post_id,
-    COALESCE(NEW.views, 0) * 1 +
-    COALESCE(NEW.likes, 0) * 10 +
-    COALESCE(NEW.comments, 0) * 20,
-    NULL,
-    NOW(),
-    TRUE
+  values (
+    new.post_id,
+    v_priority_score,
+    null,
+    now(),
+    true
   )
-  ON CONFLICT (post_id) DO NOTHING;
+  on conflict (post_id) do nothing;
 
-  RETURN NEW;
-END;
+  return new;
+end;
+$$;

@@ -17,3 +17,7 @@ create index IF not exists idx_post_metrics_history_post_date on public.post_met
 create trigger trg_sync_post
 after INSERT on post_metrics_history for EACH row
 execute FUNCTION sync_post_latest ();
+
+create trigger trg_refresh_post_queue
+after INSERT on post_metrics_history for EACH row
+execute FUNCTION refresh_post_queue_on_metrics ();
