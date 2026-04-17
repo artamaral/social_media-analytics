@@ -1,6 +1,6 @@
 # 🧭 ROADMAP
 
-## ☠️  NON Negotiable -> Para tudo pra fazer!
+## ☠️  NON Negotiable -> Parar tudo pra fazer!
 # Finalizar toda a documentacao no Github
 - [ ] Documentacao do SQL -> Incluir tabelas com extensao correta, deletar atual. Usar VScode para ficar com extensao correta
 - [ ] Documentacao do SQL -> Entender e documentar os trigger do banco de dados e documenta-los.
