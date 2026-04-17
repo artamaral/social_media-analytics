@@ -1,5 +1,12 @@
 # 🧭 ROADMAP
 
+## ☠️  NON Negotiable -> Para tudo pra fazer!
+# Finalizar toda a documentacao no Github
+- [ ] Documentacao do SQL -> Incluir tabelas com extensao correta, deletar atual. Usar VScode para ficar com extensao correta
+- [ ] Documentacao do SQL -> Entender e documentar os trigger do banco de dados e documenta-los.
+- [ ] Incluir os dois scripts de trigger no Github, verificar qual o local 
+- [ ] Checar a documentacao existente para o inclusao de novos dados, atualiza-la e gerar um arquivo.MD
+
 ## 🔴 PRIORIDADE ALTA (infra / funcionamento)
 
 - [ ] Garantir que scraper percorre TODOS creators
