@@ -10,6 +10,7 @@ create table public.posts (
   duration integer null,
   created_at timestamp without time zone null default CURRENT_TIMESTAMP,
   video_type text not null,
+  collected_at timestamp without time zone null,
   constraint posts_pkey primary key (id),
   constraint posts_post_id_key unique (post_id),
   constraint posts_creator_id_fkey foreign KEY (creator_id) references creators (id),
@@ -27,3 +28,7 @@ create index IF not exists idx_posts_creator on public.posts using btree (creato
 create unique INDEX IF not exists unique_post on public.posts using btree (post_id) TABLESPACE pg_default;
 
 create unique INDEX IF not exists unique_post_id on public.posts using btree (post_id) TABLESPACE pg_default;
+
+create trigger trigger_add_to_queue
+after INSERT on posts for EACH row
+execute FUNCTION add_to_queue ();
