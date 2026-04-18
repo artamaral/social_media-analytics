@@ -7,9 +7,9 @@ Este teste verifica se a combinacao atual de regras da fila e suficiente para o 
 Premissas atuais:
 
 - a frequencia de rechecagem e definida no SQL por `calculate_next_check(...)`
+- a fila e fatiada por bandas de prioridade no SQL
 - o worker busca apenas itens com `needs_update = true`
-- o worker busca apenas itens com `next_check <= now()`
-- o worker ordena por `priority_score desc`
+- o worker le a view `v_post_update_queue_batch`
 - o worker processa no maximo `20` itens por execucao
 
 ---
@@ -20,10 +20,10 @@ A regra de agendamento define quando cada post volta a ficar elegivel, mas nao l
 
 Se houver mais de `20` itens elegiveis em uma execucao:
 
-- o worker processa apenas os `20` primeiros
+- o worker processa apenas os `20` itens devolvidos pela view
 - os demais ficam aguardando a proxima rodada
 - se isso ocorrer continuamente, a fila pode formar backlog
-- posts de menor prioridade podem demorar mais do que o esperado para serem revisitados
+- bandas intermediarias podem acumular backlog se a capacidade continuar insuficiente
 
 Por isso, este teste mede se a capacidade operacional do worker acompanha o ritmo da fila.
 
@@ -33,10 +33,21 @@ Por isso, este teste mede se a capacidade operacional do worker acompanha o ritm
 
 Regra implementada no SQL:
 
-- `score >= 50000` -> `1 hour`
-- `score >= 20000` -> `3 hours`
-- `score >= 5000` -> `6 hours`
-- `score < 5000` -> `12 hours`
+- `700.000+` -> `30 minutes`
+- `300.000 - 699.999` -> `1 hour`
+- `150.000 - 299.999` -> `2 hours`
+- `50.000 - 149.999` -> `4 hours`
+- `10.000 - 49.999` -> `8 hours`
+- `0 - 9.999` -> `12 hours`
+
+Bandas e cotas da view:
+
+- banda `6` -> `4`
+- banda `5` -> `4`
+- banda `4` -> `4`
+- banda `3` -> `3`
+- banda `2` -> `3`
+- banda `1` -> `2`
 
 ---
 
@@ -60,28 +71,25 @@ Interpretacao:
 
 ---
 
-## Teste 2. Quais itens estao no topo da fila agora
+## Teste 2. Quais itens a view esta priorizando agora
 
 Query:
 
 ```sql
 select
   post_id,
+  priority_band,
   priority_score,
   last_checked,
   next_check
-from post_update_queue
-where needs_update = true
-  and next_check <= now()
-order by priority_score desc
-limit 100;
+from public.v_post_update_queue_batch;
 ```
 
 Interpretacao:
 
-- mostra quem esta sendo priorizado
-- permite observar se os mesmos posts ficam sempre no topo
-- ajuda a detectar concentracao excessiva nos scores mais altos
+- mostra quem realmente sera entregue ao worker
+- permite observar se as bandas estao sendo misturadas
+- ajuda a detectar se o fatiamento esta funcionando
 
 ---
 
@@ -91,23 +99,18 @@ Query:
 
 ```sql
 select
-  case
-    when priority_score >= 50000 then '1h'
-    when priority_score >= 20000 then '3h'
-    when priority_score >= 5000 then '6h'
-    else '12h'
-  end as faixa,
+  public.calculate_priority_band(priority_score) as priority_band,
   count(*) as total_posts
 from post_update_queue
 where needs_update = true
 group by 1
-order by 1;
+order by 1 desc;
 ```
 
 Interpretacao:
 
-- mostra quantos posts existem em cada faixa de frequencia
-- se houver muitos posts na faixa de `1h`, o limite de `20` por execucao pode nao ser suficiente
+- mostra quantos posts existem em cada banda
+- ajuda a medir se as cotas ainda fazem sentido para a distribuicao real
 
 ---
 
@@ -132,6 +135,28 @@ Interpretacao:
 
 - se o numero sobe e depois volta, o worker esta absorvendo a fila
 - se o numero so sobe, a capacidade esta abaixo da demanda
+
+---
+
+## Teste 4.1 Verificar backlog por banda
+
+Query:
+
+```sql
+select
+  public.calculate_priority_band(priority_score) as priority_band,
+  count(*) as itens_vencidos
+from post_update_queue
+where needs_update = true
+  and next_check <= now()
+group by 1
+order by 1 desc;
+```
+
+Interpretacao:
+
+- mostra se uma banda especifica esta ficando represada
+- ajuda a identificar se as cotas precisam de ajuste
 
 ---
 
@@ -180,18 +205,20 @@ Sugestao pratica:
 - a quantidade de itens elegiveis nao cresce continuamente
 - posts recentes passam a ter mais de `1` coleta
 - a fila nao fica permanentemente acima da capacidade de `20` por rodada
+- a view entrega mais de uma banda por execucao
 
 ### Cenario de alerta
 
 - sempre existem muitos itens elegiveis acima de `20`
-- os mesmos posts dominam o topo repetidamente
-- posts de baixa prioridade quase nunca entram
+- a view passa a repetir quase sempre o mesmo grupo
+- bandas intermediarias quase nunca entram
 
 ### Cenario de problema estrutural
 
 - backlog cresce a cada rodada
 - posts recentes continuam com apenas `1` coleta
 - a fila deixa de refletir a frequencia definida no SQL
+- a fatia da view nao reduz o starvation entre bandas
 
 ---
 

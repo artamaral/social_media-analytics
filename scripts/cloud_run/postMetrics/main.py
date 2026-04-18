@@ -23,14 +23,10 @@ HEADERS = {
 def fetch_queue():
     print("🔍 Buscando itens na fila...")
 
-    url = f"{SUPABASE_URL}/rest/v1/post_update_queue"
+    url = f"{SUPABASE_URL}/rest/v1/v_post_update_queue_batch"
 
     params = {
-        "select": "post_id",
-        "needs_update": "eq.true",
-        "next_check": "lte.now()",
-        "order": "priority_score.desc",
-        "limit": 20
+        "select": "post_id"
     }
 
     response = requests.get(url, headers=HEADERS, params=params)

@@ -7,6 +7,7 @@ Este documento serve para validar se a fila de rechecagem periodica de posts est
 - triggers
 - funcoes SQL
 - regras de prioridade
+- bandas e cotas da fila
 - regras de agendamento
 - worker do Cloud Run
 
@@ -36,6 +37,10 @@ Status: validado em producao
 Data da validacao: YYYY-MM-DD
 Resultado: rechecagem voltou a ocorrer para posts recentes e fila segue reagendando corretamente
 ```
+
+Mudanca estrutural relacionada:
+
+- [09_QUEUE_SLICING_AND_RESCHEDULING.md](C:/social_media-analytics/sql/docs/09_QUEUE_SLICING_AND_RESCHEDULING.md:1)
 
 ---
 
@@ -68,6 +73,31 @@ Sinal de problema:
 
 - `needs_update = false` para itens processados recentemente
 - `next_check <= last_checked`
+
+---
+
+### 1.1 Validar se a view da fila esta retornando itens de bandas diferentes
+
+Query:
+
+```sql
+select
+  priority_band,
+  count(*) as total_posts
+from public.v_post_update_queue_batch
+group by priority_band
+order by priority_band desc;
+```
+
+Esperado:
+
+- mais de uma banda presente no lote
+- o lote nao ser composto apenas pelos maiores scores absolutos
+
+Sinal de problema:
+
+- a view retornar apenas banda alta continuamente
+- ausencia persistente de bandas intermediarias mesmo com elegiveis
 
 ---
 
@@ -177,6 +207,32 @@ Sinal de problema:
 
 ---
 
+### 4.1 Monitorar backlog por banda
+
+Query:
+
+```sql
+select
+  public.calculate_priority_band(priority_score) as priority_band,
+  count(*) as itens_vencidos
+from post_update_queue
+where needs_update = true
+  and next_check <= now()
+group by 1
+order by 1 desc;
+```
+
+Esperado:
+
+- backlog distribuido de forma controlada
+- faixas intermediarias nao acumularem indefinidamente sem entrar na view
+
+Sinal de problema:
+
+- bandas intermediarias crescendo sem nunca aparecer no batch
+
+---
+
 ## Janela recomendada de validacao
 
 Sugestao pratica apos deploy:
@@ -195,6 +251,7 @@ A mudanca pode ser considerada validada quando:
 - posts recentes deixam de concentrar 100 por cento das ocorrencias em apenas `1` coleta
 - `post_update_queue` passa a renovar `last_checked` e `next_check`
 - itens processados permanecem elegiveis para futuras rodadas
+- a view `v_post_update_queue_batch` retorna distribuicao coerente entre bandas
 - nao ha crescimento anormal de backlog
 
 ---
