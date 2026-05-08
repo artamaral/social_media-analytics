@@ -66,10 +66,12 @@ Se a mudanca estiver correta:
 ## Como executar
 
 1. Aplicar a view nova no banco.
-2. Deixar o worker rodar apos a mudanca.
-3. Rodar as queries abaixo.
-4. Registrar os resultados neste mesmo arquivo.
-5. Concluir com:
+2. Fazer deploy do worker com a versao que busca `v_post_update_queue_batch`.
+3. Confirmar nos logs do Cloud Run que a fonte da fila exibida e `v_post_update_queue_batch`.
+4. Deixar o worker rodar apos a mudanca.
+5. Rodar as queries abaixo.
+6. Registrar os resultados neste mesmo arquivo.
+7. Concluir com:
    - validado
    - validado com ressalvas
    - nao validado
@@ -81,6 +83,7 @@ Se a mudanca estiver correta:
 - Data da validacao: 2026-05-08
 - Ambiente: producao
 - Worker: Cloud Run
+- Pre-condicao obrigatoria: logs do Cloud Run confirmando uso de `v_post_update_queue_batch`
 - Frequencia do worker: preencher
 - Limite por execucao: 40
 - View validada: `public.v_post_update_queue_batch`

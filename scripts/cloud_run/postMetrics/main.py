@@ -24,6 +24,7 @@ def fetch_queue():
     print("🔍 Buscando itens na fila...")
 
     url = f"{SUPABASE_URL}/rest/v1/v_post_update_queue_batch"
+    print("📌 Fonte da fila: v_post_update_queue_batch")
 
     params = {
         "select": "post_id"
