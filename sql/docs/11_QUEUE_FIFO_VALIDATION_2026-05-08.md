@@ -58,6 +58,8 @@ Se a mudanca estiver correta:
 - posts com poucas checagens comecam a ganhar rotacao
 - backlog nao cresce sem controle
 - posts recentes continuam sendo revisitados
+- o aumento do lote para `40` nao piora de forma relevante o custo por snapshot
+- Cloud Run, YouTube quota e Supabase writes permanecem dentro de limites aceitaveis
 
 ---
 
@@ -80,8 +82,21 @@ Se a mudanca estiver correta:
 - Ambiente: producao
 - Worker: Cloud Run
 - Frequencia do worker: preencher
-- Limite por execucao: 20
+- Limite por execucao: 40
 - View validada: `public.v_post_update_queue_batch`
+
+Distribuicao esperada por execucao:
+
+- banda `6`: `8`
+- banda `5`: `8`
+- banda `4`: `8`
+- banda `3`: `6`
+- banda `2`: `6`
+- banda `1`: `4`
+
+Observacao:
+
+- esta validacao precisa incluir custo e FinOps antes de considerar o aumento definitivo
 
 ---
 
@@ -300,6 +315,33 @@ Leitura:
 
 ---
 
+## Query 7. Validacao FinOps e custos
+
+Objetivo:
+
+- medir se o aumento para `40` posts por execucao melhora cobertura sem degradar custo unitario
+
+Indicadores a registrar:
+
+- custo diario do Cloud Run antes e depois
+- duracao media por execucao
+- total de execucoes por dia
+- total de snapshots inseridos em `post_metrics_history`
+- custo por snapshot
+- uso diario de quota da YouTube Data API
+- erros ou retries do worker
+- crescimento diario de writes no Supabase
+
+Resultado:
+
+- preencher
+
+Leitura:
+
+- preencher
+
+---
+
 ## Conclusao final
 
 ### Estado da mudanca
@@ -325,6 +367,7 @@ Leitura:
 - ajustar `calculate_next_check(...)`
 - aumentar frequencia do worker
 - ajustar limite por execucao
+- revisar custo/FinOps antes de manter lote `40`
 - outra: preencher
 
 ---

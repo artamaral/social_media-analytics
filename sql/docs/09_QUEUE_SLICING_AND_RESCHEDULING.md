@@ -131,7 +131,7 @@ Motivo:
 
 ## Cotas da fila por execucao
 
-A view foi configurada para montar um batch de `20` itens por execucao com as seguintes cotas:
+A view foi configurada inicialmente para montar um batch de `20` itens por execucao com as seguintes cotas:
 
 - banda `6`: `4`
 - banda `5`: `4`
@@ -139,6 +139,15 @@ A view foi configurada para montar um batch de `20` itens por execucao com as se
 - banda `3`: `3`
 - banda `2`: `3`
 - banda `1`: `2`
+
+Em 2026-05-08, a capacidade do lote foi aumentada para `40` itens por execucao, mantendo a mesma proporcao entre bandas:
+
+- banda `6`: `8`
+- banda `5`: `8`
+- banda `4`: `8`
+- banda `3`: `6`
+- banda `2`: `6`
+- banda `1`: `4`
 
 Se alguma banda nao tiver itens suficientes:
 
@@ -150,6 +159,12 @@ Motivo:
 - evitar starvation
 - permitir que faixas intermediarias sejam rechecadas
 - evitar concentracao excessiva dos maiores scores dentro da mesma banda
+
+Observacao FinOps:
+
+- a mudanca aumenta a quantidade de snapshots gravados por execucao
+- a chamada `videos.list` deve continuar em uma unica requisicao enquanto o lote ficar ate `50` IDs
+- a mudanca precisa ser validada em producao por custo, quota, duracao do Cloud Run, erros e writes no Supabase antes de ser considerada definitiva
 
 ---
 
@@ -198,6 +213,9 @@ Pontos principais de validacao:
 - a ordem dentro da mesma banda refletir antiguidade de `next_check`
 - backlog nao crescer indefinidamente
 - mesmos posts nao dominarem sempre todos os slots
+- custo por snapshot nao crescer de forma desproporcional
+- quota do YouTube permanecer dentro de margem segura
+- duracao media do Cloud Run e taxa de erro continuarem aceitaveis
 
 ---
 
@@ -206,6 +224,7 @@ Pontos principais de validacao:
 - se o volume de itens elegiveis exceder continuamente a capacidade do worker, ainda pode haver backlog
 - cotas e bandas podem precisar ajuste com dados reais
 - a reducao do starvation nao significa eliminacao total de backlog
+- o custo operacional pode migrar de Cloud Run para Supabase caso o volume de inserts em `post_metrics_history` cresca sem politica de retencao ou priorizacao
 
 ---
 

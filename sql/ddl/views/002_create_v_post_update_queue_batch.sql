@@ -15,12 +15,12 @@ quotas as (
   select *
   from (
     values
-      (6, 4),
-      (5, 4),
-      (4, 4),
-      (3, 3),
-      (2, 3),
-      (1, 2)
+      (6, 8),
+      (5, 8),
+      (4, 8),
+      (3, 6),
+      (2, 6),
+      (1, 4)
   ) as t(priority_band, quota)
 ),
 ranked as (
@@ -82,7 +82,7 @@ final_batch as (
     priority_band
   from remaining
   where refill_rank <= greatest(
-    20 - (select count(*) from primary_slice),
+    40 - (select count(*) from primary_slice),
     0
   )
 )
@@ -99,4 +99,4 @@ order by
   next_check asc,
   last_checked asc nulls first,
   post_id
-limit 20;
+limit 40;

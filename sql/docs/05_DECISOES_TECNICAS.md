@@ -71,3 +71,39 @@ Impacto esperado:
 - rechecagem mais equilibrada
 - menor dependencia do worker para regras de selecao
 - maior rotacao entre posts da mesma faixa de prioridade
+
+---
+
+## Aumento do lote do worker de metricas para 40 posts
+
+Decisao:
+
+- aumentar o limite da view `v_post_update_queue_batch` de `20` para `40` posts por execucao
+- dobrar as cotas por banda mantendo a proporcao original:
+  - banda `6`: `8`
+  - banda `5`: `8`
+  - banda `4`: `8`
+  - banda `3`: `6`
+  - banda `2`: `6`
+  - banda `1`: `4`
+
+Motivo:
+
+- aumentar a cobertura de posts elegiveis
+- reduzir backlog operacional sem aumentar a frequencia do scheduler
+- preservar a priorizacao por banda e a rotacao FIFO dentro da banda
+
+Status:
+
+- implementado no SQL do repositorio
+- pendente de aplicacao/validacao em producao
+- pendente de validacao FinOps e custos
+
+Validacao obrigatoria:
+
+- medir custo diario do Cloud Run
+- medir duracao media por execucao
+- medir uso de quota da YouTube Data API
+- medir volume de inserts em `post_metrics_history`
+- medir impacto no Supabase
+- calcular custo por snapshot antes de manter a mudanca como definitiva
