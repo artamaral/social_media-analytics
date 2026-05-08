@@ -10,6 +10,12 @@ Definir uma proposta tecnica para substituir o modelo atual de prioridade basead
 
 O objetivo de negocio e reduzir o efeito de concentracao permanente em posts historicamente grandes, sem perder a capacidade de identificar posts relevantes e tendencias emergentes.
 
+Escopo atual desta especificacao:
+
+- definir o modelo `v2` em modo analitico
+- nao substituir a logica ativa do worker neste momento
+- permitir comparacao com dados reais sem segundo Cloud Run
+
 ---
 
 ## Problema do modelo atual
@@ -78,6 +84,15 @@ Campos esperados:
 Uso:
 
 - historico temporal para calcular velocidade e aceleracao
+
+### Observacao de implementacao
+
+Para a avaliacao `v2`, o modelo usa:
+
+- `posts` como snapshot atual do post
+- `post_metrics_history` para buscar snapshots anteriores
+
+Essa decisao evita duplicar coleta e mantem a avaliacao no banco, em modo analitico.
 
 ---
 
@@ -236,6 +251,41 @@ final_score =
 
 ---
 
+## Mapeamento inicial de bandas para `v2`
+
+Para permitir execucao analitica e comparacao com o modelo atual, a proposta `v2` usa um mapeamento inicial de `final_score` para bandas:
+
+- banda `6`: `>= 120`
+- banda `5`: `>= 90`
+- banda `4`: `>= 70`
+- banda `3`: `>= 50`
+- banda `2`: `>= 35`
+- banda `1`: abaixo de `35`
+
+Importante:
+
+- esses cortes sao provisórios
+- foram definidos para permitir experimentacao inicial
+- devem ser recalibrados com distribuicao real do `priority_score_v2`
+
+### Agendamento inicial de `v2`
+
+Na simulacao analitica, o `v2` usa o mesmo modelo conceitual de bandas para agendamento:
+
+- banda `6` -> `30 minutes`
+- banda `5` -> `1 hour`
+- banda `4` -> `2 hours`
+- banda `3` -> `4 hours`
+- banda `2` -> `8 hours`
+- banda `1` -> `12 hours`
+
+Objetivo:
+
+- isolar o efeito da nova formula de score
+- sem introduzir outra mudanca estrutural ao mesmo tempo
+
+---
+
 ## Regra de fallback
 
 ### Caso 2. Historico parcial
@@ -295,7 +345,12 @@ final_score = base_popularity
 8. Gerar final_score
 9. Converter final_score em banda
 10. Converter banda em next_check
-11. Atualizar post_update_queue
+11. Comparar com o modelo ativo em modo analitico
+
+Observacao:
+
+- nesta fase, o fluxo `v2` nao atualiza `post_update_queue`
+- o modelo `v2` existe apenas para comparacao
 ```
 
 ---
@@ -345,6 +400,10 @@ Resultado esperado:
 - equilibrar relevancia historica com tendencia atual
 - tornar a fila mais alinhada com dinamica real de crescimento
 
+No contexto atual do projeto, ha um beneficio adicional:
+
+- validar a politica `v2` sem dobrar custo operacional
+
 ---
 
 ## Riscos e observacoes
@@ -360,8 +419,9 @@ Resultado esperado:
 
 - janelas definitivas para velocity e acceleration
 - criterio minimo de historico para sair do fallback
-- forma de mapear `final_score` para bandas
+- recalibracao dos cortes provisórios de banda
 - politica de rollout e validacao comparativa com o modelo atual
+- decisao final sobre promocao do `v2` para logica ativa
 
 ---
 
@@ -369,4 +429,6 @@ Resultado esperado:
 
 Esta especificacao descreve a proposta conceitual do novo modelo.
 
-Ainda nao representa implementacao aprovada em SQL.
+Existe implementacao `v2` apenas em modo analitico para comparacao com dados reais.
+
+Ainda nao representa logica aprovada para substituir o modelo ativo.
