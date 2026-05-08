@@ -5,6 +5,7 @@
 - [x] Validação da mudanca para FIFO dentro da banda ao inves de score. Usar arquivo "11_QUEUE_FIFO_VALIDATION_2026-05-08.md (line 1)." como referencia -> deixar rodas por dois dias. Validaçao em 2026_05_10
 
 - [ ] Validar impacto FinOps e custos apos aumento do lote do worker para 40 posts por execucao. Medir Cloud Run, YouTube quota, Supabase writes, duracao media, erros e custo por snapshot antes de manter a mudanca como definitiva.
+- [ ] Open point: reavaliar se o refill global da `v_post_update_queue_batch` deve continuar assim ou migrar para cascata por banda. Hoje, cotas nao usadas por uma banda vao para um pool global ordenado por antiguidade, e nao automaticamente para a proxima banda mais alta.
 
 # Finalizar toda a documentacao no Github
 - [x] Documentacao do SQL -> Incluir tabelas com extensao correta, deletar atual. Usar VScode para ficar com extensao correta

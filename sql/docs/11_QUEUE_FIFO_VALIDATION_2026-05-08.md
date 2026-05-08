@@ -31,11 +31,17 @@ Comportamento esperado:
 - o score continua definindo a banda
 - a view continua aplicando cotas por banda
 - dentro da mesma banda, o post com `next_check` mais antigo entra antes
+- slots nao usados por uma banda entram em refill global, e nao em cascata para a banda seguinte
 
 Objetivo de negocio:
 
 - reduzir a concentracao de checagens em poucos posts dentro da mesma banda
 - melhorar a rotacao dos posts sem perder prioridade macro por relevancia
+
+Observacao importante:
+
+- se uma banda vier vazia, o excedente nao e entregue automaticamente para a proxima banda mais alta
+- o preenchimento restante usa o ranking global de refill da view
 
 ---
 
@@ -56,6 +62,7 @@ Se a mudanca estiver correta:
 - a ordem dentro da banda respeita `next_check` mais antigo
 - os mesmos posts deixam de dominar continuamente a propria banda
 - posts com poucas checagens comecam a ganhar rotacao
+- o comportamento do refill global nao produz distorcoes inesperadas no batch final
 - backlog nao cresce sem controle
 - posts recentes continuam sendo revisitados
 - o aumento do lote para `40` nao piora de forma relevante o custo por snapshot
@@ -109,6 +116,7 @@ Objetivo:
 
 - validar diversidade entre bandas
 - validar FIFO dentro da banda
+- observar como o refill global altera a distribuicao final
 
 Query:
 
@@ -368,6 +376,7 @@ Leitura:
 - manter como esta
 - ajustar cotas por banda
 - ajustar `calculate_next_check(...)`
+- reavaliar politica de refill global versus cascata por banda
 - aumentar frequencia do worker
 - ajustar limite por execucao
 - revisar custo/FinOps antes de manter lote `40`

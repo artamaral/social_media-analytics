@@ -160,6 +160,30 @@ Motivo:
 - permitir que faixas intermediarias sejam rechecadas
 - evitar concentracao excessiva dos maiores scores dentro da mesma banda
 
+### Comportamento importante do refill
+
+O refill atual nao funciona em cascata para a proxima banda mais alta.
+
+Ou seja:
+
+- se a banda `6` nao preencher sua cota
+- os slots livres nao vao automaticamente para a banda `5`
+- nem depois para a banda `4`
+
+Em vez disso, o refill e feito sobre um pool global de itens elegiveis restantes, ordenado por:
+
+- `next_check asc`
+- `last_checked asc nulls first`
+- `priority_band desc`
+- `post_id`
+
+Consequencia pratica:
+
+- uma banda intermediaria pode receber slots excedentes se tiver itens mais antigos no refill global
+- por isso, a distribuicao final do batch pode diferir da cota nominal por banda
+
+Este comportamento esta implementado de forma intencional no SQL atual e deve ser acompanhado em producao antes de qualquer ajuste.
+
 Observacao FinOps:
 
 - a mudanca aumenta a quantidade de snapshots gravados por execucao
@@ -211,6 +235,7 @@ Pontos principais de validacao:
 - posts recentes passarem a ter mais de uma coleta
 - a view `v_post_update_queue_batch` retornar faixas variadas
 - a ordem dentro da mesma banda refletir antiguidade de `next_check`
+- a distribuicao final do batch ser lida considerando refill global, e nao cascata por banda
 - backlog nao crescer indefinidamente
 - mesmos posts nao dominarem sempre todos os slots
 - custo por snapshot nao crescer de forma desproporcional
