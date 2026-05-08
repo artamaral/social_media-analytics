@@ -1,24 +1,33 @@
-# 📌 BACKLOG GERAL
+# BACKLOG GERAL
 
-## 🚀 Pipeline
+## Pipeline
 
 - [ ] Melhorar controle de fim de lista no scraper
 - [ ] Validar duplicidade de coleta
-- [ ] Retry automático para falhas API
+- [ ] Retry automatico para falhas API
 
-## 📊 Dados / Qualidade
+## Dados / Qualidade
 
-- [ ] Validar se todos posts possuem histórico
-- [ ] Checar consistência de collected_at
+- [ ] Validar se todos posts possuem historico
+- [ ] Checar consistencia de collected_at
 - [ ] Identificar creators sem coleta recente
 
-## 📈 Analytics
+## Analytics
 
 - [ ] Query de crescimento por intervalo
 - [ ] Ranking de creators emergentes
-- [ ] Identificação de outliers
+- [ ] Identificacao de outliers
 
-## 🧠 IA / Classificação
+## Visualizacao / Produto
 
-- [ ] Classificar vídeos por tipo
-- [ ] Melhorar subnicho automático
+- [ ] Dashboard online consumindo Supabase sob demanda
+- [ ] Tela inicial com status de qualidade dos dados
+- [ ] Ranking de creators por views, engajamento e frequencia
+- [ ] Ranking semanal de crescimento de videos
+- [ ] Filtros por plataforma, creator, nicho e subnicho
+- [ ] Exportacao CSV dos rankings principais
+
+## IA / Classificacao
+
+- [ ] Classificar videos por tipo
+- [ ] Melhorar subnicho automatico

@@ -158,3 +158,44 @@ Impacto esperado:
 - maior controle sobre qualidade semantica dos resumos
 - menor risco de quebra por mudancas na interface do YouTube
 - melhor alinhamento com classificacao de nicho, subnicho e tipo de conteudo automotivo
+
+---
+
+## Dashboard online com Supabase sob demanda
+
+Data:
+
+- 2026-05-08
+
+Decisao:
+
+- o sistema de visualizacao sera online
+- o MVP deve consultar dados do Supabase sob demanda
+- a primeira camada de consumo sera baseada em views SQL analiticas
+- o frontend nao deve carregar historico bruto para calcular crescimento
+
+Views iniciais:
+
+- `v_dashboard_creator_summary`
+- `v_dashboard_post_growth_7d`
+- `v_dashboard_data_quality_status`
+
+Motivo:
+
+- manter a logica analitica perto do banco
+- reduzir duplicacao de regras no frontend
+- evitar exposicao de segredos no navegador
+- permitir que o dashboard evolua para produto sem reescrever a base de dados
+
+Diretriz de implementacao:
+
+- usar anon key somente com RLS e grants controlados
+- nunca expor service role key no browser
+- consultar indicadores de qualidade antes dos rankings
+- adicionar indices para suportar leitura sob demanda em `post_metrics_history`
+
+Impacto esperado:
+
+- primeiro MVP online com overview, creators e crescimento semanal
+- menor custo operacional do que precomputar tudo fora do Supabase no inicio
+- base pronta para filtros por nicho, subnicho e tipo de conteudo

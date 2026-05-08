@@ -1,42 +1,58 @@
-# ✅ DATA QUALITY CHECKS
+# DATA QUALITY CHECKS
 
-## 📌 Coleta de Posts
+## Coleta de posts
 
-- Todos os posts devem ter pelo menos 1 registro em post_metrics_history
-- collected_at nunca pode ser NULL
+- Todos os posts devem ter pelo menos 1 registro em `post_metrics_history`.
+- `collected_at` nunca pode ser `NULL`.
 
-## 📌 Atualização
+## Atualizacao
 
-- Cada post deve ser atualizado ao menos 1x por dia
+- Cada post deve ser atualizado ao menos 1 vez por dia.
 
-## 📌 Integridade
+## Integridade
 
-- Nenhum creator sem posts
-- Nenhum post sem creator
+- Nenhum creator deve ficar sem posts.
+- Nenhum post deve ficar sem creator.
 
-## 📌 Queries de validação
+## Queries de validacao
 
-### Posts sem histórico
+### Posts sem historico
 
 ```sql
-SELECT p.id
-FROM posts p
-LEFT JOIN post_metrics_history h ON p.id = h.post_id
+SELECT p.id, p.post_id
+FROM public.posts p
+LEFT JOIN public.post_metrics_history h ON p.post_id = h.post_id
 WHERE h.post_id IS NULL;
+```
 
-### Última coleta por post
+### Ultima coleta por post
 
 ```sql
 SELECT *
-FROM posts
+FROM public.posts
 WHERE collected_at IS NULL;
+```
 
-
-### Gaps de coleta (últimas 24h)
+### Gaps de coleta nas ultimas 24h
 
 ```sql
 SELECT post_id
-FROM post_metrics_history
+FROM public.post_metrics_history
 GROUP BY post_id
 HAVING MAX(collected_at) < NOW() - INTERVAL '24 hours';
+```
 
+## Checks obrigatorios para o dashboard
+
+Antes de usar rankings ou graficos como sinal de negocio, consultar:
+
+```sql
+SELECT *
+FROM public.v_dashboard_data_quality_status;
+```
+
+Regra:
+
+- se `is_analytics_ready = false`, o dashboard pode abrir, mas deve mostrar alerta de confiabilidade
+- rankings devem ser interpretados como exploratorios ate os problemas serem corrigidos
+- nenhuma decisao de marketing deve ser tomada sem validar os indicadores de qualidade
