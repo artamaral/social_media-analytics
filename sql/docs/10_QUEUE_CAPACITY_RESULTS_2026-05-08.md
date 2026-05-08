@@ -23,7 +23,6 @@ Premissa desta avaliacao:
 - Frequencia do worker: preencher
 - Limite por execucao: 20
 - Versao da fila: fatiada por bandas com leitura via `v_post_update_queue_batch`
-- Ordem interna da banda: FIFO por `next_check`
 
 ---
 
@@ -306,6 +305,8 @@ Observacoes:
 ### Proxima acao sugerida
 
 - Reavaliar as metricas da fila, existem post com muitos dados e post com poucos dados.
+Os posts com maior volume de checagens pertencem quase integralmente às bandas 6 e 5. Eles seguem com `needs_update = true`, `last_checked` recente e `next_check` curto, o que confirma que a fila está operando conforme a regra atual. A concentração de centenas de checagens em poucos posts indica que o comportamento atual não é falha de execução, mas efeito direto da política de priorização e agendamento. A rechecagem existe, porém a cobertura permanece desbalanceada.
+
 
 ---
 

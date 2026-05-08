@@ -6,6 +6,7 @@
 
 - [ ] Validar impacto FinOps e custos apos aumento do lote do worker para 40 posts por execucao. Medir Cloud Run, YouTube quota, Supabase writes, duracao media, erros e custo por snapshot antes de manter a mudanca como definitiva.
 - [ ] Open point: reavaliar se o refill global da `v_post_update_queue_batch` deve continuar assim ou migrar para cascata por banda. Hoje, cotas nao usadas por uma banda vao para um pool global ordenado por antiguidade, e nao automaticamente para a proxima banda mais alta.
+- [ ] Avaliar score hibrido em modo analitico sem segundo Cloud Run. Usar simulacao `v2` apenas no banco e validar com SQL + Excel/Pandas antes de qualquer troca no modelo ativo.
 
 # Finalizar toda a documentacao no Github
 - [x] Documentacao do SQL -> Incluir tabelas com extensao correta, deletar atual. Usar VScode para ficar com extensao correta
