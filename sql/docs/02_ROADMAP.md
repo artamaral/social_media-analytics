@@ -1,6 +1,9 @@
 # 🧭 ROADMAP
 
 ## ☠️  NON Negotiable -> Parar tudo pra fazer!
+
+- [x] Validação da mudanca para FIFO dentro da banda ao inves de score. Usar arquivo "11_QUEUE_FIFO_VALIDATION_2026-05-08.md (line 1)." como referencia -> deixar rodas por dois dias. Validaçao em 2026_05_10
+
 # Finalizar toda a documentacao no Github
 - [x] Documentacao do SQL -> Incluir tabelas com extensao correta, deletar atual. Usar VScode para ficar com extensao correta
 - [x] Documentacao do SQL -> Entender e documentar os trigger do banco de dados e documenta-los.
