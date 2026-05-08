@@ -432,3 +432,35 @@ Esta especificacao descreve a proposta conceitual do novo modelo.
 Existe implementacao `v2` apenas em modo analitico para comparacao com dados reais.
 
 Ainda nao representa logica aprovada para substituir o modelo ativo.
+
+---
+
+## Registro de feedback da primeira avaliacao
+
+Na primeira comparacao entre os top 50 posts com `history_level = full` e os top 50 com `history_level = low`, foi observado:
+
+- `full_top_50` com `avg_priority_score_v2 = 100.40`
+- `low_top_50` com `avg_priority_score_v2 = 229.19`
+
+Detalhe importante:
+
+- no grupo `low`, o score final ficou praticamente igual a `base_popularity`
+- no grupo `full`, o score final foi reduzido de forma forte pela combinacao ponderada
+- `velocity_score` e `acceleration_score` apareceram em escala muito menor do que `base_popularity`
+
+Leitura:
+
+- a formula atual esta descalibrada
+- os componentes nao estao na mesma escala
+- o fallback `low` deixou de ser conservador e passou a ter vantagem sistematica
+
+Consequencia pratica:
+
+- posts com historico completo podem perder prioridade para posts com historico insuficiente
+- isso contradiz o objetivo do modelo hibrido
+
+Diretriz decorrente:
+
+- a formula atual nao deve ser promovida para a logica ativa
+- antes de qualquer promocao, o modelo precisa de recalibracao
+- a linha mais promissora e migrar de ponderacao direta para modelo aditivo com bonus calibrados
