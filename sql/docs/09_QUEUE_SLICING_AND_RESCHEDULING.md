@@ -209,6 +209,25 @@ Motivo:
 - tornar o topo da fila mais responsivo
 - manter a regra simples e editavel no banco
 
+### Como `next_check` e definido
+
+O campo `next_check` e controlado pelo banco, e nao pelo worker Python.
+
+Fluxo:
+
+1. no primeiro insert em `posts`, a funcao `add_to_queue()` cria o registro em `post_update_queue` com `next_check = now()`
+2. isso torna o post novo elegivel para a primeira coleta
+3. apos cada nova coleta em `post_metrics_history`, o trigger `refresh_post_queue_on_metrics()`:
+   - recalcula `priority_score`
+   - usa `collected_at` da nova coleta como base temporal
+   - chama `calculate_next_check(priority_score, collected_at)`
+   - grava o novo `next_check` em `post_update_queue`
+
+Consequencia pratica:
+
+- o worker apenas insere historico em `post_metrics_history`
+- toda a regra de agendamento da proxima checagem fica centralizada no SQL
+
 ---
 
 ## Impacto esperado
