@@ -30,7 +30,7 @@ ranked as (
       partition by e.priority_band
       order by
         e.next_check asc,
-        e.priority_score desc,
+        e.last_checked asc nulls first,
         e.post_id
     ) as band_rank
   from eligible e
@@ -59,7 +59,8 @@ remaining as (
     row_number() over (
       order by
         r.next_check asc,
-        r.priority_score desc,
+        r.last_checked asc nulls first,
+        r.priority_band desc,
         r.post_id
     ) as refill_rank
   from ranked r
@@ -95,6 +96,7 @@ select
 from final_batch
 order by
   priority_band desc,
-  priority_score desc,
-  next_check asc
+  next_check asc,
+  last_checked asc nulls first,
+  post_id
 limit 20;

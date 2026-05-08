@@ -11,6 +11,12 @@ Este documento serve para validar se a fila de rechecagem periodica de posts est
 - regras de agendamento
 - worker do Cloud Run
 
+Modelo atual da fila:
+
+- score define a banda do post
+- a view `v_post_update_queue_batch` aplica cotas por banda
+- dentro de cada banda, a ordem e FIFO por `next_check`
+
 ---
 
 ## Status da mudanca atual
@@ -93,6 +99,7 @@ Esperado:
 
 - mais de uma banda presente no lote
 - o lote nao ser composto apenas pelos maiores scores absolutos
+- dentro da mesma banda, os posts mais antigos aparecerem antes
 
 Sinal de problema:
 

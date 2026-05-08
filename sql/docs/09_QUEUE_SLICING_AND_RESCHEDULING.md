@@ -92,6 +92,22 @@ em vez de:
 
 - `post_update_queue` com `order by priority_score desc limit 20`
 
+### Politica de ordenacao dentro da banda
+
+O score continua definindo a banda do post.
+
+Mas, dentro de cada banda, a ordenacao deixa de ser por maior score e passa a ser FIFO por antiguidade:
+
+- primeiro por `next_check` mais antigo
+- depois por `last_checked` mais antigo
+- depois por `post_id` como desempate estavel
+
+Motivo:
+
+- evitar que poucos posts dominem continuamente a propria banda
+- manter prioridade macro por relevancia
+- aumentar a justica operacional dentro de cada faixa
+
 ---
 
 ## Bandas de prioridade
@@ -133,6 +149,7 @@ Motivo:
 - manter prioridade
 - evitar starvation
 - permitir que faixas intermediarias sejam rechecadas
+- evitar concentracao excessiva dos maiores scores dentro da mesma banda
 
 ---
 
@@ -163,6 +180,7 @@ Com a mudanca, espera-se:
 - menos concentracao dos mesmos posts no topo
 - maior cobertura das faixas intermediarias
 - menor dependencia de regra de negocio no Python
+- maior rotacao entre posts da mesma banda
 
 ---
 
@@ -177,6 +195,7 @@ Pontos principais de validacao:
 
 - posts recentes passarem a ter mais de uma coleta
 - a view `v_post_update_queue_batch` retornar faixas variadas
+- a ordem dentro da mesma banda refletir antiguidade de `next_check`
 - backlog nao crescer indefinidamente
 - mesmos posts nao dominarem sempre todos os slots
 

@@ -8,6 +8,7 @@ Premissas atuais:
 
 - a frequencia de rechecagem e definida no SQL por `calculate_next_check(...)`
 - a fila e fatiada por bandas de prioridade no SQL
+- dentro de cada banda, a ordem e FIFO por `next_check`
 - o worker busca apenas itens com `needs_update = true`
 - o worker le a view `v_post_update_queue_batch`
 - o worker processa no maximo `20` itens por execucao
@@ -48,6 +49,12 @@ Bandas e cotas da view:
 - banda `3` -> `3`
 - banda `2` -> `3`
 - banda `1` -> `2`
+
+Ordem dentro de cada banda:
+
+- `next_check asc`
+- `last_checked asc nulls first`
+- `post_id`
 
 ---
 
@@ -90,6 +97,7 @@ Interpretacao:
 - mostra quem realmente sera entregue ao worker
 - permite observar se as bandas estao sendo misturadas
 - ajuda a detectar se o fatiamento esta funcionando
+- ajuda a validar se a ordem dentro da banda esta respeitando FIFO
 
 ---
 
@@ -206,12 +214,14 @@ Sugestao pratica:
 - posts recentes passam a ter mais de `1` coleta
 - a fila nao fica permanentemente acima da capacidade de `20` por rodada
 - a view entrega mais de uma banda por execucao
+- dentro da mesma banda, os posts mais antigos entram antes
 
 ### Cenario de alerta
 
 - sempre existem muitos itens elegiveis acima de `20`
 - a view passa a repetir quase sempre o mesmo grupo
 - bandas intermediarias quase nunca entram
+- dentro da mesma banda, os mesmos posts continuam retornando cedo demais
 
 ### Cenario de problema estrutural
 
@@ -219,6 +229,7 @@ Sugestao pratica:
 - posts recentes continuam com apenas `1` coleta
 - a fila deixa de refletir a frequencia definida no SQL
 - a fatia da view nao reduz o starvation entre bandas
+- a ordem interna da banda nao reduz a concentracao dos mesmos posts
 
 ---
 

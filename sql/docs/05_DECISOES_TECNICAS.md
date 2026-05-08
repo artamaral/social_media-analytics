@@ -50,12 +50,14 @@ Decisao:
 - a fila deixa de ser consumida diretamente por `priority_score desc`
 - o sistema passa a usar bandas de prioridade com cotas por faixa
 - a selecao do lote passa a ser feita por uma view SQL
+- dentro de cada banda, a ordem passa a ser FIFO por `next_check`
 
 Motivo:
 
 - evitar starvation dos posts de faixas intermediarias
 - manter prioridade para posts mais relevantes sem bloquear todo o restante
 - centralizar a regra de negocio no banco para facilitar manutencao
+- evitar concentracao excessiva dos maiores scores dentro da propria banda
 
 Implementacao:
 
@@ -68,3 +70,4 @@ Impacto esperado:
 - maior cobertura da fila
 - rechecagem mais equilibrada
 - menor dependencia do worker para regras de selecao
+- maior rotacao entre posts da mesma faixa de prioridade
