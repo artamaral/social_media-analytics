@@ -352,3 +352,62 @@ Implicacao:
 Pergunta adicional obrigatoria nas proximas validacoes:
 
 - o fallback `low` continua com vantagem sistematica sobre `full`?
+
+---
+
+## Query de referencia para comparar `full` versus `low`
+
+Esta query deve ser mantida como referencia nas proximas iteracoes do modelo, porque ela evidencia se o fallback `history_level = low` continua sendo favorecido indevidamente.
+
+```sql
+with full_top as (
+  select
+    post_id,
+    history_level,
+    priority_score_v2,
+    priority_band_v2,
+    base_popularity,
+    velocity_score,
+    acceleration_score
+  from public.v_post_priority_score_features_v2
+  where history_level = 'full'
+  order by priority_score_v2 desc
+  limit 50
+),
+low_top as (
+  select
+    post_id,
+    history_level,
+    priority_score_v2,
+    priority_band_v2,
+    base_popularity,
+    velocity_score,
+    acceleration_score
+  from public.v_post_priority_score_features_v2
+  where history_level = 'low'
+  order by priority_score_v2 desc
+  limit 50
+)
+select
+  grupo,
+  count(*) as total_posts,
+  round(avg(priority_score_v2)::numeric, 2) as avg_priority_score_v2,
+  round(min(priority_score_v2)::numeric, 2) as min_priority_score_v2,
+  round(max(priority_score_v2)::numeric, 2) as max_priority_score_v2,
+  round(avg(base_popularity)::numeric, 2) as avg_base_popularity,
+  round(avg(coalesce(velocity_score, 0))::numeric, 2) as avg_velocity_score,
+  round(avg(coalesce(acceleration_score, 0))::numeric, 2) as avg_acceleration_score
+from (
+  select 'full_top_50' as grupo, * from full_top
+  union all
+  select 'low_top_50' as grupo, * from low_top
+) t
+group by grupo
+order by grupo;
+```
+
+Objetivo:
+
+- comparar a escala do score final entre os dois grupos
+- verificar se `base_popularity`, `velocity_score` e `acceleration_score` estao contribuindo de forma equilibrada
+- identificar rapidamente descalibracao da formula
