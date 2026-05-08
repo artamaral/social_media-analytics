@@ -107,3 +107,54 @@ Validacao obrigatoria:
 - medir volume de inserts em `post_metrics_history`
 - medir impacto no Supabase
 - calcular custo por snapshot antes de manter a mudanca como definitiva
+
+---
+
+## Resumo de videos gerado por IA pelo YouTube
+
+Data:
+
+- 2026-05-08
+
+Decisao:
+
+- nao usar o resumo de video gerado por IA pelo YouTube como fonte oficial de dados do produto
+- nao implementar scraping desse resumo como dependencia de pipeline
+- gerar resumo proprio na camada de enriquecimento quando esse dado for necessario para analytics
+
+Contexto:
+
+- o YouTube informa que resumos gerados por IA existem apenas para videos selecionados em ingles
+- os resumos podem aparecer abaixo do video, na Home ou nos resultados de busca
+- o recurso e experimental, pode variar em disponibilidade e qualidade, e nao e controlado pelo creator
+- a YouTube Data API v3 nao documenta campo publico para retornar esse resumo no recurso `videos`
+- o endpoint oficial de captions exige autorizacao e permissao para editar o video quando usado para download de legenda
+
+Motivo:
+
+- evitar dependencia de campo nao documentado ou instavel
+- reduzir risco operacional e juridico associado a scraping automatizado do YouTube
+- manter a ingestao baseada em APIs oficiais e fontes controlaveis
+- permitir padronizacao do resumo por criterios proprios do projeto automotivo
+
+Diretriz de implementacao:
+
+- coletar metadados oficiais via YouTube Data API, como `title`, `description`, `statistics` e `contentDetails`
+- usar transcript apenas quando houver fonte permitida e rastreavel
+- gerar `video_ai_summary` por LLM no enrichment layer
+- registrar origem, idioma, modelo e data de geracao do resumo
+
+Campos sugeridos:
+
+- `video_ai_summary`
+- `summary_source`
+- `summary_language`
+- `summary_generated_at`
+- `summary_model`
+- `summary_confidence`
+
+Impacto esperado:
+
+- maior controle sobre qualidade semantica dos resumos
+- menor risco de quebra por mudancas na interface do YouTube
+- melhor alinhamento com classificacao de nicho, subnicho e tipo de conteudo automotivo
