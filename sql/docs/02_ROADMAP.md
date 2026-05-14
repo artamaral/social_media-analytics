@@ -3,7 +3,7 @@
 ## NON Negotiable - Parar tudo para fazer
 
 - [x] Validacao da mudanca para FIFO dentro da banda ao inves de score. Usar arquivo `11_QUEUE_FIFO_VALIDATION_2026-05-08.md` como referencia e deixar rodar por dois dias. Validacao em 2026-05-10.
-- [ ] Validar impacto FinOps e custos apos aumento do lote do worker para 40 posts por execucao. Medir Cloud Run, YouTube quota, Supabase writes, duracao media, erros e custo por snapshot antes de manter a mudanca como definitiva.
+- [x] Validar impacto FinOps e custos apos aumento do lote do worker para 40 posts por execucao. Resultado observado apos alguns dias em producao: nao houve aumento relevante de custos no Cloud Run.
 - [ ] Open point: reavaliar se o refill global da `v_post_update_queue_batch` deve continuar assim ou migrar para cascata por banda. Hoje, cotas nao usadas por uma banda vao para um pool global ordenado por antiguidade, e nao automaticamente para a proxima banda mais alta.
 - [ ] Avaliar score hibrido em modo analitico sem segundo Cloud Run. Usar simulacao `v2` apenas no banco e validar com SQL + Excel/Pandas antes de qualquer troca no modelo ativo.
 

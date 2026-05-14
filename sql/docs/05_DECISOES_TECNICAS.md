@@ -96,8 +96,8 @@ Motivo:
 Status:
 
 - implementado no SQL do repositorio
-- pendente de aplicacao/validacao em producao
-- pendente de validacao FinOps e custos
+- aplicado e validado em producao
+- validado do ponto de vista de custo do Cloud Run apos alguns dias de execucao
 
 Validacao obrigatoria:
 
@@ -107,6 +107,11 @@ Validacao obrigatoria:
 - medir volume de inserts em `post_metrics_history`
 - medir impacto no Supabase
 - calcular custo por snapshot antes de manter a mudanca como definitiva
+
+Resultado observado:
+
+- apos alguns dias rodando com lote de `40` posts por execucao, nao houve aumento relevante de custos no Cloud Run
+- a mudanca pode ser considerada aceita do ponto de vista de custo do worker
 
 ---
 

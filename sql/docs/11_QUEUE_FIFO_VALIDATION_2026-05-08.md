@@ -132,11 +132,13 @@ from public.v_post_update_queue_batch;
 
 Resultado:
 
-- preencher
+- apos alguns dias de execucao com lote de `40`, nao foi observado aumento relevante de custos no Cloud Run
+- a capacidade maior nao mostrou degradacao relevante de custo operacional do worker
 
 Leitura:
 
-- preencher
+- a validacao de custo do worker pode ser considerada satisfatoria
+- a decisao de manter lote `40` nao encontra impedimento relevante do lado de Cloud Run
 
 ---
 

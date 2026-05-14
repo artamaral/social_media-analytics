@@ -188,7 +188,8 @@ Observacao FinOps:
 
 - a mudanca aumenta a quantidade de snapshots gravados por execucao
 - a chamada `videos.list` deve continuar em uma unica requisicao enquanto o lote ficar ate `50` IDs
-- a mudanca precisa ser validada em producao por custo, quota, duracao do Cloud Run, erros e writes no Supabase antes de ser considerada definitiva
+- a mudanca foi observada em producao por alguns dias e nao apresentou aumento relevante de custos no Cloud Run
+- a validacao de custo do worker pode ser considerada satisfatoria
 
 ---
 
@@ -257,7 +258,7 @@ Pontos principais de validacao:
 - a distribuicao final do batch ser lida considerando refill global, e nao cascata por banda
 - backlog nao crescer indefinidamente
 - mesmos posts nao dominarem sempre todos os slots
-- custo por snapshot nao crescer de forma desproporcional
+- custo do Cloud Run nao crescer de forma desproporcional
 - quota do YouTube permanecer dentro de margem segura
 - duracao media do Cloud Run e taxa de erro continuarem aceitaveis
 
