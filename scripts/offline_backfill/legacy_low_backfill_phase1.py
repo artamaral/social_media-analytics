@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from datetime import UTC, datetime, timedelta
 
 import requests
@@ -7,6 +8,41 @@ import requests
 # ==============================
 # CONFIG
 # ==============================
+
+
+def load_local_env():
+    """
+    Carrega variaveis de um arquivo `.env` localizado ao lado do script.
+
+    O objetivo e facilitar execucao manual do backfill sem depender de export
+    previo no shell. O carregamento e conservador:
+    - ignora linhas vazias e comentarios
+    - aceita pares `CHAVE=valor`
+    - nao sobrescreve variaveis que ja existam no ambiente
+
+    Isso permite manter um `.env` local fora do Git, enquanto o script segue
+    compativel com configuracao via ambiente quando necessario.
+    """
+    env_path = Path(__file__).with_name(".env")
+
+    if not env_path.exists():
+        return
+
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+load_local_env()
 
 # Reusa a mesma base de configuracao do pipeline online.
 # Isso reduz a divergencia operacional entre o script offline e o Cloud Run.
