@@ -50,6 +50,31 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY")
 
+
+def normalize_supabase_url(url):
+    """
+    Normaliza a URL base do Supabase para evitar duplicacao de `/rest/v1`.
+
+    Na pratica, alguns ambientes guardam:
+    - apenas `https://<project>.supabase.co`
+    - ou a URL completa `https://<project>.supabase.co/rest/v1`
+
+    Como o script monta os endpoints adicionando `/rest/v1/...`, esta funcao
+    remove o sufixo quando necessario para que os dois formatos funcionem.
+    """
+    if not url:
+        return url
+
+    normalized = url.rstrip("/")
+
+    if normalized.endswith("/rest/v1"):
+        normalized = normalized[: -len("/rest/v1")]
+
+    return normalized
+
+
+SUPABASE_URL = normalize_supabase_url(SUPABASE_URL)
+
 HEADERS = {
     "apikey": SUPABASE_KEY,
     "Authorization": f"Bearer {SUPABASE_KEY}",
