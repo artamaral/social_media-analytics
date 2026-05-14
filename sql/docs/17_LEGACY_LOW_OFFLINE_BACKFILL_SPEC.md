@@ -34,6 +34,13 @@ Conclusao:
 
 O backfill legado deve ser executado em duas fases.
 
+Como diretriz de implementacao, o script offline deve reutilizar o maximo
+possivel da estrutura ja existente em
+`scripts/cloud_run/postMetrics/main.py`.
+
+Isso significa que a implementacao nova deve nascer como adaptacao do pipeline
+atual, e nao como um fluxo totalmente novo.
+
 ### Fase 1. Seed historico
 
 Objetivo:
@@ -94,6 +101,22 @@ Criar 1 snapshot para posts antigos que ainda nao possuem base minima de histori
 3. buscar metricas atuais
 4. inserir snapshot em `post_metrics_history`
 5. deixar triggers atualizarem `posts` e `post_update_queue`
+
+### Diretriz de reuso do codigo existente
+
+O script offline deve usar, como base inicial, as mesmas responsabilidades ja
+presentes no `postMetrics/main.py`:
+
+- configuracao por variaveis de ambiente
+- `HEADERS` para chamadas ao Supabase
+- chamada ao endpoint `videos.list` da YouTube API
+- normalizacao do payload de estatisticas
+- insert em `post_metrics_history`
+
+A diferenca principal deve ficar concentrada em:
+
+- substituir `fetch_queue()` por uma funcao de selecao de `legacy_low`
+- manter o restante do pipeline o mais proximo possivel do fluxo atual
 
 ### Prioridade sugerida para o lote
 
@@ -156,6 +179,7 @@ O script offline nao deve:
 - atualizar diretamente `post_update_queue`
 - reimplementar regra dos triggers
 - competir continuamente com o pipeline principal
+- reescrever desnecessariamente funcoes que ja existem no `postMetrics/main.py`
 
 O papel dele e:
 

@@ -1,0 +1,519 @@
+import os
+from datetime import UTC, datetime, timedelta
+
+import requests
+
+
+# ==============================
+# CONFIG
+# ==============================
+
+# Reusa a mesma base de configuracao do pipeline online.
+# Isso reduz a divergencia operacional entre o script offline e o Cloud Run.
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY")
+
+HEADERS = {
+    "apikey": SUPABASE_KEY,
+    "Authorization": f"Bearer {SUPABASE_KEY}",
+    "Content-Type": "application/json",
+}
+
+# Parametros operacionais da fase 1.
+# Mantidos como constantes simples para facilitar ajuste manual inicial.
+DEFAULT_BATCH_SIZE = 50
+LEGACY_AGE_DAYS = 7
+MAX_TOTAL_CHECKS = 1
+SUPABASE_PAGE_SIZE = 1000
+SUPABASE_CHUNK_SIZE = 100
+
+
+def validate_config():
+    """
+    Valida as variaveis de ambiente obrigatorias antes de iniciar o backfill.
+
+    Esta funcao existe para falhar cedo e de forma clara. Como o script usa os
+    mesmos servicos do pipeline online, nao faz sentido continuar se Supabase ou
+    YouTube nao estiverem configurados.
+
+    Responsabilidade:
+    - verificar presenca das credenciais minimas
+    - interromper a execucao com erro explicito se faltar algo
+    """
+    missing = []
+
+    if not SUPABASE_URL:
+        missing.append("SUPABASE_URL")
+    if not SUPABASE_KEY:
+        missing.append("SUPABASE_KEY")
+    if not YOUTUBE_API_KEY:
+        missing.append("YOUTUBE_API_KEY")
+
+    if missing:
+        raise RuntimeError(
+            "Variaveis de ambiente ausentes: " + ", ".join(missing)
+        )
+
+
+def fetch_paginated(endpoint, params):
+    """
+    Busca um endpoint REST do Supabase em modo paginado.
+
+    Esta funcao encapsula a paginacao basica para evitar repeticao nas rotinas
+    de leitura de `posts` e `post_metrics_history`. Ela usa `limit` e `offset`
+    porque o backfill offline pode precisar varrer mais de uma pagina para
+    levantar os candidatos legados.
+
+    Responsabilidade:
+    - executar requests GET em paginas sucessivas
+    - acumular todos os registros retornados
+    - abortar com erro claro em caso de falha HTTP
+
+    Saida:
+    - lista unica com todos os objetos retornados pelo endpoint
+    """
+    rows = []
+    offset = 0
+
+    while True:
+        page_params = params.copy()
+        page_params["limit"] = SUPABASE_PAGE_SIZE
+        page_params["offset"] = offset
+
+        response = requests.get(
+            f"{SUPABASE_URL}/rest/v1/{endpoint}",
+            headers=HEADERS,
+            params=page_params,
+            timeout=60,
+        )
+
+        print(f"📡 {endpoint} page status:", response.status_code, "offset:", offset)
+
+        if response.status_code != 200:
+            raise RuntimeError(
+                f"Erro ao buscar {endpoint}: {response.status_code} - {response.text}"
+            )
+
+        page_rows = response.json()
+        rows.extend(page_rows)
+
+        if len(page_rows) < SUPABASE_PAGE_SIZE:
+            break
+
+        offset += SUPABASE_PAGE_SIZE
+
+    return rows
+
+
+def chunk_list(values, chunk_size):
+    """
+    Divide uma lista grande em blocos menores.
+
+    O Supabase REST e a query string do endpoint ficam mais previsiveis quando
+    os `post_id` sao enviados em lotes controlados. Essa funcao isola essa
+    responsabilidade e permite reaproveitar o mesmo padrao para consultar
+    features e historico.
+
+    Responsabilidade:
+    - receber uma lista qualquer
+    - devolver sublistas menores e ordenadas pela ordem original
+    """
+    for start in range(0, len(values), chunk_size):
+        yield values[start : start + chunk_size]
+
+
+def fetch_old_posts():
+    """
+    Busca os posts antigos o suficiente para concorrerem como legado.
+
+    Aqui aplicamos apenas o primeiro filtro estrutural do problema:
+    `created_at < now() - 7 days`.
+
+    Ainda nao filtramos por historico insuficiente, porque essa informacao esta
+    em `post_metrics_history` e sera cruzada depois.
+
+    Responsabilidade:
+    - buscar posts com idade acima da janela de cold start
+    - retornar dados minimos para desempate e rastreabilidade
+
+    Saida esperada por item:
+    - post_id
+    - created_at
+    - collected_at
+    """
+    cutoff = (datetime.now(UTC) - timedelta(days=LEGACY_AGE_DAYS)).isoformat()
+
+    print("🔍 Buscando posts antigos elegiveis para legado...")
+    print("📌 Corte de created_at:", cutoff)
+
+    return fetch_paginated(
+        "posts",
+        {
+            "select": "post_id,created_at,collected_at",
+            "created_at": f"lt.{cutoff}",
+        },
+    )
+
+
+def fetch_low_feature_scores(post_ids):
+    """
+    Busca o `priority_score_v2` apenas para posts que estao em `history_level=low`.
+
+    O backfill de fase 1 precisa ordenar os candidatos por `priority_score_v2`,
+    mas nao depende de banda. Esta funcao le a view analitica `v2` e traz so o
+    necessario para a priorizacao offline.
+
+    Responsabilidade:
+    - consultar `v_post_priority_score_features_v2`
+    - restringir aos `post_id` informados
+    - restringir a `history_level = low`
+    - devolver um mapa por `post_id`
+
+    Saida:
+    - dicionario {post_id: {priority_score_v2, history_level}}
+    """
+    print("🧮 Buscando priority_score_v2 para candidatos low...")
+
+    features_by_post = {}
+
+    for chunk in chunk_list(post_ids, SUPABASE_CHUNK_SIZE):
+        ids_filter = ",".join(chunk)
+        response = requests.get(
+            f"{SUPABASE_URL}/rest/v1/v_post_priority_score_features_v2",
+            headers=HEADERS,
+            params={
+                "select": "post_id,priority_score_v2,history_level",
+                "post_id": f"in.({ids_filter})",
+                "history_level": "eq.low",
+                "limit": SUPABASE_PAGE_SIZE,
+            },
+            timeout=60,
+        )
+
+        print("📡 v2 features status:", response.status_code, "chunk:", len(chunk))
+
+        if response.status_code != 200:
+            raise RuntimeError(
+                "Erro ao buscar v_post_priority_score_features_v2: "
+                f"{response.status_code} - {response.text}"
+            )
+
+        for row in response.json():
+            features_by_post[row["post_id"]] = row
+
+    return features_by_post
+
+
+def fetch_history_counts(post_ids):
+    """
+    Conta quantas checagens cada post ja possui em `post_metrics_history`.
+
+    Essa funcao resolve a parte que distingue um `low` de cold start de um
+    `legacy_low`: o script precisa saber se o post tem `<= 1` snapshot total.
+    Como nao estamos introduzindo uma view nova nesta etapa, a contagem e feita
+    no proprio script a partir do endpoint REST.
+
+    Responsabilidade:
+    - consultar `post_metrics_history` em blocos de IDs
+    - contar ocorrencias por `post_id`
+    - devolver um dicionario simples de contagens
+
+    Saida:
+    - dicionario {post_id: total_checagens}
+    """
+    print("📚 Contando historico existente dos candidatos...")
+
+    counts = {post_id: 0 for post_id in post_ids}
+
+    for chunk in chunk_list(post_ids, SUPABASE_CHUNK_SIZE):
+        ids_filter = ",".join(chunk)
+        rows = fetch_paginated(
+            "post_metrics_history",
+            {
+                "select": "post_id",
+                "post_id": f"in.({ids_filter})",
+            },
+        )
+
+        for row in rows:
+            counts[row["post_id"]] = counts.get(row["post_id"], 0) + 1
+
+    return counts
+
+
+def fetch_legacy_low_batch(batch_size=DEFAULT_BATCH_SIZE):
+    """
+    Seleciona o lote offline de `legacy_low` para a fase 1.
+
+    Esta e a funcao que substitui conceitualmente o `fetch_queue()` do pipeline
+    online. Em vez de usar a fila operacional, ela monta uma lista de correcao
+    historica com base em tres passos:
+
+    1. buscar posts antigos o suficiente para nao serem cold start
+    2. manter apenas os que estao em `history_level=low`
+    3. manter apenas os que possuem `<= 1` checagem total
+
+    Depois disso, o lote e ordenado por:
+    - `priority_score_v2 desc`
+    - `total_checagens asc`
+    - `collected_at asc nulls first`
+    - `post_id`
+
+    Responsabilidade:
+    - produzir o lote final do backfill
+    - devolver a mesma estrutura simples esperada pelas proximas etapas
+    """
+    old_posts = fetch_old_posts()
+
+    if not old_posts:
+        print("⚠️ Nenhum post antigo encontrado para backfill")
+        return []
+
+    post_ids = [row["post_id"] for row in old_posts]
+    features_by_post = fetch_low_feature_scores(post_ids)
+    history_counts = fetch_history_counts(post_ids)
+
+    batch_candidates = []
+
+    for row in old_posts:
+        post_id = row["post_id"]
+        total_checks = history_counts.get(post_id, 0)
+        feature_row = features_by_post.get(post_id)
+
+        if not feature_row:
+            continue
+
+        if total_checks > MAX_TOTAL_CHECKS:
+            continue
+
+        batch_candidates.append(
+            {
+                "post_id": post_id,
+                "created_at": row.get("created_at"),
+                "collected_at": row.get("collected_at"),
+                "total_checagens": total_checks,
+                "priority_score_v2": float(feature_row.get("priority_score_v2", 0)),
+                "history_level": feature_row.get("history_level"),
+            }
+        )
+
+    batch_candidates.sort(
+        key=lambda item: (
+            -item["priority_score_v2"],
+            item["total_checagens"],
+            item["collected_at"] is not None,
+            item["collected_at"] or "",
+            item["post_id"],
+        )
+    )
+
+    selected = batch_candidates[:batch_size]
+
+    print(f"📦 Legacy low candidatos: {len(batch_candidates)}")
+    print(f"✅ Legacy low selecionados: {len(selected)}")
+
+    return selected
+
+
+def extract_ids(rows):
+    """
+    Extrai apenas os `post_id` do lote selecionado.
+
+    Esta funcao e reaproveitada do desenho do `postMetrics/main.py` e mantida
+    separada para preservar a mesma estrutura mental do pipeline online.
+
+    Responsabilidade:
+    - traduzir linhas ricas em uma lista simples de IDs
+    """
+    return [row["post_id"] for row in rows]
+
+
+def fetch_youtube_stats(video_ids):
+    """
+    Busca estatisticas atuais dos videos no endpoint `videos.list`.
+
+    A implementacao segue o mesmo contrato do pipeline online:
+    - usa uma unica chamada para varios IDs
+    - pede `part=statistics`
+    - devolve a lista `items`
+
+    Responsabilidade:
+    - integrar com a YouTube Data API
+    - devolver o payload bruto necessario para normalizacao
+    """
+    print("🌐 Chamando YouTube API...")
+
+    response = requests.get(
+        "https://www.googleapis.com/youtube/v3/videos",
+        params={
+            "part": "statistics",
+            "id": ",".join(video_ids),
+            "key": YOUTUBE_API_KEY,
+        },
+        timeout=60,
+    )
+
+    print("📡 YouTube status:", response.status_code)
+
+    if response.status_code != 200:
+        raise RuntimeError(
+            f"Erro YouTube: {response.status_code} - {response.text}"
+        )
+
+    return response.json().get("items", [])
+
+
+def normalize(items):
+    """
+    Normaliza a resposta da YouTube API para o contrato de `post_metrics_history`.
+
+    Esta funcao preserva o mesmo formato do pipeline online. Isso e importante
+    porque os triggers do banco ja conhecem esse payload e atualizam o restante
+    do sistema automaticamente.
+
+    Responsabilidade:
+    - extrair `viewCount`, `likeCount` e `commentCount`
+    - preencher defaults seguros quando um campo nao vier
+    - marcar `collected_at` no momento da coleta
+    """
+    collected_at = datetime.now(UTC).isoformat()
+    records = []
+
+    for video in items:
+        stats = video.get("statistics", {})
+        records.append(
+            {
+                "post_id": video["id"],
+                "views": int(stats.get("viewCount", 0)),
+                "likes": int(stats.get("likeCount", 0)),
+                "comments": int(stats.get("commentCount", 0)),
+                "collected_at": collected_at,
+            }
+        )
+
+    return records
+
+
+def insert_history(records):
+    """
+    Insere o lote normalizado em `post_metrics_history`.
+
+    O objetivo desta funcao e permanecer o mais proximo possivel do
+    `postMetrics/main.py`. O script offline nao deve atualizar `posts` nem
+    `post_update_queue` diretamente; ele so insere historico e deixa os
+    triggers do banco cuidarem do restante.
+
+    Responsabilidade:
+    - fazer POST do lote para o endpoint REST
+    - validar retorno HTTP
+    - interromper com erro claro em caso de falha
+    """
+    print("📝 Inserindo histórico batch...")
+
+    response = requests.post(
+        f"{SUPABASE_URL}/rest/v1/post_metrics_history",
+        headers=HEADERS,
+        json=records,
+        timeout=60,
+    )
+
+    print("📡 History batch:", response.status_code)
+
+    if response.status_code >= 300:
+        raise RuntimeError(
+            f"Erro ao inserir histórico: {response.status_code} - {response.text}"
+        )
+
+
+def log_missing_posts(requested_ids, returned_items):
+    """
+    Registra discrepancias entre IDs enviados e itens retornados pela API.
+
+    Em rotinas offline, e importante nao perder visibilidade sobre posts
+    removidos, privados ou simplesmente nao retornados pela YouTube API.
+    Essa funcao nao bloqueia a execucao; ela apenas informa a diferenca.
+
+    Responsabilidade:
+    - comparar IDs pedidos com IDs retornados
+    - registrar em log os que nao voltaram
+    """
+    returned_ids = {item["id"] for item in returned_items}
+    missing_ids = [post_id for post_id in requested_ids if post_id not in returned_ids]
+
+    if missing_ids:
+        print(f"⚠️ IDs sem retorno da YouTube API: {len(missing_ids)}")
+        print("⚠️ Lista:", ",".join(missing_ids))
+
+
+def run_backfill_batch(batch_size=DEFAULT_BATCH_SIZE):
+    """
+    Executa uma rodada completa do backfill offline fase 1.
+
+    Esta funcao equivale ao `run_pipeline()` do worker online, mas a origem dos
+    IDs vem da selecao de `legacy_low`. Todo o restante do pipeline segue a
+    mesma logica operacional:
+    - selecionar origem
+    - extrair IDs
+    - buscar estatisticas
+    - normalizar
+    - inserir historico
+
+    Responsabilidade:
+    - orquestrar o lote de ponta a ponta
+    - manter logs suficientes para observacao manual
+    """
+    selected_rows = fetch_legacy_low_batch(batch_size=batch_size)
+
+    if not selected_rows:
+        print("⚠️ Nada para processar no backfill legacy_low")
+        return
+
+    video_ids = extract_ids(selected_rows)
+    youtube_items = fetch_youtube_stats(video_ids)
+
+    if not youtube_items:
+        print("⚠️ Sem dados do YouTube para o lote selecionado")
+        return
+
+    log_missing_posts(video_ids, youtube_items)
+
+    records = normalize(youtube_items)
+    insert_history(records)
+
+    print(f"✅ Processados no backfill: {len(records)}")
+
+
+def run():
+    """
+    Entry point simples para execucao manual do backfill offline.
+
+    Mantem a mesma ideia de inicializacao do script online:
+    - logar inicio
+    - validar configuracao
+    - executar o pipeline
+    - capturar erros em um bloco unico
+
+    Responsabilidade:
+    - oferecer um ponto unico e previsivel de execucao
+    """
+    started_at = datetime.now(UTC)
+    print("🚀 Backfill offline legacy_low iniciado")
+    print("📌 Script: legacy_low_backfill_phase1.py")
+
+    try:
+        validate_config()
+        run_backfill_batch()
+
+        finished_at = datetime.now(UTC)
+        print("✅ Backfill finalizado com sucesso")
+        print("⏱️ Duração:", finished_at - started_at)
+    except Exception as exc:
+        finished_at = datetime.now(UTC)
+        print("❌ ERRO:", str(exc))
+        print("⏱️ Duração até erro:", finished_at - started_at)
+        raise
+
+
+if __name__ == "__main__":
+    run()

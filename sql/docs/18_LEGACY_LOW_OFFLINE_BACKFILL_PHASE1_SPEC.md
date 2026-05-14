@@ -118,6 +118,33 @@ Justificativa:
 7. Registrar logs da execucao
 ```
 
+### Mapeamento para o `postMetrics/main.py`
+
+A implementacao do script offline deve, a principio, reaproveitar o mesmo
+esqueleto funcional do arquivo
+`scripts/cloud_run/postMetrics/main.py`.
+
+Mapeamento esperado:
+
+- `fetch_queue()`:
+  - sera substituida por uma funcao de selecao do lote `legacy_low`
+- `extract_ids()`:
+  - deve ser reaproveitada sem mudanca, se possivel
+- `fetch_youtube_stats()`:
+  - deve ser reaproveitada sem mudanca, se possivel
+- `normalize()`:
+  - deve ser reaproveitada sem mudanca, se possivel
+- `insert_history()`:
+  - deve ser reaproveitada sem mudanca, se possivel
+- `run_pipeline()`:
+  - deve orquestrar o fluxo offline trocando apenas a origem dos `post_id`
+
+Objetivo:
+
+- reduzir divergencia entre pipeline online e script offline
+- diminuir risco de comportamento inconsistente
+- manter manutencao mais simples
+
 ---
 
 ## Query de selecao do lote
@@ -163,6 +190,11 @@ O script deve seguir o mesmo principio operacional do pipeline atual:
 - `part=statistics`
 - enviar multiplos `post_id` em uma unica chamada
 
+Diretriz adicional:
+
+- reaproveitar a mesma funcao `fetch_youtube_stats()` do `postMetrics/main.py`
+  como referencia direta de implementacao
+
 Objetivo:
 
 - minimizar numero de requests HTTP
@@ -190,6 +222,11 @@ O script nao deve:
 - atualizar `post_update_queue` diretamente
 
 Essas atualizacoes devem continuar sendo feitas pelos triggers do banco.
+
+Diretriz adicional:
+
+- reaproveitar a mesma funcao `insert_history()` do `postMetrics/main.py`
+  como referencia direta de implementacao
 
 ---
 
