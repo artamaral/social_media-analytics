@@ -204,3 +204,37 @@ Impacto esperado:
 - primeiro MVP online com overview, creators e crescimento semanal
 - menor custo operacional do que precomputar tudo fora do Supabase no inicio
 - base pronta para filtros por nicho, subnicho e tipo de conteudo
+
+---
+
+## Streamlit como solucao atual para dashboard analitico
+
+Data:
+
+- 2026-05-14
+
+Decisao:
+
+- usar Streamlit Community Cloud como solucao atual para o dashboard online
+- tratar o dashboard como ferramenta interna de estudo de mercado, nao como produto SaaS publico
+- manter Supabase como fonte de dados sob demanda
+- manter views SQL como camada principal de consumo analitico
+
+Motivo:
+
+- o numero de acessos deve ser baixo
+- a complexidade tende a crescer nas fontes de dados e nas perguntas analiticas, nao na escala de usuarios
+- Streamlit permite iterar rapidamente com SQL, Python, Pandas e graficos
+- a solucao reduz custo e complexidade em relacao a um app Next.js neste momento
+
+Diretriz de implementacao:
+
+- guardar credenciais no Streamlit secrets
+- nunca usar service role key exposta em codigo ou navegador
+- consultar `v_dashboard_data_quality_status` antes de rankings
+- usar filtros de periodo antes de carregar historico
+- usar cache com TTL curto para reduzir leituras repetidas no Supabase
+
+Alternativa futura:
+
+- reavaliar Next.js, TypeScript e Vercel/Cloudflare apenas se o dashboard evoluir para produto externo ou multiusuario

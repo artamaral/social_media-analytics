@@ -29,7 +29,7 @@
 - [ ] Detectar gaps de coleta por post.
 - [ ] Validar atualizacao de `collected_at`.
 - [ ] Preparar camada SQL para dashboard online sob demanda no Supabase.
-- [ ] Definir stack e deploy do dashboard online.
+- [x] Definir stack e deploy do dashboard online: Streamlit Community Cloud + Supabase.
 
 ## Baixa - produto / insights
 
@@ -41,3 +41,9 @@
 - [ ] Implementar MVP online com overview, creators e crescimento semanal.
 - [ ] Exibir status de qualidade dos dados antes dos rankings.
 - [ ] Garantir que o app use Supabase sob demanda sem expor service role key.
+
+## Atualizacao 2026-05-14 - Direcao do dashboard
+
+- [x] Confirmar que o dashboard e uma ferramenta interna de estudo de mercado, nao um produto SaaS publico.
+- [x] Definir Streamlit como solucao atual por simplicidade, custo zero e velocidade analitica.
+- [ ] Criar app Streamlit inicial consumindo as views do Supabase.

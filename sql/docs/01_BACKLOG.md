@@ -18,9 +18,9 @@
 - [ ] Ranking de creators emergentes
 - [ ] Identificacao de outliers
 
-## Visualizacao / Produto
+## Visualizacao / Estudos de mercado
 
-- [ ] Dashboard online consumindo Supabase sob demanda
+- [ ] App Streamlit online consumindo Supabase sob demanda
 - [ ] Tela inicial com status de qualidade dos dados
 - [ ] Ranking de creators por views, engajamento e frequencia
 - [ ] Ranking semanal de crescimento de videos

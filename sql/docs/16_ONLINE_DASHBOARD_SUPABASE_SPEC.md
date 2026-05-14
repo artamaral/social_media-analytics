@@ -1,37 +1,42 @@
-# Online dashboard Supabase spec
+# Dashboard analitico interno com Supabase e Streamlit
 
 ## Objetivo
 
-Criar um sistema de visualizacao online para transformar o projeto em uma plataforma de analytics automotivo, consumindo dados do Supabase sob demanda e sem copiar metricas para uma base paralela no MVP.
+Criar um sistema de visualizacao online para estudos de mercado automotivo, consumindo dados do Supabase sob demanda e sem copiar metricas para uma base paralela no MVP.
+
+O dashboard, neste momento, nao tem objetivo de virar produto SaaS publico. Ele deve funcionar como uma bancada analitica interna para investigar creators, videos, crescimento, engajamento, nichos e qualidade da coleta.
 
 ## Principios
 
 - O dashboard le dados agregados do Supabase em tempo de consulta.
-- O frontend nunca usa service role key.
-- Toda consulta publica passa por views, RPCs ou API backend com escopo controlado.
+- O app nunca expoe `SUPABASE_SERVICE_ROLE_KEY`.
+- Toda consulta passa por views SQL, RPCs ou queries controladas.
 - Toda analise visual deve exibir estado de qualidade dos dados antes dos rankings.
-- O MVP prioriza crescimento, engajamento e confiabilidade operacional antes de graficos avancados.
+- O MVP prioriza estudo de mercado, exploracao analitica e confiabilidade dos dados antes de acabamento visual de produto.
+- A evolucao esperada e aumentar fontes de dados e profundidade analitica, nao numero de acessos.
 
 ## Arquitetura recomendada
 
 ```text
 Usuario
-  -> app web online
-  -> camada de API/server actions
+  -> Streamlit Community Cloud
+  -> queries Python controladas
   -> Supabase views/RPCs
   -> tabelas analiticas e historico
 ```
 
-### Frontend
+## App online
 
 Recomendacao para MVP:
 
-- Next.js hospedado na Vercel ou Cloud Run
-- Supabase JS client para consultas read-only
-- Server-side rendering para paginas principais
-- Revalidacao curta ou cache por rota para reduzir custo de leitura
+- Streamlit Community Cloud
+- Python
+- Pandas para analises exploratorias
+- Supabase Python client ou conexao Postgres read-only
+- secrets gerenciados no proprio Streamlit Cloud
+- cache de consultas com TTL curto para reduzir leituras repetidas
 
-### Banco
+## Banco
 
 Consumir preferencialmente:
 
@@ -39,7 +44,9 @@ Consumir preferencialmente:
 - `v_dashboard_post_growth_7d`
 - `v_dashboard_data_quality_status`
 
-Essas views deixam o dashboard simples e evitam repetir logica analitica no frontend.
+Essas views deixam o dashboard simples e evitam repetir logica analitica no app.
+
+Para estudos mais exploratorios, o Streamlit pode complementar as views com Pandas, desde que nao carregue historico bruto sem filtros de periodo.
 
 ## MVP de telas
 
@@ -100,17 +107,19 @@ O MVP deve consultar o Supabase apenas quando:
 Evitar:
 
 - polling frequente sem necessidade
-- carregar historico bruto no navegador
-- calcular crescimento no frontend linha a linha
+- carregar historico bruto sem filtros
+- calcular crescimento linha a linha no app quando uma view SQL puder resolver
+- consultas abertas sem limite de periodo
 
-## Segurança
+## Seguranca
 
 Regras obrigatorias:
 
-- usar anon key somente com RLS e permissoes de leitura controladas
-- nunca expor `SUPABASE_SERVICE_ROLE_KEY` no browser
-- criar grants especificos para views publicaveis
-- se dados forem sensiveis, rotear tudo por backend autenticado
+- nunca expor `SUPABASE_SERVICE_ROLE_KEY`
+- usar uma chave/usuario de leitura quando possivel
+- guardar credenciais apenas em Streamlit secrets
+- criar grants especificos para views consumidas pelo dashboard
+- aplicar filtros de periodo e limites nas consultas de historico
 
 ## Data quality antes de analytics
 
@@ -132,42 +141,56 @@ O dashboard deve exibir esses indicadores na tela inicial.
 - validar data quality
 - documentar contrato dos dados
 
-### Fase 2 - App online MVP
+### Fase 2 - App Streamlit MVP
 
-- criar app web
-- configurar Supabase read-only
+- criar app Streamlit
+- configurar secrets do Supabase
 - implementar overview, creators e crescimento semanal
-- publicar em ambiente online
+- publicar no Streamlit Community Cloud
 
-### Fase 3 - Produto analytics
+### Fase 3 - Estudos avancados
 
 - filtros por nicho e subnicho
 - curvas temporais por creator
 - deteccao de outliers
 - comparativo entre creators
 - exportacao CSV
+- analises por fonte de dados adicional
 
 ## Stack recomendada
 
 Escolha padrao:
 
+- Streamlit Community Cloud
+- Python
+- Pandas
+- Supabase Python client ou psycopg
+- Plotly ou Altair para graficos
+
+Motivo:
+
+- deploy online simples e gratuito
+- baixa complexidade de manutencao
+- adequado para poucos acessos e muita exploracao analitica
+- permite iterar rapidamente novas perguntas de mercado
+- combina bem com SQL, Pandas e estudos automotivos por creator/video
+
+## Alternativa futura
+
+Se o dashboard deixar de ser ferramenta interna e passar a ser produto para terceiros, reavaliar:
+
 - Next.js
 - TypeScript
 - Supabase JS
 - Tailwind CSS
-- Recharts ou Tremor para graficos
+- Recharts ou Tremor
 
-Motivo:
-
-- deploy online simples
-- boa integracao com Supabase
-- facilidade para evoluir de dashboard para produto
-- possibilidade de proteger consultas no server side
+Essa alternativa deve ser tratada como evolucao de produto, nao como prioridade atual.
 
 ## Criterio de pronto do MVP
 
 - app online acessivel por URL
-- nenhum segredo exposto no frontend
+- nenhum segredo exposto no codigo ou no navegador
 - overview mostra qualidade dos dados
 - ranking de creators funcionando
 - ranking de crescimento semanal funcionando
