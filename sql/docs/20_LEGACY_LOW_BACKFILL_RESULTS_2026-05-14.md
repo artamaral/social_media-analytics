@@ -139,3 +139,115 @@ Conclusao operacional:
 - o backfill offline da fase 1 esta funcionando
 - o foco agora e repetir a rotina ate fechar a maior parte do passivo legado
 - a fase 2 permanece pendente e so deve ser detalhada depois do encerramento da fase 1
+
+---
+
+## Atualizacao de acompanhamento - 2026-05-15
+
+Depois de aproximadamente `12h` com o scheduler executando a fase 1 do
+backfill offline, foram observados os resultados abaixo.
+
+### Resultado 4. Distribuicao atual de `history_level`
+
+| history_level | total_posts |
+| ------------- | ----------- |
+| full          | 1785        |
+| low           | 636         |
+| partial       | 7           |
+
+### Leitura
+
+- a maior parte da base continua em `full`
+- ainda existe um bloco relevante em `low`
+- o grupo `partial` ainda e muito pequeno
+- isso confirma que a fase 1 esta semeando historico, mas ainda nao esta
+  promovendo estado de forma ampla
+
+### Resultado 5. Distribuicao atual de `total_checagens`
+
+| total_checagens | total_posts |
+| --------------- | ----------- |
+| 1               | 165         |
+| 2               | 1033        |
+| 3               | 230         |
+| 4               | 16          |
+| 5               | 184         |
+| 6               | 84          |
+| 7               | 5           |
+| 8               | 12          |
+| 9               | 13          |
+| 10              | 3           |
+| 11              | 9           |
+| 12              | 6           |
+| 13              | 22          |
+| 14              | 61          |
+| 15              | 31          |
+| 16              | 1           |
+| 18              | 2           |
+| 19              | 5           |
+| 20              | 2           |
+| 22              | 3           |
+| 23              | 26          |
+| 24              | 8           |
+| 43              | 1           |
+| 82              | 1           |
+| 92              | 1           |
+| 97              | 1           |
+| 173             | 1           |
+| 181             | 1           |
+| 185             | 1           |
+| 203             | 1           |
+| 261             | 6           |
+| 265             | 2           |
+| 273             | 1           |
+| 277             | 1           |
+| 281             | 7           |
+| 442             | 1           |
+| 446             | 1           |
+| 455             | 1           |
+| 605             | 8           |
+
+### Leitura
+
+- existe agora um bloco muito forte em `2` checagens (`1033` posts)
+- isso e compativel com a hipotese de que a fase 1 conseguiu distribuir o seed
+  historico em massa
+- ainda permanecem `165` posts com apenas `1` checagem
+- a cauda longa de posts hiperchecados permanece, mas nao invalida o objetivo
+  do backfill legado
+
+### Resultado 6. Contagem atual de `legacy_low`
+
+- `legacy_low` atual: `447`
+
+### Leitura
+
+- houve nova reducao em relacao ao marco anterior de `474`
+- a fase 1 continua produzindo drenagem do passivo legado
+- a tarefa ainda nao pode ser considerada concluida
+
+---
+
+## Baseline para avaliacao no dia seguinte
+
+Para avaliar o ganho real do `legacy_low` na proxima verificacao, usar estes
+numeros como referencia:
+
+- `legacy_low`: `447`
+- `history_level = low`: `636`
+- `history_level = partial`: `7`
+- posts com `2` checagens: `1033`
+- posts com `1` checagem: `165`
+
+### Sinal positivo esperado na proxima leitura
+
+- nova reducao de `legacy_low`
+- reducao do bloco de `1` checagem
+- aumento adicional do bloco de `2` checagens ou superior
+- aumento gradual de `partial`
+
+### Sinal de alerta
+
+- `legacy_low` estagnar perto do valor atual
+- bloco de `1` checagem parar de cair
+- `partial` permanecer praticamente nulo mesmo apos novas rodadas

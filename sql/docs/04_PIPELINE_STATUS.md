@@ -69,6 +69,24 @@ O objetivo e manter uma leitura simples de:
 - reduzir `legacy_low` progressivamente para perto de zero
 - so depois detalhar e executar a fase 2 de promocao de estado
 
+### Atualizacao observada apos aproximadamente 12h
+
+- `legacy_low` atual: `447`
+- distribuicao atual de `history_level`:
+  - `full`: `1785`
+  - `low`: `636`
+  - `partial`: `7`
+- distribuicao de checagens:
+  - principal concentracao atual em `2` checagens: `1033` posts
+  - ainda existem `165` posts com `1` checagem
+
+### Interpretacao da atualizacao
+
+- a fase 1 segue drenando o passivo legado
+- o seed historico em massa parece estar funcionando
+- a promocao para `partial` ainda e residual, o que continua coerente com o
+  desenho atual
+
 ### Estimativa operacional atual
 
 - base inicial de `legacy_low`: `511`
@@ -104,9 +122,10 @@ O objetivo e manter uma leitura simples de:
 
 ## 6. Ultima verificacao manual
 
-- Data: `2026-05-14`
+- Data: `2026-05-15`
 - Resultado:
-  - backfill offline executado com sucesso
-  - historico atualizado
-  - passivo legado reduzido
-  - atividade segue em andamento ate completar as rodadas restantes
+  - backfill offline continua executando com sucesso
+  - historico segue sendo atualizado
+  - `legacy_low` caiu para `447`
+  - bloco principal da base observada esta em `2` checagens
+  - atividade segue em andamento antes da fase 2
