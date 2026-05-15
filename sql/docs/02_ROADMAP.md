@@ -35,6 +35,7 @@
 
 - [ ] Dashboard inicial.
 - [ ] Ranking de crescimento semanal.
+- [ ] Definir plano de dados externos automotivos com ingestao estruturada apenas de Fenabrave e SENATRAN/RENAVAM. Usar `22_EXTERNAL_MARKET_DATA_STUDY_PLAN.md` como referencia antes de criar tabelas definitivas no Supabase; demais fontes ficam apenas como contexto para textos e interpretacao.
 
 ## Atualizacao 2026-05-08 - Visualizacao online
 
