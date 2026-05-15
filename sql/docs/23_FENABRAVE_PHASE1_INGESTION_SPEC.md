@@ -41,6 +41,12 @@ Uso:
 - perguntas do ChatGPT via API
 - cruzamento futuro com mencoes em titulos de videos e creators automotivos
 
+Frequencia da rotina:
+
+- mensal
+- executar somente apos o 5o dia util do mes
+- objetivo da execucao mensal: obter e processar os dados do mes anterior
+
 Fora do escopo desta fase:
 
 - ranking por modelo
@@ -61,6 +67,88 @@ Fenabrave PDF ou fonte original
   -> v_market_registration_segment_summary
   -> Streamlit / ChatGPT
 ```
+
+## Matriz operacional da fase 1
+
+Esta matriz separa:
+
+1. atividades feitas apenas uma vez para iniciar o processo
+2. atividades rotineiras da execucao mensal
+3. explicacao de cada bloco da rotina
+
+Responsaveis usados nesta fase:
+
+- `Arthur`: decisao de negocio, aprovacao final e revisao de excecoes
+- `Codex/ChatGPT`: apoio tecnico, criacao de SQL, revisao de extracao e documentacao
+- `Script de ingestao`: processo Python ou job local/cloud que baixa, salva, extrai e carrega dados
+- `Supabase`: Postgres, Storage, views, constraints e validacoes SQL
+
+### Atividades feitas apenas uma vez
+
+Estas atividades preparam a estrutura. Depois de concluidas, nao fazem parte da rotina mensal.
+
+| Ordem | Atividade | Tipo | Responsavel principal | Saida esperada |
+|---:|---|---|---|---|
+| 1 | Cadastrar a fonte Fenabrave em `market_data_sources` | Manual | Codex/ChatGPT | Fonte cadastrada como `emplacamento` e `structured_ingestion = true` |
+| 2 | Criar bucket privado `market-source-files` no Supabase Storage | Manual | Arthur | Bucket privado disponivel para PDFs originais |
+| 3 | Criar tabelas da fase 1 no Supabase | Manual | Codex/ChatGPT | DDL versionado para fonte, arquivo, raw, tabela normalizada e validacao |
+| 4 | Criar view analitica inicial | Manual | Codex/ChatGPT | `v_market_registration_segment_summary` disponivel para Streamlit e ChatGPT |
+| 5 | Definir dicionario inicial de segmentos | Manual | Codex/ChatGPT | Mapeamento como `A) Autos -> autos` e `Total -> total` |
+| 6 | Definir regra de aprovacao do periodo | Manual | Arthur + Codex/ChatGPT | Criterio claro para marcar o arquivo como `validated` |
+
+### Rotina mensal
+
+Regra de agenda:
+
+- executar mensalmente apos o 5o dia util
+- sempre processar o mes anterior
+- exemplo: apos o 5o dia util de maio, processar abril
+
+```mermaid
+flowchart TD
+  A["Confirmar publicacao Fenabrave do mes anterior"]
+  B["Registrar ou atualizar source_url"]
+  C["Baixar PDF"]
+  D["Calcular sha256 e tamanho"]
+  E["Salvar PDF no bucket privado"]
+  F["Registrar metadados em market_source_files"]
+  G["Extrair tabela da pagina 1"]
+  H["Revisar extracao no piloto ou por excecao"]
+  I["Gravar raw extraido"]
+  J["Normalizar segmentos, numeros e percentuais"]
+  K["Gravar tabela normalizada"]
+  L["Rodar validacoes SQL"]
+  M{"Validacoes passaram?"}
+  N["Aprovar periodo como confiavel"]
+  O["Disponibilizar view para Streamlit e ChatGPT"]
+  P["Revisar erro e corrigir extracao ou mapeamento"]
+
+  A --> B --> C --> D --> E --> F --> G --> H --> I --> J --> K --> L --> M
+  M -->|sim| N --> O
+  M -->|nao| P --> G
+```
+
+### Blocos da rotina mensal
+
+| Bloco | Atividades incluidas | Tipo predominante | Responsavel principal | Saida esperada |
+|---|---|---|---|---|
+| Confirmacao da fonte | Confirmar publicacao Fenabrave do mes anterior e registrar `source_url` | Manual no piloto; semiautomatico depois | Arthur + Codex/ChatGPT | URL oficial confirmada antes do download |
+| Captura do arquivo | Baixar PDF, calcular `sha256`, calcular tamanho e salvar no bucket privado | Automatico | Script de ingestao + Supabase | PDF preservado em `market-source-files/fenabrave/{ano}/{mes}/` |
+| Registro de metadados | Inserir linha em `market_source_files` com URL, periodo, storage, hash, status e metodo | Automatico | Script de ingestao | Arquivo rastreavel no Postgres sem guardar o PDF na tabela |
+| Extracao | Extrair a primeira tabela da pagina 1 e revisar quando necessario | Semiautomatico | Script de ingestao + Codex/ChatGPT | Linhas extraidas e conferidas |
+| Raw | Gravar dados extraidos em `raw_fenabrave_segment_summary` | Automatico | Script de ingestao | Dados brutos preservados como texto |
+| Normalizacao | Converter nomes, numeros e percentuais para formato analitico | Automatico | Script de ingestao | Valores prontos como `integer` e `numeric` |
+| Carga analitica | Inserir dados em `market_vehicle_registrations_segment` | Automatico | Script de ingestao | Tabela normalizada preenchida |
+| Validacao | Rodar checks de soma, total e campos obrigatorios | Automatico | Supabase | Resultado objetivo de qualidade da carga |
+| Tratamento de erro | Corrigir extracao, ajustar mapeamento ou rejeitar arquivo | Manual | Arthur + Codex/ChatGPT | Falha resolvida antes de liberar dados |
+| Liberacao | Marcar periodo como confiavel e consumir a view | Manual para aprovacao; automatico para consumo | Arthur + Streamlit/ChatGPT API | Dados disponiveis em `v_market_registration_segment_summary` |
+
+Regra pratica:
+
+- decisoes, revisoes e aprovacoes ficam com humanos
+- download, storage, metadados, raw, normalizacao e validacao devem virar automacao
+- extracao de PDF comeca semiautomatica porque o layout pode mudar entre meses
+- a rotina mensal so deve liberar dados quando as validacoes passarem
 
 ## Entregavel 1 - Tabela de controle de fonte
 
