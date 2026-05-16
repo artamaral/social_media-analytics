@@ -370,6 +370,121 @@ file_size_bytes: tamanho_em_bytes
 captured_at: data_hora_da_captura
 ```
 
+### Como operacionalizar a extracao agora
+
+Situacao atual da fase:
+
+- bucket `market-source-files` criado
+- PDF de abril salvo no Supabase Storage
+- tabela `market_data_sources` ja possui DDL no projeto
+
+Antes de extrair dados do PDF, ainda precisam existir no Supabase:
+
+- `market_source_files`
+- `raw_fenabrave_segment_summary`
+- `market_vehicle_registrations_segment`
+- `market_ingestion_validation_results`, opcional mas recomendado
+- `v_market_registration_segment_summary`
+
+O processo operacional da extracao deve ser:
+
+```text
+1. Registrar o PDF salvo no Storage em market_source_files
+2. Baixar o PDF do Storage para uma pasta temporaria
+3. Extrair a primeira tabela da pagina 1
+4. Gravar a tabela extraida em raw_fenabrave_segment_summary
+5. Normalizar os segmentos e numeros
+6. Gravar a tabela normalizada em market_vehicle_registrations_segment
+7. Rodar validacoes SQL
+8. Se as validacoes passarem, marcar market_source_files.extraction_status = validated
+9. Consumir a view no Streamlit/ChatGPT
+```
+
+O script nao deve procurar o PDF na internet nesta etapa, porque o arquivo ja esta no Storage. Ele deve partir de:
+
+```text
+storage_bucket: market-source-files
+storage_path: fenabrave/2026/04/2026_04_02.pdf
+reference_period: 2026-04-01
+source_name: Fenabrave
+```
+
+Variaveis de ambiente esperadas pelo script:
+
+```text
+SUPABASE_URL
+SUPABASE_SERVICE_ROLE_KEY
+FENABRAVE_STORAGE_BUCKET=market-source-files
+FENABRAVE_STORAGE_PATH=fenabrave/2026/04/2026_04_02.pdf
+FENABRAVE_REFERENCE_PERIOD=2026-04-01
+FENABRAVE_SOURCE_URL=https://www.fenabrave.org.br/portal/files/2026_04_02.pdf
+```
+
+O `SUPABASE_SERVICE_ROLE_KEY` deve ficar apenas no ambiente seguro que roda o script. Ele nao deve ir para Streamlit publico, navegador ou repositorio.
+
+Local recomendado para o script no projeto:
+
+```text
+scripts/fenabrave_ingestion/
+```
+
+Arquivos esperados:
+
+```text
+scripts/fenabrave_ingestion/
+  ingest_fenabrave_phase1.py
+  requirements.txt
+  README.md
+```
+
+Bibliotecas provaveis:
+
+```text
+supabase
+pdfplumber
+pandas
+python-dotenv
+```
+
+Responsabilidade de cada arquivo:
+
+- `ingest_fenabrave_phase1.py`: baixa do Storage, extrai, normaliza, grava e valida
+- `requirements.txt`: dependencias do processo
+- `README.md`: como configurar `.env` e rodar a extracao
+
+Comando esperado em ambiente local:
+
+```powershell
+cd scripts\fenabrave_ingestion
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+python ingest_fenabrave_phase1.py
+```
+
+No piloto, a extracao deve gerar uma saida de revisao antes de gravar como definitivo. Exemplo:
+
+```text
+Segmento                         Abr/2026   Mar/2026   Acum/2026
+A) Autos                         187.313    206.361    659.311
+B) Com. Leves                    49.943     51.848     175.377
+A + B                            237.256    258.209    834.688
+```
+
+Se a tabela extraida nao bater visualmente com o PDF:
+
+- nao carregar normalizado
+- marcar `extraction_status = failed`
+- registrar observacao em `extraction_notes`
+- ajustar parser ou fazer extracao manual assistida apenas para o piloto
+
+Se a tabela extraida bater:
+
+- gravar raw
+- normalizar
+- rodar validacoes
+- liberar apenas se os checks passarem
+
 ### Tabela sugerida
 
 ```sql
