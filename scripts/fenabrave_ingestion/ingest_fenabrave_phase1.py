@@ -86,6 +86,13 @@ RAW_FIELD_NAMES = [
 
 
 def load_local_env():
+    """
+    Carrega variaveis do `.env` local sem sobrescrever o ambiente.
+
+    Resultado esperado:
+    - variaveis como SUPABASE_URL e FENABRAVE_STORAGE_PATH ficam disponiveis
+      para a execucao manual do script.
+    """
     env_path = Path(__file__).with_name(".env")
 
     if not env_path.exists():
@@ -106,6 +113,12 @@ def load_local_env():
 
 
 def normalize_supabase_url(url):
+    """
+    Remove sufixos de API da URL do Supabase.
+
+    Resultado esperado:
+    - `https://project.supabase.co/rest/v1` vira `https://project.supabase.co`.
+    """
     if not url:
         return url
 
@@ -118,6 +131,12 @@ def normalize_supabase_url(url):
 
 
 def require_env(name):
+    """
+    Busca uma variavel obrigatoria no ambiente.
+
+    Resultado esperado:
+    - retorna o valor configurado ou interrompe a execucao com erro claro.
+    """
     value = os.environ.get(name)
 
     if not value:
@@ -127,11 +146,23 @@ def require_env(name):
 
 
 def strip_accents(value):
+    """
+    Remove acentos de uma string para comparacao robusta.
+
+    Resultado esperado:
+    - `Ônibus` vira `Onibus`, facilitando matching de segmentos.
+    """
     decomposed = unicodedata.normalize("NFKD", value)
     return "".join(char for char in decomposed if not unicodedata.combining(char))
 
 
 def normalize_text(value):
+    """
+    Normaliza texto extraido do PDF.
+
+    Resultado esperado:
+    - quebras de linha e espacos duplicados viram uma string limpa.
+    """
     value = "" if value is None else str(value)
     value = value.replace("\n", " ")
     value = re.sub(r"\s+", " ", value).strip()
@@ -139,6 +170,12 @@ def normalize_text(value):
 
 
 def normalize_key(value):
+    """
+    Cria uma chave textual simplificada para matching.
+
+    Resultado esperado:
+    - nomes com acento, pontuacao e caixa diferente passam a comparar igual.
+    """
     value = strip_accents(normalize_text(value)).lower()
     value = re.sub(r"[^a-z0-9+]+", " ", value)
     value = re.sub(r"\s+", " ", value).strip()
@@ -146,6 +183,13 @@ def normalize_key(value):
 
 
 def segment_lookup():
+    """
+    Monta a lista de aliases conhecidos dos segmentos Fenabrave.
+
+    Resultado esperado:
+    - retorna pares `(alias_normalizado, segmento)` ordenados do alias maior
+      para o menor, evitando matches curtos antes dos especificos.
+    """
     lookup = []
 
     for segment in EXPECTED_SEGMENTS:
@@ -160,6 +204,13 @@ SEGMENT_LOOKUP = segment_lookup()
 
 
 def match_segment(row):
+    """
+    Identifica qual segmento Fenabrave uma linha extraida representa.
+
+    Resultado esperado:
+    - retorna o dicionario do segmento esperado ou `None` se a linha nao for
+      uma linha de dado relevante.
+    """
     row_text = normalize_text(" ".join(cell for cell in row if cell))
     row_key = normalize_key(row_text)
     first_cell_key = normalize_key(row[0] if row else "")
@@ -176,6 +227,12 @@ def match_segment(row):
 
 
 def extract_numbers_from_cells(cells):
+    """
+    Extrai numeros em formato brasileiro de celulas do PDF.
+
+    Resultado esperado:
+    - retorna strings como `187.313` e `-9,23` preservadas para raw.
+    """
     numbers = []
     pattern = re.compile(r"-?\d{1,3}(?:\.\d{3})*(?:,\d+)?|-?\d+,\d+|-?\d+")
 
@@ -191,6 +248,12 @@ def extract_numbers_from_cells(cells):
 
 
 def parse_int_br(value):
+    """
+    Converte inteiro em formato brasileiro para `int`.
+
+    Resultado esperado:
+    - `187.313` vira `187313`.
+    """
     if value is None:
         return None
 
@@ -208,6 +271,12 @@ def parse_int_br(value):
 
 
 def parse_decimal_br(value):
+    """
+    Converte percentual/decimal brasileiro para `float`.
+
+    Resultado esperado:
+    - `-9,23` vira `-9.23`.
+    """
     if value is None:
         return None
 
@@ -221,6 +290,12 @@ def parse_decimal_br(value):
 
 
 def build_headers(supabase_key):
+    """
+    Cria headers padrao para chamadas REST ao Supabase.
+
+    Resultado esperado:
+    - headers com `apikey`, `Authorization` e `Content-Type`.
+    """
     return {
         "apikey": supabase_key,
         "Authorization": f"Bearer {supabase_key}",
@@ -229,15 +304,35 @@ def build_headers(supabase_key):
 
 
 def rest_url(base_url, table):
+    """
+    Monta endpoint REST de uma tabela Supabase.
+
+    Resultado esperado:
+    - `base_url` + `/rest/v1/<table>`.
+    """
     return f"{base_url}/rest/v1/{table}"
 
 
 def storage_object_url(base_url, bucket, storage_path):
+    """
+    Monta endpoint de download de objeto privado no Supabase Storage.
+
+    Resultado esperado:
+    - URL correta mesmo quando `storage_path` possui barras ou caracteres
+      que precisam de encoding.
+    """
     safe_path = quote(storage_path, safe="/")
     return f"{base_url}/storage/v1/object/{bucket}/{safe_path}"
 
 
 def request_json(method, url, headers, **kwargs):
+    """
+    Executa uma chamada HTTP ao Supabase e retorna JSON.
+
+    Resultado esperado:
+    - retorna JSON decodificado quando a chamada e bem-sucedida.
+    - levanta erro com status/body quando a chamada falha.
+    """
     response = requests.request(method, url, headers=headers, timeout=60, **kwargs)
 
     if not response.ok:
@@ -253,6 +348,12 @@ def request_json(method, url, headers, **kwargs):
 
 
 def download_pdf_from_storage(base_url, supabase_key, bucket, storage_path):
+    """
+    Baixa o PDF ja salvo no bucket privado do Supabase Storage.
+
+    Resultado esperado:
+    - retorna os bytes do PDF que serao enviados ao pdfplumber.
+    """
     url = storage_object_url(base_url, bucket, storage_path)
     headers = {
         "apikey": supabase_key,
@@ -270,6 +371,12 @@ def download_pdf_from_storage(base_url, supabase_key, bucket, storage_path):
 
 
 def find_source_id(base_url, headers, source_name):
+    """
+    Busca o ID da fonte em `public.market_data_sources`.
+
+    Resultado esperado:
+    - retorna o `id` da Fenabrave ou falha se a fonte ainda nao foi cadastrada.
+    """
     params = {
         "select": "id,source_name",
         "source_name": f"eq.{source_name}",
@@ -296,6 +403,13 @@ def get_or_create_source_file(
     file_bytes,
     write,
 ):
+    """
+    Localiza ou cria o registro do PDF em `market_source_files`.
+
+    Resultado esperado:
+    - em dry-run, retorna o ID se o registro ja existe ou `None`.
+    - em modo write, cria o registro se ainda nao existir e retorna seu ID.
+    """
     params = {
         "select": "id,extraction_status,storage_path",
         "source_id": f"eq.{source_id}",
@@ -339,6 +453,13 @@ def get_or_create_source_file(
 
 
 def extract_first_page_table(pdf_bytes):
+    """
+    Extrai a primeira tabela util da pagina 1 do PDF Fenabrave.
+
+    Resultado esperado:
+    - retorna linhas raw com segmento identificado e oito valores brutos:
+      mes atual, mes anterior, acumulados e variacoes.
+    """
     with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
         if not pdf.pages:
             raise RuntimeError("PDF sem paginas.")
@@ -408,6 +529,12 @@ def extract_first_page_table(pdf_bytes):
 
 
 def normalize_rows(raw_rows, source_file_id, reference_period):
+    """
+    Converte linhas raw em registros analiticos normalizados.
+
+    Resultado esperado:
+    - retorna payloads compativeis com `market_vehicle_registrations_segment`.
+    """
     normalized = []
 
     for row in raw_rows:
@@ -440,6 +567,12 @@ def normalize_rows(raw_rows, source_file_id, reference_period):
 
 
 def validate_normalized_rows(normalized_rows):
+    """
+    Valida somas estruturais da primeira tabela Fenabrave.
+
+    Resultado esperado:
+    - confirma `Autos + Com. Leves`, `Caminhoes + Onibus` e o total geral.
+    """
     by_code = {row["segment_code"]: row for row in normalized_rows}
 
     def value(code):
@@ -493,6 +626,13 @@ def validate_normalized_rows(normalized_rows):
 
 
 def print_preview(raw_rows, normalized_rows, checks, pdf_bytes):
+    """
+    Imprime uma pre-visualizacao da extracao no terminal.
+
+    Resultado esperado:
+    - operador consegue revisar segmentos, valores normalizados e checks antes
+      de gravar dados no Supabase.
+    """
     print("")
     print("PDF")
     print(f"- bytes: {len(pdf_bytes)}")
@@ -532,6 +672,13 @@ def print_preview(raw_rows, normalized_rows, checks, pdf_bytes):
 
 
 def raw_payloads(raw_rows, source_file_id):
+    """
+    Prepara payloads para `raw_fenabrave_segment_summary`.
+
+    Resultado esperado:
+    - retorna linhas raw com valores preservados como texto e vinculadas ao
+      `source_file_id`.
+    """
     payloads = []
 
     for row in raw_rows:
@@ -560,6 +707,12 @@ def raw_payloads(raw_rows, source_file_id):
 
 
 def delete_existing_rows(base_url, headers, source_file_id):
+    """
+    Remove cargas anteriores do mesmo arquivo de origem.
+
+    Resultado esperado:
+    - usado por `--replace` para reprocessar um PDF sem duplicar linhas.
+    """
     for table in [
         "raw_fenabrave_segment_summary",
         "market_vehicle_registrations_segment",
@@ -577,6 +730,13 @@ def delete_existing_rows(base_url, headers, source_file_id):
 
 
 def insert_rows(base_url, headers, table, rows):
+    """
+    Insere uma lista de registros em uma tabela Supabase.
+
+    Resultado esperado:
+    - grava payloads raw, normalizados ou de validacao; se a tabela nao existir
+      ou houver conflito, retorna erro claro.
+    """
     if not rows:
         return
 
@@ -597,6 +757,13 @@ def insert_rows(base_url, headers, table, rows):
 
 
 def update_source_file_status(base_url, headers, source_file_id, status, notes):
+    """
+    Atualiza status operacional do arquivo processado.
+
+    Resultado esperado:
+    - marca o PDF como `validated` quando checks passam ou `failed` quando
+      alguma validacao falha.
+    """
     write_headers = dict(headers)
     write_headers["Prefer"] = "return=minimal"
     payload = {
@@ -619,6 +786,12 @@ def update_source_file_status(base_url, headers, source_file_id, status, notes):
 
 
 def validation_payloads(checks, source_file_id):
+    """
+    Converte checks locais em registros de validacao.
+
+    Resultado esperado:
+    - gera payloads para `market_ingestion_validation_results`.
+    """
     payloads = []
 
     for check in checks:
@@ -648,6 +821,13 @@ def write_results(
     checks,
     replace,
 ):
+    """
+    Persiste raw, normalizado, validacoes e status no Supabase.
+
+    Resultado esperado:
+    - em `--write`, grava os resultados da extracao; com `--replace`, limpa
+      cargas antigas do mesmo arquivo antes de inserir novamente.
+    """
     if replace:
         delete_existing_rows(base_url, headers, source_file_id)
 
@@ -697,6 +877,12 @@ def write_results(
 
 
 def save_temp_pdf(pdf_bytes):
+    """
+    Salva copia temporaria do PDF baixado para depuracao local.
+
+    Resultado esperado:
+    - cria `tmp/fenabrave_phase1_current.pdf` quando `--save-pdf` e usado.
+    """
     tmp_dir = Path(__file__).parent / "tmp"
     tmp_dir.mkdir(exist_ok=True)
     path = tmp_dir / "fenabrave_phase1_current.pdf"
@@ -705,6 +891,13 @@ def save_temp_pdf(pdf_bytes):
 
 
 def parse_args():
+    """
+    Define argumentos de linha de comando do script.
+
+    Resultado esperado:
+    - permite rodar em `--dry-run`, `--write`, `--replace` e sobrescrever
+      bucket/path/periodo sem editar `.env`.
+    """
     parser = argparse.ArgumentParser(
         description="Extrai a primeira tabela da pagina 1 de PDF Fenabrave no Supabase Storage."
     )
@@ -741,6 +934,13 @@ def parse_args():
 
 
 def main():
+    """
+    Orquestra a extracao Fenabrave fase 1.
+
+    Resultado esperado:
+    - baixa o PDF do Storage, extrai/normaliza/valida e, se solicitado com
+      `--write`, grava os dados no Supabase.
+    """
     load_local_env()
     args = parse_args()
 
