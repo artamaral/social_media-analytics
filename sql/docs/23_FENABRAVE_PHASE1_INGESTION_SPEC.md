@@ -273,6 +273,103 @@ Uso local opcional:
 - nao versionar PDFs grandes no Git sem necessidade
 - se houver arquivo pequeno usado como fixture de teste, guardar apenas uma amostra controlada
 
+### Como criar o bucket no Supabase
+
+Para esta fase, criar o bucket manualmente pelo Supabase Dashboard. Isso evita misturar setup de infraestrutura com a rotina mensal de ingestao.
+
+Passo a passo:
+
+1. Acessar o projeto no Supabase.
+2. Abrir `Storage`.
+3. Clicar em `New bucket` ou `Create bucket`.
+4. Informar o nome:
+
+```text
+market-source-files
+```
+
+5. Manter o bucket como privado.
+6. Configurar restricao de tipo de arquivo para PDF, se a interface permitir:
+
+```text
+application/pdf
+```
+
+7. Configurar limite de tamanho suficiente para relatorios mensais da Fenabrave, por exemplo:
+
+```text
+20MB
+```
+
+8. Criar o bucket.
+9. Nao criar URL publica para os PDFs.
+10. Usar o caminho padrao para uploads:
+
+```text
+fenabrave/{ano}/{mes}/{nome_original_do_arquivo}
+```
+
+Exemplo:
+
+```text
+fenabrave/2026/04/2026_04_02.pdf
+```
+
+Configuracao esperada:
+
+```text
+bucket_id: market-source-files
+public: false
+allowed_mime_type: application/pdf
+file_size_limit: 20MB
+```
+
+Observacao importante:
+
+- o bucket privado guarda o arquivo original
+- o Postgres guarda apenas metadados, como `storage_bucket`, `storage_path`, `source_url`, `sha256`, `file_size_bytes` e `captured_at`
+- o PDF nao deve ser salvo dentro de uma coluna do Postgres
+
+### Como o script deve usar o bucket
+
+O script de ingestao deve rodar em ambiente seguro, como maquina local controlada, job interno ou backend.
+
+Ele pode usar uma chave com permissao administrativa para:
+
+- baixar o PDF da Fenabrave
+- enviar o PDF ao Supabase Storage
+- inserir metadados em `market_source_files`
+- carregar raw e tabelas normalizadas
+
+Regra de seguranca:
+
+- nunca expor `SUPABASE_SERVICE_ROLE_KEY` no Streamlit publico, navegador ou frontend
+- o Streamlit e o ChatGPT devem consumir views e metadados ja validados
+- se for necessario abrir o PDF original no app, gerar uma signed URL curta a partir de backend seguro
+
+Exemplo conceitual de upload pelo script:
+
+```python
+storage_path = "fenabrave/2026/04/2026_04_02.pdf"
+
+supabase.storage.from_("market-source-files").upload(
+    storage_path,
+    pdf_bytes,
+    file_options={"content-type": "application/pdf", "upsert": "false"}
+)
+```
+
+Depois do upload, gravar no Postgres:
+
+```text
+storage_bucket: market-source-files
+storage_path: fenabrave/2026/04/2026_04_02.pdf
+source_url: https://www.fenabrave.org.br/portal/files/2026_04_02.pdf
+sha256: hash_calculado_do_pdf
+file_size_bytes: tamanho_em_bytes
+captured_at: data_hora_da_captura
+```
+
 ### Tabela sugerida
 
 ```sql
