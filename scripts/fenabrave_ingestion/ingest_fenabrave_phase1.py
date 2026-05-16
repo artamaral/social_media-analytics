@@ -4,6 +4,7 @@ import io
 import json
 import os
 import re
+import subprocess
 import sys
 import tempfile
 import unicodedata
@@ -897,6 +898,136 @@ def save_temp_pdf(pdf_bytes):
     return path
 
 
+def open_pdf_for_review(pdf_path):
+    """
+    Abre o PDF temporario para revisao visual, quando o ambiente permite.
+
+    Resultado esperado:
+    - no Windows, abre o PDF no visualizador padrao.
+    - em outros ambientes, tenta usar `open` ou `xdg-open`.
+    - retorna um handle de processo quando possivel, para fechamento best effort.
+    """
+    try:
+        if os.name == "nt":
+            os.startfile(str(pdf_path))
+            return None
+
+        opener = "open" if sys.platform == "darwin" else "xdg-open"
+        return subprocess.Popen(
+            [opener, str(pdf_path)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except Exception as error:
+        print(f"Aviso: nao foi possivel abrir o PDF automaticamente: {error}")
+        return None
+
+
+def close_pdf_review(process):
+    """
+    Fecha o visualizador do PDF quando existe um processo controlado.
+
+    Resultado esperado:
+    - encerra o processo aberto por `xdg-open/open` quando houver handle.
+    - no Windows com `os.startfile`, nao ha PID confiavel do visualizador
+      padrao; nesse caso o fechamento e manual/best effort.
+    """
+    if process is None:
+        return
+
+    try:
+        process.terminate()
+    except Exception:
+        pass
+
+
+def ask_operator_approval_gui():
+    """
+    Exibe caixa de dialogo OK/NOK para validacao do operador.
+
+    Resultado esperado:
+    - retorna True se o operador clicar OK.
+    - retorna False se clicar NOK/cancelar.
+    - se GUI nao estiver disponivel, levanta excecao para fallback terminal.
+    """
+    import tkinter as tk
+    from tkinter import messagebox
+
+    root = tk.Tk()
+    root.withdraw()
+    root.attributes("-topmost", True)
+
+    result = messagebox.askokcancel(
+        title="Validacao Fenabrave",
+        message=(
+            "Confira o PDF aberto e o preview no terminal.\n\n"
+            "Os dados extraidos estao corretos?\n\n"
+            "OK = salvar/liberar continuidade\n"
+            "NOK = nao salvar e retornar erro"
+        ),
+        parent=root,
+    )
+    root.destroy()
+    return bool(result)
+
+
+def ask_operator_approval_terminal():
+    """
+    Solicita validacao pelo terminal quando a GUI nao estiver disponivel.
+
+    Resultado esperado:
+    - aceita apenas `ok` ou `nok`.
+    - retorna True para `ok` e False para `nok`.
+    """
+    while True:
+        answer = input("Os dados extraidos estao corretos? Digite ok ou nok: ")
+        normalized = answer.strip().lower()
+
+        if normalized == "ok":
+            return True
+
+        if normalized == "nok":
+            return False
+
+        print("Resposta invalida. Use apenas ok ou nok.")
+
+
+def operator_review(pdf_bytes, open_pdf):
+    """
+    Executa a revisao humana antes de gravar dados.
+
+    Resultado esperado:
+    - salva uma copia temporaria do PDF.
+    - abre o PDF se `open_pdf=True`.
+    - pergunta OK/NOK ao operador.
+    - remove a copia temporaria quando possivel.
+    """
+    pdf_path = save_temp_pdf(pdf_bytes)
+    process = None
+
+    try:
+        if open_pdf:
+            process = open_pdf_for_review(pdf_path)
+
+        try:
+            approved = ask_operator_approval_gui()
+        except Exception as error:
+            print(f"Aviso: caixa grafica indisponivel ({error}). Usando terminal.")
+            approved = ask_operator_approval_terminal()
+
+        return approved
+    finally:
+        close_pdf_review(process)
+
+        try:
+            pdf_path.unlink()
+        except Exception:
+            print(
+                f"Aviso: nao foi possivel remover PDF temporario: {pdf_path}. "
+                "Feche o visualizador e remova manualmente se necessario."
+            )
+
+
 def parse_args():
     """
     Define argumentos de linha de comando do script.
@@ -946,6 +1077,16 @@ def parse_args():
         "--save-pdf",
         action="store_true",
         help="Salva uma copia temporaria em scripts/fenabrave_ingestion/tmp.",
+    )
+    parser.add_argument(
+        "--no-review",
+        action="store_true",
+        help="Nao abre dialogo OK/NOK antes de gravar. Use apenas em automacao confiavel.",
+    )
+    parser.add_argument(
+        "--no-open-pdf",
+        action="store_true",
+        help="Mantem a caixa OK/NOK, mas nao tenta abrir o PDF automaticamente.",
     )
     return parser.parse_args()
 
@@ -1024,6 +1165,21 @@ def main():
         raise RuntimeError(
             "source_file_id ausente. Informe --source-file-id ou permita criar o registro com --write."
         )
+
+    if not args.no_review:
+        approved = operator_review(pdf_bytes, open_pdf=not args.no_open_pdf)
+
+        if not approved:
+            update_source_file_status(
+                base_url,
+                headers,
+                source_file_id,
+                "failed",
+                "Operador marcou dados como NOK na revisao interativa.",
+            )
+            raise RuntimeError(
+                "Dados marcados como NOK pelo operador. Nada foi salvo nas tabelas raw/normalizada."
+            )
 
     print("Gravando resultados no Supabase...")
     write_results(

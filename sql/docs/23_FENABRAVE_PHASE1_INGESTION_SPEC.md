@@ -542,6 +542,15 @@ Se a tabela extraida bater:
 - rodar validacoes
 - liberar apenas se os checks passarem
 
+Antes de gravar em modo `--write`, o script deve abrir o PDF temporario quando o ambiente permitir e exibir uma confirmacao do operador:
+
+```text
+OK  -> grava os dados e conclui o processo
+NOK -> nao grava raw/normalizado, fecha o PDF quando possivel e retorna erro no terminal
+```
+
+Se a interface grafica nao estiver disponivel, a confirmacao deve acontecer pelo terminal com `ok` ou `nok`.
+
 ### Tabela sugerida
 
 ```sql

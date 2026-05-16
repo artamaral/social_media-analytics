@@ -43,7 +43,8 @@ Etapas:
 4. Rodar o script em `--dry-run`.
 5. Revisar a extracao impressa no terminal.
 6. Quando as tabelas raw e normalizada estiverem disponiveis, rodar em `--write`.
-7. Conferir validacoes.
+7. Na caixa de dialogo, conferir o PDF aberto e marcar `OK` ou `NOK`.
+8. Conferir validacoes.
 
 Comando PowerShell - setup inicial:
 
@@ -96,6 +97,7 @@ Resultado esperado:
 - PDF preservado no Storage
 - arquivo registrado em `market_source_files`
 - tabela extraida revisada
+- operador confirma `OK` antes da gravacao definitiva
 - checks locais aprovados
 - dados prontos para uso analitico apos carga definitiva
 

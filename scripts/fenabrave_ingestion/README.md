@@ -67,6 +67,15 @@ python ingest_fenabrave_phase1.py --write `
   --source-url "https://www.fenabrave.org.br/portal/files/2026_04_02.pdf"
 ```
 
+Por padrao, `--write` abre o PDF temporario e mostra uma caixa de dialogo:
+
+```text
+OK  = grava os dados e conclui o processo
+NOK = nao grava raw/normalizado e retorna erro no terminal
+```
+
+Se a abertura automatica do PDF nao for permitida, o script continua com a caixa de dialogo. Se a interface grafica nao estiver disponivel, a confirmacao cai para o terminal com `ok` ou `nok`.
+
 Para reprocessar o mesmo arquivo e substituir dados ja carregados:
 
 ```powershell
@@ -85,3 +94,25 @@ python ingest_fenabrave_phase1.py --write --replace `
 ```
 
 Esses parametros mudam a cada mes. O `.env` nao deve ser editado para trocar o arquivo processado.
+
+## Opcoes de revisao
+
+Rodar gravacao sem tentar abrir o PDF, mas ainda perguntando OK/NOK:
+
+```powershell
+python ingest_fenabrave_phase1.py --write --no-open-pdf `
+  --path "fenabrave/2026/04/2026_04_02.pdf" `
+  --reference-period "2026-04-01" `
+  --source-url "https://www.fenabrave.org.br/portal/files/2026_04_02.pdf"
+```
+
+Pular a revisao interativa:
+
+```powershell
+python ingest_fenabrave_phase1.py --write --no-review `
+  --path "fenabrave/2026/04/2026_04_02.pdf" `
+  --reference-period "2026-04-01" `
+  --source-url "https://www.fenabrave.org.br/portal/files/2026_04_02.pdf"
+```
+
+Usar `--no-review` apenas em automacao confiavel ou quando a revisao ja tiver sido feita em uma execucao anterior.
