@@ -85,7 +85,7 @@ Responsaveis usados nesta fase:
 
 - `Arthur`: decisao de negocio, aprovacao final e revisao de excecoes
 - `Codex/ChatGPT`: apoio tecnico, criacao de SQL, revisao de extracao e documentacao
-- `Script de ingestao`: processo Python ou job local/cloud que baixa, salva, extrai e carrega dados
+- `Script de extracao`: processo Python local que le o PDF ja salvo no Storage, extrai, normaliza e valida dados
 - `Supabase`: Postgres, Storage, views, constraints e validacoes SQL
 
 ### Atividades feitas apenas uma vez
@@ -113,10 +113,10 @@ Regra de agenda:
 flowchart TD
   A["Confirmar publicacao Fenabrave do mes anterior"]
   B["Registrar ou atualizar source_url"]
-  C["Baixar PDF"]
-  D["Calcular sha256 e tamanho"]
-  E["Salvar PDF no bucket privado"]
-  F["Registrar metadados em market_source_files"]
+  C["Salvar PDF manualmente no bucket privado"]
+  D["Registrar metadados manualmente em market_source_files"]
+  E["Baixar PDF do Storage para processamento"]
+  F["Calcular ou conferir sha256 e tamanho"]
   G["Extrair tabela da pagina 1"]
   H["Revisar extracao no piloto ou por excecao"]
   I["Gravar raw extraido"]
@@ -137,13 +137,13 @@ flowchart TD
 
 | Bloco | Atividades incluidas | Tipo predominante | Responsavel principal | Saida esperada |
 |---|---|---|---|---|
-| Confirmacao da fonte | Confirmar publicacao Fenabrave do mes anterior e registrar `source_url` | Manual no piloto; semiautomatico depois | Arthur + Codex/ChatGPT | URL oficial confirmada antes do download |
-| Captura do arquivo | Baixar PDF, calcular `sha256`, calcular tamanho e salvar no bucket privado | Automatico | Script de ingestao + Supabase | PDF preservado em `market-source-files/fenabrave/{ano}/{mes}/` |
-| Registro de metadados | Inserir linha em `market_source_files` com URL, periodo, storage, hash, status e metodo | Automatico | Script de ingestao | Arquivo rastreavel no Postgres sem guardar o PDF na tabela |
-| Extracao | Extrair a primeira tabela da pagina 1 e revisar quando necessario | Semiautomatico | Script de ingestao + Codex/ChatGPT | Linhas extraidas e conferidas |
-| Raw | Gravar dados extraidos em `raw_fenabrave_segment_summary` | Automatico | Script de ingestao | Dados brutos preservados como texto |
-| Normalizacao | Converter nomes, numeros e percentuais para formato analitico | Automatico | Script de ingestao | Valores prontos como `integer` e `numeric` |
-| Carga analitica | Inserir dados em `market_vehicle_registrations_segment` | Automatico | Script de ingestao | Tabela normalizada preenchida |
+| Confirmacao da fonte | Confirmar publicacao Fenabrave do mes anterior e definir `source_url` | Manual | Arthur + Codex/ChatGPT | URL oficial confirmada |
+| Upload do arquivo | Salvar manualmente o PDF no bucket privado `market-source-files` | Manual | Arthur | PDF preservado em `market-source-files/fenabrave/{ano}/{mes}/` |
+| Registro de metadados | Inserir manualmente linha em `market_source_files` com URL, periodo, storage, hash, status e metodo | Manual | Arthur + Codex/ChatGPT | Arquivo rastreavel no Postgres sem guardar o PDF na tabela |
+| Extracao | Ler o PDF ja salvo no Storage, extrair a primeira tabela da pagina 1 e revisar quando necessario | Semiautomatico | Script de extracao + Codex/ChatGPT | Linhas extraidas e conferidas |
+| Raw | Gravar dados extraidos em `raw_fenabrave_segment_summary` | Automatico | Script de extracao | Dados brutos preservados como texto |
+| Normalizacao | Converter nomes, numeros e percentuais para formato analitico | Automatico | Script de extracao | Valores prontos como `integer` e `numeric` |
+| Carga analitica | Inserir dados em `market_vehicle_registrations_segment` | Automatico | Script de extracao | Tabela normalizada preenchida |
 | Validacao | Rodar checks de soma, total e campos obrigatorios | Automatico | Supabase | Resultado objetivo de qualidade da carga |
 | Tratamento de erro | Corrigir extracao, ajustar mapeamento ou rejeitar arquivo | Manual | Arthur + Codex/ChatGPT | Falha resolvida antes de liberar dados |
 | Liberacao | Marcar periodo como confiavel e consumir a view | Manual para aprovacao; automatico para consumo | Arthur + Streamlit/ChatGPT API | Dados disponiveis em `v_market_registration_segment_summary` |
@@ -151,7 +151,8 @@ flowchart TD
 Regra pratica:
 
 - decisoes, revisoes e aprovacoes ficam com humanos
-- download, storage, metadados, raw, normalizacao e validacao devem virar automacao
+- upload do PDF e registro inicial de metadados serao manuais nesta fase
+- raw, normalizacao e validacao podem ser apoiados por script de extracao
 - extracao de PDF comeca semiautomatica porque o layout pode mudar entre meses
 - a rotina mensal so deve liberar dados quando as validacoes passarem
 
@@ -278,6 +279,47 @@ Uso local opcional:
 - nao versionar PDFs grandes no Git sem necessidade
 - se houver arquivo pequeno usado como fixture de teste, guardar apenas uma amostra controlada
 
+### Ingestao manual do arquivo nesta fase
+
+Nesta fase, a ingestao do arquivo sera manual.
+
+Motivo:
+
+- o volume e pequeno: um PDF por mes
+- a execucao acontece somente apos o 5o dia util
+- o custo de automatizar download e upload agora e maior que o ganho operacional
+- a etapa critica neste momento e provar extracao, normalizacao e validacao
+
+Atividades manuais mensais:
+
+1. Acessar a pagina oficial da Fenabrave.
+2. Baixar o PDF do mes anterior.
+3. Fazer upload do PDF no bucket privado `market-source-files`.
+4. Usar o caminho padrao:
+
+```text
+fenabrave/{ano}/{mes}/{nome_original_do_arquivo}
+```
+
+5. Inserir ou atualizar o registro correspondente em `market_source_files`.
+
+Exemplo:
+
+```text
+storage_bucket: market-source-files
+storage_path: fenabrave/2026/04/2026_04_02.pdf
+source_url: https://www.fenabrave.org.br/portal/files/2026_04_02.pdf
+reference_period: 2026-04-01
+extraction_status: stored
+```
+
+Automacao futura so deve ser reavaliada se:
+
+- o volume de arquivos crescer
+- houver necessidade de backfill historico grande
+- o processo mensal manual comecar a gerar erro recorrente
+- houver uma fonte estruturada mais estavel que PDF
+
 ### Como criar o bucket no Supabase
 
 Para esta fase, criar o bucket manualmente pelo Supabase Dashboard. Isso evita misturar setup de infraestrutura com a rotina mensal de ingestao.
@@ -337,14 +379,15 @@ Observacao importante:
 
 ### Como o script deve usar o bucket
 
-O script de ingestao deve rodar em ambiente seguro, como maquina local controlada, job interno ou backend.
+Nesta fase, o script nao deve fazer upload mensal de arquivos para o bucket. A ingestao do arquivo sera manual porque o volume e pequeno: um PDF mensal.
 
-Ele pode usar uma chave com permissao administrativa para:
+O script deve atuar depois que o PDF ja estiver no Storage e o registro em `market_source_files` ja existir.
 
-- baixar o PDF da Fenabrave
-- enviar o PDF ao Supabase Storage
-- inserir metadados em `market_source_files`
+Ele deve usar uma chave segura apenas para:
+
+- ler o PDF ja salvo no Supabase Storage
 - carregar raw e tabelas normalizadas
+- atualizar status de extracao e validacao
 
 Regra de seguranca:
 
@@ -352,19 +395,17 @@ Regra de seguranca:
 - o Streamlit e o ChatGPT devem consumir views e metadados ja validados
 - se for necessario abrir o PDF original no app, gerar uma signed URL curta a partir de backend seguro
 
-Exemplo conceitual de upload pelo script:
+Exemplo conceitual de leitura pelo script:
 
 ```python
 storage_path = "fenabrave/2026/04/2026_04_02.pdf"
 
-supabase.storage.from_("market-source-files").upload(
-    storage_path,
-    pdf_bytes,
-    file_options={"content-type": "application/pdf", "upsert": "false"}
+pdf_bytes = supabase.storage.from_("market-source-files").download(
+    storage_path
 )
 ```
 
-Depois do upload, gravar no Postgres:
+O registro correspondente deve existir no Postgres antes da extracao:
 
 ```text
 storage_bucket: market-source-files
@@ -380,12 +421,12 @@ captured_at: data_hora_da_captura
 Situacao atual da fase:
 
 - bucket `market-source-files` criado
-- PDF de abril salvo no Supabase Storage
+- PDF de abril salvo manualmente no Supabase Storage
 - tabela `market_data_sources` ja possui DDL no projeto
+- tabela `market_source_files` ja possui DDL no projeto
 
 Antes de extrair dados do PDF, ainda precisam existir no Supabase:
 
-- `market_source_files`
 - `raw_fenabrave_segment_summary`
 - `market_vehicle_registrations_segment`
 - `market_ingestion_validation_results`, opcional mas recomendado
@@ -394,15 +435,16 @@ Antes de extrair dados do PDF, ainda precisam existir no Supabase:
 O processo operacional da extracao deve ser:
 
 ```text
-1. Registrar o PDF salvo no Storage em market_source_files
-2. Baixar o PDF do Storage para uma pasta temporaria
-3. Extrair a primeira tabela da pagina 1
-4. Gravar a tabela extraida em raw_fenabrave_segment_summary
-5. Normalizar os segmentos e numeros
-6. Gravar a tabela normalizada em market_vehicle_registrations_segment
-7. Rodar validacoes SQL
-8. Se as validacoes passarem, marcar market_source_files.extraction_status = validated
-9. Consumir a view no Streamlit/ChatGPT
+1. Confirmar que o PDF esta no Storage
+2. Registrar manualmente o PDF em market_source_files, se ainda nao estiver registrado
+3. Baixar o PDF do Storage para uma pasta temporaria
+4. Extrair a primeira tabela da pagina 1
+5. Gravar a tabela extraida em raw_fenabrave_segment_summary
+6. Normalizar os segmentos e numeros
+7. Gravar a tabela normalizada em market_vehicle_registrations_segment
+8. Rodar validacoes SQL
+9. Se as validacoes passarem, marcar market_source_files.extraction_status = validated
+10. Consumir a view no Streamlit/ChatGPT
 ```
 
 O script nao deve procurar o PDF na internet nesta etapa, porque o arquivo ja esta no Storage. Ele deve partir de:
@@ -453,7 +495,7 @@ python-dotenv
 
 Responsabilidade de cada arquivo:
 
-- `ingest_fenabrave_phase1.py`: baixa do Storage, extrai, normaliza, grava e valida
+- `ingest_fenabrave_phase1.py`: le o PDF do Storage, extrai, normaliza, grava e valida
 - `requirements.txt`: dependencias do processo
 - `README.md`: como configurar `.env` e rodar a extracao
 
