@@ -16,6 +16,11 @@ Esta fase deve provar que o projeto consegue:
 - validar os totais contra a publicacao
 - entregar uma view simples para Streamlit e ChatGPT
 
+## Status operacional
+
+- 2026-05-15: Entregavel 1 criado no Supabase. A tabela `public.market_data_sources` esta registrada no repositorio em `sql/ddl/tables/010_create_market_data_sources.sql`.
+- 2026-05-15: Entregavel 2 criado no Supabase. A tabela `public.market_source_files` esta registrada no repositorio em `sql/ddl/tables/011_create_market_source_files.sql`.
+
 ## Escopo da fase 1
 
 Fonte:
