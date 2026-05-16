@@ -11,7 +11,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import quote
 
-import pdfplumber
 import requests
 
 
@@ -90,8 +89,8 @@ def load_local_env():
     Carrega variaveis do `.env` local sem sobrescrever o ambiente.
 
     Resultado esperado:
-    - variaveis como SUPABASE_URL e FENABRAVE_STORAGE_PATH ficam disponiveis
-      para a execucao manual do script.
+    - credenciais e configuracoes fixas, como SUPABASE_URL e bucket padrao,
+      ficam disponiveis para a execucao manual do script.
     """
     env_path = Path(__file__).with_name(".env")
 
@@ -460,6 +459,14 @@ def extract_first_page_table(pdf_bytes):
     - retorna linhas raw com segmento identificado e oito valores brutos:
       mes atual, mes anterior, acumulados e variacoes.
     """
+    try:
+        import pdfplumber
+    except ImportError as error:
+        raise RuntimeError(
+            "Dependencia ausente: pdfplumber. Execute `pip install -r requirements.txt` "
+            "em scripts/fenabrave_ingestion."
+        ) from error
+
     with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
         if not pdf.pages:
             raise RuntimeError("PDF sem paginas.")
@@ -895,8 +902,9 @@ def parse_args():
     Define argumentos de linha de comando do script.
 
     Resultado esperado:
-    - permite rodar em `--dry-run`, `--write`, `--replace` e sobrescrever
-      bucket/path/periodo sem editar `.env`.
+    - permite rodar em `--dry-run`, `--write` e `--replace`.
+    - path, periodo e URL do PDF sao informados no comando mensal, sem editar
+      `.env`.
     """
     parser = argparse.ArgumentParser(
         description="Extrai a primeira tabela da pagina 1 de PDF Fenabrave no Supabase Storage."
@@ -909,12 +917,21 @@ def parse_args():
         help="Remove cargas anteriores do mesmo source_file_id antes de gravar.",
     )
     parser.add_argument("--bucket", default=os.environ.get("FENABRAVE_STORAGE_BUCKET"))
-    parser.add_argument("--path", default=os.environ.get("FENABRAVE_STORAGE_PATH"))
+    parser.add_argument(
+        "--path",
+        required=True,
+        help="Caminho do PDF no bucket, ex: fenabrave/2026/04/2026_04_02.pdf.",
+    )
     parser.add_argument(
         "--reference-period",
-        default=os.environ.get("FENABRAVE_REFERENCE_PERIOD"),
+        required=True,
+        help="Periodo de referencia no formato YYYY-MM-DD, usando o primeiro dia do mes.",
     )
-    parser.add_argument("--source-url", default=os.environ.get("FENABRAVE_SOURCE_URL"))
+    parser.add_argument(
+        "--source-url",
+        required=True,
+        help="URL original do PDF no site da Fenabrave.",
+    )
     parser.add_argument(
         "--source-name",
         default=os.environ.get("FENABRAVE_SOURCE_NAME", "Fenabrave"),
@@ -958,9 +975,9 @@ def main():
         )
 
     bucket = args.bucket or require_env("FENABRAVE_STORAGE_BUCKET")
-    storage_path = args.path or require_env("FENABRAVE_STORAGE_PATH")
-    reference_period = args.reference_period or require_env("FENABRAVE_REFERENCE_PERIOD")
-    source_url = args.source_url or require_env("FENABRAVE_SOURCE_URL")
+    storage_path = args.path
+    reference_period = args.reference_period
+    source_url = args.source_url
     headers = build_headers(supabase_key)
 
     print("Baixando PDF do Supabase Storage...")

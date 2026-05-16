@@ -20,6 +20,7 @@ Esta fase deve provar que o projeto consegue:
 
 - 2026-05-15: Entregavel 1 criado no Supabase. A tabela `public.market_data_sources` esta registrada no repositorio em `sql/ddl/tables/010_create_market_data_sources.sql`.
 - 2026-05-15: Entregavel 2 criado no Supabase. A tabela `public.market_source_files` esta registrada no repositorio em `sql/ddl/tables/011_create_market_source_files.sql`.
+- 2026-05-15: Rotina offline mensal referenciada no calendario operacional em `sql/docs/24_OFFLINE_OPERATIONS_CALENDAR.md`.
 
 ## Escopo da fase 1
 
@@ -456,15 +457,21 @@ reference_period: 2026-04-01
 source_name: Fenabrave
 ```
 
-Variaveis de ambiente esperadas pelo script:
+Variaveis de ambiente fixas esperadas pelo script:
 
 ```text
 SUPABASE_URL
 SUPABASE_SERVICE_ROLE_KEY
 FENABRAVE_STORAGE_BUCKET=market-source-files
-FENABRAVE_STORAGE_PATH=fenabrave/2026/04/2026_04_02.pdf
-FENABRAVE_REFERENCE_PERIOD=2026-04-01
-FENABRAVE_SOURCE_URL=https://www.fenabrave.org.br/portal/files/2026_04_02.pdf
+FENABRAVE_SOURCE_NAME=Fenabrave
+```
+
+Os dados especificos do arquivo mensal nao devem ficar no `.env`. Informar no comando:
+
+```text
+--path
+--reference-period
+--source-url
 ```
 
 O `SUPABASE_SERVICE_ROLE_KEY` deve ficar apenas no ambiente seguro que roda o script. Ele nao deve ir para Streamlit publico, navegador ou repositorio.
@@ -506,7 +513,10 @@ cd scripts\fenabrave_ingestion
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-python ingest_fenabrave_phase1.py
+python ingest_fenabrave_phase1.py --dry-run `
+  --path "fenabrave/2026/04/2026_04_02.pdf" `
+  --reference-period "2026-04-01" `
+  --source-url "https://www.fenabrave.org.br/portal/files/2026_04_02.pdf"
 ```
 
 No piloto, a extracao deve gerar uma saida de revisao antes de gravar como definitivo. Exemplo:

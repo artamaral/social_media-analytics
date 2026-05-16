@@ -1,3 +1,14 @@
+param(
+    [Parameter(Mandatory = $true)]
+    [string]$Path,
+
+    [Parameter(Mandatory = $true)]
+    [string]$ReferencePeriod,
+
+    [Parameter(Mandatory = $true)]
+    [string]$SourceUrl
+)
+
 $ErrorActionPreference = "Stop"
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -14,8 +25,8 @@ Write-Host "Diretorio: $scriptDir"
 Write-Host "Script: $pythonScript"
 
 try {
-    py -3 $pythonScript --dry-run
+    py -3 $pythonScript --dry-run --path $Path --reference-period $ReferencePeriod --source-url $SourceUrl
 }
 catch {
-    python $pythonScript --dry-run
+    python $pythonScript --dry-run --path $Path --reference-period $ReferencePeriod --source-url $SourceUrl
 }
