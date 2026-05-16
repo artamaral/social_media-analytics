@@ -14,6 +14,31 @@ pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
+Se `.\.venv\Scripts\Activate.ps1` nao for reconhecido, a pasta `.venv` provavelmente ainda nao existe ou o terminal nao esta em `scripts\fenabrave_ingestion`.
+
+Rode novamente a partir da raiz do projeto:
+
+```powershell
+cd C:\social_media-analytics\scripts\fenabrave_ingestion
+
+py -3 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+
+pip install -r requirements.txt
+```
+
+Se `py -3 -m venv .venv` falhar:
+
+```powershell
+python -m venv .venv
+```
+
+Para conferir se a `.venv` foi criada:
+
+```powershell
+Get-ChildItem .venv\Scripts
+```
+
 Edite `.env` apenas com credenciais e configuracoes fixas:
 
 ```text

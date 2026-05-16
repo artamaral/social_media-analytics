@@ -56,6 +56,21 @@ pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
+Se `.\.venv\Scripts\Activate.ps1` nao for reconhecido, recriar a venv a partir da raiz do projeto:
+
+```powershell
+cd C:\social_media-analytics\scripts\fenabrave_ingestion
+py -3 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+Fallback se `py` nao estiver disponivel:
+
+```powershell
+python -m venv .venv
+```
+
 Comando PowerShell - dry-run mensal:
 
 ```powershell
