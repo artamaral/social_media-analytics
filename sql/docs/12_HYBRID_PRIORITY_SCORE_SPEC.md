@@ -433,6 +433,36 @@ Existe implementacao `v2` apenas em modo analitico para comparacao com dados rea
 
 Ainda nao representa logica aprovada para substituir o modelo ativo.
 
+### Relacao com a fila ativa apos guardrail
+
+Em `2026-05-17`, a fila ativa `public.v_post_update_queue_batch` passou a
+incluir uma fatia guardrail de ate `4` posts com `total_checagens < 3`.
+
+Essa mudanca nao promove o score hibrido `v2` para producao.
+
+Estado atual da fila ativa:
+
+- ate `4` slots:
+  - guardrail por cobertura minima
+  - regra: `total_checagens < 3`
+- ate `36` slots:
+  - modelo ativo atual
+  - `post_update_queue.priority_score`
+  - `calculate_priority_band(priority_score)`
+
+Estado atual do `v2`:
+
+- permanece analitico
+- nao alimenta o worker Cloud Run
+- nao substitui `priority_score`
+- nao define as bandas dos `36` slots normais
+
+Motivo:
+
+- a primeira avaliacao mostrou descalibracao do `v2`
+- o fallback `low` foi favorecido indevidamente
+- a formula precisa ser recalibrada antes de qualquer promocao
+
 ---
 
 ## Registro de feedback da primeira avaliacao

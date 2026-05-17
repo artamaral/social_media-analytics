@@ -70,6 +70,13 @@ Continuar usando:
 - triggers ativos
 - worker ativo
 
+Estado atual apos a inclusao do guardrail:
+
+- `public.v_post_update_queue_batch` e a fonte real do worker
+- ate `4` slots sao reservados para cobertura minima
+- os demais slots continuam usando o score ativo atual
+- `priority_score_v2` nao participa da fila real
+
 ### Modelo candidato
 
 Criar apenas objetos analiticos paralelos, por exemplo:
@@ -165,6 +172,43 @@ So vale considerar troca do modelo ativo se a simulacao mostrar melhora consiste
 - reducao de concentracao extrema
 - promocao de posts com poucas checagens e bom potencial
 - manutencao da cobertura de posts relevantes
+
+### Etapas para o `v2` virar padrao
+
+1. Recalibrar a formula
+
+- abandonar ou corrigir a ponderacao direta atual
+- testar alternativa aditiva com bonus calibrado
+- garantir que `history_level = low` nao tenha vantagem sistematica sobre
+  `full`
+
+2. Validar em modo analitico
+
+- comparar `v_post_update_queue_batch` contra `v_post_update_queue_batch_v2`
+- medir overlap de lote
+- medir troca de posts por banda
+- medir impacto em posts hiperchecados
+- medir se o guardrail continua protegido
+
+3. Validar com dados exportados
+
+- usar SQL para gerar comparativos
+- analisar em Excel ou Pandas
+- documentar ganhos e perdas
+
+4. Promover apenas a parte normal da fila
+
+- manter a fatia guardrail como regra independente
+- trocar o criterio dos slots normais somente depois da validacao
+- o desenho alvo seria:
+  - `4` slots guardrail
+  - `36` slots por score `v2` recalibrado
+
+5. Rollback simples
+
+- manter a view ativa versionada em SQL
+- se o `v2` piorar cobertura ou concentracao, voltar ao `priority_score`
+  atual
 
 ---
 

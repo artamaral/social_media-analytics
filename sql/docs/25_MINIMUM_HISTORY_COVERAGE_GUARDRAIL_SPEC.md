@@ -490,6 +490,27 @@ Acao esperada em caso de alerta:
 
 ## Relacao com documentos existentes
 
+### Score hibrido `v2`
+
+O guardrail e independente do score hibrido `v2`.
+
+Estado atual:
+
+- guardrail faz parte da fila ativa
+- `v2` continua em modo analitico
+- os slots normais da fila ativa ainda usam o `priority_score` atual
+
+Desenho alvo futuro, se o `v2` for aprovado:
+
+- `4` slots guardrail por `total_checagens < 3`
+- `36` slots normais por score `v2` recalibrado
+
+Regra:
+
+- a promocao do `v2` nao deve remover nem enfraquecer o guardrail
+
+---
+
 ### Documento 15
 
 `15_LOW_HISTORY_BOOTSTRAP_AND_BACKFILL_SPEC.md` separa conceitualmente:

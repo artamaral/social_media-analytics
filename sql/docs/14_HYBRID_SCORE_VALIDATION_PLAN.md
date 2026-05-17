@@ -330,6 +330,14 @@ Ao final da avaliacao, documentar:
 
 Este plano descreve a validacao recomendada do score hibrido antes de qualquer troca no modelo ativo.
 
+Estado operacional atual:
+
+- o guardrail de cobertura minima esta previsto na fila ativa
+- os slots normais da fila ainda usam o score ativo atual
+- `priority_score_v2` continua apenas analitico
+- qualquer avaliacao do `v2` deve considerar que o guardrail e uma camada
+  independente e deve permanecer protegido
+
 ---
 
 ## Registro de feedback da primeira avaliacao
@@ -411,3 +419,69 @@ Objetivo:
 - comparar a escala do score final entre os dois grupos
 - verificar se `base_popularity`, `velocity_score` e `acceleration_score` estao contribuindo de forma equilibrada
 - identificar rapidamente descalibracao da formula
+
+---
+
+## Validacao necessaria para promocao do `v2`
+
+Antes de promover o `v2`, a avaliacao deve responder:
+
+1. O `v2` recalibrado elimina a vantagem indevida do fallback `low`?
+2. O lote `v2` reduz concentracao em posts hiperchecados?
+3. O lote `v2` mantem posts estruturalmente relevantes?
+4. O lote `v2` melhora a sensibilidade a crescimento recente?
+5. O guardrail continua garantindo cobertura minima?
+
+### Query de comparacao entre fila ativa e fila `v2`
+
+```sql
+with active_batch as (
+  select
+    post_id,
+    priority_band,
+    row_number() over (
+      order by priority_band desc, next_check asc, last_checked asc nulls first, post_id
+    ) as active_rank
+  from public.v_post_update_queue_batch
+),
+v2_batch as (
+  select
+    post_id,
+    priority_band_v2,
+    history_level,
+    priority_score_v2,
+    row_number() over (
+      order by priority_band_v2 desc, proposed_next_check_v2 asc, post_id
+    ) as v2_rank
+  from public.v_post_update_queue_batch_v2
+)
+select
+  coalesce(a.post_id, v.post_id) as post_id,
+  a.active_rank,
+  a.priority_band as active_priority_band,
+  v.v2_rank,
+  v.priority_band_v2,
+  v.history_level,
+  v.priority_score_v2,
+  case
+    when a.post_id is not null and v.post_id is not null then 'both'
+    when a.post_id is not null then 'active_only'
+    else 'v2_only'
+  end as comparison_status
+from active_batch a
+full outer join v2_batch v
+  on v.post_id = a.post_id
+order by
+  comparison_status,
+  coalesce(a.active_rank, v.v2_rank);
+```
+
+### Criterio de promocao
+
+O `v2` so deve virar padrao se:
+
+- a formula estiver recalibrada
+- `low` nao vencer `full` por artefato de escala
+- houver ganho claro de rotacao ou sensibilidade temporal
+- nao houver perda relevante de cobertura de posts importantes
+- o guardrail continuar como camada independente de `4` slots
