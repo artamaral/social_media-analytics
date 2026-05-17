@@ -44,6 +44,7 @@ O objetivo e manter uma leitura simples de:
 
 - Status: em andamento
 - Implementacao: `scripts/offline_backfill/legacy_low_backfill_phase1.py`
+- Launcher agendado: `scripts/offline_backfill/run_legacy_low_backfill_phase1.ps1`
 - Objetivo: inserir 1 snapshot inicial para posts antigos com historico insuficiente
 - Escopo: apenas `legacy_low`
 - Prioridade de selecao:
@@ -52,6 +53,8 @@ O objetivo e manter uma leitura simples de:
 - Tamanho do lote: `50`
 - Frequencia atual do scheduler: `10` minutos
 - Observacao de custo: consumo observado da API do YouTube segue baixo nesta frequencia
+- Observacao operacional: logs por execucao agora sao obrigatorios em
+  `scripts/offline_backfill/logs`
 
 ### Resultado da primeira execucao validada
 
@@ -72,6 +75,7 @@ O objetivo e manter uma leitura simples de:
 - continuar executando a fase 1 em lotes
 - reduzir `legacy_low` progressivamente para perto de zero
 - so depois detalhar e executar a fase 2 de promocao de estado
+- acompanhar logs do scheduler junto com inserts no banco
 
 ### Atualizacao observada apos aproximadamente 12h
 
@@ -126,15 +130,30 @@ O objetivo e manter uma leitura simples de:
 - ainda existe passivo de `legacy_low`
 - posts seedados pela fase 1 nao saem imediatamente de `low`
 - a fase 2 ainda nao foi iniciada
+- houve um incidente operacional no scheduler do Windows:
+  - a tarefa ficou com a acao malformada
+  - o script manual rodava, mas a execucao agendada falhava
+  - a ausencia de log persistente atrasou o diagnostico
+
+### Mitigacao aplicada
+
+- a tarefa foi recriada com comando corrigido
+- o launcher passou a gravar log por execucao e um arquivo `latest`
+- troubleshooting de scheduler agora exige:
+  - checar `Last Result`
+  - checar log mais recente
+  - checar novos inserts em `post_metrics_history`
 
 ---
 
 ## 6. Ultima verificacao manual
 
-- Data: `2026-05-15`
+- Data: `2026-05-17`
 - Resultado:
-  - backfill offline continua executando com sucesso
-  - historico segue sendo atualizado
-  - `legacy_low` caiu para `447`
-  - bloco principal da base observada esta em `2` checagens
-  - atividade segue em andamento antes da fase 2
+  - o script continua funcionando manualmente
+  - foi confirmado que a tarefa agendada do Windows estava com a acao incorreta
+  - o launcher foi ajustado para gerar logs persistentes
+  - a tarefa precisa ser validada novamente com base em:
+    - atualizacao do log mais recente
+    - novos inserts em `post_metrics_history`
+    - mudanca real no universo `legacy_low`

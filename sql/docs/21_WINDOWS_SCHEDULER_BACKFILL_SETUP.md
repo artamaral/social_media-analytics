@@ -21,6 +21,7 @@ Motivo:
 - fixa o diretorio correto
 - chama o script Python pelo caminho certo
 - reduz erro manual ao rodar pelo Agendador do Windows
+- grava logs persistentes por execucao em `scripts/offline_backfill/logs`
 
 ---
 
@@ -96,7 +97,34 @@ schtasks /Create /TN "legacy-low-backfill-phase1" /SC MINUTE /MO 10 /TR "powersh
 Antes de confiar no scheduler, rode manualmente:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File "C:\social_media-analytics\scripts\offline_backfill\run_legacy_low_backfill_phase1.ps1"
+powershell.exe -ExecutionPolicy Bypass -File "C:\social_media-analytics\scripts\offline_backfill\run_legacy_low_backfill_phase1.ps1"
+```
+
+---
+
+## Logs obrigatorios de execucao
+
+O launcher agora grava logs locais por execucao.
+
+Arquivos esperados:
+
+- `scripts/offline_backfill/logs/legacy_low_backfill_phase1_YYYY-MM-DD_HH-mm-ss.log`
+- `scripts/offline_backfill/logs/legacy_low_backfill_phase1_latest.log`
+
+Diretriz operacional:
+
+- nenhuma rotina agendada deve rodar sem log persistente
+- sem log, a rotina deve ser tratada como operacionalmente cega
+- a validacao do scheduler precisa olhar banco e log
+
+Comandos uteis:
+
+```powershell
+Get-Content "C:\social_media-analytics\scripts\offline_backfill\logs\legacy_low_backfill_phase1_latest.log" -Tail 200
+```
+
+```powershell
+Get-Content "C:\social_media-analytics\scripts\offline_backfill\logs\legacy_low_backfill_phase1_latest.log" -Wait
 ```
 
 ---
@@ -131,6 +159,46 @@ where p.created_at < now() - interval '7 days'
 ```
 
 3. a ultima execucao do scheduler terminou com sucesso no Windows
+
+4. o log mais recente mostra inicio, selecao, chamada da YouTube API e insert
+
+```powershell
+Get-Content "C:\social_media-analytics\scripts\offline_backfill\logs\legacy_low_backfill_phase1_latest.log" -Tail 200
+```
+
+---
+
+## Diagnostico minimo quando o scheduler parecer parado
+
+1. confirmar a acao registrada:
+
+```powershell
+schtasks /Query /TN "legacy-low-backfill-phase1" /V /FO LIST
+```
+
+2. confirmar o comando correto:
+
+- Programa/script:
+  - `powershell.exe`
+- Argumentos:
+  - `-ExecutionPolicy Bypass -File "C:\social_media-analytics\scripts\offline_backfill\run_legacy_low_backfill_phase1.ps1"`
+- Iniciar em:
+  - `C:\social_media-analytics\scripts\offline_backfill`
+
+3. confirmar se o log foi atualizado no horario esperado
+
+4. confirmar inserts novos em `post_metrics_history`
+
+Incidente registrado:
+
+- foi identificado um periodo em que a tarefa do Windows estava com a acao malformada
+- o scheduler aparentava rodar, mas nao executava o script corretamente
+- a ausencia de log persistente atrasou o diagnostico e gerou perda de tempo operacional
+
+Decisao:
+
+- logs locais passam a ser parte obrigatoria do desenho da rotina
+- revisao do log mais recente passa a ser etapa padrao de troubleshooting
 
 ---
 

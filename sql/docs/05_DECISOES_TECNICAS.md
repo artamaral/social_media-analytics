@@ -238,3 +238,45 @@ Diretriz de implementacao:
 Alternativa futura:
 
 - reavaliar Next.js, TypeScript e Vercel/Cloudflare apenas se o dashboard evoluir para produto externo ou multiusuario
+
+---
+
+## Logs persistentes como requisito para rotinas agendadas
+
+Data:
+
+- 2026-05-17
+
+Decisao:
+
+- toda rotina agendada relevante do projeto deve gerar log persistente por execucao
+- scheduler sem log local ou centralizado deve ser tratado como configuracao incompleta
+- troubleshooting operacional deve sempre combinar:
+  - status do scheduler
+  - log da execucao
+  - evidencia no banco
+
+Contexto:
+
+- o backfill offline de `legacy_low` ficou alguns dias com a tarefa do Windows mal configurada
+- a execucao manual funcionava, mas a execucao agendada nao produzia efeito
+- a ausencia de log persistente atrasou o diagnostico e consumiu tempo operacional desnecessario
+
+Motivo:
+
+- evitar rotinas cegas
+- reduzir tempo de diagnostico
+- separar falha de scheduler, falha de script e ausencia de efeito no banco
+- preservar evidencias operacionais para auditoria rapida
+
+Diretriz de implementacao:
+
+- gravar um arquivo por execucao com timestamp
+- manter tambem um arquivo `latest` para consulta rapida
+- documentar caminho do log e comando de leitura no runbook operacional
+- validar logs antes de considerar uma automacao saudavel
+
+Primeira aplicacao:
+
+- `scripts/offline_backfill/run_legacy_low_backfill_phase1.ps1`
+- logs em `scripts/offline_backfill/logs`
