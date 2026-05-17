@@ -8,7 +8,6 @@ import subprocess
 import sys
 import tempfile
 import unicodedata
-from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import quote
 
@@ -742,7 +741,6 @@ def delete_existing_rows(base_url, headers, source_file_id):
     """
     for table in [
         "market_vehicle_registrations_segment",
-        "market_ingestion_validation_results",
     ]:
         url = rest_url(base_url, table)
         params = {"source_file_id": f"eq.{source_file_id}"}
@@ -760,8 +758,8 @@ def insert_rows(base_url, headers, table, rows):
     Insere uma lista de registros em uma tabela Supabase.
 
     Resultado esperado:
-    - grava payloads normalizados ou de validacao; se a tabela nao existir ou
-      houver conflito, retorna erro claro.
+    - grava payloads normalizados; se a tabela nao existir ou houver conflito,
+      retorna erro claro.
     """
     if not rows:
         return
@@ -811,33 +809,6 @@ def update_source_file_status(base_url, headers, source_file_id, status, notes):
         )
 
 
-def validation_payloads(checks, source_file_id):
-    """
-    Converte checks locais em registros de validacao.
-
-    Resultado esperado:
-    - gera payloads para `market_ingestion_validation_results`.
-    """
-    payloads = []
-
-    for check in checks:
-        payloads.append(
-            {
-                "source_file_id": source_file_id,
-                "check_name": check["check_name"],
-                "calculated_value": check["calculated_value"],
-                "expected_value": check["expected_value"],
-                "difference": check["difference"],
-                "passed": check["passed"],
-                "severity": check["severity"],
-                "notes": check["notes"],
-                "checked_at": datetime.now(timezone.utc).isoformat(),
-            }
-        )
-
-    return payloads
-
-
 def write_results(
     base_url,
     headers,
@@ -847,10 +818,10 @@ def write_results(
     replace,
 ):
     """
-    Persiste normalizado, validacoes e status no Supabase.
+    Persiste normalizado e status no Supabase.
 
     Resultado esperado:
-    - em `--write`, grava os dados normalizados e validacoes; com `--replace`,
+    - em `--write`, grava os dados normalizados; com `--replace`,
       limpa cargas antigas do mesmo arquivo antes de inserir novamente.
     """
     if replace:
@@ -862,20 +833,6 @@ def write_results(
         "market_vehicle_registrations_segment",
         normalized_rows,
     )
-
-    try:
-        insert_rows(
-            base_url,
-            headers,
-            "market_ingestion_validation_results",
-            validation_payloads(checks, source_file_id),
-        )
-    except RuntimeError as error:
-        print(
-            "Aviso: nao foi possivel gravar market_ingestion_validation_results. "
-            f"{error}",
-            file=sys.stderr,
-        )
 
     has_error = any(
         not check["passed"] and check["severity"] == "error" for check in checks
@@ -1059,7 +1016,7 @@ def parse_args():
     parser.add_argument(
         "--write",
         action="store_true",
-        help="Grava tabela normalizada e validacoes no Supabase.",
+        help="Grava tabela normalizada e atualiza status no Supabase.",
     )
     parser.add_argument(
         "--replace",

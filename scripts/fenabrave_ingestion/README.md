@@ -85,6 +85,8 @@ O parser seleciona para `mes_atual` o primeiro volume inteiro nao negativo da li
 
 Se `subtotal_plus_outros` aparecer com `expected=None`, significa que a linha `Total` nao foi extraida/identificada. Nesse caso o script mostra a soma calculada, por exemplo `479662`, e marca a validacao como `warning`, nao como falha bloqueante. Os checks de `Autos + Comerciais Leves` e `Caminhoes + Onibus` continuam sendo erros bloqueantes quando falham.
 
+Nesta fase, os resultados de validacao ficam no terminal e no status do arquivo em `market_source_files`. O script nao tenta gravar `market_ingestion_validation_results`, porque essa tabela ainda nao faz parte da estrutura minima.
+
 ## Gravar no banco
 
 Quando a tabela normalizada existir no Supabase e o dry-run estiver correto:

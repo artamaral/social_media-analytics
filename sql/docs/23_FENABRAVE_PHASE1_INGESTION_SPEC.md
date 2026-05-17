@@ -430,7 +430,6 @@ Situacao atual da fase:
 Antes de extrair dados do PDF, ainda precisam existir no Supabase:
 
 - `market_vehicle_registrations_segment`
-- `market_ingestion_validation_results`, opcional mas recomendado
 - `v_market_registration_segment_summary`
 
 O processo operacional da extracao deve ser:
@@ -801,22 +800,22 @@ WHERE source_file_id = 1
   AND segment_code = 'total';
 ```
 
-### Tabela opcional de resultados de validacao
+### Persistencia dos resultados de validacao
 
-```sql
-CREATE TABLE public.market_ingestion_validation_results (
-  id bigserial PRIMARY KEY,
-  source_file_id bigint NOT NULL REFERENCES public.market_source_files(id),
-  check_name text NOT NULL,
-  calculated_value numeric,
-  expected_value numeric,
-  difference numeric,
-  passed boolean NOT NULL,
-  severity text NOT NULL DEFAULT 'error',
-  notes text,
-  checked_at timestamptz NOT NULL DEFAULT now()
-);
-```
+Nesta fase, os resultados de validacao ficam no terminal e no status do arquivo
+em `market_source_files`.
+
+Nao criar `public.market_ingestion_validation_results` agora.
+
+Motivo:
+
+- a rotina ainda tem revisao humana obrigatoria
+- o volume mensal e pequeno
+- o status do arquivo ja registra se a extracao foi validada ou falhou
+- warnings como `subtotal_plus_outros` sem linha `Total` sao revisados pelo operador antes do `OK`
+
+Essa tabela pode voltar ao plano no futuro se a rotina for automatizada ou se o
+projeto precisar auditar historico detalhado de cada check.
 
 ## Entregavel 6 - View analitica inicial
 
