@@ -46,7 +46,9 @@ O objetivo e manter uma leitura simples de:
 - Implementacao: `scripts/offline_backfill/legacy_low_backfill_phase1.py`
 - Objetivo: inserir 1 snapshot inicial para posts antigos com historico insuficiente
 - Escopo: apenas `legacy_low`
-- Prioridade de selecao: `priority_score_v2 desc`
+- Prioridade de selecao:
+  - `total_checagens asc`
+  - `priority_score_v2 desc`
 - Tamanho do lote: `50`
 - Frequencia atual do scheduler: `10` minutos
 - Observacao de custo: consumo observado da API do YouTube segue baixo nesta frequencia
@@ -89,7 +91,8 @@ O objetivo e manter uma leitura simples de:
 - a promocao para `partial` ainda e residual, o que continua coerente com o
   desenho atual
 - a estrategia passa a priorizar explicitamente posts com `0`, `1` e `2`
-  checagens para acelerar a reducao do `legacy_low`
+  checagens, nessa ordem, usando `priority_score_v2` como criterio secundario
+  para acelerar a reducao do `legacy_low`
 
 ### Estimativa operacional atual
 
@@ -108,7 +111,8 @@ O objetivo e manter uma leitura simples de:
 - confirmar reducao continua do `legacy_low`
 - confirmar reducao dos blocos de `0`, `1` e `2` checagens
 - confirmar inserts recorrentes em `post_metrics_history`
-- confirmar que a selecao continua aderente a `priority_score_v2`
+- confirmar que a selecao continua aderente a `total_checagens asc` e
+  `priority_score_v2 desc`
 
 ### Fase 2 do legado
 

@@ -278,6 +278,22 @@ Motivo:
 - acelerar a migracao de posts de `0` para `1` e de `1` para `2+` checagens
 - deixar a base mais limpa para discutir a fase 2
 
+### Regra operacional atual da selecao
+
+Neste momento, a selecao da fase 1 deve seguir:
+
+1. `total_checagens asc`
+2. `priority_score_v2 desc`
+3. `collected_at asc nulls first`
+4. `post_id`
+
+Interpretacao:
+
+- primeiro entram os posts com `0` checagens
+- depois os com `1`
+- depois os com `2`
+- dentro de cada grupo, entram antes os de maior `priority_score_v2`
+
 ### Observacao sobre o custo da API
 
 Foi observado pela manha de `2026-05-16` que o consumo de tokens/quota da API

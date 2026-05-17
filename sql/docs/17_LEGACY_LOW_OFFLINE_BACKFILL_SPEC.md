@@ -102,6 +102,21 @@ Motivo:
 - atacar `0`, `1` e `2` checagens acelera a reducao do `legacy_low`
 - isso direciona melhor o esforco para os posts ainda pouco observados
 
+### Regra de ordenacao operacional atual
+
+Durante esta fase de drenagem, a selecao do lote deve seguir:
+
+1. `total_checagens asc`
+2. `priority_score_v2 desc`
+3. `collected_at asc nulls first`
+4. `post_id`
+
+Interpretacao:
+
+- primeiro entram os posts mais sem contexto
+- depois, dentro do mesmo nivel de checagem, entram os de maior valor segundo
+  `priority_score_v2`
+
 ---
 
 ## Fase 1. Seed historico

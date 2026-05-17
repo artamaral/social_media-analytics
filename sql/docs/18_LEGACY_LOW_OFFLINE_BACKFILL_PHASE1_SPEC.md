@@ -75,38 +75,34 @@ Objetivo:
 
 Nao usar prioridade por banda.
 
-O lote deve ser ordenado apenas por:
-
-- `priority_score_v2 desc`
-
-Desempates sugeridos:
+Na estrategia operacional atual, o lote deve ser ordenado por:
 
 1. `total_checagens asc`
-2. `collected_at asc nulls first`
-3. `post_id`
+2. `priority_score_v2 desc`
+3. `collected_at asc nulls first`
+4. `post_id`
 
 Motivo:
 
-- simplifica a implementacao
-- usa diretamente a nova logica analitica do modelo `v2`
-- evita adicionar outra camada de regra antes de validar o score
+- o objetivo imediato e drenar todo o conjunto `legacy_low` com `0`, `1` e `2`
+  checagens
+- como o script deve percorrer todo esse universo, a prioridade principal passa
+  a ser o nivel de falta de contexto
+- dentro de cada bucket (`0`, `1`, `2`), `priority_score_v2` continua sendo o
+  criterio de valor
 
 ### Implicacao operacional
 
 Nesta fase, a fila offline de backfill nao tenta reproduzir o comportamento da
 `v_post_update_queue_batch`.
 
-Ela usa apenas:
-
-- `priority_score_v2` para ordenar os `legacy_low`
-- desempates simples para garantir determinismo
-
 Isso significa que:
 
-- a prioridade vem do score analitico do `v2`
 - nao existe cota por banda
 - nao existe refill por banda
 - o objetivo e corrigir historico legado, nao simular a fila online
+- a prioridade principal e a carencia de historico (`0`, `1`, `2`)
+- `priority_score_v2` atua como criterio secundario dentro de cada grupo
 
 ---
 
@@ -128,7 +124,7 @@ Justificativa:
 
 ```text
 1. Selecionar lote de legacy_low
-2. Ordenar por priority_score_v2 desc
+2. Ordenar por `total_checagens asc` e `priority_score_v2 desc`
 3. Chamar YouTube API para os post_ids do lote
 4. Normalizar resposta
 5. Inserir snapshots em post_metrics_history
@@ -191,8 +187,8 @@ join public.v_post_priority_score_features_v2 f
 where p.created_at < now() - interval '7 days'
   and coalesce(h.total_checagens, 0) <= 2
 order by
-  f.priority_score_v2 desc,
   coalesce(h.total_checagens, 0) asc,
+  f.priority_score_v2 desc,
   p.collected_at asc nulls first,
   p.post_id
 limit 50;

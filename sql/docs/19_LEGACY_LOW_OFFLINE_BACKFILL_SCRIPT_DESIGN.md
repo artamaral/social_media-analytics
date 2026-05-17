@@ -97,7 +97,7 @@ Motivo:
 Substituir a funcao `fetch_queue()` do pipeline online.
 
 Em vez de buscar `v_post_update_queue_batch`, esta funcao deve buscar o lote de
-`legacy_low` ordenado por `priority_score_v2`.
+`legacy_low` ordenado pela estrategia operacional ativa da fase 1.
 
 ### Assinatura sugerida
 
@@ -120,7 +120,8 @@ Tudo o que vem depois dela pode continuar quase igual ao `postMetrics`.
 Ela deve:
 
 - aplicar o criterio de elegibilidade legado
-- ordenar por `priority_score_v2 desc`
+- priorizar primeiro `0`, depois `1`, depois `2` checagens
+- usar `priority_score_v2 desc` dentro de cada grupo
 - respeitar o `batch_size`
 - retornar estrutura simples, com pelo menos `post_id`
 
@@ -145,10 +146,10 @@ left join (
 join public.v_post_priority_score_features_v2 f
   on f.post_id = p.post_id
 where p.created_at < now() - interval '7 days'
-  and coalesce(h.total_checagens, 0) <= 1
+  and coalesce(h.total_checagens, 0) <= 2
 order by
-  f.priority_score_v2 desc,
   coalesce(h.total_checagens, 0) asc,
+  f.priority_score_v2 desc,
   p.collected_at asc nulls first,
   p.post_id
 limit 50;
@@ -425,8 +426,8 @@ HEADERS = {
 
 
 def fetch_legacy_low_batch(batch_size=50):
-    # Busca apenas posts legacy_low, ordenados por priority_score_v2.
-    # Esta e a unica troca estrutural relevante em relacao ao postMetrics.
+    # Busca posts legacy_low com foco operacional em 0, 1 e 2 checagens.
+    # Dentro de cada grupo, usa priority_score_v2 como criterio secundario.
     pass
 
 

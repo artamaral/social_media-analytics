@@ -85,7 +85,7 @@ HEADERS = {
 # Mantidos como constantes simples para facilitar ajuste manual inicial.
 DEFAULT_BATCH_SIZE = 50
 LEGACY_AGE_DAYS = 7
-MAX_TOTAL_CHECKS = 1
+MAX_TOTAL_CHECKS = 2
 SUPABASE_PAGE_SIZE = 1000
 SUPABASE_CHUNK_SIZE = 100
 
@@ -303,32 +303,27 @@ def fetch_history_counts(post_ids):
     return counts
 
 
-def fetch_legacy_low_batch(batch_size=DEFAULT_BATCH_SIZE):
+def fetch_legacy_low_batch_priority_first(batch_size=DEFAULT_BATCH_SIZE):
     """
-    Seleciona o lote offline de `legacy_low` para a fase 1.
+    Mantem a primeira estrategia de selecao usada no backfill de `legacy_low`.
 
-    Esta e a funcao que substitui conceitualmente o `fetch_queue()` do pipeline
-    online. Em vez de usar a fila operacional, ela monta uma lista de correcao
-    historica com base em tres passos:
+    Esta versao foi mantida como referencia historica da regra inicial. Nela,
+    o lote era ordenado primeiro por `priority_score_v2 desc`.
 
-    1. buscar posts antigos o suficiente para nao serem cold start
-    2. manter apenas os que estao em `history_level=low`
-    3. manter apenas os que possuem `<= 1` checagem total
-
-    Depois disso, o lote e ordenado por:
+    Ordenacao original:
     - `priority_score_v2 desc`
     - `total_checagens asc`
     - `collected_at asc nulls first`
     - `post_id`
 
-    Responsabilidade:
-    - produzir o lote final do backfill
-    - devolver a mesma estrutura simples esperada pelas proximas etapas
+    Esta funcao nao esta mais ativa no fluxo principal.
+    A chamada ativa do lote atualmente acontece dentro de `run_backfill_batch()`
+    na linha 603, usando `fetch_legacy_low_batch(...)`.
     """
     old_posts = fetch_old_posts()
 
     if not old_posts:
-        print("⚠️ Nenhum post antigo encontrado para backfill")
+        print("?? Nenhum post antigo encontrado para backfill")
         return []
 
     post_ids = [row["post_id"] for row in old_posts]
@@ -371,11 +366,92 @@ def fetch_legacy_low_batch(batch_size=DEFAULT_BATCH_SIZE):
 
     selected = batch_candidates[:batch_size]
 
-    print(f"📦 Legacy low candidatos: {len(batch_candidates)}")
-    print(f"✅ Legacy low selecionados: {len(selected)}")
+    print(f"?? Legacy low candidatos (priority first): {len(batch_candidates)}")
+    print(f"? Legacy low selecionados (priority first): {len(selected)}")
 
     return selected
 
+
+def fetch_legacy_low_batch(batch_size=DEFAULT_BATCH_SIZE):
+    """
+    Seleciona o lote offline ativo de `legacy_low` para a fase 1.
+
+    Esta e a estrategia operacional atual do backfill. Nesta fase, o objetivo
+    principal e drenar todo o conjunto legado com `0`, `1` e `2` checagens ate
+    que cada item alcance pelo menos `3` snapshots.
+
+    A regra de elegibilidade continua sendo:
+    1. post antigo o suficiente para nao ser `bootstrap_low`
+    2. `history_level = low`
+    3. `total_checagens <= 2`
+
+    Como o script vai percorrer todo o conjunto elegivel, a prioridade fina por
+    score deixa de ser a regra principal. O lote passa a ser ordenado por:
+    - `total_checagens asc`
+    - `priority_score_v2 desc`
+    - `collected_at asc nulls first`
+    - `post_id`
+
+    Isso faz com que:
+    - posts com `0` checagens venham primeiro
+    - depois os de `1`
+    - depois os de `2`
+    - dentro de cada grupo, os mais fortes por `priority_score_v2` entrem antes
+
+    Responsabilidade:
+    - produzir o lote final ativo do backfill
+    - devolver a estrutura simples esperada pelas proximas etapas
+    """
+    old_posts = fetch_old_posts()
+
+    if not old_posts:
+        print("?? Nenhum post antigo encontrado para backfill")
+        return []
+
+    post_ids = [row["post_id"] for row in old_posts]
+    features_by_post = fetch_low_feature_scores(post_ids)
+    history_counts = fetch_history_counts(post_ids)
+
+    batch_candidates = []
+
+    for row in old_posts:
+        post_id = row["post_id"]
+        total_checks = history_counts.get(post_id, 0)
+        feature_row = features_by_post.get(post_id)
+
+        if not feature_row:
+            continue
+
+        if total_checks > MAX_TOTAL_CHECKS:
+            continue
+
+        batch_candidates.append(
+            {
+                "post_id": post_id,
+                "created_at": row.get("created_at"),
+                "collected_at": row.get("collected_at"),
+                "total_checagens": total_checks,
+                "priority_score_v2": float(feature_row.get("priority_score_v2", 0)),
+                "history_level": feature_row.get("history_level"),
+            }
+        )
+
+    batch_candidates.sort(
+        key=lambda item: (
+            item["total_checagens"],
+            -item["priority_score_v2"],
+            item["collected_at"] is not None,
+            item["collected_at"] or "",
+            item["post_id"],
+        )
+    )
+
+    selected = batch_candidates[:batch_size]
+
+    print(f"?? Legacy low candidatos: {len(batch_candidates)}")
+    print(f"? Legacy low selecionados: {len(selected)}")
+
+    return selected
 
 def extract_ids(rows):
     """
