@@ -81,7 +81,7 @@ O script deve imprimir:
 - valores normalizados por segmento, usando apenas a coluna `mes_atual`
 - checks locais de soma
 
-O parser seleciona para `mes_atual` o primeiro volume inteiro nao negativo da linha. Isso evita confundir a coluna mensal com percentuais negativos, como `-9,23`, quando o PDF extrai as celulas fora da ordem visual.
+O parser seleciona para `mes_atual` o primeiro volume inteiro nao negativo da linha. Ele procura primeiro nas celulas depois do rotulo e, se encontrar apenas percentuais negativos, faz fallback para a linha inteira. Isso evita confundir a coluna mensal com percentuais como `-9,23`, quando o PDF extrai as celulas fora da ordem visual.
 
 Se um check aparecer com `expected=None`, significa que a linha esperada para comparacao nao foi extraida do PDF. Exemplo: em `subtotal_plus_outros`, o script soma `Subtotal + Motos + Implementos Rodoviarios + Outros`, mas precisa da linha `Total` para validar a diferenca.
 

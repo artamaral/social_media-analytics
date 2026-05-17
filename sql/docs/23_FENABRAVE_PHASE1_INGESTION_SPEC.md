@@ -534,7 +534,7 @@ Regra da fase 1:
 - extrair e persistir apenas `mes_atual`
 - nao persistir acumulado, mes anterior ou percentuais publicados no PDF
 - gerar acumulados e variacoes em views SQL a partir das cargas mensais validadas
-- selecionar `mes_atual` como o primeiro volume inteiro nao negativo da linha, ignorando percentuais como `-9,23`
+- selecionar `mes_atual` como o primeiro volume inteiro nao negativo, procurando primeiro nas celulas depois do rotulo e fazendo fallback para a linha inteira quando o PDF trouxer apenas percentuais nas demais celulas
 
 Se a tabela extraida nao bater visualmente com o PDF:
 

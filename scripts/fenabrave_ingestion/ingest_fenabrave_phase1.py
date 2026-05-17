@@ -531,17 +531,14 @@ def extract_first_page_table(pdf_bytes):
                 continue
 
             numbers = extract_numbers_from_cells(cells[1:])
-
-            if len(numbers) < 1:
-                numbers = extract_numbers_from_cells(cells)
-
-            if len(numbers) < 1:
-                continue
-
             current_month_raw = select_current_month_raw(numbers)
 
             if current_month_raw is None:
-                continue
+                numbers = extract_numbers_from_cells(cells)
+                current_month_raw = select_current_month_raw(numbers)
+
+                if current_month_raw is None:
+                    continue
 
             values = [current_month_raw]
             row = {
