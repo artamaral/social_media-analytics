@@ -592,7 +592,7 @@ def normalize_rows(raw_rows, source_file_id, reference_period):
 
     Resultado esperado:
     - retorna payloads compativeis com `market_vehicle_registrations_segment`,
-      contendo apenas o volume do mes atual.
+      contendo os campos da extracao: `segment_code`, `segmento` e `mes_atual`.
     """
     normalized = []
 
@@ -601,11 +601,9 @@ def normalize_rows(raw_rows, source_file_id, reference_period):
             {
                 "source_file_id": source_file_id,
                 "reference_period": reference_period,
-                "market_scope": "Brasil",
-                "metric_name": "emplacamentos",
                 "segment_code": row["segment_code"],
-                "segment_name": row["segment_name"],
-                "current_month_units": parse_int_br(row["current_month_raw"]),
+                "segmento": row["segment_name"],
+                "mes_atual": parse_int_br(row["current_month_raw"]),
             }
         )
 
@@ -623,7 +621,7 @@ def validate_normalized_rows(normalized_rows):
 
     def value(code):
         row = by_code.get(code)
-        return None if row is None else row["current_month_units"]
+        return None if row is None else row["mes_atual"]
 
     checks = []
 
@@ -711,8 +709,8 @@ def print_preview(raw_rows, normalized_rows, checks, pdf_bytes):
     for row in normalized_rows:
         print(
             f"{row['segment_code'][:28]:28} "
-            f"{row['segment_name'][:28]:28} "
-            f"{row['current_month_units']:>10}"
+            f"{row['segmento'][:28]:28} "
+            f"{row['mes_atual']:>10}"
         )
 
     print("")

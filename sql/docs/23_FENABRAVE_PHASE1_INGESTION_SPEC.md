@@ -20,6 +20,7 @@ Esta fase deve provar que o projeto consegue:
 
 - 2026-05-15: Entregavel 1 criado no Supabase. A tabela `public.market_data_sources` esta registrada no repositorio em `sql/ddl/tables/010_create_market_data_sources.sql`.
 - 2026-05-15: Entregavel 2 criado no Supabase. A tabela `public.market_source_files` esta registrada no repositorio em `sql/ddl/tables/011_create_market_source_files.sql`.
+- 2026-05-17: Entregavel 4 especificado com os campos efetivos da extracao (`segment_code`, `segmento`, `mes_atual`) e DDL registrado em `sql/ddl/tables/012_create_market_vehicle_registrations_segment.sql`.
 - 2026-05-15: Rotina offline mensal referenciada no calendario operacional em `sql/docs/00_OFFLINE_OPERATIONS_CALENDAR.md`.
 
 ## Escopo da fase 1
@@ -669,7 +670,7 @@ Versao limpa e pronta para analise.
 Aqui:
 
 - `187.313` vira `187313`
-- `A) Autos` vira `segment_code = autos` e `segment_name = Autos`
+- `A) Autos` vira `segment_code = autos` e `segmento = Autos`
 - cada linha fica ligada ao arquivo de origem
 
 ### Para que serve
@@ -689,11 +690,9 @@ CREATE TABLE public.market_vehicle_registrations_segment (
   id bigserial PRIMARY KEY,
   source_file_id bigint NOT NULL REFERENCES public.market_source_files(id),
   reference_period date NOT NULL,
-  market_scope text NOT NULL DEFAULT 'Brasil',
-  metric_name text NOT NULL DEFAULT 'emplacamentos',
   segment_code text NOT NULL,
-  segment_name text NOT NULL,
-  current_month_units integer,
+  segmento text NOT NULL,
+  mes_atual integer NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
 
   CONSTRAINT market_vehicle_reg_segment_unique UNIQUE (
@@ -711,8 +710,8 @@ INSERT INTO public.market_vehicle_registrations_segment (
   source_file_id,
   reference_period,
   segment_code,
-  segment_name,
-  current_month_units
+  segmento,
+  mes_atual
 )
 VALUES (
   1,
@@ -748,7 +747,7 @@ Evitar que uma tabela extraida errado entre no dashboard como se fosse confiavel
 WITH base AS (
   SELECT
     segment_code,
-    current_month_units
+    mes_atual
   FROM public.market_vehicle_registrations_segment
   WHERE source_file_id = 1
     AND reference_period = DATE '2026-04-01'
@@ -756,27 +755,27 @@ WITH base AS (
 checks AS (
   SELECT
     'autos_plus_comerciais_leves' AS check_name,
-    (SELECT current_month_units FROM base WHERE segment_code = 'autos')
-      + (SELECT current_month_units FROM base WHERE segment_code = 'comerciais_leves') AS calculated_value,
-    (SELECT current_month_units FROM base WHERE segment_code = 'autos_comerciais_leves') AS expected_value
+    (SELECT mes_atual FROM base WHERE segment_code = 'autos')
+      + (SELECT mes_atual FROM base WHERE segment_code = 'comerciais_leves') AS calculated_value,
+    (SELECT mes_atual FROM base WHERE segment_code = 'autos_comerciais_leves') AS expected_value
 
   UNION ALL
 
   SELECT
     'caminhoes_plus_onibus' AS check_name,
-    (SELECT current_month_units FROM base WHERE segment_code = 'caminhoes')
-      + (SELECT current_month_units FROM base WHERE segment_code = 'onibus') AS calculated_value,
-    (SELECT current_month_units FROM base WHERE segment_code = 'caminhoes_onibus') AS expected_value
+    (SELECT mes_atual FROM base WHERE segment_code = 'caminhoes')
+      + (SELECT mes_atual FROM base WHERE segment_code = 'onibus') AS calculated_value,
+    (SELECT mes_atual FROM base WHERE segment_code = 'caminhoes_onibus') AS expected_value
 
   UNION ALL
 
   SELECT
     'subtotal_plus_outros' AS check_name,
-    (SELECT current_month_units FROM base WHERE segment_code = 'subtotal')
-      + (SELECT current_month_units FROM base WHERE segment_code = 'motos')
-      + (SELECT current_month_units FROM base WHERE segment_code = 'implementos_rodoviarios')
-      + (SELECT current_month_units FROM base WHERE segment_code = 'outros') AS calculated_value,
-    (SELECT current_month_units FROM base WHERE segment_code = 'total') AS expected_value
+    (SELECT mes_atual FROM base WHERE segment_code = 'subtotal')
+      + (SELECT mes_atual FROM base WHERE segment_code = 'motos')
+      + (SELECT mes_atual FROM base WHERE segment_code = 'implementos_rodoviarios')
+      + (SELECT mes_atual FROM base WHERE segment_code = 'outros') AS calculated_value,
+    (SELECT mes_atual FROM base WHERE segment_code = 'total') AS expected_value
 )
 SELECT
   check_name,
@@ -794,8 +793,8 @@ Para o PDF de abril/2026, o total da primeira tabela deve ser `479662`.
 ```sql
 SELECT
   segment_code,
-  current_month_units,
-  current_month_units = 479662 AS passed
+  mes_atual,
+  mes_atual = 479662 AS passed
 FROM public.market_vehicle_registrations_segment
 WHERE source_file_id = 1
   AND reference_period = DATE '2026-04-01'
@@ -844,22 +843,22 @@ CREATE OR REPLACE VIEW public.v_market_registration_segment_summary AS
 WITH enriched AS (
   SELECT
     r.reference_period,
-    r.market_scope,
-    r.metric_name,
+    'Brasil'::text AS market_scope,
+    'emplacamentos'::text AS metric_name,
     r.segment_code,
-    r.segment_name,
-    r.current_month_units,
-    SUM(r.current_month_units) OVER (
-      PARTITION BY r.market_scope, r.metric_name, r.segment_code, date_part('year', r.reference_period)
+    r.segmento,
+    r.mes_atual,
+    SUM(r.mes_atual) OVER (
+      PARTITION BY r.segment_code, date_part('year', r.reference_period)
       ORDER BY r.reference_period
       ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
     ) AS current_year_accumulated_units,
-    LAG(r.current_month_units) OVER (
-      PARTITION BY r.market_scope, r.metric_name, r.segment_code
+    LAG(r.mes_atual) OVER (
+      PARTITION BY r.segment_code
       ORDER BY r.reference_period
     ) AS previous_month_units,
-    LAG(r.current_month_units, 12) OVER (
-      PARTITION BY r.market_scope, r.metric_name, r.segment_code
+    LAG(r.mes_atual, 12) OVER (
+      PARTITION BY r.segment_code
       ORDER BY r.reference_period
     ) AS previous_year_month_units,
     s.source_name,
@@ -877,18 +876,18 @@ SELECT
   market_scope,
   metric_name,
   segment_code,
-  segment_name,
-  current_month_units,
+  segmento,
+  mes_atual,
   current_year_accumulated_units,
   previous_month_units,
   previous_year_month_units,
   CASE
     WHEN previous_month_units IS NULL OR previous_month_units = 0 THEN NULL
-    ELSE ROUND(((current_month_units::numeric / previous_month_units) - 1) * 100, 2)
+    ELSE ROUND(((mes_atual::numeric / previous_month_units) - 1) * 100, 2)
   END AS month_over_month_pct,
   CASE
     WHEN previous_year_month_units IS NULL OR previous_year_month_units = 0 THEN NULL
-    ELSE ROUND(((current_month_units::numeric / previous_year_month_units) - 1) * 100, 2)
+    ELSE ROUND(((mes_atual::numeric / previous_year_month_units) - 1) * 100, 2)
   END AS year_over_year_pct,
   source_name,
   source_url,
@@ -904,8 +903,8 @@ FROM enriched;
 ```sql
 SELECT
   reference_period,
-  segment_name,
-  current_month_units,
+  segmento,
+  mes_atual,
   current_year_accumulated_units,
   month_over_month_pct,
   year_over_year_pct,
@@ -913,7 +912,7 @@ SELECT
   captured_at
 FROM public.v_market_registration_segment_summary
 WHERE reference_period = DATE '2026-04-01'
-ORDER BY current_month_units DESC;
+ORDER BY mes_atual DESC;
 ```
 
 ## Politica para guardar PDFs
