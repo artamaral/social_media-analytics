@@ -121,7 +121,7 @@ flowchart TD
   G["Extrair tabela da pagina 1"]
   H["Revisar extracao no piloto ou por excecao"]
   I["Gravar raw extraido"]
-  J["Normalizar segmentos, numeros e percentuais"]
+  J["Normalizar segmentos e mes atual"]
   K["Gravar tabela normalizada"]
   L["Rodar validacoes SQL"]
   M{"Validacoes passaram?"}
@@ -143,7 +143,7 @@ flowchart TD
 | Registro de metadados | Inserir manualmente linha em `market_source_files` com URL, periodo, storage, hash, status e metodo | Manual | Arthur + Codex/ChatGPT | Arquivo rastreavel no Postgres sem guardar o PDF na tabela |
 | Extracao | Ler o PDF ja salvo no Storage, extrair a primeira tabela da pagina 1 e revisar quando necessario | Semiautomatico | Script de extracao + Codex/ChatGPT | Linhas extraidas e conferidas |
 | Raw | Gravar dados extraidos em `raw_fenabrave_segment_summary` | Automatico | Script de extracao | Dados brutos preservados como texto |
-| Normalizacao | Converter nomes, numeros e percentuais para formato analitico | Automatico | Script de extracao | Valores prontos como `integer` e `numeric` |
+| Normalizacao | Converter nomes e a coluna `mes_atual` para formato analitico | Automatico | Script de extracao | Valores mensais prontos como `integer` |
 | Carga analitica | Inserir dados em `market_vehicle_registrations_segment` | Automatico | Script de extracao | Tabela normalizada preenchida |
 | Validacao | Rodar checks de soma, total e campos obrigatorios | Automatico | Supabase | Resultado objetivo de qualidade da carga |
 | Tratamento de erro | Corrigir extracao, ajustar mapeamento ou rejeitar arquivo | Manual | Arthur + Codex/ChatGPT | Falha resolvida antes de liberar dados |
@@ -470,9 +470,11 @@ Os dados especificos do arquivo mensal nao devem ficar no `.env`. Informar no co
 
 ```text
 --path
---reference-period
 --source-url
 ```
+
+O periodo de referencia deve ser inferido pelo nome do arquivo informado em `--path`.
+Exemplo: `fenabrave/2026/04/2026_04_02.pdf` vira `2026-04-01`.
 
 O `SUPABASE_SERVICE_ROLE_KEY` deve ficar apenas no ambiente seguro que roda o script. Ele nao deve ir para Streamlit publico, navegador ou repositorio.
 
@@ -515,18 +517,23 @@ python -m venv .venv
 pip install -r requirements.txt
 python ingest_fenabrave_phase1.py --dry-run `
   --path "fenabrave/2026/04/2026_04_02.pdf" `
-  --reference-period "2026-04-01" `
   --source-url "https://www.fenabrave.org.br/portal/files/2026_04_02.pdf"
 ```
 
 No piloto, a extracao deve gerar uma saida de revisao antes de gravar como definitivo. Exemplo:
 
 ```text
-Segmento                         Abr/2026   Mar/2026   Acum/2026
-A) Autos                         187.313    206.361    659.311
-B) Com. Leves                    49.943     51.848     175.377
-A + B                            237.256    258.209    834.688
+segment_code                 segmento                      mes_atual
+autos                        Autos                            187313
+comerciais_leves             Comerciais Leves                  49943
+autos_comerciais_leves       Autos + Comerciais Leves         237256
 ```
+
+Regra da fase 1:
+
+- extrair e persistir apenas `mes_atual`
+- nao persistir acumulado, mes anterior ou percentuais publicados no PDF
+- gerar acumulados e variacoes em views SQL a partir das cargas mensais validadas
 
 Se a tabela extraida nao bater visualmente com o PDF:
 
@@ -534,6 +541,8 @@ Se a tabela extraida nao bater visualmente com o PDF:
 - marcar `extraction_status = failed`
 - registrar observacao em `extraction_notes`
 - ajustar parser ou fazer extracao manual assistida apenas para o piloto
+
+Se uma validacao mostrar `expected=None`, a soma pode ter sido calculada, mas a linha esperada de comparacao nao foi extraida. Exemplo: `subtotal_plus_outros` depende da linha `Total`.
 
 Se a tabela extraida bater:
 
@@ -639,13 +648,6 @@ CREATE TABLE public.raw_fenabrave_segment_summary (
   row_number integer NOT NULL,
   segment_label_raw text,
   current_month_raw text,
-  previous_month_raw text,
-  current_year_accumulated_raw text,
-  previous_year_month_raw text,
-  previous_year_accumulated_raw text,
-  month_over_month_raw text,
-  year_over_year_raw text,
-  accumulated_year_over_year_raw text,
   extraction_confidence numeric,
   created_at timestamptz NOT NULL DEFAULT now()
 );
@@ -661,13 +663,6 @@ INSERT INTO public.raw_fenabrave_segment_summary (
   row_number,
   segment_label_raw,
   current_month_raw,
-  previous_month_raw,
-  current_year_accumulated_raw,
-  previous_year_month_raw,
-  previous_year_accumulated_raw,
-  month_over_month_raw,
-  year_over_year_raw,
-  accumulated_year_over_year_raw,
   extraction_confidence
 )
 VALUES (
@@ -677,13 +672,6 @@ VALUES (
   1,
   'A) Autos',
   '187.313',
-  '206.361',
-  '659.311',
-  '152.257',
-  '551.901',
-  '-9,23',
-  '23,02',
-  '19,46',
   0.98
 );
 ```
@@ -697,7 +685,6 @@ Versao limpa e pronta para analise.
 Aqui:
 
 - `187.313` vira `187313`
-- `-9,23` vira `-9.23`
 - `A) Autos` vira `segment_code = autos` e `segment_name = Autos`
 - cada linha fica ligada ao arquivo de origem
 
@@ -706,10 +693,10 @@ Aqui:
 Responder:
 
 - quantos emplacamentos ocorreram por segmento?
-- qual foi a variacao mensal?
-- qual foi a variacao ano contra ano?
-- qual foi o acumulado do ano?
 - qual arquivo sustenta esse numero?
+- qual mes cada numero representa?
+
+Acumulados, variacoes mensais e comparacoes ano contra ano devem ser calculados em views SQL, usando a serie mensal ja validada.
 
 ### Tabela sugerida
 
@@ -723,13 +710,6 @@ CREATE TABLE public.market_vehicle_registrations_segment (
   segment_code text NOT NULL,
   segment_name text NOT NULL,
   current_month_units integer,
-  previous_month_units integer,
-  current_year_accumulated_units integer,
-  previous_year_month_units integer,
-  previous_year_accumulated_units integer,
-  month_over_month_pct numeric,
-  year_over_year_pct numeric,
-  accumulated_year_over_year_pct numeric,
   created_at timestamptz NOT NULL DEFAULT now(),
 
   CONSTRAINT market_vehicle_reg_segment_unique UNIQUE (
@@ -748,28 +728,14 @@ INSERT INTO public.market_vehicle_registrations_segment (
   reference_period,
   segment_code,
   segment_name,
-  current_month_units,
-  previous_month_units,
-  current_year_accumulated_units,
-  previous_year_month_units,
-  previous_year_accumulated_units,
-  month_over_month_pct,
-  year_over_year_pct,
-  accumulated_year_over_year_pct
+  current_month_units
 )
 VALUES (
   1,
   DATE '2026-04-01',
   'autos',
   'Autos',
-  187313,
-  206361,
-  659311,
-  152257,
-  551901,
-  -9.23,
-  23.02,
-  19.46
+  187313
 );
 ```
 
@@ -789,8 +755,8 @@ Evitar que uma tabela extraida errado entre no dashboard como se fosse confiavel
 2. `Caminhoes + Onibus = C + D`
 3. `Subtotal + Motos + Impl. Rod. + Outros = Total`
 4. total normalizado deve bater com total publicado
-5. percentuais devem bater com os valores publicados dentro de tolerancia definida
-6. nenhuma linha principal da tabela deve ficar sem `segment_code`
+5. nenhuma linha principal da tabela deve ficar sem `segment_code`
+6. cada segmento deve ter apenas um registro por `source_file_id`, `reference_period` e `segment_code`
 
 ### Query exemplo - totais principais
 
@@ -884,35 +850,69 @@ Responder perguntas simples como:
 - qual segmento cresceu mais contra o ano anterior?
 - qual segmento caiu contra o mes anterior?
 - qual foi o total de emplacamentos no periodo?
+- qual e o acumulado do ano calculado pela serie mensal validada?
 - qual periodo e fonte sustentam o dado?
 
 ### View sugerida
 
 ```sql
 CREATE OR REPLACE VIEW public.v_market_registration_segment_summary AS
+WITH enriched AS (
+  SELECT
+    r.reference_period,
+    r.market_scope,
+    r.metric_name,
+    r.segment_code,
+    r.segment_name,
+    r.current_month_units,
+    SUM(r.current_month_units) OVER (
+      PARTITION BY r.market_scope, r.metric_name, r.segment_code, date_part('year', r.reference_period)
+      ORDER BY r.reference_period
+      ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) AS current_year_accumulated_units,
+    LAG(r.current_month_units) OVER (
+      PARTITION BY r.market_scope, r.metric_name, r.segment_code
+      ORDER BY r.reference_period
+    ) AS previous_month_units,
+    LAG(r.current_month_units, 12) OVER (
+      PARTITION BY r.market_scope, r.metric_name, r.segment_code
+      ORDER BY r.reference_period
+    ) AS previous_year_month_units,
+    s.source_name,
+    f.source_url,
+    f.storage_bucket,
+    f.storage_path,
+    f.captured_at,
+    f.extraction_status
+  FROM public.market_vehicle_registrations_segment r
+  JOIN public.market_source_files f ON f.id = r.source_file_id
+  JOIN public.market_data_sources s ON s.id = f.source_id
+)
 SELECT
-  r.reference_period,
-  r.market_scope,
-  r.metric_name,
-  r.segment_code,
-  r.segment_name,
-  r.current_month_units,
-  r.previous_month_units,
-  r.current_year_accumulated_units,
-  r.previous_year_month_units,
-  r.previous_year_accumulated_units,
-  r.month_over_month_pct,
-  r.year_over_year_pct,
-  r.accumulated_year_over_year_pct,
-  s.source_name,
-  f.source_url,
-  f.storage_bucket,
-  f.storage_path,
-  f.captured_at,
-  f.extraction_status
-FROM public.market_vehicle_registrations_segment r
-JOIN public.market_source_files f ON f.id = r.source_file_id
-JOIN public.market_data_sources s ON s.id = f.source_id;
+  reference_period,
+  market_scope,
+  metric_name,
+  segment_code,
+  segment_name,
+  current_month_units,
+  current_year_accumulated_units,
+  previous_month_units,
+  previous_year_month_units,
+  CASE
+    WHEN previous_month_units IS NULL OR previous_month_units = 0 THEN NULL
+    ELSE ROUND(((current_month_units::numeric / previous_month_units) - 1) * 100, 2)
+  END AS month_over_month_pct,
+  CASE
+    WHEN previous_year_month_units IS NULL OR previous_year_month_units = 0 THEN NULL
+    ELSE ROUND(((current_month_units::numeric / previous_year_month_units) - 1) * 100, 2)
+  END AS year_over_year_pct,
+  source_name,
+  source_url,
+  storage_bucket,
+  storage_path,
+  captured_at,
+  extraction_status
+FROM enriched;
 ```
 
 ### Query de consumo exemplo
@@ -922,6 +922,7 @@ SELECT
   reference_period,
   segment_name,
   current_month_units,
+  current_year_accumulated_units,
   month_over_month_pct,
   year_over_year_pct,
   source_name,

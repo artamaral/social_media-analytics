@@ -61,16 +61,16 @@ Exemplo para abril/2026:
 ```powershell
 python ingest_fenabrave_phase1.py --dry-run `
   --path "fenabrave/2026/04/2026_04_02.pdf" `
-  --reference-period "2026-04-01" `
   --source-url "https://www.fenabrave.org.br/portal/files/2026_04_02.pdf"
 ```
+
+O periodo `2026-04-01` sera inferido automaticamente a partir do nome do arquivo `2026_04_02.pdf`.
 
 Alternativa usando o helper PowerShell:
 
 ```powershell
 .\run_fenabrave_phase1.ps1 `
   -Path "fenabrave/2026/04/2026_04_02.pdf" `
-  -ReferencePeriod "2026-04-01" `
   -SourceUrl "https://www.fenabrave.org.br/portal/files/2026_04_02.pdf"
 ```
 
@@ -78,8 +78,10 @@ O script deve imprimir:
 
 - metadados do PDF baixado do Storage
 - linhas extraidas da primeira tabela da pagina 1
-- valores normalizados por segmento
+- valores normalizados por segmento, usando apenas a coluna `mes_atual`
 - checks locais de soma
+
+Se um check aparecer com `expected=None`, significa que a linha esperada para comparacao nao foi extraida do PDF. Exemplo: em `subtotal_plus_outros`, o script soma `Subtotal + Motos + Implementos Rodoviarios + Outros`, mas precisa da linha `Total` para validar a diferenca.
 
 ## Gravar no banco
 
@@ -88,7 +90,6 @@ Quando as tabelas raw e normalizada existirem no Supabase e o dry-run estiver co
 ```powershell
 python ingest_fenabrave_phase1.py --write `
   --path "fenabrave/2026/04/2026_04_02.pdf" `
-  --reference-period "2026-04-01" `
   --source-url "https://www.fenabrave.org.br/portal/files/2026_04_02.pdf"
 ```
 
@@ -106,7 +107,6 @@ Para reprocessar o mesmo arquivo e substituir dados ja carregados:
 ```powershell
 python ingest_fenabrave_phase1.py --write --replace `
   --path "fenabrave/2026/04/2026_04_02.pdf" `
-  --reference-period "2026-04-01" `
   --source-url "https://www.fenabrave.org.br/portal/files/2026_04_02.pdf"
 ```
 
@@ -114,11 +114,18 @@ python ingest_fenabrave_phase1.py --write --replace `
 
 ```text
 --path
---reference-period
 --source-url
 ```
 
 Esses parametros mudam a cada mes. O `.env` nao deve ser editado para trocar o arquivo processado.
+
+`--reference-period` existe como opcional apenas para excecoes. No fluxo normal, o script infere o mes pelo nome do arquivo no path:
+
+```text
+fenabrave/2026/04/2026_04_02.pdf -> 2026-04-01
+```
+
+O script carrega apenas a coluna `mes_atual`. Acumulados mensais ou anuais devem ser gerados depois por view SQL.
 
 ## Opcoes de revisao
 
@@ -127,7 +134,6 @@ Rodar gravacao sem tentar abrir o PDF, mas ainda perguntando OK/NOK:
 ```powershell
 python ingest_fenabrave_phase1.py --write --no-open-pdf `
   --path "fenabrave/2026/04/2026_04_02.pdf" `
-  --reference-period "2026-04-01" `
   --source-url "https://www.fenabrave.org.br/portal/files/2026_04_02.pdf"
 ```
 
@@ -136,7 +142,6 @@ Pular a revisao interativa:
 ```powershell
 python ingest_fenabrave_phase1.py --write --no-review `
   --path "fenabrave/2026/04/2026_04_02.pdf" `
-  --reference-period "2026-04-01" `
   --source-url "https://www.fenabrave.org.br/portal/files/2026_04_02.pdf"
 ```
 

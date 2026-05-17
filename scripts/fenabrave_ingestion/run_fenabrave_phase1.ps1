@@ -2,7 +2,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$Path,
 
-    [Parameter(Mandatory = $true)]
+    [Parameter(Mandatory = $false)]
     [string]$ReferencePeriod,
 
     [Parameter(Mandatory = $true)]
@@ -25,8 +25,13 @@ Write-Host "Diretorio: $scriptDir"
 Write-Host "Script: $pythonScript"
 
 try {
-    py -3 $pythonScript --dry-run --path $Path --reference-period $ReferencePeriod --source-url $SourceUrl
+    $argsList = @("--dry-run", "--path", $Path, "--source-url", $SourceUrl)
+    if ($ReferencePeriod) {
+        $argsList += @("--reference-period", $ReferencePeriod)
+    }
+
+    py -3 $pythonScript @argsList
 }
 catch {
-    python $pythonScript --dry-run --path $Path --reference-period $ReferencePeriod --source-url $SourceUrl
+    python $pythonScript @argsList
 }

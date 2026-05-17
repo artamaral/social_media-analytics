@@ -75,14 +75,36 @@ EXPECTED_SEGMENTS = [
 
 RAW_FIELD_NAMES = [
     "current_month_raw",
-    "previous_month_raw",
-    "current_year_accumulated_raw",
-    "previous_year_month_raw",
-    "previous_year_accumulated_raw",
-    "month_over_month_raw",
-    "year_over_year_raw",
-    "accumulated_year_over_year_raw",
 ]
+
+
+def infer_reference_period_from_path(storage_path):
+    """
+    Infere o periodo de referencia a partir do nome/caminho do PDF.
+
+    Resultado esperado:
+    - `fenabrave/2026/04/2026_04_02.pdf` vira `2026-04-01`.
+    - usa os dois primeiros grupos numericos do nome do arquivo como ano/mes.
+    """
+    filename = Path(storage_path).name
+    match = re.search(r"(20\d{2})[_-](\d{2})", filename)
+
+    if not match:
+        match = re.search(r"(20\d{2})[^\d]+(\d{2})", storage_path)
+
+    if not match:
+        raise RuntimeError(
+            "Nao foi possivel inferir o periodo pelo nome do arquivo. "
+            "Use um nome como 2026_04_02.pdf ou informe --reference-period."
+        )
+
+    year = int(match.group(1))
+    month = int(match.group(2))
+
+    if month < 1 or month > 12:
+        raise RuntimeError(f"Mes invalido inferido do arquivo: {month}")
+
+    return f"{year:04d}-{month:02d}-01"
 
 
 def load_local_env():
@@ -457,8 +479,8 @@ def extract_first_page_table(pdf_bytes):
     Extrai a primeira tabela util da pagina 1 do PDF Fenabrave.
 
     Resultado esperado:
-    - retorna linhas raw com segmento identificado e oito valores brutos:
-      mes atual, mes anterior, acumulados e variacoes.
+    - retorna linhas raw com segmento identificado e, para a carga analitica,
+      usa apenas o primeiro valor numerico da linha: `mes_atual`.
     """
     try:
         import pdfplumber
@@ -490,13 +512,13 @@ def extract_first_page_table(pdf_bytes):
 
             numbers = extract_numbers_from_cells(cells[1:])
 
-            if len(numbers) < 8:
+            if len(numbers) < 1:
                 numbers = extract_numbers_from_cells(cells)
 
-            if len(numbers) < 8:
+            if len(numbers) < 1:
                 continue
 
-            values = numbers[:8]
+            values = numbers[:1]
             row = {
                 "page_number": 1,
                 "table_number": table_number,
@@ -505,7 +527,13 @@ def extract_first_page_table(pdf_bytes):
                 "segment_code": segment["code"],
                 "segment_name": segment["name"],
             }
-            row.update(dict(zip(RAW_FIELD_NAMES, values)))
+
+            for field_name, value in zip(RAW_FIELD_NAMES, values):
+                row[field_name] = value
+
+            for field_name in RAW_FIELD_NAMES:
+                row.setdefault(field_name, None)
+
             parsed_rows.append(row)
 
     by_code = {}
@@ -541,7 +569,8 @@ def normalize_rows(raw_rows, source_file_id, reference_period):
     Converte linhas raw em registros analiticos normalizados.
 
     Resultado esperado:
-    - retorna payloads compativeis com `market_vehicle_registrations_segment`.
+    - retorna payloads compativeis com `market_vehicle_registrations_segment`,
+      contendo apenas o volume do mes atual.
     """
     normalized = []
 
@@ -555,19 +584,6 @@ def normalize_rows(raw_rows, source_file_id, reference_period):
                 "segment_code": row["segment_code"],
                 "segment_name": row["segment_name"],
                 "current_month_units": parse_int_br(row["current_month_raw"]),
-                "previous_month_units": parse_int_br(row["previous_month_raw"]),
-                "current_year_accumulated_units": parse_int_br(
-                    row["current_year_accumulated_raw"]
-                ),
-                "previous_year_month_units": parse_int_br(row["previous_year_month_raw"]),
-                "previous_year_accumulated_units": parse_int_br(
-                    row["previous_year_accumulated_raw"]
-                ),
-                "month_over_month_pct": parse_decimal_br(row["month_over_month_raw"]),
-                "year_over_year_pct": parse_decimal_br(row["year_over_year_raw"]),
-                "accumulated_year_over_year_pct": parse_decimal_br(
-                    row["accumulated_year_over_year_raw"]
-                ),
             }
         )
 
@@ -611,8 +627,12 @@ def validate_normalized_rows(normalized_rows):
         input_values = [value(code) for code in inputs]
         expected_value = value(expected_code)
 
-        if any(item is None for item in input_values) or expected_value is None:
+        if any(item is None for item in input_values):
             calculated_value = None
+            passed = False
+            difference = None
+        elif expected_value is None:
+            calculated_value = sum(input_values)
             passed = False
             difference = None
         else:
@@ -648,19 +668,14 @@ def print_preview(raw_rows, normalized_rows, checks, pdf_bytes):
     print("")
     print("Linhas extraidas")
     print("-" * 96)
-    print(
-        f"{'segment_code':28} {'segmento':28} {'mes_atual':>10} "
-        f"{'mes_ant':>10} {'acum_ano':>10}"
-    )
+    print(f"{'segment_code':28} {'segmento':28} {'mes_atual':>10}")
     print("-" * 96)
 
     for row in normalized_rows:
         print(
             f"{row['segment_code'][:28]:28} "
             f"{row['segment_name'][:28]:28} "
-            f"{row['current_month_units']:>10} "
-            f"{row['previous_month_units']:>10} "
-            f"{row['current_year_accumulated_units']:>10}"
+            f"{row['current_month_units']:>10}"
         )
 
     print("")
@@ -698,15 +713,6 @@ def raw_payloads(raw_rows, source_file_id):
                 "row_number": row["row_number"],
                 "segment_label_raw": row["segment_label_raw"],
                 "current_month_raw": row["current_month_raw"],
-                "previous_month_raw": row["previous_month_raw"],
-                "current_year_accumulated_raw": row["current_year_accumulated_raw"],
-                "previous_year_month_raw": row["previous_year_month_raw"],
-                "previous_year_accumulated_raw": row["previous_year_accumulated_raw"],
-                "month_over_month_raw": row["month_over_month_raw"],
-                "year_over_year_raw": row["year_over_year_raw"],
-                "accumulated_year_over_year_raw": row[
-                    "accumulated_year_over_year_raw"
-                ],
                 "extraction_confidence": 0.95,
             }
         )
@@ -1034,8 +1040,8 @@ def parse_args():
 
     Resultado esperado:
     - permite rodar em `--dry-run`, `--write` e `--replace`.
-    - path, periodo e URL do PDF sao informados no comando mensal, sem editar
-      `.env`.
+    - path e URL do PDF sao informados no comando mensal, sem editar `.env`.
+    - periodo pode ser inferido pelo nome do arquivo.
     """
     parser = argparse.ArgumentParser(
         description="Extrai a primeira tabela da pagina 1 de PDF Fenabrave no Supabase Storage."
@@ -1055,8 +1061,11 @@ def parse_args():
     )
     parser.add_argument(
         "--reference-period",
-        required=True,
-        help="Periodo de referencia no formato YYYY-MM-DD, usando o primeiro dia do mes.",
+        default=None,
+        help=(
+            "Periodo de referencia YYYY-MM-DD. Opcional; se omitido, "
+            "o script infere do nome do arquivo, ex: 2026_04_02.pdf -> 2026-04-01."
+        ),
     )
     parser.add_argument(
         "--source-url",
@@ -1117,7 +1126,9 @@ def main():
 
     bucket = args.bucket or require_env("FENABRAVE_STORAGE_BUCKET")
     storage_path = args.path
-    reference_period = args.reference_period
+    reference_period = args.reference_period or infer_reference_period_from_path(
+        storage_path
+    )
     source_url = args.source_url
     headers = build_headers(supabase_key)
 

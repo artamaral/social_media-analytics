@@ -79,9 +79,11 @@ cd scripts\fenabrave_ingestion
 
 python ingest_fenabrave_phase1.py --dry-run `
   --path "fenabrave/2026/04/2026_04_02.pdf" `
-  --reference-period "2026-04-01" `
   --source-url "https://www.fenabrave.org.br/portal/files/2026_04_02.pdf"
 ```
+
+O periodo de referencia e inferido pelo nome do arquivo. Exemplo:
+`2026_04_02.pdf` vira `2026-04-01`.
 
 Comando PowerShell - gravar no Supabase:
 
@@ -91,7 +93,6 @@ cd scripts\fenabrave_ingestion
 
 python ingest_fenabrave_phase1.py --write `
   --path "fenabrave/2026/04/2026_04_02.pdf" `
-  --reference-period "2026-04-01" `
   --source-url "https://www.fenabrave.org.br/portal/files/2026_04_02.pdf"
 ```
 
@@ -103,7 +104,6 @@ cd scripts\fenabrave_ingestion
 
 python ingest_fenabrave_phase1.py --write --replace `
   --path "fenabrave/2026/04/2026_04_02.pdf" `
-  --reference-period "2026-04-01" `
   --source-url "https://www.fenabrave.org.br/portal/files/2026_04_02.pdf"
 ```
 
@@ -114,7 +114,8 @@ Resultado esperado:
 - tabela extraida revisada
 - operador confirma `OK` antes da gravacao definitiva
 - checks locais aprovados
-- dados prontos para uso analitico apos carga definitiva
+- dados de `mes_atual` prontos para uso analitico apos carga definitiva
+- acumulados devem ser calculados por view SQL, nao extraidos como coluna persistida
 
 ## Atividades semanais
 
