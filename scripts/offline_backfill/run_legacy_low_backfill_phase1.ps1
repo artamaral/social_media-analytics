@@ -16,6 +16,7 @@ if (-not (Test-Path $logsDir)) {
 }
 
 Set-Location $scriptDir
+$env:PYTHONIOENCODING = "utf-8"
 
 $pythonCommand = $null
 
@@ -42,23 +43,32 @@ $banner = @(
 
 $banner | Tee-Object -FilePath $runLog
 
-if ((Split-Path $pythonCommand -Leaf).ToLower() -eq "py.exe" -or
-    (Split-Path $pythonCommand -Leaf).ToLower() -eq "py") {
-    & $pythonCommand -3 $pythonScript 2>&1 | Tee-Object -FilePath $runLog -Append
+$exitCode = $null
+
+try {
+    if ((Split-Path $pythonCommand -Leaf).ToLower() -eq "py.exe" -or
+        (Split-Path $pythonCommand -Leaf).ToLower() -eq "py") {
+        & $pythonCommand -3 $pythonScript 2>&1 | Tee-Object -FilePath $runLog -Append
+    }
+    else {
+        & $pythonCommand $pythonScript 2>&1 | Tee-Object -FilePath $runLog -Append
+    }
+
+    $exitCode = $LASTEXITCODE
 }
-else {
-    & $pythonCommand $pythonScript 2>&1 | Tee-Object -FilePath $runLog -Append
+finally {
+    if ($null -eq $exitCode) {
+        $exitCode = $LASTEXITCODE
+    }
+
+    @(
+        "Codigo de saida: $exitCode"
+        "Fim da execucao: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")"
+    ) | Tee-Object -FilePath $runLog -Append
+
+    Copy-Item -LiteralPath $runLog -Destination $latestLog -Force
 }
-
-$exitCode = $LASTEXITCODE
-
-@(
-    "Codigo de saida: $exitCode"
-    "Fim da execucao: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")"
-) | Tee-Object -FilePath $runLog -Append
-
-Copy-Item -LiteralPath $runLog -Destination $latestLog -Force
 
 if ($exitCode -ne 0) {
-    throw "Backfill finalizado com codigo de saida $exitCode. Verifique: $runLog"
+    throw "Backfill finalizado com codigo de saida $exitCode. Verifique: $latestLog"
 }

@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 from datetime import UTC, datetime, timedelta
 
@@ -8,6 +9,12 @@ import requests
 # ==============================
 # CONFIG
 # ==============================
+
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except AttributeError:
+    pass
 
 
 def load_local_env():
