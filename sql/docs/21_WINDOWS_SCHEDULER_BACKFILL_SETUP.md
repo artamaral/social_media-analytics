@@ -42,18 +42,17 @@ Antes de criar a tarefa:
 
 ## Frequencia recomendada
 
-Como a fase 1 ainda precisa de varias rodadas, uma frequencia segura inicial e:
+Com a observacao operacional mais recente, a frequencia recomendada para a fase
+1 passa a ser:
 
-- 1 execucao por hora
+- 1 execucao a cada `10` minutos
 
-Isso reduz intervencao manual e permite drenar o passivo de `legacy_low` ao
-longo do dia.
+Motivo:
 
-Observacao:
-
-- se quiser mais controle, tambem e aceitavel rodar a cada `2` horas
-- a fase 1 nao depende de janela de `6h`, entao pode rodar com frequencia maior
-  que a futura fase 2
+- o objetivo atual e drenar o `legacy_low` o mais rapido possivel antes da fase 2
+- foi observado baixo consumo da API do YouTube mesmo com frequencia alta
+- a fase 1 nao depende de janela de `6h`, entao pode rodar mais agressivamente
+  do que a fase 2
 
 ---
 
@@ -69,7 +68,7 @@ No Agendador de Tarefas do Windows:
 4. aba `Disparadores`
    - Novo
    - Iniciar: em um horario proximo
-   - Repetir tarefa a cada: `1 hora`
+   - Repetir tarefa a cada: `10 minutos`
    - Duracao: `1 dia`
 5. aba `Acoes`
    - Programa/script:
@@ -87,7 +86,7 @@ No Agendador de Tarefas do Windows:
 Comando sugerido:
 
 ```powershell
-schtasks /Create /TN "legacy-low-backfill-phase1" /SC HOURLY /MO 1 /TR "powershell.exe -ExecutionPolicy Bypass -File \"C:\social_media-analytics\scripts\offline_backfill\run_legacy_low_backfill_phase1.ps1\"" /F
+schtasks /Create /TN "legacy-low-backfill-phase1" /SC MINUTE /MO 10 /TR "powershell.exe -ExecutionPolicy Bypass -File \"C:\social_media-analytics\scripts\offline_backfill\run_legacy_low_backfill_phase1.ps1\"" /F
 ```
 
 ---

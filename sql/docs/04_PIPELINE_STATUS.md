@@ -48,6 +48,8 @@ O objetivo e manter uma leitura simples de:
 - Escopo: apenas `legacy_low`
 - Prioridade de selecao: `priority_score_v2 desc`
 - Tamanho do lote: `50`
+- Frequencia atual do scheduler: `10` minutos
+- Observacao de custo: consumo observado da API do YouTube segue baixo nesta frequencia
 
 ### Resultado da primeira execucao validada
 
@@ -86,6 +88,8 @@ O objetivo e manter uma leitura simples de:
 - o seed historico em massa parece estar funcionando
 - a promocao para `partial` ainda e residual, o que continua coerente com o
   desenho atual
+- a estrategia passa a priorizar explicitamente posts com `0`, `1` e `2`
+  checagens para acelerar a reducao do `legacy_low`
 
 ### Estimativa operacional atual
 
@@ -102,6 +106,7 @@ O objetivo e manter uma leitura simples de:
 ### Backfill legado fase 1
 
 - confirmar reducao continua do `legacy_low`
+- confirmar reducao dos blocos de `0`, `1` e `2` checagens
 - confirmar inserts recorrentes em `post_metrics_history`
 - confirmar que a selecao continua aderente a `priority_score_v2`
 

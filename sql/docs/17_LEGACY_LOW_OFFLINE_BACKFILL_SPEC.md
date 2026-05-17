@@ -78,6 +78,8 @@ Para fins do script offline, um post e considerado `legacy_low` quando:
 
 ### Criterio inicial sugerido
 
+Versao inicial:
+
 - `created_at < now() - interval '7 days'`
 - `total_checagens <= 1`
 
@@ -85,6 +87,20 @@ Observacao:
 
 - esse criterio e inicial e pode ser recalibrado
 - o objetivo e separar legado de bootstrap de novos posts
+
+### Ajuste operacional posterior
+
+Com a fase 1 em execucao e evidencias de baixo consumo da API do YouTube,
+passou a fazer sentido ampliar momentaneamente o foco operacional para:
+
+- `created_at < now() - interval '7 days'`
+- `total_checagens <= 2`
+
+Motivo:
+
+- atacar apenas `<= 1` ajuda a semear historico
+- atacar `0`, `1` e `2` checagens acelera a reducao do `legacy_low`
+- isso direciona melhor o esforco para os posts ainda pouco observados
 
 ---
 

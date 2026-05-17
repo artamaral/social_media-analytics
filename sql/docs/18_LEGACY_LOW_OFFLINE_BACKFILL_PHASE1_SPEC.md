@@ -43,13 +43,31 @@ O foco desta especificacao e apenas o conjunto `legacy_low`.
 Um post entra na fase 1 do backfill quando:
 
 - `created_at < now() - interval '7 days'`
-- `total_checagens <= 1`
+- `total_checagens <= 2`
 
 Interpretacao:
 
 - o post nao e novo
 - o post esta subobservado
 - o caso representa divida historica, nao cold start
+
+### Observacao de estrategia
+
+Inicialmente a fase 1 foi pensada para atacar `<= 1` checagem.
+
+Com a observacao operacional da base e o baixo consumo da API do YouTube sob
+agendamento frequente, a estrategia foi ajustada para priorizar neste momento
+os posts com:
+
+- `0` checagens
+- `1` checagem
+- `2` checagens
+
+Objetivo:
+
+- acelerar a drenagem do `legacy_low`
+- concentrar o esforco nos posts ainda mais proximos do estado sem contexto
+- deixar a base mais preparada antes da fase 2
 
 ---
 
@@ -171,7 +189,7 @@ left join (
 join public.v_post_priority_score_features_v2 f
   on f.post_id = p.post_id
 where p.created_at < now() - interval '7 days'
-  and coalesce(h.total_checagens, 0) <= 1
+  and coalesce(h.total_checagens, 0) <= 2
 order by
   f.priority_score_v2 desc,
   coalesce(h.total_checagens, 0) asc,
@@ -254,7 +272,7 @@ Campos uteis para log:
 
 ## Criterios de sucesso da fase 1
 
-- os posts `legacy_low` recebem ao menos 1 snapshot
+- os posts `legacy_low` com `0`, `1` e `2` checagens recebem prioridade de reprocessamento
 - a quantidade de posts sem historico diminui
 - o script roda sem interferir no pipeline principal
 - o tempo por lote permanece aceitavel
@@ -277,7 +295,7 @@ left join (
   group by post_id
 ) h on h.post_id = p.post_id
 where p.created_at < now() - interval '7 days'
-  and coalesce(h.total_checagens, 0) <= 1;
+  and coalesce(h.total_checagens, 0) <= 2;
 ```
 
 ### 2. Quantos posts ganharam seu primeiro snapshot

@@ -251,3 +251,40 @@ numeros como referencia:
 - `legacy_low` estagnar perto do valor atual
 - bloco de `1` checagem parar de cair
 - `partial` permanecer praticamente nulo mesmo apos novas rodadas
+
+---
+
+## Atualizacao de diretriz operacional - 2026-05-16
+
+### Mudanca de foco da fase 1
+
+Com base nos resultados parciais da execucao continua, a fase 1 passa a ter
+foco mais direcionado nos posts com:
+
+- `0` checagens
+- `1` checagem
+- `2` checagens
+
+Motivo:
+
+- esse conjunto representa os posts ainda mais proximos do estado sem contexto
+- o objetivo imediato continua sendo reduzir o `legacy_low`
+- neste momento, atacar esse grupo e mais importante do que continuar dando
+  contexto adicional para posts ja mais distantes do estado inicial
+
+### Impacto esperado dessa mudanca
+
+- reduzir mais rapidamente o bloco residual de `low`
+- acelerar a migracao de posts de `0` para `1` e de `1` para `2+` checagens
+- deixar a base mais limpa para discutir a fase 2
+
+### Observacao sobre o custo da API
+
+Foi observado pela manha de `2026-05-16` que o consumo de tokens/quota da API
+do YouTube permanecia baixo mesmo com execucao automatica a cada `10` minutos.
+
+Interpretacao:
+
+- nao ha bloqueio operacional imediato de quota para intensificar a fase 1
+- a frequencia mais alta e aceitavel neste momento para reduzir o passivo
+  legado antes de avancar
