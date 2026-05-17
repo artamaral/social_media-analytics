@@ -315,6 +315,159 @@ reference_period: 2026-04-01
 extraction_status: stored
 ```
 
+### Como registrar o PDF em `market_source_files`
+
+Objetivo desta etapa:
+
+- criar um registro no Postgres dizendo qual PDF sera usado
+- ligar o PDF ao cadastro da Fenabrave em `market_data_sources`
+- informar periodo, URL oficial, bucket e caminho no Storage
+- deixar o arquivo com status `stored`, pronto para a extracao
+
+Esse registro nao guarda o PDF dentro do Postgres. Ele guarda apenas metadados e o caminho do arquivo preservado no Supabase Storage.
+
+Campos obrigatorios na pratica:
+
+| Campo | Como preencher |
+|---|---|
+| `source_id` | ID da Fenabrave em `market_data_sources` |
+| `reference_period` | primeiro dia do mes representado pelo PDF, ex. `2026-04-01` |
+| `source_url` | URL direta do PDF no site da Fenabrave |
+| `file_type` | `pdf` |
+| `storage_bucket` | `market-source-files` |
+| `storage_path` | caminho do arquivo no bucket, ex. `fenabrave/2026/04/2026_04_02.pdf` |
+| `original_filename` | nome original do arquivo, ex. `2026_04_02.pdf` |
+| `extraction_status` | `stored` |
+| `extraction_method` | `pdf_table_extraction` |
+
+Campos recomendados, mas que podem ficar nulos se ainda nao estiverem disponiveis:
+
+| Campo | Observacao |
+|---|---|
+| `file_size_bytes` | tamanho do PDF em bytes |
+| `sha256` | hash do PDF para auditoria |
+| `source_page_url` | pagina oficial onde o PDF foi encontrado |
+| `extraction_notes` | observacao operacional do arquivo |
+
+#### Passo 1 - confirmar o ID da Fenabrave
+
+No Supabase Dashboard:
+
+1. Abrir `SQL Editor`.
+2. Rodar:
+
+```sql
+SELECT
+  id,
+  source_name,
+  data_role,
+  structured_ingestion
+FROM public.market_data_sources
+WHERE source_name = 'Fenabrave';
+```
+
+Resultado esperado:
+
+```text
+source_name = Fenabrave
+data_role = emplacamento
+structured_ingestion = true
+```
+
+Se essa query nao retornar nenhuma linha, o entregavel 1 ainda nao foi criado ou a fonte foi cadastrada com outro nome.
+
+#### Passo 2 - inserir ou atualizar o registro do PDF
+
+Usar este modelo no `SQL Editor`, alterando apenas mes, URL, caminho, tamanho e hash quando necessario:
+
+```sql
+INSERT INTO public.market_source_files (
+  source_id,
+  reference_period,
+  source_url,
+  source_page_url,
+  file_type,
+  storage_bucket,
+  storage_path,
+  original_filename,
+  file_size_bytes,
+  sha256,
+  extraction_status,
+  extraction_method,
+  extraction_notes
+)
+SELECT
+  s.id,
+  DATE '2026-04-01',
+  'https://www.fenabrave.org.br/portal/files/2026_04_02.pdf',
+  'https://www.fenabrave.org.br/portalv2/Conteudo/Emplacamentos%20',
+  'pdf',
+  'market-source-files',
+  'fenabrave/2026/04/2026_04_02.pdf',
+  '2026_04_02.pdf',
+  NULL,
+  NULL,
+  'stored',
+  'pdf_table_extraction',
+  'PDF de abril/2026 preservado manualmente no Supabase Storage.'
+FROM public.market_data_sources s
+WHERE s.source_name = 'Fenabrave'
+ON CONFLICT (source_id, reference_period, source_url)
+DO UPDATE SET
+  source_page_url = EXCLUDED.source_page_url,
+  file_type = EXCLUDED.file_type,
+  storage_bucket = EXCLUDED.storage_bucket,
+  storage_path = EXCLUDED.storage_path,
+  original_filename = EXCLUDED.original_filename,
+  file_size_bytes = EXCLUDED.file_size_bytes,
+  sha256 = EXCLUDED.sha256,
+  extraction_status = EXCLUDED.extraction_status,
+  extraction_method = EXCLUDED.extraction_method,
+  extraction_notes = EXCLUDED.extraction_notes
+RETURNING
+  id,
+  source_id,
+  reference_period,
+  storage_bucket,
+  storage_path,
+  extraction_status;
+```
+
+Uso esperado:
+
+- se o registro ainda nao existe, ele cria
+- se o registro ja existe para a mesma fonte, periodo e URL, ele atualiza os metadados
+- o `id` retornado e o `source_file_id` daquele PDF
+
+#### Passo 3 - conferir se o registro ficou correto
+
+```sql
+SELECT
+  f.id,
+  s.source_name,
+  f.reference_period,
+  f.source_url,
+  f.storage_bucket,
+  f.storage_path,
+  f.original_filename,
+  f.extraction_status,
+  f.extraction_method,
+  f.captured_at
+FROM public.market_source_files f
+JOIN public.market_data_sources s
+  ON s.id = f.source_id
+WHERE s.source_name = 'Fenabrave'
+  AND f.reference_period = DATE '2026-04-01'
+ORDER BY f.created_at DESC;
+```
+
+Conferencia manual:
+
+- `reference_period` deve representar o mes do dado, nao a data de publicacao do arquivo
+- `storage_path` deve ser exatamente o caminho do PDF no bucket
+- `source_url` deve apontar para o PDF original da Fenabrave
+- `extraction_status` deve estar como `stored` antes da extracao
+
 Automacao futura so deve ser reavaliada se:
 
 - o volume de arquivos crescer
@@ -388,8 +541,8 @@ O script deve atuar depois que o PDF ja estiver no Storage e o registro em `mark
 Ele deve usar uma chave segura apenas para:
 
 - ler o PDF ja salvo no Supabase Storage
-- carregar raw e tabelas normalizadas
-- atualizar status de extracao e validacao
+- carregar a tabela normalizada
+- atualizar status de extracao em `market_source_files`
 
 Regra de seguranca:
 
@@ -986,7 +1139,7 @@ Uso esperado:
 - `pending`: arquivo identificado, ainda nao baixado
 - `downloaded`: arquivo baixado temporariamente
 - `stored`: copia preservada no storage
-- `extracted`: tabela raw gerada
+- `extracted`: preview operacional gerado
 - `normalized`: tabela analitica preenchida
 - `validated`: checks principais passaram
 - `failed`: houve erro em alguma etapa
@@ -998,7 +1151,7 @@ A Fase 1 estara pronta quando:
 - Fenabrave estiver cadastrada em `market_data_sources`
 - o PDF piloto estiver registrado em `market_source_files`
 - o PDF piloto tiver caminho de storage definido
-- a primeira tabela da pagina 1 existir em raw
+- o preview operacional da primeira tabela da pagina 1 estiver revisado
 - a tabela normalizada por segmento estiver preenchida
 - os checks de totais passarem
 - a view inicial retornar dados com fonte, periodo e captura
