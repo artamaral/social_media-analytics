@@ -350,4 +350,14 @@ Depois da fase 1:
 
 Esta especificacao descreve a implementacao da fase 1 do backfill offline para `legacy_low`.
 
-Ainda nao representa script implementado.
+Atualizacao operacional em `2026-05-17`:
+
+- a fase 1 foi considerada operacionalmente concluida
+- o `legacy_low` residual observado caiu para `3`
+- o scheduler pode ser pausado
+- novas execucoes desta fase passam a ser apenas corretivas, se necessario
+
+Proxima etapa:
+
+- detalhar a fase 2 de promocao de estado
+- tratar `bootstrap_low` como principal fonte remanescente de `low`

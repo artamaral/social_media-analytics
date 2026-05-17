@@ -142,6 +142,48 @@ Conclusao operacional:
 
 ---
 
+## Encerramento operacional da fase 1 - 2026-05-17
+
+Depois das rodadas adicionais e da validacao do scheduler com logs persistentes,
+a fase 1 do backfill legado foi considerada encerrada.
+
+### Estado final observado do legado
+
+| low_type   | total_checagens | history_level | total_posts |
+| ---------- | --------------- | ------------- | ----------- |
+| legacy_low | 0               | low           | 2           |
+| legacy_low | 1               | low           | 1           |
+| legacy_low | 2               | full          | 1034        |
+| legacy_low | 2               | partial       | 239         |
+
+### Leitura
+
+- `legacy_low` residual: `3`
+- composicao residual:
+  - `2` posts com `0` checagens
+  - `1` post com `1` checagem
+- nao houve mais mudanca relevante entre leituras consecutivas
+- o log do script passou a mostrar apenas `3` candidatos, confirmando que o
+  passivo legado foi praticamente drenado
+
+### Interpretacao
+
+- a fase 1 cumpriu seu objetivo operacional
+- o principal passivo legado deixou de ser um bloqueio
+- o `low` remanescente da base passa a ser explicado majoritariamente por
+  `bootstrap_low`
+- a proxima frente tecnica deve sair de drenagem legado e ir para:
+  - fase 2 de promocao de estado
+  - tratamento de posts novos em `bootstrap_low`
+
+### Decisao operacional
+
+- pausar o scheduler da fase 1
+- preservar logs como evidencia da ultima rodada
+- tratar novas execucoes apenas como corretivas, se necessario
+
+---
+
 ## Atualizacao de acompanhamento - 2026-05-15
 
 Depois de aproximadamente `12h` com o scheduler executando a fase 1 do

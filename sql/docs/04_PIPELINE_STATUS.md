@@ -42,7 +42,7 @@ O objetivo e manter uma leitura simples de:
 
 ## 3. Backfill offline de `legacy_low` - fase 1
 
-- Status: em andamento
+- Status: concluida
 - Implementacao: `scripts/offline_backfill/legacy_low_backfill_phase1.py`
 - Launcher agendado: `scripts/offline_backfill/run_legacy_low_backfill_phase1.ps1`
 - Objetivo: inserir 1 snapshot inicial para posts antigos com historico insuficiente
@@ -70,12 +70,25 @@ O objetivo e manter uma leitura simples de:
 - os posts atendidos continuam `history_level = low`, o que e esperado nesta fase
 - o objetivo imediato continua sendo reduzir o passivo legado, nao promover estado
 
+### Encerramento da fase 1
+
+- `legacy_low` residual observado: `3`
+- composicao residual:
+  - `legacy_low` com `0` checagens: `2`
+  - `legacy_low` com `1` checagem: `1`
+- os logs da execucao passaram a mostrar apenas `3` candidatos
+- a fase 1 cumpriu o objetivo de drenar o passivo legado relevante
+- o `low` remanescente da base passa a ser explicado principalmente por
+  `bootstrap_low`, nao por backlog legado
+
 ### Trabalho restante antes da fase 2
 
-- continuar executando a fase 1 em lotes
-- reduzir `legacy_low` progressivamente para perto de zero
-- so depois detalhar e executar a fase 2 de promocao de estado
-- acompanhar logs do scheduler junto com inserts no banco
+- manter a fase 1 pausada, salvo necessidade de rodada corretiva pontual
+- detalhar a fase 2 de promocao de estado para os legados agora com contexto
+- desenhar o bootstrap de posts novos, que passa a ser a principal fonte de
+  `low`
+- acompanhar logs do scheduler junto com inserts no banco em qualquer futura
+  retomada
 
 ### Atualizacao observada apos aproximadamente 12h
 
@@ -120,15 +133,15 @@ O objetivo e manter uma leitura simples de:
 
 ### Fase 2 do legado
 
-- permanece bloqueada ate o fechamento da fase 1
-- depende de nova janela temporal util entre snapshots
+- desbloqueada do ponto de vista operacional
+- depende agora de definicao da estrategia de promocao temporal entre snapshots
 
 ---
 
 ## 5. Problemas conhecidos
 
-- ainda existe passivo de `legacy_low`
 - posts seedados pela fase 1 nao saem imediatamente de `low`
+- o `bootstrap_low` continua sendo a principal fonte de `low`
 - a fase 2 ainda nao foi iniciada
 - houve um incidente operacional no scheduler do Windows:
   - a tarefa ficou com a acao malformada
@@ -151,9 +164,11 @@ O objetivo e manter uma leitura simples de:
 - Data: `2026-05-17`
 - Resultado:
   - o script continua funcionando manualmente
-  - foi confirmado que a tarefa agendada do Windows estava com a acao incorreta
-  - o launcher foi ajustado para gerar logs persistentes
-  - a tarefa precisa ser validada novamente com base em:
-    - atualizacao do log mais recente
-    - novos inserts em `post_metrics_history`
-    - mudanca real no universo `legacy_low`
+  - o scheduler foi corrigido e passou a gerar log persistente por execucao
+  - a fase 1 foi considerada encerrada com `legacy_low = 3`
+  - o bloco residual de legado ficou em:
+    - `0` checagens: `2`
+    - `1` checagem: `1`
+  - o foco operacional seguinte deixa de ser drenagem legado e passa a ser:
+    - fase 2 do legado
+    - tratamento de `bootstrap_low`
