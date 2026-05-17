@@ -533,10 +533,20 @@ A partir do encerramento da fase 1:
 
 ## Status
 
-Esta especificacao define a logica de prevencao.
+Esta especificacao define a logica de prevencao e a primeira implementacao na
+fila ativa.
+
+Implementado:
+
+- fatia guardrail de ate `4` slots dentro de `public.v_post_update_queue_batch`
+- regra operacional `total_checagens < 3`
+- ordenacao da fatia guardrail por:
+  - `total_checagens asc`
+  - `created_at asc`
+  - `priority_score desc`
+- preenchimento do restante do lote com a fila normal por bandas
 
 Ainda falta implementar:
 
 - view SQL de monitoramento de cobertura minima
-- fatia guardrail de `4` slots dentro da montagem do lote
 - monitoramento semanal do volume com `total_checagens < 3`

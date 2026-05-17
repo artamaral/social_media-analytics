@@ -108,6 +108,48 @@ Sinal de problema:
 
 ---
 
+### 1.2 Validar fatia guardrail da fila
+
+Query:
+
+```sql
+with checks as (
+  select
+    post_id,
+    count(*) as total_checagens
+  from post_metrics_history
+  group by post_id
+)
+select
+  case
+    when coalesce(c.total_checagens, 0) < 3 then 'guardrail'
+    else 'priority_band'
+  end as slice_type,
+  coalesce(c.total_checagens, 0) as total_checagens,
+  b.priority_band,
+  count(*) as total_posts
+from public.v_post_update_queue_batch b
+left join checks c
+  on c.post_id = b.post_id
+group by 1, 2, 3
+order by 1, 2, 3 desc;
+```
+
+Esperado:
+
+- ate `4` posts no slice `guardrail`
+- demais posts no slice `priority_band`
+- lote total permanecendo em ate `40` posts
+
+Sinal de problema:
+
+- mais de `4` posts com `total_checagens < 3`
+- guardrail vazio por varios ciclos enquanto existem posts elegiveis com menos
+  de `3` checagens
+- lote normal deixar de preencher quando existem posts elegiveis
+
+---
+
 ### 2. Validar se posts recentes passaram a ter mais de 1 coleta
 
 Esta e a prova principal de que o recheck voltou a acontecer.

@@ -149,6 +149,34 @@ Em 2026-05-08, a capacidade do lote foi aumentada para `40` itens por execucao, 
 - banda `2`: `6`
 - banda `1`: `4`
 
+Em 2026-05-17, a view passou a reservar uma fatia de cobertura minima antes da
+fila normal por bandas:
+
+- guardrail: ate `4` posts com `total_checagens < 3`
+- fila normal por bandas: ate `36` posts
+
+As cotas nominais da fila normal passaram a ser:
+
+- banda `6`: `7`
+- banda `5`: `7`
+- banda `4`: `7`
+- banda `3`: `6`
+- banda `2`: `5`
+- banda `1`: `4`
+
+Motivo:
+
+- impedir que posts com menos de `3` snapshots fiquem para tras
+- preservar a maior parte do lote para a priorizacao normal por banda
+- cobrir a media atual de novos posts sem consumir capacidade excessiva
+
+Ordem da fatia guardrail:
+
+- `total_checagens asc`
+- `created_at asc`
+- `priority_score desc`
+- `post_id`
+
 Se alguma banda nao tiver itens suficientes:
 
 - os slots restantes sao preenchidos por outros itens elegiveis

@@ -1,25 +1,70 @@
 create or replace view public.v_post_update_queue_batch as
-with eligible as (
+with history_counts as (
+  select
+    post_id,
+    count(*) as total_checagens
+  from public.post_metrics_history
+  group by post_id
+),
+eligible as (
   select
     q.post_id,
     q.priority_score,
     q.last_checked,
     q.next_check,
     q.needs_update,
+    p.created_at,
+    coalesce(h.total_checagens, 0) as total_checagens,
     public.calculate_priority_band(q.priority_score) as priority_band
   from public.post_update_queue q
+  join public.posts p
+    on p.post_id = q.post_id
+  left join history_counts h
+    on h.post_id = q.post_id
   where q.needs_update = true
     and q.next_check <= now()
+),
+guardrail_ranked as (
+  select
+    e.*,
+    row_number() over (
+      order by
+        e.total_checagens asc,
+        e.created_at asc,
+        e.priority_score desc,
+        e.post_id
+    ) as guardrail_rank
+  from eligible e
+  where e.total_checagens < 3
+),
+guardrail_slice as (
+  select
+    g.post_id,
+    g.priority_score,
+    g.last_checked,
+    g.next_check,
+    g.needs_update,
+    g.created_at,
+    g.total_checagens,
+    g.priority_band,
+    0 as slice_order
+  from guardrail_ranked g
+  where g.guardrail_rank <= 4
+),
+normal_eligible as (
+  select e.*
+  from eligible e
+  where e.total_checagens >= 3
 ),
 quotas as (
   select *
   from (
     values
-      (6, 8),
-      (5, 8),
-      (4, 8),
+      (6, 7),
+      (5, 7),
+      (4, 7),
       (3, 6),
-      (2, 6),
+      (2, 5),
       (1, 4)
   ) as t(priority_band, quota)
 ),
@@ -33,7 +78,7 @@ ranked as (
         e.last_checked asc nulls first,
         e.post_id
     ) as band_rank
-  from eligible e
+  from normal_eligible e
 ),
 primary_slice as (
   select
@@ -42,7 +87,10 @@ primary_slice as (
     r.last_checked,
     r.next_check,
     r.needs_update,
-    r.priority_band
+    r.created_at,
+    r.total_checagens,
+    r.priority_band,
+    1 as slice_order
   from ranked r
   join quotas q
     on q.priority_band = r.priority_band
@@ -55,6 +103,8 @@ remaining as (
     r.last_checked,
     r.next_check,
     r.needs_update,
+    r.created_at,
+    r.total_checagens,
     r.priority_band,
     row_number() over (
       order by
@@ -71,6 +121,8 @@ remaining as (
   )
 ),
 final_batch as (
+  select * from guardrail_slice
+  union all
   select * from primary_slice
   union all
   select
@@ -79,10 +131,15 @@ final_batch as (
     last_checked,
     next_check,
     needs_update,
-    priority_band
+    created_at,
+    total_checagens,
+    priority_band,
+    2 as slice_order
   from remaining
   where refill_rank <= greatest(
-    40 - (select count(*) from primary_slice),
+    40
+    - (select count(*) from guardrail_slice)
+    - (select count(*) from primary_slice),
     0
   )
 )
@@ -95,6 +152,15 @@ select
   priority_band
 from final_batch
 order by
+  slice_order asc,
+  case
+    when slice_order = 0 then total_checagens
+    else null
+  end asc nulls last,
+  case
+    when slice_order = 0 then created_at
+    else null
+  end asc nulls last,
   priority_band desc,
   next_check asc,
   last_checked asc nulls first,

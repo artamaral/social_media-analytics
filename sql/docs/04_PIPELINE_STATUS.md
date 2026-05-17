@@ -130,9 +130,10 @@ O objetivo e manter uma leitura simples de:
 - objetivo:
   - impedir que posts com menos de `3` checagens fiquem para tras
 - proximo passo:
-  - implementar fatia guardrail de `4` slots por execucao
+  - aplicar e validar no banco a nova versao de `v_post_update_queue_batch`
   - manter `bootstrap_low`, `at_risk_bootstrap` e `recovery_low` apenas como
     diagnosticos de monitoramento
+  - acompanhar se a fatia de `4` slots e suficiente para manter o guardrail sob controle
 
 ### Backfill legado fase 1
 
