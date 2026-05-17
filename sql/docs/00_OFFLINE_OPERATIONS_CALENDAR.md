@@ -42,7 +42,7 @@ Etapas:
 3. Registrar ou conferir o arquivo em `public.market_source_files`.
 4. Rodar o script em `--dry-run`.
 5. Revisar a extracao impressa no terminal.
-6. Quando as tabelas raw e normalizada estiverem disponiveis, rodar em `--write`.
+6. Quando a tabela normalizada estiver disponivel, rodar em `--write`.
 7. Na caixa de dialogo, conferir o PDF aberto e marcar `OK` ou `NOK`.
 8. Conferir validacoes.
 

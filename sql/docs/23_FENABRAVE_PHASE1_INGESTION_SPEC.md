@@ -67,7 +67,7 @@ Fora do escopo desta fase:
 Fenabrave PDF ou fonte original
   -> market_data_sources
   -> market_source_files
-  -> raw_fenabrave_segment_summary
+  -> preview operacional da extracao
   -> market_vehicle_registrations_segment
   -> validacao SQL
   -> v_market_registration_segment_summary
@@ -97,7 +97,7 @@ Estas atividades preparam a estrutura. Depois de concluidas, nao fazem parte da 
 |---:|---|---|---|---|
 | 1 | Cadastrar a fonte Fenabrave em `market_data_sources` | Manual | Codex/ChatGPT | Fonte cadastrada como `emplacamento` e `structured_ingestion = true` |
 | 2 | Criar bucket privado `market-source-files` no Supabase Storage | Manual | Arthur | Bucket privado disponivel para PDFs originais |
-| 3 | Criar tabelas da fase 1 no Supabase | Manual | Codex/ChatGPT | DDL versionado para fonte, arquivo, raw, tabela normalizada e validacao |
+| 3 | Criar tabelas da fase 1 no Supabase | Manual | Codex/ChatGPT | DDL versionado para fonte, arquivo, tabela normalizada e validacao |
 | 4 | Criar view analitica inicial | Manual | Codex/ChatGPT | `v_market_registration_segment_summary` disponivel para Streamlit e ChatGPT |
 | 5 | Definir dicionario inicial de segmentos | Manual | Codex/ChatGPT | Mapeamento como `A) Autos -> autos` e `Total -> total` |
 | 6 | Definir regra de aprovacao do periodo | Manual | Arthur + Codex/ChatGPT | Criterio claro para marcar o arquivo como `validated` |
@@ -120,7 +120,7 @@ flowchart TD
   F["Calcular ou conferir sha256 e tamanho"]
   G["Extrair tabela da pagina 1"]
   H["Revisar extracao no piloto ou por excecao"]
-  I["Gravar raw extraido"]
+  I["Exibir preview operacional"]
   J["Normalizar segmentos e mes atual"]
   K["Gravar tabela normalizada"]
   L["Rodar validacoes SQL"]
@@ -142,7 +142,7 @@ flowchart TD
 | Upload do arquivo | Salvar manualmente o PDF no bucket privado `market-source-files` | Manual | Arthur | PDF preservado em `market-source-files/fenabrave/{ano}/{mes}/` |
 | Registro de metadados | Inserir manualmente linha em `market_source_files` com URL, periodo, storage, hash, status e metodo | Manual | Arthur + Codex/ChatGPT | Arquivo rastreavel no Postgres sem guardar o PDF na tabela |
 | Extracao | Ler o PDF ja salvo no Storage, extrair a primeira tabela da pagina 1 e revisar quando necessario | Semiautomatico | Script de extracao + Codex/ChatGPT | Linhas extraidas e conferidas |
-| Raw | Gravar dados extraidos em `raw_fenabrave_segment_summary` | Automatico | Script de extracao | Dados brutos preservados como texto |
+| Preview operacional | Exibir no terminal os segmentos, valores extraidos e checks antes da gravacao | Semiautomatico | Script de extracao + Arthur | Dados conferidos contra o PDF sem persistir uma camada raw |
 | Normalizacao | Converter nomes e a coluna `mes_atual` para formato analitico | Automatico | Script de extracao | Valores mensais prontos como `integer` |
 | Carga analitica | Inserir dados em `market_vehicle_registrations_segment` | Automatico | Script de extracao | Tabela normalizada preenchida |
 | Validacao | Rodar checks de soma, total e campos obrigatorios | Automatico | Supabase | Resultado objetivo de qualidade da carga |
@@ -153,7 +153,7 @@ Regra pratica:
 
 - decisoes, revisoes e aprovacoes ficam com humanos
 - upload do PDF e registro inicial de metadados serao manuais nesta fase
-- raw, normalizacao e validacao podem ser apoiados por script de extracao
+- preview operacional, normalizacao e validacao podem ser apoiados por script de extracao
 - extracao de PDF comeca semiautomatica porque o layout pode mudar entre meses
 - a rotina mensal so deve liberar dados quando as validacoes passarem
 
@@ -428,7 +428,6 @@ Situacao atual da fase:
 
 Antes de extrair dados do PDF, ainda precisam existir no Supabase:
 
-- `raw_fenabrave_segment_summary`
 - `market_vehicle_registrations_segment`
 - `market_ingestion_validation_results`, opcional mas recomendado
 - `v_market_registration_segment_summary`
@@ -440,11 +439,11 @@ O processo operacional da extracao deve ser:
 2. Registrar manualmente o PDF em market_source_files, se ainda nao estiver registrado
 3. Baixar o PDF do Storage para uma pasta temporaria
 4. Extrair a primeira tabela da pagina 1
-5. Gravar a tabela extraida em raw_fenabrave_segment_summary
-6. Normalizar os segmentos e numeros
+5. Exibir preview operacional para revisao humana
+6. Normalizar os segmentos e o valor de `mes_atual`
 7. Gravar a tabela normalizada em market_vehicle_registrations_segment
 8. Rodar validacoes SQL
-9. Se as validacoes passarem, marcar market_source_files.extraction_status = validated
+9. Se as validacoes passarem ou houver apenas warnings aceitos, marcar market_source_files.extraction_status = validated
 10. Consumir a view no Streamlit/ChatGPT
 ```
 
@@ -504,7 +503,7 @@ python-dotenv
 
 Responsabilidade de cada arquivo:
 
-- `ingest_fenabrave_phase1.py`: le o PDF do Storage, extrai, normaliza, grava e valida
+- `ingest_fenabrave_phase1.py`: le o PDF do Storage, exibe preview, normaliza, grava e valida
 - `requirements.txt`: dependencias do processo
 - `README.md`: como configurar `.env` e rodar a extracao
 
@@ -547,7 +546,6 @@ Se `subtotal_plus_outros` mostrar `expected=None`, a soma pode ter sido calculad
 
 Se a tabela extraida bater:
 
-- gravar raw
 - normalizar
 - rodar validacoes
 - liberar apenas se os checks passarem
@@ -556,7 +554,7 @@ Antes de gravar em modo `--write`, o script deve abrir o PDF temporario quando o
 
 ```text
 OK  -> grava os dados e conclui o processo
-NOK -> nao grava raw/normalizado, fecha o PDF quando possivel e retorna erro no terminal
+NOK -> nao grava normalizado, fecha o PDF quando possivel e retorna erro no terminal
 ```
 
 Se a interface grafica nao estiver disponivel, a confirmacao deve acontecer pelo terminal com `ok` ou `nok`.
@@ -621,60 +619,45 @@ VALUES (
 );
 ```
 
-## Entregavel 3 - Raw da primeira tabela extraida
+## Entregavel 3 - Preview operacional da extracao
 
 ### O que e
 
-Versao bruta da tabela extraida do PDF, antes da normalizacao.
+Pre-visualizacao da tabela extraida do PDF, antes da gravacao definitiva.
 
-Essa tabela deve preservar o que saiu da extracao, inclusive numeros como texto com formato brasileiro.
+Nesta fase, esse entregavel nao deve ser uma tabela persistida no Supabase.
+O arquivo PDF original ja fica preservado no Storage, com metadados e hash em
+`market_source_files`, e a revisao humana valida o preview antes do `--write`.
 
 ### Para que serve
 
 Responder:
 
-- o que foi extraido originalmente?
-- qual linha veio de qual arquivo?
-- qual pagina e tabela do PDF foram usadas?
-- se a normalizacao falhar, o dado bruto continua auditavel?
+- o parser encontrou os segmentos esperados?
+- os valores de `mes_atual` batem visualmente com o PDF?
+- os checks estruturais passaram?
+- existe algum warning, como ausencia da linha `Total`?
 
-### Tabela sugerida
+### Decisao da fase 1
 
-```sql
-CREATE TABLE public.raw_fenabrave_segment_summary (
-  id bigserial PRIMARY KEY,
-  source_file_id bigint NOT NULL REFERENCES public.market_source_files(id),
-  page_number integer NOT NULL,
-  table_number integer NOT NULL,
-  row_number integer NOT NULL,
-  segment_label_raw text,
-  current_month_raw text,
-  extraction_confidence numeric,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-```
+Nao criar `public.raw_fenabrave_segment_summary` neste momento.
 
-### Exemplo de registro
+Justificativa:
 
-```sql
-INSERT INTO public.raw_fenabrave_segment_summary (
-  source_file_id,
-  page_number,
-  table_number,
-  row_number,
-  segment_label_raw,
-  current_month_raw,
-  extraction_confidence
-)
-VALUES (
-  1,
-  1,
-  1,
-  1,
-  'A) Autos',
-  '187.313',
-  0.98
-);
+- o volume mensal e pequeno
+- o PDF original fica preservado no bucket privado
+- `market_source_files` guarda URL, storage path, hash, tamanho e status
+- ha validacao humana antes de gravar
+- a tabela normalizada guarda o dado efetivamente consumido
+- uma tabela raw extraida pode ser reavaliada no futuro se houver backfill grande ou automacao sem revisao humana
+
+### Exemplo de preview esperado
+
+```text
+segment_code                 segmento                      mes_atual
+autos                        Autos                            187313
+comerciais_leves             Comerciais Leves                  49943
+autos_comerciais_leves       Autos + Comerciais Leves         237256
 ```
 
 ## Entregavel 4 - Tabela normalizada por segmento

@@ -735,32 +735,6 @@ def print_preview(raw_rows, normalized_rows, checks, pdf_bytes):
     print("")
 
 
-def raw_payloads(raw_rows, source_file_id):
-    """
-    Prepara payloads para `raw_fenabrave_segment_summary`.
-
-    Resultado esperado:
-    - retorna linhas raw com valores preservados como texto e vinculadas ao
-      `source_file_id`.
-    """
-    payloads = []
-
-    for row in raw_rows:
-        payloads.append(
-            {
-                "source_file_id": source_file_id,
-                "page_number": row["page_number"],
-                "table_number": row["table_number"],
-                "row_number": row["row_number"],
-                "segment_label_raw": row["segment_label_raw"],
-                "current_month_raw": row["current_month_raw"],
-                "extraction_confidence": 0.95,
-            }
-        )
-
-    return payloads
-
-
 def delete_existing_rows(base_url, headers, source_file_id):
     """
     Remove cargas anteriores do mesmo arquivo de origem.
@@ -769,7 +743,6 @@ def delete_existing_rows(base_url, headers, source_file_id):
     - usado por `--replace` para reprocessar um PDF sem duplicar linhas.
     """
     for table in [
-        "raw_fenabrave_segment_summary",
         "market_vehicle_registrations_segment",
         "market_ingestion_validation_results",
     ]:
@@ -789,8 +762,8 @@ def insert_rows(base_url, headers, table, rows):
     Insere uma lista de registros em uma tabela Supabase.
 
     Resultado esperado:
-    - grava payloads raw, normalizados ou de validacao; se a tabela nao existir
-      ou houver conflito, retorna erro claro.
+    - grava payloads normalizados ou de validacao; se a tabela nao existir ou
+      houver conflito, retorna erro claro.
     """
     if not rows:
         return
@@ -871,27 +844,20 @@ def write_results(
     base_url,
     headers,
     source_file_id,
-    raw_rows,
     normalized_rows,
     checks,
     replace,
 ):
     """
-    Persiste raw, normalizado, validacoes e status no Supabase.
+    Persiste normalizado, validacoes e status no Supabase.
 
     Resultado esperado:
-    - em `--write`, grava os resultados da extracao; com `--replace`, limpa
-      cargas antigas do mesmo arquivo antes de inserir novamente.
+    - em `--write`, grava os dados normalizados e validacoes; com `--replace`,
+      limpa cargas antigas do mesmo arquivo antes de inserir novamente.
     """
     if replace:
         delete_existing_rows(base_url, headers, source_file_id)
 
-    insert_rows(
-        base_url,
-        headers,
-        "raw_fenabrave_segment_summary",
-        raw_payloads(raw_rows, source_file_id),
-    )
     insert_rows(
         base_url,
         headers,
@@ -1092,7 +1058,11 @@ def parse_args():
         description="Extrai a primeira tabela da pagina 1 de PDF Fenabrave no Supabase Storage."
     )
     parser.add_argument("--dry-run", action="store_true", help="Extrai e valida sem gravar.")
-    parser.add_argument("--write", action="store_true", help="Grava raw e normalizado no Supabase.")
+    parser.add_argument(
+        "--write",
+        action="store_true",
+        help="Grava tabela normalizada e validacoes no Supabase.",
+    )
     parser.add_argument(
         "--replace",
         action="store_true",
@@ -1234,7 +1204,7 @@ def main():
                 "Operador marcou dados como NOK na revisao interativa.",
             )
             raise RuntimeError(
-                "Dados marcados como NOK pelo operador. Nada foi salvo nas tabelas raw/normalizada."
+                "Dados marcados como NOK pelo operador. Nada foi salvo na tabela normalizada."
             )
 
     print("Gravando resultados no Supabase...")
@@ -1242,7 +1212,6 @@ def main():
         base_url,
         headers,
         source_file_id,
-        raw_rows,
         normalized_rows,
         checks,
         replace=args.replace,

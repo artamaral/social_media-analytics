@@ -87,7 +87,7 @@ Se `subtotal_plus_outros` aparecer com `expected=None`, significa que a linha `T
 
 ## Gravar no banco
 
-Quando as tabelas raw e normalizada existirem no Supabase e o dry-run estiver correto:
+Quando a tabela normalizada existir no Supabase e o dry-run estiver correto:
 
 ```powershell
 python ingest_fenabrave_phase1.py --write `
@@ -99,7 +99,7 @@ Por padrao, `--write` abre o PDF temporario e mostra uma caixa de dialogo:
 
 ```text
 OK  = grava os dados e conclui o processo
-NOK = nao grava raw/normalizado e retorna erro no terminal
+NOK = nao grava normalizado e retorna erro no terminal
 ```
 
 Se a abertura automatica do PDF nao for permitida, o script continua com a caixa de dialogo. Se a interface grafica nao estiver disponivel, a confirmacao cai para o terminal com `ok` ou `nok`.
