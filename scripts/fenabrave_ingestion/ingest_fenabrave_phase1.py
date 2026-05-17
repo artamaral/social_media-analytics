@@ -269,6 +269,26 @@ def extract_numbers_from_cells(cells):
     return numbers
 
 
+def select_current_month_raw(numbers):
+    """
+    Seleciona a coluna `mes_atual` entre os numeros extraidos da linha.
+
+    Resultado esperado:
+    - ignora percentuais como `-9,23`, que podem aparecer antes dos volumes
+      por causa da ordem extraida pelo PDF.
+    - retorna o primeiro volume inteiro nao negativo, como `187.313`.
+    """
+    for value in numbers:
+        text = normalize_text(value)
+
+        if "," in text or text.startswith("-"):
+            continue
+
+        return text
+
+    return None
+
+
 def parse_int_br(value):
     """
     Converte inteiro em formato brasileiro para `int`.
@@ -518,7 +538,12 @@ def extract_first_page_table(pdf_bytes):
             if len(numbers) < 1:
                 continue
 
-            values = numbers[:1]
+            current_month_raw = select_current_month_raw(numbers)
+
+            if current_month_raw is None:
+                continue
+
+            values = [current_month_raw]
             row = {
                 "page_number": 1,
                 "table_number": table_number,
