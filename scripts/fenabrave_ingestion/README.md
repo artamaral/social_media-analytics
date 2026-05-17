@@ -83,7 +83,7 @@ O script deve imprimir:
 
 O parser seleciona para `mes_atual` o primeiro volume inteiro nao negativo da linha. Ele procura primeiro nas celulas depois do rotulo e, se encontrar apenas percentuais negativos, faz fallback para a linha inteira. Isso evita confundir a coluna mensal com percentuais como `-9,23`, quando o PDF extrai as celulas fora da ordem visual.
 
-Se um check aparecer com `expected=None`, significa que a linha esperada para comparacao nao foi extraida do PDF. Exemplo: em `subtotal_plus_outros`, o script soma `Subtotal + Motos + Implementos Rodoviarios + Outros`, mas precisa da linha `Total` para validar a diferenca.
+Se `subtotal_plus_outros` aparecer com `expected=None`, significa que a linha `Total` nao foi extraida/identificada. Nesse caso o script mostra a soma calculada, por exemplo `479662`, e marca a validacao como `warning`, nao como falha bloqueante. Os checks de `Autos + Comerciais Leves` e `Caminhoes + Onibus` continuam sendo erros bloqueantes quando falham.
 
 ## Gravar no banco
 

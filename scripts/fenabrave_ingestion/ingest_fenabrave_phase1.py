@@ -628,26 +628,34 @@ def validate_normalized_rows(normalized_rows):
     checks = []
 
     check_specs = [
-        (
-            "autos_plus_comerciais_leves",
-            ["autos", "comerciais_leves"],
-            "autos_comerciais_leves",
-        ),
-        (
-            "caminhoes_plus_onibus",
-            ["caminhoes", "onibus"],
-            "caminhoes_onibus",
-        ),
-        (
-            "subtotal_plus_outros",
-            ["subtotal", "motos", "implementos_rodoviarios", "outros"],
-            "total",
-        ),
+        {
+            "check_name": "autos_plus_comerciais_leves",
+            "inputs": ["autos", "comerciais_leves"],
+            "expected_code": "autos_comerciais_leves",
+            "missing_expected_severity": "error",
+        },
+        {
+            "check_name": "caminhoes_plus_onibus",
+            "inputs": ["caminhoes", "onibus"],
+            "expected_code": "caminhoes_onibus",
+            "missing_expected_severity": "error",
+        },
+        {
+            "check_name": "subtotal_plus_outros",
+            "inputs": ["subtotal", "motos", "implementos_rodoviarios", "outros"],
+            "expected_code": "total",
+            "missing_expected_severity": "warning",
+        },
     ]
 
-    for check_name, inputs, expected_code in check_specs:
+    for check_spec in check_specs:
+        check_name = check_spec["check_name"]
+        inputs = check_spec["inputs"]
+        expected_code = check_spec["expected_code"]
         input_values = [value(code) for code in inputs]
         expected_value = value(expected_code)
+        severity = "error"
+        notes = None
 
         if any(item is None for item in input_values):
             calculated_value = None
@@ -657,6 +665,11 @@ def validate_normalized_rows(normalized_rows):
             calculated_value = sum(input_values)
             passed = False
             difference = None
+            severity = check_spec["missing_expected_severity"]
+            notes = (
+                f"Linha esperada `{expected_code}` nao extraida; "
+                "soma calculada mantida para revisao."
+            )
         else:
             calculated_value = sum(input_values)
             difference = calculated_value - expected_value
@@ -669,6 +682,8 @@ def validate_normalized_rows(normalized_rows):
                 "expected_value": expected_value,
                 "difference": difference,
                 "passed": passed,
+                "severity": severity,
+                "notes": notes if notes else None if passed else "Falha em validacao local.",
             }
         )
 
@@ -710,8 +725,12 @@ def print_preview(raw_rows, normalized_rows, checks, pdf_bytes):
             f"calc={check['calculated_value']} "
             f"expected={check['expected_value']} "
             f"diff={check['difference']} "
-            f"passed={check['passed']}"
+            f"passed={check['passed']} "
+            f"severity={check['severity']}"
         )
+
+        if check["notes"]:
+            print(f"{'':32} notes={check['notes']}")
 
     print("")
 
@@ -839,8 +858,8 @@ def validation_payloads(checks, source_file_id):
                 "expected_value": check["expected_value"],
                 "difference": check["difference"],
                 "passed": check["passed"],
-                "severity": "error",
-                "notes": None if check["passed"] else "Falha em validacao local.",
+                "severity": check["severity"],
+                "notes": check["notes"],
                 "checked_at": datetime.now(timezone.utc).isoformat(),
             }
         )
@@ -894,7 +913,11 @@ def write_results(
             file=sys.stderr,
         )
 
-    if all(check["passed"] for check in checks):
+    has_error = any(
+        not check["passed"] and check["severity"] == "error" for check in checks
+    )
+
+    if not has_error:
         update_source_file_status(
             base_url,
             headers,

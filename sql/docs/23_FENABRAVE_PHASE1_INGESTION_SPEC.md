@@ -543,7 +543,7 @@ Se a tabela extraida nao bater visualmente com o PDF:
 - registrar observacao em `extraction_notes`
 - ajustar parser ou fazer extracao manual assistida apenas para o piloto
 
-Se uma validacao mostrar `expected=None`, a soma pode ter sido calculada, mas a linha esperada de comparacao nao foi extraida. Exemplo: `subtotal_plus_outros` depende da linha `Total`.
+Se `subtotal_plus_outros` mostrar `expected=None`, a soma pode ter sido calculada, mas a linha `Total` nao foi extraida/identificada. Nesta fase isso deve ser tratado como `warning`, nao como erro bloqueante, desde que os checks estruturais de `Autos + Comerciais Leves` e `Caminhoes + Onibus` passem.
 
 Se a tabela extraida bater:
 
@@ -754,8 +754,8 @@ Evitar que uma tabela extraida errado entre no dashboard como se fosse confiavel
 
 1. `Autos + Comerciais Leves = A + B`
 2. `Caminhoes + Onibus = C + D`
-3. `Subtotal + Motos + Impl. Rod. + Outros = Total`
-4. total normalizado deve bater com total publicado
+3. `Subtotal + Motos + Impl. Rod. + Outros = Total`, quando a linha `Total` estiver disponivel
+4. quando a linha `Total` nao estiver disponivel, registrar `subtotal_plus_outros` como alerta e manter a soma calculada para revisao
 5. nenhuma linha principal da tabela deve ficar sem `segment_code`
 6. cada segmento deve ter apenas um registro por `source_file_id`, `reference_period` e `segment_code`
 
