@@ -135,6 +135,8 @@ O objetivo e manter uma leitura simples de:
 
 - desbloqueada do ponto de vista operacional
 - depende agora de definicao da estrategia de promocao temporal entre snapshots
+- baseline inicial registrado em:
+  - `sql/docs/24_PHASE2_INITIAL_DATA_BASELINE_2026-05-17.md`
 
 ---
 
