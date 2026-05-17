@@ -13,6 +13,11 @@ Este plano assume que:
 - nao ha segundo Cloud Run ativo
 - a comparacao sera feita sobre os mesmos dados reais do banco
 
+Baseline atual:
+
+- `sql/docs/26_HYBRID_SCORE_V2_BASELINE_2026-05-17.md`
+- usar esse arquivo como ponto inicial de comparacao para proximas iteracoes
+
 ---
 
 ## Perguntas que a validacao deve responder

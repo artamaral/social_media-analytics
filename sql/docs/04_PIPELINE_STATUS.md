@@ -150,6 +150,17 @@ O objetivo e manter uma leitura simples de:
 - baseline inicial registrado em:
   - `sql/docs/24_PHASE2_INITIAL_DATA_BASELINE_2026-05-17.md`
 
+### Score hibrido `v2`
+
+- status: analitico, nao ativo
+- baseline atual registrado em:
+  - `sql/docs/26_HYBRID_SCORE_V2_BASELINE_2026-05-17.md`
+- leitura atual:
+  - overlap baixo entre fila ativa e `v2`
+  - `v2` ainda favorece muitos `low` em bandas altas
+  - acceleration aparece praticamente nula no baseline
+  - formula ainda precisa de recalibracao antes de promocao
+
 ---
 
 ## 5. Problemas conhecidos
