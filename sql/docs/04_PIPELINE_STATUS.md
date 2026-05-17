@@ -128,13 +128,11 @@ O objetivo e manter uma leitura simples de:
 - especificacao registrada em:
   - `sql/docs/25_MINIMUM_HISTORY_COVERAGE_GUARDRAIL_SPEC.md`
 - objetivo:
-  - impedir que novos `bootstrap_low` envelhecam e virem `legacy_low`
+  - impedir que posts com menos de `3` checagens fiquem para tras
 - proximo passo:
-  - implementar view ou query operacional para monitorar:
-    - `bootstrap_low`
-    - `at_risk_bootstrap`
-    - `recovery_low`
-    - `covered`
+  - implementar fatia guardrail de `4` slots por execucao
+  - manter `bootstrap_low`, `at_risk_bootstrap` e `recovery_low` apenas como
+    diagnosticos de monitoramento
 
 ### Backfill legado fase 1
 
@@ -157,8 +155,8 @@ O objetivo e manter uma leitura simples de:
 
 - posts seedados pela fase 1 nao saem imediatamente de `low`
 - o `bootstrap_low` continua sendo a principal fonte de `low`
-- sem guarda de cobertura minima, `bootstrap_low` pode envelhecer e recriar
-  `legacy_low`
+- sem guarda de cobertura minima, posts com menos de `3` checagens podem ficar
+  para tras e recriar `legacy_low`
 - a fase 2 ainda nao foi iniciada
 - houve um incidente operacional no scheduler do Windows:
   - a tarefa ficou com a acao malformada
@@ -188,5 +186,4 @@ O objetivo e manter uma leitura simples de:
     - `1` checagem: `1`
   - o foco operacional seguinte deixa de ser drenagem legado e passa a ser:
     - fase 2 do legado
-    - tratamento de `bootstrap_low`
-    - implementacao do guarda de cobertura minima
+    - implementacao do guarda de cobertura minima com regra `total_checagens < 3`

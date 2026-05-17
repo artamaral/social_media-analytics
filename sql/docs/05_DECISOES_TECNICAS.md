@@ -291,14 +291,13 @@ Data:
 
 Decisao:
 
-- todo post deve atingir uma cobertura minima de historico antes de sair da
-  janela de bootstrap
+- todo post com menos de `3` snapshots deve entrar no guardrail de cobertura
 - o alvo operacional inicial e `3` snapshots por post
-- posts novos com historico insuficiente devem ser acompanhados como
-  `bootstrap_low`
-- posts proximos de envelhecer sem historico suficiente devem ser acompanhados
-  como `at_risk_bootstrap`
-- posts ja antigos sem cobertura minima devem ser tratados como `recovery_low`
+- a implementacao principal deve usar a regra simples `total_checagens < 3`
+- os nomes `bootstrap_low`, `at_risk_bootstrap` e `recovery_low` ficam como
+  diagnosticos, nao como regra principal de implementacao
+- a configuracao inicial recomendada e reservar `4` slots por execucao para
+  guardrail dentro do lote de `40`
 
 Contexto:
 
@@ -318,10 +317,10 @@ Motivo:
 
 Diretriz:
 
-- monitorar diariamente `bootstrap_low`, `at_risk_bootstrap`, `recovery_low` e
-  `covered`
-- priorizar `at_risk_bootstrap` antes que vire recuperacao
-- tratar crescimento de `recovery_low` como sinal de falha operacional
+- monitorar diariamente o total de posts com `total_checagens < 3`
+- ordenar a fatia guardrail por `total_checagens asc`, `created_at asc` e
+  `priority_score desc`
+- tratar crescimento persistente do guardrail como sinal de falta de capacidade
 - manter logs e evidencias de banco para qualquer rotina automatizada
 
 Documento de referencia:

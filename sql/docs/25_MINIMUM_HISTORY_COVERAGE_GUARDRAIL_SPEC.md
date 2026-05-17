@@ -11,6 +11,15 @@ precisa prevenir que novos posts envelhecam sem cobertura minima.
 
 Esta especificacao define a politica de cobertura minima de historico.
 
+Regra operacional simplificada:
+
+```text
+todo post com menos de 3 checagens entra no guardrail
+```
+
+Os nomes `bootstrap_low`, `at_risk_bootstrap` e `recovery_low` continuam uteis
+para diagnostico, mas nao devem tornar a implementacao principal mais complexa.
+
 ---
 
 ## Problema
@@ -64,7 +73,40 @@ Esta meta pode ser recalibrada, mas `3` snapshots e o alvo operacional inicial.
 
 ---
 
-## Estados de cobertura
+## Regra operacional simplificada
+
+A implementacao principal do guardrail deve depender de uma regra simples:
+
+```sql
+total_checagens < 3
+```
+
+Todo post que ainda nao atingiu `3` snapshots deve disputar a fatia reservada
+do guardrail.
+
+Ordenacao recomendada:
+
+```sql
+order by
+  total_checagens asc,
+  created_at asc,
+  priority_score desc nulls last,
+  post_id
+```
+
+Interpretacao:
+
+- primeiro entram posts com menos contexto
+- dentro do mesmo nivel de contexto, entram os mais antigos
+- `priority_score` atua apenas como desempate de valor
+
+---
+
+## Estados de cobertura para diagnostico
+
+Os estados abaixo existem para leitura e monitoramento.
+
+Eles nao devem ser a regra principal de implementacao do guardrail.
 
 ### 1. `bootstrap_low`
 
@@ -154,7 +196,19 @@ Interpretacao:
 
 ---
 
-## Fluxo operacional
+## Fluxo operacional simplificado
+
+```text
+posts
+  -> total_checagens < 3?
+     -> sim:
+        entra na fatia guardrail
+     -> nao:
+        segue fila normal por priority_band
+```
+
+Para diagnostico, a leitura pode continuar separando `bootstrap_low`,
+`at_risk_bootstrap` e `recovery_low`:
 
 ```text
 posts
@@ -177,42 +231,26 @@ posts
 
 ## Politica de acao
 
-### `bootstrap_low`
+A politica de acao deve ser unica:
 
-Acao:
+- reservar uma fatia fixa do lote para posts com `total_checagens < 3`
+- usar `total_checagens asc` como primeira prioridade
+- usar `created_at asc` como segunda prioridade
+- usar `priority_score desc` apenas como desempate
 
-- entrar em rotina de bootstrap normal
-- receber snapshots iniciais de forma controlada
+Configuracao inicial recomendada:
 
-Objetivo:
+- lote total do worker: `40`
+- fatia guardrail: `4`
+- fatia normal por bandas: `36`
 
-- construir historico antes de virar risco
+Motivo:
 
----
-
-### `at_risk_bootstrap`
-
-Acao:
-
-- ter prioridade sobre `bootstrap_low` comum
-- ser processado antes de cruzar a janela de `7 dias`
-
-Objetivo:
-
-- evitar que vire `recovery_low`
-
----
-
-### `recovery_low`
-
-Acao:
-
-- entrar em fila de recuperacao
-- ser tratado como alerta de cobertura
-
-Objetivo:
-
-- impedir recriacao de backlog legado
+- a media observada de posts novos e aproximadamente `27` por dia
+- cada post precisa de `3` checagens para sair do guardrail
+- `4` slots por hora geram ate `96` checagens por dia
+- isso cobre a media atual com margem moderada sem consumir capacidade demais
+  da fila normal
 
 ---
 
@@ -253,8 +291,50 @@ order by 1, 2;
 Uso:
 
 - acompanhar diariamente
-- separar falta normal de historico de falha operacional
+- monitorar o tamanho total do guardrail
+- separar diagnostico de cold start e falha operacional quando necessario
 - evitar olhar apenas `history_level = low`, que mistura causas diferentes
+
+---
+
+## Query operacional do guardrail
+
+Esta e a query conceitual da fatia guardrail.
+
+```sql
+with checks as (
+  select
+    post_id,
+    count(*) as total_checagens
+  from post_metrics_history
+  group by post_id
+)
+select
+  p.post_id,
+  p.created_at,
+  p.collected_at,
+  coalesce(c.total_checagens, 0) as total_checagens,
+  q.priority_score,
+  public.calculate_priority_band(q.priority_score) as priority_band
+from posts p
+left join checks c
+  on c.post_id = p.post_id
+left join post_update_queue q
+  on q.post_id = p.post_id
+where coalesce(c.total_checagens, 0) < 3
+order by
+  coalesce(c.total_checagens, 0) asc,
+  p.created_at asc,
+  q.priority_score desc nulls last,
+  p.post_id
+limit 4;
+```
+
+Uso:
+
+- selecionar a fatia minima de cobertura
+- garantir que posts com menos de `3` checagens nao fiquem presos atras da
+  priorizacao normal por banda
 
 ---
 
@@ -371,20 +451,21 @@ order by
 
 Saudavel:
 
+- total de posts com `total_checagens < 3` controlado
 - `recovery_low = 0` ou residual muito baixo
-- `at_risk_bootstrap` baixo e sem crescimento persistente
-- `bootstrap_low` existe, mas nao envelhece sem snapshots
+- posts com `0` e `1` checagem nao acumulam
 
 Alerta:
 
+- total do guardrail cresce semana contra semana
 - qualquer crescimento recorrente de `recovery_low`
-- `at_risk_bootstrap` acumulando semana contra semana
 - posts com `0` ou `1` checagem chegando perto de `7` dias
 
 Acao esperada em caso de alerta:
 
-- revisar o bootstrap de novos posts
-- executar rotina corretiva apenas para `recovery_low`
+- revisar a fatia guardrail
+- subir temporariamente a fatia de `4` para `6` se houver acumulacao
+- executar rotina corretiva se houver `recovery_low`
 - registrar o resultado em `04_PIPELINE_STATUS.md`
 
 ---
@@ -441,9 +522,10 @@ em diante.
 
 A partir do encerramento da fase 1:
 
+- qualquer post com menos de `3` checagens entra no guardrail
 - `legacy_low` residual deve ser tratado como alerta, nao como backlog normal
-- `bootstrap_low` precisa de rotina propria
-- `at_risk_bootstrap` deve ser priorizado antes de virar recuperacao
+- `bootstrap_low`, `at_risk_bootstrap` e `recovery_low` sao diagnosticos, nao
+  regras principais de implementacao
 - nenhuma automacao nova deve ser considerada saudavel sem logs e consulta de
   cobertura minima
 
@@ -456,5 +538,5 @@ Esta especificacao define a logica de prevencao.
 Ainda falta implementar:
 
 - view SQL de monitoramento de cobertura minima
-- rotina de bootstrap para novos posts
-- eventual rotina de recuperacao para `recovery_low`
+- fatia guardrail de `4` slots dentro da montagem do lote
+- monitoramento semanal do volume com `total_checagens < 3`
