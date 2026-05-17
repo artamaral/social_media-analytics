@@ -123,6 +123,19 @@ O objetivo e manter uma leitura simples de:
 
 ## 4. Proximos checkpoints operacionais
 
+### Guarda de cobertura minima
+
+- especificacao registrada em:
+  - `sql/docs/25_MINIMUM_HISTORY_COVERAGE_GUARDRAIL_SPEC.md`
+- objetivo:
+  - impedir que novos `bootstrap_low` envelhecam e virem `legacy_low`
+- proximo passo:
+  - implementar view ou query operacional para monitorar:
+    - `bootstrap_low`
+    - `at_risk_bootstrap`
+    - `recovery_low`
+    - `covered`
+
 ### Backfill legado fase 1
 
 - confirmar reducao continua do `legacy_low`
@@ -144,6 +157,8 @@ O objetivo e manter uma leitura simples de:
 
 - posts seedados pela fase 1 nao saem imediatamente de `low`
 - o `bootstrap_low` continua sendo a principal fonte de `low`
+- sem guarda de cobertura minima, `bootstrap_low` pode envelhecer e recriar
+  `legacy_low`
 - a fase 2 ainda nao foi iniciada
 - houve um incidente operacional no scheduler do Windows:
   - a tarefa ficou com a acao malformada
@@ -174,3 +189,4 @@ O objetivo e manter uma leitura simples de:
   - o foco operacional seguinte deixa de ser drenagem legado e passa a ser:
     - fase 2 do legado
     - tratamento de `bootstrap_low`
+    - implementacao do guarda de cobertura minima

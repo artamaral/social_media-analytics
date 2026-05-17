@@ -280,3 +280,50 @@ Primeira aplicacao:
 
 - `scripts/offline_backfill/run_legacy_low_backfill_phase1.ps1`
 - logs em `scripts/offline_backfill/logs`
+
+---
+
+## Guarda de cobertura minima de historico
+
+Data:
+
+- 2026-05-17
+
+Decisao:
+
+- todo post deve atingir uma cobertura minima de historico antes de sair da
+  janela de bootstrap
+- o alvo operacional inicial e `3` snapshots por post
+- posts novos com historico insuficiente devem ser acompanhados como
+  `bootstrap_low`
+- posts proximos de envelhecer sem historico suficiente devem ser acompanhados
+  como `at_risk_bootstrap`
+- posts ja antigos sem cobertura minima devem ser tratados como `recovery_low`
+
+Contexto:
+
+- a fase 1 do backfill de `legacy_low` drenou o backlog historico para nivel
+  residual
+- o `low` remanescente passou a ser explicado principalmente por
+  `bootstrap_low`
+- sem uma rotina preventiva, novos posts podem envelhecer e recriar
+  `legacy_low`
+
+Motivo:
+
+- impedir que posts fiquem perdidos por falta de snapshots
+- transformar `legacy_low` futuro em alerta operacional, nao em backlog normal
+- separar cold start legitimo de falha de cobertura
+- proteger a avaliacao futura de velocity e acceleration
+
+Diretriz:
+
+- monitorar diariamente `bootstrap_low`, `at_risk_bootstrap`, `recovery_low` e
+  `covered`
+- priorizar `at_risk_bootstrap` antes que vire recuperacao
+- tratar crescimento de `recovery_low` como sinal de falha operacional
+- manter logs e evidencias de banco para qualquer rotina automatizada
+
+Documento de referencia:
+
+- `sql/docs/25_MINIMUM_HISTORY_COVERAGE_GUARDRAIL_SPEC.md`

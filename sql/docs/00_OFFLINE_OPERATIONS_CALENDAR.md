@@ -116,6 +116,73 @@ Resultado esperado:
 - checks locais aprovados
 - dados prontos para uso analitico apos carga definitiva
 
+## Atividades semanais
+
+### Guarda de cobertura minima de historico
+
+Frequencia:
+
+- semanal
+- sugestao: toda segunda-feira antes de iniciar novas analises
+
+Responsavel:
+
+- Arthur para rodar a checagem e decidir se ha necessidade de acao corretiva
+- Codex/ChatGPT para apoio tecnico, interpretacao e ajuste de rotinas
+
+Documentacao:
+
+- `sql/docs/25_MINIMUM_HISTORY_COVERAGE_GUARDRAIL_SPEC.md`
+- `sql/docs/04_PIPELINE_STATUS.md`
+
+Objetivo:
+
+- confirmar que posts novos nao estao envelhecendo sem cobertura minima
+- monitorar se `bootstrap_low` esta virando `recovery_low`
+- garantir que `legacy_low` nao volte a crescer depois da limpeza da fase 1
+
+Query resumida:
+
+```sql
+with checks as (
+  select
+    post_id,
+    count(*) as total_checagens
+  from post_metrics_history
+  group by post_id
+),
+coverage as (
+  select
+    p.post_id,
+    p.created_at,
+    p.collected_at,
+    coalesce(c.total_checagens, 0) as total_checagens,
+    case
+      when coalesce(c.total_checagens, 0) >= 3 then 'covered'
+      when p.created_at < now() - interval '7 days' then 'recovery_low'
+      when p.created_at < now() - interval '5 days' then 'at_risk_bootstrap'
+      else 'bootstrap_low'
+    end as coverage_status
+  from posts p
+  left join checks c
+    on c.post_id = p.post_id
+)
+select
+  coverage_status,
+  total_checagens,
+  count(*) as total_posts
+from coverage
+group by 1, 2
+order by 1, 2;
+```
+
+Resultado esperado:
+
+- `recovery_low` deve permanecer proximo de zero
+- `at_risk_bootstrap` nao deve acumular semana contra semana
+- qualquer crescimento de `recovery_low` deve ser registrado em
+  `04_PIPELINE_STATUS.md` e tratado como alerta operacional
+
 ## Atividades sob demanda
 
 ### Backfill offline de posts legacy_low
