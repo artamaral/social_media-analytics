@@ -268,6 +268,57 @@ Status humanos sugeridos:
 - `available_on_manual_check`
 - `unclear`
 
+### Confirmacao manual via SQL
+
+Quando o humano abrir a `youtube_url` e confirmar que o video esta
+indisponivel, registrar a decisao no banco.
+
+Exemplo para os casos observados:
+
+```sql
+update public.post_collection_failures
+set
+  status = 'unavailable',
+  human_review_status = 'confirmed_unavailable',
+  human_reviewed_at = now(),
+  human_reviewed_by = 'arthur',
+  human_review_notes = 'Confirmado manualmente no YouTube: video indisponivel.'
+where post_id in ('BH0gnUODKwI', 'lFodaSeTE9A');
+```
+
+Validar a confirmacao:
+
+```sql
+select
+  post_id,
+  youtube_url,
+  failure_count,
+  status,
+  human_review_status,
+  human_reviewed_at,
+  human_reviewed_by,
+  human_review_notes
+from public.post_collection_failures
+where post_id in ('BH0gnUODKwI', 'lFodaSeTE9A')
+order by post_id;
+```
+
+Confirmar que os videos sairam da fila ativa:
+
+```sql
+select *
+from public.v_post_update_queue_batch
+where post_id in ('BH0gnUODKwI', 'lFodaSeTE9A')
+order by post_id;
+```
+
+Resultado esperado:
+
+- `status = 'unavailable'`
+- `human_review_status = 'confirmed_unavailable'`
+- `human_reviewed_at` preenchido
+- a query contra `v_post_update_queue_batch` retorna zero linhas
+
 ---
 
 ## Query semanal de revisao
