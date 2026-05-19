@@ -14,6 +14,7 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 
 - [ ] Avaliar e garantir que os posts estao sendo atualizados.
 - [x] Confirmar que posts nao estavam sendo atualizados e que o novo codigo esta rodando.
+- [ ] Avaliar limpeza temporaria do backlog de guardrail: priorizar posts com `total_checagens = 2`, principalmente `old_30d_plus` e `warm_8_30d`, para reduzir rapidamente a divida de cobertura minima.
 - [ ] Executar teste pendente descrito em `08_QUEUE_CAPACITY_TEST.md` e `09_QUEUE_SLICING_AND_RESCHEDULING.md`.
 - [ ] Garantir que scraper percorre todos creators.
 - [ ] Validar integridade de `post_metrics_history`.
@@ -23,7 +24,8 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 
 ### Prioridade estrategica - modelo de priorizacao
 
-- [ ] Avaliar score hibrido em modo analitico sem segundo Cloud Run. Usar simulacao `v2` apenas no banco e validar com SQL + Excel/Pandas antes de qualquer troca no modelo ativo.
+- [ ] Manter score hibrido `v2` em espera/segundo plano. Nao promover para a fila ativa enquanto o objetivo principal for analise temporal de videos quentes no momento.
+- [ ] Criar abordagem analitica simples para `hot now`, baseada em `velocity_6h`, `previous_velocity` e `acceleration`, usando views SQL para dashboard.
 
 ### Itens concluidos nesta frente
 
@@ -56,6 +58,7 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 
 - [ ] Dashboard inicial.
 - [ ] Ranking de crescimento semanal.
+- [ ] Criar ranking "quente agora" com velocidade e aceleracao temporal do score, separado da logica operacional da fila.
 - [ ] Implementar MVP online com overview, creators e crescimento semanal.
 - [ ] Exibir status de qualidade dos dados antes dos rankings.
 - [ ] Garantir que o app use Supabase sob demanda sem expor service role key.

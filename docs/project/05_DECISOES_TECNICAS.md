@@ -327,3 +327,71 @@ Documento de referencia:
 
 - `docs/social_media/25_MINIMUM_HISTORY_COVERAGE_GUARDRAIL_SPEC.md`
 
+---
+
+## Score hibrido v2 em espera e foco em analise temporal
+
+Data:
+
+- 2026-05-19
+
+Decisao:
+
+- manter `priority_score_v2` em modo analitico e em segundo plano
+- nao promover o `v2` para a fila ativa neste momento
+- separar a fila operacional da analise temporal do dashboard
+- priorizar uma view simples de "hot now" baseada em velocidade recente e
+  aceleracao do score
+
+Contexto:
+
+- o baseline do `v2` mostrou baixo overlap com a fila ativa
+- o `v2` ainda favorece posts `low` em bandas altas por causa de popularidade
+  base
+- a aceleracao aparece fraca no score agregado atual
+- a fila ativa ja possui guardrail para cobertura minima e bandas operacionais
+- a avaliacao atual do backlog mostrou que o maior problema de curto prazo e
+  limpar divida de guardrail, nao trocar o score da fila
+
+Motivo:
+
+- o produto deve responder primeiro o que esta quente no momento
+- analises do dashboard serao majoritariamente temporais, nao baseadas na vida
+  inteira do video
+- detectar tracao recente e mais importante agora do que antecipar videos que
+  ainda nao possuem historico suficiente
+- a promocao do `v2` adicionaria complexidade operacional sem beneficio claro
+  para o MVP analitico
+
+Diretriz:
+
+- fila operacional continua com guardrail + `priority_band` atual
+- dashboard deve usar views temporais para medir:
+  - velocidade recente
+  - velocidade anterior
+  - aceleracao
+- `v2` so deve voltar a ser prioridade se houver necessidade explicita de uma
+  fila operacional mais inteligente
+- nao usar `v2` como criterio de produto para o ranking "quente agora"
+
+Formula conceitual recomendada para analytics:
+
+```text
+velocity_6h = (score_agora - score_6h_atras) / horas
+
+previous_velocity = (score_6h_atras - score_24h_atras) / horas
+
+acceleration = velocity_6h - previous_velocity
+```
+
+Impacto esperado:
+
+- simplificacao do modelo analitico
+- menor risco de promover posts com baixo historico por fallback de score
+- melhor alinhamento entre dashboard e pergunta de negocio
+- manutencao da estabilidade operacional da fila atual
+
+Documentos relacionados:
+
+- `docs/social_media/26_HYBRID_SCORE_V2_BASELINE_2026-05-17.md`
+- `docs/social_media/25_MINIMUM_HISTORY_COVERAGE_GUARDRAIL_SPEC.md`
