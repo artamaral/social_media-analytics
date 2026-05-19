@@ -61,6 +61,7 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 - [ ] Dashboard inicial.
 - [ ] Ranking de crescimento semanal.
 - [ ] Criar ranking "quente agora" com velocidade e aceleracao temporal do score, separado da logica operacional da fila.
+- [ ] Seguir plano de execucao do dashboard em `docs/dashboard/29_STREAMLIT_DASHBOARD_EXECUTION_PLAN.md`.
 - [ ] Implementar MVP online com overview, creators e crescimento semanal.
 - [ ] Exibir status de qualidade dos dados antes dos rankings.
 - [ ] Garantir que o app use Supabase sob demanda sem expor service role key.

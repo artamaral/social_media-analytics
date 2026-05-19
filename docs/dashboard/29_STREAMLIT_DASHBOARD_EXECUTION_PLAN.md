@@ -1,0 +1,382 @@
+# Streamlit dashboard execution plan
+
+## Objetivo
+
+Iniciar a fase de execucao do dashboard analitico interno do projeto, usando Streamlit Community Cloud e Supabase sob demanda.
+
+O foco desta fase e entregar uma primeira versao online, segura e util para estudos de mercado automotivo, sem transformar o dashboard em produto SaaS publico.
+
+## Premissas atuais
+
+- O dashboard sera uma ferramenta interna de analise de mercado.
+- O numero de acessos sera baixo.
+- A complexidade deve crescer em fontes de dados, perguntas analiticas e profundidade das views.
+- O Supabase continua sendo a fonte de dados principal.
+- O app nao deve expor `SUPABASE_SERVICE_ROLE_KEY`.
+- Rankings e graficos devem sempre considerar qualidade dos dados antes de gerar conclusoes.
+- A identidade visual deve usar fundo em escala de cinza, sidebar escura, cards contrastados, acento coral e pictos.
+
+## Etapa 0 - Pre-flight do repositorio
+
+Objetivo:
+
+- garantir que a base local esta organizada para iniciar o app sem misturar pipeline, SQL e UI.
+
+Tarefas:
+
+- revisar `docs/dashboard/16_ONLINE_DASHBOARD_SUPABASE_SPEC.md`
+- revisar `docs/project/02_ROADMAP.md`
+- confirmar quais views SQL ja existem no repositorio
+- confirmar se as views ja foram aplicadas no Supabase de producao
+- criar estrutura inicial recomendada:
+
+```text
+dashboard/
+  streamlit_app.py
+  requirements.txt
+  README.md
+  .streamlit/
+    config.toml
+```
+
+Criterio de pronto:
+
+- estrutura de pastas definida
+- lista de views disponiveis confirmada
+- decisoes visuais e de seguranca revisadas
+
+## Etapa 1 - Conta e ambiente online
+
+Objetivo:
+
+- preparar o ambiente onde o dashboard sera publicado.
+
+Tarefas:
+
+- criar ou confirmar conta no Streamlit Community Cloud
+- conectar o Streamlit ao repositorio GitHub
+- definir se o app ficara publico por link ou privado conforme disponibilidade da conta
+- confirmar branch de deploy
+- confirmar arquivo principal do app, inicialmente `dashboard/streamlit_app.py`
+
+Criterio de pronto:
+
+- Streamlit Community Cloud conectado ao repositorio
+- app vazio ou placeholder pronto para deploy
+- caminho do app definido
+
+## Etapa 2 - Ligacao segura com Supabase
+
+Objetivo:
+
+- permitir leitura sob demanda do Supabase sem expor credenciais sensiveis.
+
+Tarefas:
+
+- definir o metodo de conexao inicial:
+  - Supabase Python client com anon key e RLS/grants, ou
+  - conexao Postgres com usuario read-only
+- criar ou validar usuario/chave de leitura
+- garantir que `SUPABASE_SERVICE_ROLE_KEY` nao sera usada no app
+- configurar secrets no Streamlit Cloud:
+
+```toml
+SUPABASE_URL = "..."
+SUPABASE_ANON_KEY = "..."
+```
+
+ou, se for conexao Postgres:
+
+```toml
+SUPABASE_DB_URL = "postgresql://..."
+```
+
+- criar `.streamlit/secrets.toml.example` sem valores reais
+- garantir que nenhum segredo real entre no Git
+
+Criterio de pronto:
+
+- app local consegue autenticar com credenciais seguras
+- Streamlit Cloud possui secrets configurados
+- nenhuma credencial real esta versionada
+
+## Etapa 3 - Analise de seguranca e permissao
+
+Objetivo:
+
+- reduzir risco antes de publicar o dashboard online.
+
+Tarefas:
+
+- confirmar RLS/grants para as views do dashboard
+- permitir leitura apenas das views necessarias ao MVP
+- bloquear acesso direto a tabelas sensiveis quando possivel
+- validar que o app nao permite escrita no Supabase
+- revisar logs e prints para evitar vazamento de secrets
+- confirmar que tabelas brutas pesadas nao sao carregadas sem filtro
+
+Views minimas:
+
+- `public.v_dashboard_data_quality_status`
+- `public.v_dashboard_creator_summary`
+- `public.v_dashboard_post_growth_7d`
+- `public.v_dashboard_unavailable_video_review`
+
+Criterio de pronto:
+
+- checklist de seguranca aprovado
+- consulta de leitura funciona
+- tentativa de escrita nao e necessaria nem implementada
+
+## Etapa 4 - Validacao das views existentes
+
+Objetivo:
+
+- garantir que a camada SQL atual suporta a primeira versao do app.
+
+Tarefas:
+
+- executar no Supabase:
+
+```sql
+SELECT * FROM public.v_dashboard_data_quality_status;
+```
+
+```sql
+SELECT *
+FROM public.v_dashboard_creator_summary
+ORDER BY total_views DESC
+LIMIT 20;
+```
+
+```sql
+SELECT *
+FROM public.v_dashboard_post_growth_7d
+ORDER BY views_delta_7d DESC
+LIMIT 20;
+```
+
+```sql
+SELECT *
+FROM public.v_dashboard_unavailable_video_review
+LIMIT 20;
+```
+
+- validar tempo de resposta
+- validar nomes de colunas esperados pelo app
+- validar se nulos e zeros estao tratados de forma aceitavel
+- documentar qualquer gap antes da construcao da UI
+
+Criterio de pronto:
+
+- views retornam dados sem erro
+- colunas principais confirmadas
+- tempo de resposta aceitavel para uso sob demanda
+
+## Etapa 5 - Primeira view nova: hot now
+
+Objetivo:
+
+- criar a primeira view analitica nova orientada ao dashboard, separada da logica operacional da fila.
+
+Racional:
+
+- a documentacao atual prioriza analise temporal para responder o que esta quente agora
+- o ranking deve usar velocidade recente e aceleracao, nao apenas volume absoluto
+
+Tarefas:
+
+- desenhar view SQL para:
+  - `velocity_6h`
+  - `previous_velocity`
+  - `acceleration`
+  - `views_delta_recent`
+  - `likes_delta_recent`
+  - `comments_delta_recent`
+- criar arquivo em `sql/ddl/views/`
+- validar contra `post_metrics_history`
+- garantir filtros por historico minimo para evitar falsos positivos
+- documentar limitacoes da view
+
+Nome sugerido:
+
+- `v_dashboard_hot_now`
+
+Criterio de pronto:
+
+- view retorna ranking temporal coerente
+- posts com historico insuficiente sao tratados explicitamente
+- view nao altera a fila operacional
+
+## Etapa 6 - App local Streamlit MVP
+
+Objetivo:
+
+- criar o dashboard local antes de publicar.
+
+Tarefas:
+
+- criar `dashboard/requirements.txt`
+- criar `dashboard/streamlit_app.py`
+- configurar `st.set_page_config(layout="wide")`
+- criar camada simples de conexao com Supabase
+- aplicar cache com TTL curto nas queries
+- criar navegacao inicial:
+  - Overview
+  - Creators
+  - Videos em crescimento
+  - Hot now
+  - Data quality
+  - Fila / videos indisponiveis
+- criar tratamento de erro para falha de conexao
+
+Criterio de pronto:
+
+- app roda localmente
+- cada pagina carrega ao menos uma view real
+- falhas de conexao aparecem como mensagem clara
+
+## Etapa 7 - Tema visual e componentes
+
+Objetivo:
+
+- aplicar a direcao visual definida pelo projeto.
+
+Tarefas:
+
+- criar CSS customizado para:
+  - background cinza escuro
+  - sidebar grafite
+  - cards claros/escuros
+  - cabecalhos de card escuros
+  - acento coral
+  - tabelas legiveis
+- criar componentes reutilizaveis:
+  - KPI card
+  - status card
+  - section header com picto
+  - alert box de data quality
+- escolher biblioteca de pictos:
+  - primeira opcao: pictos via HTML/CSS simples ou caracteres seguros
+  - alternativa: pacote leve de icones se fizer sentido no Streamlit
+- evitar poluir a UI com emojis excessivos
+
+Criterio de pronto:
+
+- app segue a referencia visual acordada
+- layout funciona em tela larga
+- data quality aparece antes de rankings
+
+## Etapa 8 - Testes iniciais
+
+Objetivo:
+
+- validar que o MVP e confiavel para uso analitico.
+
+Tarefas:
+
+- testar carregamento local
+- testar deploy no Streamlit Cloud
+- testar conexao com secrets online
+- testar ausencia de secrets no Git
+- testar paginas com dados vazios
+- testar ordenacao de rankings
+- testar limites de linhas e filtros
+- testar data quality antes dos rankings
+- comparar amostras do dashboard com queries diretas no Supabase
+
+Criterio de pronto:
+
+- dados do dashboard batem com queries diretas
+- app nao quebra com nulos ou listas vazias
+- tempo de carregamento aceitavel
+- nenhum segredo exposto
+
+## Etapa 9 - Publicacao online
+
+Objetivo:
+
+- disponibilizar a primeira versao online.
+
+Tarefas:
+
+- publicar no Streamlit Community Cloud
+- configurar branch e arquivo principal
+- configurar secrets online
+- testar URL final
+- documentar URL e modo de acesso em `dashboard/README.md`
+- registrar limitacoes conhecidas
+
+Criterio de pronto:
+
+- URL online funcionando
+- app consome Supabase sob demanda
+- primeira versao pronta para uso em estudos de mercado
+
+## Etapa 10 - Revisao analitica pos-MVP
+
+Objetivo:
+
+- avaliar se o dashboard responde perguntas reais do projeto.
+
+Perguntas de validacao:
+
+- quais creators cresceram mais nos ultimos 7 dias?
+- quais videos estao acelerando agora?
+- quais videos tem alto engajamento relativo?
+- quais creators tem volume alto mas engajamento baixo?
+- ha problemas de coleta que tornam alguma analise arriscada?
+- videos indisponiveis estao afetando a leitura de performance?
+
+Entregaveis:
+
+- lista de melhorias de layout
+- lista de novas views necessarias
+- lista de filtros prioritarios
+- decisao sobre incluir dados externos automotivos no dashboard
+
+## Ordem recomendada de execucao
+
+1. Pre-flight do repositorio
+2. Conta Streamlit e deploy placeholder
+3. Ligacao segura com Supabase
+4. Analise de seguranca
+5. Validacao das views existentes
+6. Criacao da view `v_dashboard_hot_now`
+7. App local Streamlit MVP
+8. Tema visual e componentes
+9. Testes iniciais
+10. Publicacao online
+11. Revisao analitica pos-MVP
+
+## Primeira entrega pratica sugerida
+
+Primeiro sprint:
+
+- criar estrutura `dashboard/`
+- criar app Streamlit local com pagina Overview
+- conectar em `v_dashboard_data_quality_status`
+- exibir cards de data quality
+- aplicar tema visual base
+- rodar localmente
+
+Motivo:
+
+- valida conta, conexao, seguranca, layout e data quality com escopo pequeno
+- evita construir rankings antes de confirmar confiabilidade dos dados
+- cria base reaproveitavel para as proximas paginas
+
+## Riscos principais
+
+- usar service role key por conveniencia
+- carregar historico bruto demais no Streamlit
+- chamar dashboard de pronto apenas porque as views SQL existem
+- ignorar data quality e interpretar ranking como verdade final
+- criar UI bonita sem validar se responde perguntas reais de mercado
+- misturar app do dashboard com scripts operacionais do pipeline
+
+## Commit sugerido para a primeira implementacao
+
+```bash
+git commit -m "feat(dashboard): cria mvp streamlit inicial"
+```
