@@ -320,6 +320,71 @@ Rotinas de teste:
 - `scripts/cloud_run/postMetrics/test_missing_video_ids.py`
 - `sql/ddl/tests/001_test_post_collection_failure_segmentation.sql`
 
+## Como executar os testes
+
+### Teste Python local
+
+Objetivo:
+
+- validar somente a regra pura `requested_ids - returned_ids = missing_ids`
+- nao chama YouTube API
+- nao le Supabase
+- nao depende de `requests`
+- usa dados sinteticos definidos dentro do proprio teste
+
+Comando PowerShell:
+
+```powershell
+& C:\social_media-analytics\.venv\Scripts\python.exe C:\social_media-analytics\scripts\cloud_run\postMetrics\test_missing_video_ids.py
+```
+
+Resultado esperado:
+
+```text
+Ran 5 tests
+
+OK
+```
+
+Se a ativacao da venv falhar por `ExecutionPolicy`, nao e necessario ativar a
+venv. Usar diretamente o `python.exe` da venv, como no comando acima, e
+suficiente.
+
+### Teste SQL transacional
+
+Objetivo:
+
+- validar a regra dentro do Postgres/Supabase
+- confirmar que somente o ID solicitado e nao retornado vira
+  `unavailable_candidate`
+- confirmar que o ID retornado e saudavel nao cria linha em
+  `post_collection_failures`
+- validar a URL completa de revisao
+- validar promocao para `unavailable` apos 3 falhas
+- validar `recovered` quando o ID volta
+
+Pre-requisitos:
+
+1. Executar `sql/ddl/tables/013_create_post_collection_failures.sql`.
+2. Executar `sql/ddl/functions/005_post_collection_failure_functions.sql`.
+3. Opcionalmente executar `sql/ddl/views/008_create_v_dashboard_unavailable_video_review.sql`.
+
+Como rodar no Supabase SQL Editor:
+
+1. Abrir o SQL Editor do Supabase.
+2. Colar o conteudo de `sql/ddl/tests/001_test_post_collection_failure_segmentation.sql`.
+3. Executar o script completo.
+
+Resultado esperado:
+
+```text
+NOTICE: post_collection_failure_segmentation test passed
+```
+
+O teste abre `begin;` e termina com `rollback;`, portanto nao deve deixar dados
+de teste persistidos no banco. Se houver `raise exception`, a regra falhou e a
+rotina nao deve ser liberada para producao ate a causa ser corrigida.
+
 Ainda falta executar no Supabase:
 
 1. Criar a tabela `post_collection_failures`.
