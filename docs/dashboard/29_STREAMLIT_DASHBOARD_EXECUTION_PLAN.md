@@ -54,6 +54,8 @@ Objetivo:
 Status:
 
 - conta Streamlit Community Cloud ja esta linkada ao GitHub
+- branch de trabalho criada: `codex/dashboard-streamlit-mvp`
+- placeholder inicial criado em `dashboard/streamlit_app.py`
 
 Tarefas:
 
@@ -73,7 +75,6 @@ Pendencias:
 
 - confirmar branch de deploy
 - confirmar caminho do arquivo principal
-- criar placeholder `dashboard/streamlit_app.py`
 - executar primeiro deploy vazio ou quase vazio
 
 ## Etapa 2 - Ligacao segura com Supabase
