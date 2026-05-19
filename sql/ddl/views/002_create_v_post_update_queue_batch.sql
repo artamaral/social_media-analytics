@@ -21,8 +21,11 @@ eligible as (
     on p.post_id = q.post_id
   left join history_counts h
     on h.post_id = q.post_id
+  left join public.post_collection_failures f
+    on f.post_id = q.post_id
   where q.needs_update = true
     and q.next_check <= now()
+    and coalesce(f.status, 'active') <> 'unavailable'
 ),
 guardrail_ranked as (
   select

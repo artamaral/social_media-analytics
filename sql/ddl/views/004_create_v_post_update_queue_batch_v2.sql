@@ -16,8 +16,11 @@ with eligible as (
   from public.post_update_queue q
   join public.v_post_priority_score_features_v2 f
     on f.post_id = q.post_id
+  left join public.post_collection_failures cf
+    on cf.post_id = q.post_id
   where q.needs_update = true
     and q.next_check <= now()
+    and coalesce(cf.status, 'active') <> 'unavailable'
 ),
 quotas as (
   select *

@@ -301,12 +301,29 @@ Resultado esperado:
 
 ## Status
 
-Esta especificacao define a solucao.
+Implementacao preparada no repositorio.
 
-Ainda falta implementar:
+Arquivos SQL:
 
-- tabela `post_collection_failures`
-- funcao `register_post_collection_result(...)`
-- exclusao de `status = 'unavailable'` na view da fila
-- view `v_dashboard_unavailable_video_review`
-- chamada minima do worker para registrar `requested_ids` e `returned_ids`
+- `sql/ddl/tables/013_create_post_collection_failures.sql`
+- `sql/ddl/functions/005_post_collection_failure_functions.sql`
+- `sql/ddl/views/008_create_v_dashboard_unavailable_video_review.sql`
+- `sql/ddl/views/002_create_v_post_update_queue_batch.sql`
+- `sql/ddl/views/004_create_v_post_update_queue_batch_v2.sql`
+
+Worker:
+
+- `scripts/cloud_run/postMetrics/main.py`
+
+Rotinas de teste:
+
+- `scripts/cloud_run/postMetrics/test_missing_video_ids.py`
+- `sql/ddl/tests/001_test_post_collection_failure_segmentation.sql`
+
+Ainda falta executar no Supabase:
+
+1. Criar a tabela `post_collection_failures`.
+2. Criar a funcao `register_post_collection_result(...)`.
+3. Criar a view `v_dashboard_unavailable_video_review`.
+4. Recriar as views de fila para aplicar a exclusao de `status = 'unavailable'`.
+5. Rodar o teste SQL transacional antes de liberar a rotina em producao.
