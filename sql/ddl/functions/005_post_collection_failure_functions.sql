@@ -10,6 +10,8 @@ returns table (
   action_taken text
 )
 language plpgsql
+security definer
+set search_path = public, pg_temp
 as $$
 declare
   returned_id text;
@@ -130,3 +132,6 @@ begin
     a.post_id;
 end;
 $$;
+
+grant execute on function public.register_post_collection_result(text[], text[])
+  to anon, authenticated, service_role;

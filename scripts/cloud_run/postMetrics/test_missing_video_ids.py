@@ -1,10 +1,13 @@
 import unittest
 from pathlib import Path
 import sys
+from unittest.mock import MagicMock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from video_id_segmentation import extract_returned_ids, find_missing_video_ids
+sys.modules.setdefault("requests", MagicMock())
+
+from main import extract_returned_ids, find_missing_video_ids
 
 
 class MissingVideoIdsTest(unittest.TestCase):

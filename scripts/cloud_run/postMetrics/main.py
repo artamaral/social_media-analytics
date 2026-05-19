@@ -3,8 +3,6 @@ from datetime import datetime, timezone
 
 import requests
 
-from video_id_segmentation import extract_returned_ids, find_missing_video_ids
-
 # ==============================
 # CONFIG
 # ==============================
@@ -82,8 +80,29 @@ def fetch_youtube_stats(video_ids):
     return response.json().get("items", [])
 
 
+def extract_returned_ids(items):
+    return [video["id"] for video in items if video.get("id")]
+
+
+def find_missing_video_ids(requested_ids, returned_ids):
+    returned_set = set(returned_ids)
+    seen_missing = set()
+    missing_ids = []
+
+    for video_id in requested_ids:
+        if video_id in returned_set or video_id in seen_missing:
+            continue
+
+        seen_missing.add(video_id)
+        missing_ids.append(video_id)
+
+    return missing_ids
+
+
 def register_post_collection_result(requested_ids, returned_ids):
     print("Registrando resultado da coleta no banco...")
+    print(f"IDs solicitados: {len(requested_ids)}")
+    print(f"IDs retornados pela YouTube API: {len(returned_ids)}")
 
     url = f"{SUPABASE_URL}/rest/v1/rpc/register_post_collection_result"
     payload = {
@@ -97,7 +116,10 @@ def register_post_collection_result(requested_ids, returned_ids):
 
     if response.status_code >= 300:
         print("Response:", response.text)
-        return []
+        raise RuntimeError(
+            "Falha ao registrar resultado da coleta na RPC "
+            f"register_post_collection_result: {response.status_code} - {response.text}"
+        )
 
     actions = response.json()
     missing_ids = [
@@ -108,6 +130,8 @@ def register_post_collection_result(requested_ids, returned_ids):
 
     if missing_ids:
         print(f"IDs nao retornados pela YouTube API: {missing_ids}")
+    else:
+        print("Nenhum ID ausente detectado nesta execucao")
 
     return actions
 
@@ -171,6 +195,10 @@ def run_pipeline():
 
     returned_ids = extract_returned_ids(yt_data)
     missing_ids = find_missing_video_ids(ids, returned_ids)
+
+    print(f"IDs ausentes calculados localmente: {len(missing_ids)}")
+    if missing_ids:
+        print(f"IDs ausentes calculados localmente: {missing_ids}")
 
     register_post_collection_result(ids, returned_ids)
 
