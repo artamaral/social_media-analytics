@@ -269,13 +269,20 @@ def render_connection_notice(error: str | None) -> None:
         st.success("Conexao com Supabase ativa usando secrets.")
 
 
-def render_data_quality_cards(data_quality: dict[str, Any] | None) -> None:
+def render_data_quality_cards(data_quality: dict[str, Any] | None, error: str | None = None) -> None:
     if not data_quality:
+        if error:
+            headline = "Erro"
+            caption = "View indisponivel ou sem permissao"
+        else:
+            headline = "Pendente"
+            caption = "Configure secrets para consultar Supabase"
+
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            metric_card("Data Quality", "Pendente", "Configure secrets para consultar Supabase", "DQ")
+            status_card("Data Quality", headline, "danger" if error else "warning", "DQ")
         with col2:
-            metric_card("Sem historico", "--", "Aguardando v_dashboard_data_quality_status", "HS")
+            metric_card("Sem historico", "--", caption, "HS")
         with col3:
             metric_card("Coleta nula", "--", "Aguardando v_dashboard_data_quality_status", "CL")
         with col4:
@@ -328,7 +335,7 @@ def render_overview() -> None:
     )
 
     render_connection_notice(error)
-    render_data_quality_cards(data_quality)
+    render_data_quality_cards(data_quality, error)
 
     st.write("")
     left, right = st.columns([1, 2])
@@ -353,7 +360,7 @@ def render_data_quality_page() -> None:
     data_quality, error = get_data_quality_status()
     st.title("Data quality")
     render_connection_notice(error)
-    render_data_quality_cards(data_quality)
+    render_data_quality_cards(data_quality, error)
 
     if data_quality:
         st.write("")
