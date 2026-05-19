@@ -83,6 +83,13 @@ Objetivo:
 
 - permitir leitura sob demanda do Supabase sem expor credenciais sensiveis.
 
+Status:
+
+- metodo inicial definido: Supabase Python client com `SUPABASE_URL` e `SUPABASE_ANON_KEY`
+- app preparado para abrir mesmo sem secrets configurados
+- primeira consulta implementada contra `v_dashboard_data_quality_status`
+- cache inicial configurado com TTL de 300 segundos
+
 Tarefas:
 
 - definir o metodo de conexao inicial:
@@ -111,6 +118,12 @@ Criterio de pronto:
 - app local consegue autenticar com credenciais seguras
 - Streamlit Cloud possui secrets configurados
 - nenhuma credencial real esta versionada
+
+Pendencias:
+
+- inserir secrets reais no Streamlit Community Cloud
+- validar grants/RLS da anon key para `v_dashboard_data_quality_status`
+- testar retorno real da view no app online
 
 ## Etapa 3 - Analise de seguranca e permissao
 

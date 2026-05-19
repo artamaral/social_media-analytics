@@ -26,3 +26,14 @@ streamlit run dashboard/streamlit_app.py
 - Nao usar `SUPABASE_SERVICE_ROLE_KEY` no app.
 - Guardar credenciais em `.streamlit/secrets.toml` localmente ou em Secrets no Streamlit Community Cloud.
 - A primeira conexao real deve carregar `v_dashboard_data_quality_status` antes dos rankings.
+
+## Secrets esperados
+
+Configurar localmente em `.streamlit/secrets.toml` ou no painel do Streamlit Community Cloud:
+
+```toml
+SUPABASE_URL = "https://your-project.supabase.co"
+SUPABASE_ANON_KEY = "your-anon-key"
+```
+
+O app usa apenas leitura das views do dashboard. A service role key nao deve ser usada.

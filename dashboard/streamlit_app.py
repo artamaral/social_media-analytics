@@ -1,3 +1,5 @@
+from typing import Any
+
 import streamlit as st
 
 
@@ -174,6 +176,30 @@ def metric_card(title: str, value: str, caption: str, picto: str) -> None:
     )
 
 
+def status_card(title: str, value: Any, status: str, picto: str) -> None:
+    status_color = {
+        "ok": "#98df96",
+        "warning": "#f2c14e",
+        "danger": "#ff6f61",
+        "neutral": "#aeb4bf",
+    }.get(status, "#aeb4bf")
+    st.markdown(
+        f"""
+        <div class="metric-card">
+            <div class="metric-card-header">{title}</div>
+            <div class="metric-card-body">
+                <div class="metric-value">
+                    <span>{value}</span>
+                    <span class="metric-picto" style="color: {status_color};">{picto}</span>
+                </div>
+                <div class="metric-caption">Status de confiabilidade</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def placeholder_card(title: str, body: str) -> None:
     st.markdown(
         f"""
@@ -186,7 +212,108 @@ def placeholder_card(title: str, body: str) -> None:
     )
 
 
+def get_secret(name: str) -> str | None:
+    value = st.secrets.get(name)
+    if value is None:
+        return None
+    return str(value).strip() or None
+
+
+def is_supabase_configured() -> bool:
+    return bool(get_secret("SUPABASE_URL") and get_secret("SUPABASE_ANON_KEY"))
+
+
+@st.cache_resource(show_spinner=False)
+def get_supabase_client():
+    from supabase import create_client
+
+    supabase_url = get_secret("SUPABASE_URL")
+    supabase_anon_key = get_secret("SUPABASE_ANON_KEY")
+    if not supabase_url or not supabase_anon_key:
+        return None
+    return create_client(supabase_url, supabase_anon_key)
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def load_data_quality_status() -> dict[str, Any] | None:
+    client = get_supabase_client()
+    if client is None:
+        return None
+
+    response = (
+        client.table("v_dashboard_data_quality_status")
+        .select("*")
+        .limit(1)
+        .execute()
+    )
+
+    if not response.data:
+        return None
+    return response.data[0]
+
+
+def get_data_quality_status() -> tuple[dict[str, Any] | None, str | None]:
+    if not is_supabase_configured():
+        return None, "Supabase ainda nao configurado. Adicione SUPABASE_URL e SUPABASE_ANON_KEY nos secrets."
+
+    try:
+        return load_data_quality_status(), None
+    except Exception as exc:
+        return None, f"Falha ao consultar Supabase: {exc}"
+
+
+def render_connection_notice(error: str | None) -> None:
+    if error:
+        st.warning(error)
+    else:
+        st.success("Conexao com Supabase ativa usando secrets.")
+
+
+def render_data_quality_cards(data_quality: dict[str, Any] | None) -> None:
+    if not data_quality:
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            metric_card("Data Quality", "Pendente", "Configure secrets para consultar Supabase", "DQ")
+        with col2:
+            metric_card("Sem historico", "--", "Aguardando v_dashboard_data_quality_status", "HS")
+        with col3:
+            metric_card("Coleta nula", "--", "Aguardando v_dashboard_data_quality_status", "CL")
+        with col4:
+            metric_card("Stale 24h", "--", "Aguardando v_dashboard_data_quality_status", "24")
+        return
+
+    is_ready = bool(data_quality.get("is_analytics_ready"))
+    readiness = "OK" if is_ready else "Atencao"
+    readiness_status = "ok" if is_ready else "warning"
+
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        status_card("Analytics Ready", readiness, readiness_status, "DQ")
+    with col2:
+        status_card(
+            "Sem historico",
+            data_quality.get("posts_without_history", 0),
+            "ok" if data_quality.get("posts_without_history", 0) == 0 else "danger",
+            "HS",
+        )
+    with col3:
+        status_card(
+            "Coleta nula",
+            data_quality.get("posts_with_null_collected_at", 0),
+            "ok" if data_quality.get("posts_with_null_collected_at", 0) == 0 else "danger",
+            "CL",
+        )
+    with col4:
+        status_card(
+            "Stale 24h",
+            data_quality.get("posts_stale_24h", 0),
+            "ok" if data_quality.get("posts_stale_24h", 0) == 0 else "warning",
+            "24",
+        )
+
+
 def render_overview() -> None:
+    data_quality, error = get_data_quality_status()
     st.markdown(
         """
         <div class="dashboard-title">
@@ -200,33 +327,38 @@ def render_overview() -> None:
         unsafe_allow_html=True,
     )
 
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        metric_card("Data Quality", "Pendente", "Primeira view: v_dashboard_data_quality_status", "DQ")
-    with col2:
-        metric_card("Creators", "--", "Ranking sera conectado ao Supabase", "CR")
-    with col3:
-        metric_card("Videos", "--", "Crescimento semanal em preparacao", "PL")
-    with col4:
-        metric_card("Hot Now", "--", "Velocidade e aceleracao temporal", "UP")
+    render_connection_notice(error)
+    render_data_quality_cards(data_quality)
 
     st.write("")
     left, right = st.columns([1, 2])
     with left:
         placeholder_card(
             "Proximo passo",
-            "Conectar o app ao Supabase via secrets e carregar a view de qualidade dos dados antes de qualquer ranking.",
+            "Validar grants/RLS das views e depois liberar ranking de creators e crescimento semanal.",
         )
     with right:
         placeholder_card(
             "Area de analise",
-            "Este bloco recebera os primeiros graficos e tabelas depois da validacao das views existentes no Supabase.",
+            "Este bloco recebera graficos e tabelas depois da validacao das views existentes no Supabase.",
         )
 
 
 def render_placeholder_page(title: str, description: str) -> None:
     st.title(title)
     placeholder_card(title, description)
+
+
+def render_data_quality_page() -> None:
+    data_quality, error = get_data_quality_status()
+    st.title("Data quality")
+    render_connection_notice(error)
+    render_data_quality_cards(data_quality)
+
+    if data_quality:
+        st.write("")
+        st.markdown("### Registro bruto da view")
+        st.dataframe([data_quality], use_container_width=True)
 
 
 inject_theme()
@@ -255,6 +387,6 @@ elif page == "Videos em crescimento":
 elif page == "Hot now":
     render_placeholder_page("Hot now", "View futura para velocidade recente, velocidade anterior e aceleracao.")
 elif page == "Data quality":
-    render_placeholder_page("Data quality", "Primeira tela real: status de confiabilidade antes dos rankings.")
+    render_data_quality_page()
 else:
     render_placeholder_page("Fila operacional", "Revisao de videos indisponiveis e problemas de coleta.")
