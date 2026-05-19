@@ -65,11 +65,13 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 - [ ] Exibir status de qualidade dos dados antes dos rankings.
 - [ ] Garantir que o app use Supabase sob demanda sem expor service role key.
 - [ ] Criar app Streamlit inicial consumindo as views do Supabase.
+- [ ] Aplicar tema visual do dashboard com fundo em escala de cinza, sidebar escura, cards contrastados e pictos.
 
 ### Direcao desta frente
 
 - [x] Confirmar que o dashboard e uma ferramenta interna de estudo de mercado, nao um produto SaaS publico.
 - [x] Definir Streamlit como solucao atual por simplicidade, custo zero e velocidade analitica.
+- [x] Definir direcao visual inicial: dashboard escuro em escala de cinza com acento coral e pictos.
 
 ## Bloco transversal
 

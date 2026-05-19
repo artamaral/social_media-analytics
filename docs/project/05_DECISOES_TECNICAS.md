@@ -241,6 +241,36 @@ Alternativa futura:
 
 ---
 
+## Direcao visual do dashboard Streamlit
+
+Data:
+
+- 2026-05-19
+
+Decisao:
+
+- adotar uma linguagem visual inspirada em dashboards editoriais com sidebar escura, cards contrastados e pictos
+- usar um fundo geral mais escuro que a referencia visual, baseado em escala de cinza
+- manter acentos coral/salmao para destaques e interacoes
+- usar pictos/icones lineares para navegacao, KPIs e secoes quando ajudarem a leitura
+
+Motivo:
+
+- o dashboard sera uma ferramenta de estudo de mercado e precisa ser escaneavel
+- o visual deve ajudar a separar qualidade de dados, crescimento, creators, videos e operacao
+- a escala de cinza reduz ruido visual e deixa os dados e alertas mais claros
+- pictos ajudam a reconhecer rapidamente areas recorrentes sem transformar a interface em produto promocional
+
+Diretriz de implementacao:
+
+- criar tema Streamlit com background cinza escuro, sidebar grafite e cards claros/escuros
+- evitar visual de landing page ou BI generico demais
+- usar cards com raio baixo, cabecalhos escuros e informacao densa
+- preservar legibilidade em tabelas e graficos
+- reservar cores fortes para sinal analitico: crescimento, alerta, erro e selecao
+
+---
+
 ## Logs persistentes como requisito para rotinas agendadas
 
 Data:

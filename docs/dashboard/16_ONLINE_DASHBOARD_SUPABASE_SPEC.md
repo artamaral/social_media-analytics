@@ -36,6 +36,63 @@ Recomendacao para MVP:
 - secrets gerenciados no proprio Streamlit Cloud
 - cache de consultas com TTL curto para reduzir leituras repetidas
 
+## Direcao visual
+
+Referencia visual:
+
+- dashboard com composicao editorial, sidebar escura, cards claros, cabecalhos escuros nos cards e acentos coral/salmao
+- adaptar para um visual mais escuro que a referencia, usando escala de cinza no background geral
+- manter o layout denso, organizado e funcional para analise de mercado, sem parecer landing page
+
+Principios de layout:
+
+- sidebar fixa escura para navegacao principal
+- conteudo central em grid com cards de raio baixo
+- cards de KPI no topo para leitura rapida
+- area principal com graficos maiores e tabelas abaixo
+- filtros na sidebar ou no topo, sempre compactos
+- data quality deve aparecer como bloco visivel antes dos rankings
+
+Paleta inicial:
+
+- background geral: cinza escuro `#15171c`
+- sidebar: grafite quase preto `#20212b`
+- superficie de pagina: cinza medio escuro `#24272f`
+- cards: cinza claro frio `#f4f6f7` quando o dado precisar de contraste
+- cards escuros: `#2a2c36` para blocos operacionais
+- texto principal em fundo escuro: `#f5f7fa`
+- texto secundario em fundo escuro: `#aeb4bf`
+- texto principal em cards claros: `#252733`
+- acento principal: coral `#ff8069`
+- acento positivo: verde suave `#98df96`
+- alerta: amarelo queimado `#f2c14e`
+- erro: vermelho coral `#ff6f61`
+
+Pictos e icones:
+
+- usar pictos sempre que ajudarem a leitura de secoes, KPIs e navegacao
+- preferir icones lineares simples, inspirados em dashboard/editorial, com stroke consistente
+- evitar excesso de emojis como linguagem principal da interface
+- exemplos de pictos por area:
+  - overview: gauge ou home
+  - creators: user ou users
+  - videos: play ou film
+  - crescimento: trending-up
+  - engajamento: heart ou message-circle
+  - qualidade dos dados: shield-check ou alert-triangle
+  - fila operacional: list-check ou refresh-cw
+  - fontes externas: database ou table
+
+Diretriz para Streamlit:
+
+- usar `st.set_page_config(layout="wide")`
+- aplicar CSS customizado para fundo, sidebar, cards e metricas
+- usar componentes HTML leves para cards quando `st.metric` nao permitir controle visual suficiente
+- evitar cards arredondados demais; raio alvo entre `6px` e `8px`
+- manter tipografia condensada apenas em titulos curtos; textos analiticos devem ser legiveis
+- usar graficos com fundo transparente ou cinza escuro, sem molduras pesadas
+- reservar acento coral para highlights, selecao, icones e variacao positiva/negativa relevante
+
 ## Banco
 
 Consumir preferencialmente:
@@ -227,3 +284,4 @@ Essa alternativa deve ser tratada como evolucao de produto, nao como prioridade 
 - revisao de videos indisponiveis disponivel por view com URL clicavel
 - queries respondem sem leitura excessiva do historico
 - limitacao conhecida de frescor dos dados documentada
+- identidade visual aplicada com fundo em escala de cinza, sidebar escura, cards contrastados e pictos consistentes
