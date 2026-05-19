@@ -314,6 +314,35 @@ Importante:
 - `priority_score` atual serve apenas como desempate
 - videos confirmados como `unavailable` devem ser excluidos
 
+### Baseline do cleanup - 2026-05-19 17h
+
+Este baseline registra o estado inicial antes de avaliar a evolucao do
+scheduler `guardrail-cleanup-backfill`.
+
+| video_age_bucket | total_checagens | total_posts |
+| --- | ---: | ---: |
+| new_0_3d | 0 | 41 |
+| recent_4_7d | 0 | 75 |
+| recent_4_7d | 1 | 43 |
+| warm_8_30d | 2 | 548 |
+| old_30d_plus | 1 | 1 |
+| old_30d_plus | 2 | 806 |
+
+Leitura:
+
+- warm e old ainda concentram a maior divida operacional do guardrail
+- `old_30d_plus` tem `807` posts abaixo da meta de `3` checagens
+- `warm_8_30d` tem `548` posts abaixo da meta de `3` checagens
+- novos e recentes ainda possuem `116` posts com `0` checagens
+- recentes possuem mais `43` posts com apenas `1` checagem
+
+Meta de curto prazo:
+
+- reduzir `warm_8_30d` e `old_30d_plus` abaixo de `3` checagens para zero
+- reduzir `new_0_3d` e `recent_4_7d` abaixo de `2` checagens para zero
+- depois disso, pausar o cleanup offline e deixar o guardrail permanente
+  completar a terceira checagem dos novos e recentes
+
 ---
 
 ## Query de monitoramento diario

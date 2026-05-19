@@ -128,6 +128,36 @@ O objetivo e manter uma leitura simples de:
 
 ### 1.4 Proximos checkpoints desta frente
 
+#### Cleanup temporario do guardrail
+
+- Status: em execucao controlada via Windows Scheduler
+- Tarefa: `guardrail-cleanup-backfill`
+- Frequencia: a cada `10` minutos
+- Script: `scripts/offline_backfill/legacy_low_backfill_phase1.py`
+- Launcher: `scripts/offline_backfill/run_legacy_low_backfill_phase1.ps1`
+- Resultado do scheduler validado: `0` na execucao de `2026-05-19 17:10`
+- Objetivo:
+  - limpar `warm_8_30d` e `old_30d_plus` ate `3` checagens
+  - limpar `new_0_3d` e `recent_4_7d` ate `2` checagens
+  - devolver o controle restante ao guardrail permanente
+
+Baseline inicial registrado em `2026-05-19 17h`:
+
+| video_age_bucket | total_checagens | total_posts |
+| --- | ---: | ---: |
+| new_0_3d | 0 | 41 |
+| recent_4_7d | 0 | 75 |
+| recent_4_7d | 1 | 43 |
+| warm_8_30d | 2 | 548 |
+| old_30d_plus | 1 | 1 |
+| old_30d_plus | 2 | 806 |
+
+Proxima avaliacao:
+
+- comparar este baseline contra nova leitura apos algumas horas de scheduler
+- pausar a tarefa quando warm/old abaixo de `3` e new/recent abaixo de `2`
+  estiverem zerados
+
 #### Guarda de cobertura minima
 
 - especificacao registrada em:
