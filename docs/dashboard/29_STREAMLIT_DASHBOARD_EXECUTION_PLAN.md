@@ -89,6 +89,9 @@ Status:
 - app preparado para abrir mesmo sem secrets configurados
 - primeira consulta implementada contra `v_dashboard_data_quality_status`
 - cache inicial configurado com TTL de 300 segundos
+- conexao online validada no Streamlit Cloud
+- `v_dashboard_data_quality_status` retornou dados no app
+- status atual exibido pelo app: `Analytics Ready = Atencao`
 
 Tarefas:
 
@@ -121,15 +124,20 @@ Criterio de pronto:
 
 Pendencias:
 
-- inserir secrets reais no Streamlit Community Cloud
-- validar grants/RLS da anon key para `v_dashboard_data_quality_status`
-- testar retorno real da view no app online
+- investigar quais indicadores de data quality impedem `is_analytics_ready = true`
+- validar grants/RLS das demais views do MVP
 
 ## Etapa 3 - Analise de seguranca e permissao
 
 Objetivo:
 
 - reduzir risco antes de publicar o dashboard online.
+
+Status:
+
+- iniciada apos validacao da conexao com Supabase
+- a anon key ja consegue ler `v_dashboard_data_quality_status`
+- proximo passo e validar escopo minimo de leitura para as demais views do MVP
 
 Tarefas:
 
@@ -139,6 +147,11 @@ Tarefas:
 - validar que o app nao permite escrita no Supabase
 - revisar logs e prints para evitar vazamento de secrets
 - confirmar que tabelas brutas pesadas nao sao carregadas sem filtro
+- registrar resultado dos indicadores de data quality:
+  - `posts_without_history`
+  - `posts_with_null_collected_at`
+  - `posts_stale_24h`
+  - `creators_without_posts`
 
 Views minimas:
 
@@ -152,6 +165,7 @@ Criterio de pronto:
 - checklist de seguranca aprovado
 - consulta de leitura funciona
 - tentativa de escrita nao e necessaria nem implementada
+- `Analytics Ready = Atencao` explicado por indicadores conhecidos, nao por falha de conexao
 
 ## Etapa 4 - Validacao das views existentes
 
