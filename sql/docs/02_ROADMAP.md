@@ -2,6 +2,7 @@
 
 ## NON Negotiable - Parar tudo para fazer
 
+- [ ] Planejar e iniciar a base Carros na Web para catalogo, modelos e ficha tecnica. Usar `27_CARROSNAWEB_VEHICLE_SPECS_INGESTION_PLAN.md` como referencia obrigatoria; manter discovery por links reais do catalogo, sem enumeracao sequencial de IDs, e com CSV/HTML bruto como MVP antes de criar schema definitivo no Supabase.
 - [x] Validacao da mudanca para FIFO dentro da banda ao inves de score. Usar arquivo `11_QUEUE_FIFO_VALIDATION_2026-05-08.md` como referencia e deixar rodar por dois dias. Validacao em 2026-05-10.
 - [x] Validar impacto FinOps e custos apos aumento do lote do worker para 40 posts por execucao. Resultado observado apos alguns dias em producao: nao houve aumento relevante de custos no Cloud Run.
 - [x] Open point: reavaliar se o refill global da `v_post_update_queue_batch` deve continuar assim ou migrar para cascata por banda. Hoje, cotas nao usadas por uma banda vao para um pool global ordenado por antiguidade, e nao automaticamente para a proxima banda mais alta.
