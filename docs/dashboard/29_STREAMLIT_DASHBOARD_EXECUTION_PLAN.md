@@ -87,11 +87,12 @@ Status:
 
 - metodo inicial definido: Supabase Python client com `SUPABASE_URL` e `SUPABASE_ANON_KEY`
 - app preparado para abrir mesmo sem secrets configurados
-- primeira consulta implementada contra `v_dashboard_data_quality_status`
+- primeira leitura de data quality redesenhada para dois KPIs:
+  - `v_dashboard_guardrail_coverage_status`
+  - `v_dashboard_dead_post_validation_status`
 - cache inicial configurado com TTL de 300 segundos
 - conexao online validada no Streamlit Cloud
-- `v_dashboard_data_quality_status` retornou dados no app
-- status atual exibido pelo app: `Analytics Ready = Atencao`
+- `v_dashboard_data_quality_status` foi validada, mas deixou de ser a view alvo do Data Quality do dashboard
 
 Tarefas:
 
@@ -124,8 +125,10 @@ Criterio de pronto:
 
 Pendencias:
 
-- investigar quais indicadores de data quality impedem `is_analytics_ready = true`
-- validar grants/RLS das demais views do MVP
+- aplicar as novas views de Data Quality no Supabase
+- validar grants/RLS para `v_dashboard_guardrail_coverage_status`
+- validar grants/RLS para `v_dashboard_dead_post_validation_status`
+- testar retorno real das duas views no app online
 
 ## Etapa 3 - Analise de seguranca e permissao
 
@@ -136,7 +139,7 @@ Objetivo:
 Status:
 
 - iniciada apos validacao da conexao com Supabase
-- a anon key ja consegue ler `v_dashboard_data_quality_status`
+- a anon key ja conseguiu ler `v_dashboard_data_quality_status`
 - proximo passo e validar escopo minimo de leitura para as demais views do MVP
 
 Tarefas:
@@ -147,15 +150,14 @@ Tarefas:
 - validar que o app nao permite escrita no Supabase
 - revisar logs e prints para evitar vazamento de secrets
 - confirmar que tabelas brutas pesadas nao sao carregadas sem filtro
-- registrar resultado dos indicadores de data quality:
-  - `posts_without_history`
-  - `posts_with_null_collected_at`
-  - `posts_stale_24h`
-  - `creators_without_posts`
+- registrar resultado dos dois KPIs de data quality:
+  - `recovery_low` em `v_dashboard_guardrail_coverage_status`
+  - `pending_human_review` em `v_dashboard_dead_post_validation_status`
 
 Views minimas:
 
-- `public.v_dashboard_data_quality_status`
+- `public.v_dashboard_guardrail_coverage_status`
+- `public.v_dashboard_dead_post_validation_status`
 - `public.v_dashboard_creator_summary`
 - `public.v_dashboard_post_growth_7d`
 - `public.v_dashboard_unavailable_video_review`
@@ -165,7 +167,7 @@ Criterio de pronto:
 - checklist de seguranca aprovado
 - consulta de leitura funciona
 - tentativa de escrita nao e necessaria nem implementada
-- `Analytics Ready = Atencao` explicado por indicadores conhecidos, nao por falha de conexao
+- Data Quality explicado pelos dois KPIs definidos, nao por checks genericos de frescor
 
 ## Etapa 4 - Validacao das views existentes
 
@@ -178,7 +180,11 @@ Tarefas:
 - executar no Supabase:
 
 ```sql
-SELECT * FROM public.v_dashboard_data_quality_status;
+SELECT * FROM public.v_dashboard_guardrail_coverage_status;
+```
+
+```sql
+SELECT * FROM public.v_dashboard_dead_post_validation_status;
 ```
 
 ```sql
@@ -394,8 +400,9 @@ Primeiro sprint:
 
 - criar estrutura `dashboard/`
 - criar app Streamlit local com pagina Overview
-- conectar em `v_dashboard_data_quality_status`
-- exibir cards de data quality
+- conectar em `v_dashboard_guardrail_coverage_status`
+- conectar em `v_dashboard_dead_post_validation_status`
+- exibir os 2 cards de data quality
 - aplicar tema visual base
 - rodar localmente
 

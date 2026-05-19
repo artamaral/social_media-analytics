@@ -99,7 +99,8 @@ Consumir preferencialmente:
 
 - `v_dashboard_creator_summary`
 - `v_dashboard_post_growth_7d`
-- `v_dashboard_data_quality_status`
+- `v_dashboard_guardrail_coverage_status`
+- `v_dashboard_dead_post_validation_status`
 - `v_dashboard_unavailable_video_review`
 
 Essas views deixam o dashboard simples e evitam repetir logica analitica no app.
@@ -208,13 +209,19 @@ Regras obrigatorias:
 
 ## Data quality antes de analytics
 
-Antes de liberar rankings como sinal de negocio, validar:
+O bloco de Data Quality do dashboard deve ter exatamente dois KPIs principais:
 
-- posts sem historico
-- posts com `collected_at` nulo
-- posts sem atualizacao nas ultimas 24h
-- creators sem posts
-- videos indisponiveis presos na fila de atualizacao
+1. Legado guardrail
+   - fonte: `v_dashboard_guardrail_coverage_status`
+   - mede a cobertura minima descrita em `docs/social_media/25_MINIMUM_HISTORY_COVERAGE_GUARDRAIL_SPEC.md`
+   - KPI principal: `recovery_low`
+   - contexto: `total_under_minimum`, `bootstrap_low`, `at_risk_bootstrap`
+
+2. Posts mortos
+   - fonte: `v_dashboard_dead_post_validation_status`
+   - mede candidatos/confirmados como indisponiveis e se ja passaram por validacao humana
+   - KPI principal: `pending_human_review`
+   - contexto: `total_dead_posts`, `confirmed_unavailable`, `available_on_manual_check`, `unclear`
 
 O dashboard deve exibir esses indicadores na tela inicial.
 
@@ -224,6 +231,7 @@ O dashboard deve exibir esses indicadores na tela inicial.
 
 - criar views SQL de consumo
 - criar view de revisao de videos indisponiveis com URL completa
+- criar views de resumo para guardrail legado e posts mortos
 - criar indices para `post_metrics_history`
 - validar data quality
 - documentar contrato dos dados

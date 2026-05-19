@@ -69,7 +69,7 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 - [x] Garantir que o app use Supabase sob demanda sem expor service role key.
 - [ ] Criar app Streamlit inicial consumindo as views do Supabase.
 - [ ] Aplicar tema visual do dashboard com fundo em escala de cinza, sidebar escura, cards contrastados e pictos.
-- [ ] Investigar motivo de `Analytics Ready = Atencao` na view de data quality.
+- [ ] Aplicar views de Data Quality do dashboard: guardrail legado e posts mortos/validados.
 
 ### Direcao desta frente
 

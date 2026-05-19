@@ -235,13 +235,13 @@ def get_supabase_client():
 
 
 @st.cache_data(ttl=300, show_spinner=False)
-def load_data_quality_status() -> dict[str, Any] | None:
+def load_single_row_view(view_name: str) -> dict[str, Any] | None:
     client = get_supabase_client()
     if client is None:
         return None
 
     response = (
-        client.table("v_dashboard_data_quality_status")
+        client.table(view_name)
         .select("*")
         .limit(1)
         .execute()
@@ -252,14 +252,14 @@ def load_data_quality_status() -> dict[str, Any] | None:
     return response.data[0]
 
 
-def get_data_quality_status() -> tuple[dict[str, Any] | None, str | None]:
+def get_single_row_view(view_name: str) -> tuple[dict[str, Any] | None, str | None]:
     if not is_supabase_configured():
         return None, "Supabase ainda nao configurado. Adicione SUPABASE_URL e SUPABASE_ANON_KEY nos secrets."
 
     try:
-        return load_data_quality_status(), None
+        return load_single_row_view(view_name), None
     except Exception as exc:
-        return None, f"Falha ao consultar Supabase: {exc}"
+        return None, f"Falha ao consultar {view_name}: {exc}"
 
 
 def render_connection_notice(error: str | None) -> None:
@@ -269,58 +269,75 @@ def render_connection_notice(error: str | None) -> None:
         st.success("Conexao com Supabase ativa usando secrets.")
 
 
-def render_data_quality_cards(data_quality: dict[str, Any] | None, error: str | None = None) -> None:
-    if not data_quality:
-        if error:
-            headline = "Erro"
-            caption = "View indisponivel ou sem permissao"
-        else:
-            headline = "Pendente"
-            caption = "Configure secrets para consultar Supabase"
+def render_data_quality_cards(
+    guardrail: dict[str, Any] | None,
+    dead_posts: dict[str, Any] | None,
+    errors: list[str],
+) -> None:
+    if errors:
+        st.warning(" | ".join(errors))
 
-        col1, col2, col3, col4 = st.columns(4)
+    col1, col2 = st.columns(2)
+
+    if guardrail:
+        recovery_low = int(guardrail.get("recovery_low") or 0)
+        under_minimum = int(guardrail.get("total_under_minimum") or 0)
+        legacy_ready = bool(guardrail.get("legacy_ready"))
         with col1:
-            status_card("Data Quality", headline, "danger" if error else "warning", "DQ")
+            status_card(
+                "Legado guardrail",
+                recovery_low,
+                "ok" if legacy_ready else "warning",
+                "LG",
+            )
+            st.caption(f"{under_minimum} posts abaixo de 3 checagens.")
+    else:
+        with col1:
+            status_card("Legado guardrail", "Erro", "danger", "LG")
+            st.caption("View v_dashboard_guardrail_coverage_status indisponivel.")
+
+    if dead_posts:
+        pending_review = int(dead_posts.get("pending_human_review") or 0)
+        total_dead_posts = int(dead_posts.get("total_dead_posts") or 0)
+        review_ready = bool(dead_posts.get("dead_posts_review_ready"))
         with col2:
-            metric_card("Sem historico", "--", caption, "HS")
-        with col3:
-            metric_card("Coleta nula", "--", "Aguardando v_dashboard_data_quality_status", "CL")
-        with col4:
-            metric_card("Stale 24h", "--", "Aguardando v_dashboard_data_quality_status", "24")
+            status_card(
+                "Posts mortos",
+                pending_review,
+                "ok" if review_ready else "warning",
+                "PM",
+            )
+            st.caption(f"{total_dead_posts} posts mortos/candidatos monitorados.")
+    else:
+        with col2:
+            status_card("Posts mortos", "Erro", "danger", "PM")
+            st.caption("View v_dashboard_dead_post_validation_status indisponivel.")
+
+
+def load_data_quality_context() -> tuple[dict[str, Any] | None, dict[str, Any] | None, list[str]]:
+    guardrail, guardrail_error = get_single_row_view("v_dashboard_guardrail_coverage_status")
+    dead_posts, dead_posts_error = get_single_row_view("v_dashboard_dead_post_validation_status")
+    errors = [error for error in [guardrail_error, dead_posts_error] if error]
+    return guardrail, dead_posts, errors
+
+
+def render_data_quality_raw_tables(
+    guardrail: dict[str, Any] | None,
+    dead_posts: dict[str, Any] | None,
+) -> None:
+    if guardrail:
+        st.write("")
+        st.markdown("### Legado guardrail")
+        st.dataframe([guardrail], use_container_width=True)
+    if dead_posts:
+        st.write("")
+        st.markdown("### Posts mortos e validacao humana")
+        st.dataframe([dead_posts], use_container_width=True)
         return
-
-    is_ready = bool(data_quality.get("is_analytics_ready"))
-    readiness = "OK" if is_ready else "Atencao"
-    readiness_status = "ok" if is_ready else "warning"
-
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        status_card("Analytics Ready", readiness, readiness_status, "DQ")
-    with col2:
-        status_card(
-            "Sem historico",
-            data_quality.get("posts_without_history", 0),
-            "ok" if data_quality.get("posts_without_history", 0) == 0 else "danger",
-            "HS",
-        )
-    with col3:
-        status_card(
-            "Coleta nula",
-            data_quality.get("posts_with_null_collected_at", 0),
-            "ok" if data_quality.get("posts_with_null_collected_at", 0) == 0 else "danger",
-            "CL",
-        )
-    with col4:
-        status_card(
-            "Stale 24h",
-            data_quality.get("posts_stale_24h", 0),
-            "ok" if data_quality.get("posts_stale_24h", 0) == 0 else "warning",
-            "24",
-        )
 
 
 def render_overview() -> None:
-    data_quality, error = get_data_quality_status()
+    guardrail, dead_posts, errors = load_data_quality_context()
     st.markdown(
         """
         <div class="dashboard-title">
@@ -334,8 +351,8 @@ def render_overview() -> None:
         unsafe_allow_html=True,
     )
 
-    render_connection_notice(error)
-    render_data_quality_cards(data_quality, error)
+    render_connection_notice(errors[0] if errors else None)
+    render_data_quality_cards(guardrail, dead_posts, errors)
 
     st.write("")
     left, right = st.columns([1, 2])
@@ -357,15 +374,11 @@ def render_placeholder_page(title: str, description: str) -> None:
 
 
 def render_data_quality_page() -> None:
-    data_quality, error = get_data_quality_status()
+    guardrail, dead_posts, errors = load_data_quality_context()
     st.title("Data quality")
-    render_connection_notice(error)
-    render_data_quality_cards(data_quality, error)
-
-    if data_quality:
-        st.write("")
-        st.markdown("### Registro bruto da view")
-        st.dataframe([data_quality], use_container_width=True)
+    render_connection_notice(errors[0] if errors else None)
+    render_data_quality_cards(guardrail, dead_posts, errors)
+    render_data_quality_raw_tables(guardrail, dead_posts)
 
 
 inject_theme()
