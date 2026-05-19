@@ -1,4 +1,4 @@
-# Fase 1 - Ingestao Fenabrave
+﻿# Fase 1 - Ingestao Fenabrave
 
 Data: 2026-05-15
 
@@ -21,7 +21,7 @@ Esta fase deve provar que o projeto consegue:
 - 2026-05-15: Entregavel 1 criado no Supabase. A tabela `public.market_data_sources` esta registrada no repositorio em `sql/ddl/tables/010_create_market_data_sources.sql`.
 - 2026-05-15: Entregavel 2 criado no Supabase. A tabela `public.market_source_files` esta registrada no repositorio em `sql/ddl/tables/011_create_market_source_files.sql`.
 - 2026-05-17: Entregavel 4 especificado com os campos efetivos da extracao (`segment_code`, `segmento`, `mes_atual`) e DDL registrado em `sql/ddl/tables/012_create_market_vehicle_registrations_segment.sql`.
-- 2026-05-15: Rotina offline mensal referenciada no calendario operacional em `sql/docs/00_OFFLINE_OPERATIONS_CALENDAR.md`.
+- 2026-05-15: Rotina offline mensal referenciada no calendario operacional em `docs/external_data/00_OFFLINE_OPERATIONS_CALENDAR.md`.
 
 ## Escopo da fase 1
 
@@ -1162,3 +1162,4 @@ A Fase 1 estara pronta quando:
 ```text
 docs(analytics): detalha fase fenabrave de ingestao
 ```
+

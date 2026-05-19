@@ -1,46 +1,46 @@
-# 🧠 DECISÕES TÉCNICAS
+﻿# ðŸ§  DECISÃ•ES TÃ‰CNICAS
 
 ---
 
-## 📌 Estrutura de dados
+## ðŸ“Œ Estrutura de dados
 
-### Uso de histórico (post_metrics_history)
+### Uso de histÃ³rico (post_metrics_history)
 
 Motivo:
-- Permitir análise temporal
+- Permitir anÃ¡lise temporal
 - Calcular crescimento real
 
 ---
 
-## 📌 Estratégia de pipeline
+## ðŸ“Œ EstratÃ©gia de pipeline
 
-- Pipeline A → novos posts
-- Pipeline B → atualização de métricas
+- Pipeline A â†’ novos posts
+- Pipeline B â†’ atualizaÃ§Ã£o de mÃ©tricas
 
 Motivo:
-- Redução de custo
+- ReduÃ§Ã£o de custo
 - Escalabilidade
 
 ---
 
-## 📌 Classificação de vídeo
+## ðŸ“Œ ClassificaÃ§Ã£o de vÃ­deo
 
-- Regra: <= 270s → short
-- > 270s → long
+- Regra: <= 270s â†’ short
+- > 270s â†’ long
 
 Motivo:
-- Padronização
+- PadronizaÃ§Ã£o
 
 ---
 
-## 📌 Prioridade de sistema
+## ðŸ“Œ Prioridade de sistema
 
 1. Pipeline funcionando
 2. Qualidade dos dados
 3. Analytics
 
 Motivo:
-- Evitar decisões com dados ruins
+- Evitar decisÃµes com dados ruins
 ---
 
 ## Fatiamento da fila de rechecagem
@@ -325,4 +325,5 @@ Diretriz:
 
 Documento de referencia:
 
-- `sql/docs/25_MINIMUM_HISTORY_COVERAGE_GUARDRAIL_SPEC.md`
+- `docs/social_media/25_MINIMUM_HISTORY_COVERAGE_GUARDRAIL_SPEC.md`
+

@@ -1,11 +1,11 @@
-# RESULTADO DAS QUERIES DE VALIDACAO DA FILA - 2026-05-08
+﻿# RESULTADO DAS QUERIES DE VALIDACAO DA FILA - 2026-05-08
 
 ## Objetivo
 
 Registrar os resultados das queries propostas em:
 
-- [07_QUEUE_VALIDATION_CHECKLIST.md](C:/social_media-analytics/sql/docs/07_QUEUE_VALIDATION_CHECKLIST.md:1)
-- [08_QUEUE_CAPACITY_TEST.md](C:/social_media-analytics/sql/docs/08_QUEUE_CAPACITY_TEST.md:1)
+- [07_QUEUE_VALIDATION_CHECKLIST.md](C:/social_media-analytics/docs/social_media/07_QUEUE_VALIDATION_CHECKLIST.md:1)
+- [08_QUEUE_CAPACITY_TEST.md](C:/social_media-analytics/docs/social_media/08_QUEUE_CAPACITY_TEST.md:1)
 
 Premissa desta avaliacao:
 
@@ -305,7 +305,7 @@ Observacoes:
 ### Proxima acao sugerida
 
 - Reavaliar as metricas da fila, existem post com muitos dados e post com poucos dados.
-Os posts com maior volume de checagens pertencem quase integralmente às bandas 6 e 5. Eles seguem com `needs_update = true`, `last_checked` recente e `next_check` curto, o que confirma que a fila está operando conforme a regra atual. A concentração de centenas de checagens em poucos posts indica que o comportamento atual não é falha de execução, mas efeito direto da política de priorização e agendamento. A rechecagem existe, porém a cobertura permanece desbalanceada.
+Os posts com maior volume de checagens pertencem quase integralmente Ã s bandas 6 e 5. Eles seguem com `needs_update = true`, `last_checked` recente e `next_check` curto, o que confirma que a fila estÃ¡ operando conforme a regra atual. A concentraÃ§Ã£o de centenas de checagens em poucos posts indica que o comportamento atual nÃ£o Ã© falha de execuÃ§Ã£o, mas efeito direto da polÃ­tica de priorizaÃ§Ã£o e agendamento. A rechecagem existe, porÃ©m a cobertura permanece desbalanceada.
 
 
 ---
@@ -314,7 +314,7 @@ Os posts com maior volume de checagens pertencem quase integralmente às bandas 
 
 Se a validacao for suficiente, atualizar tambem:
 
-- [07_QUEUE_VALIDATION_CHECKLIST.md](C:/social_media-analytics/sql/docs/07_QUEUE_VALIDATION_CHECKLIST.md:1)
+- [07_QUEUE_VALIDATION_CHECKLIST.md](C:/social_media-analytics/docs/social_media/07_QUEUE_VALIDATION_CHECKLIST.md:1)
 
 Modelo:
 
@@ -323,3 +323,4 @@ Status: validado em producao
 Data da validacao: 2026-05-08
 Resultado: preencher resumo curto
 ```
+

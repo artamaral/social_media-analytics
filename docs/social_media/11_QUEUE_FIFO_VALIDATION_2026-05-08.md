@@ -1,4 +1,4 @@
-# QUEUE FIFO VALIDATION - PLAN AND RESULTS
+﻿# QUEUE FIFO VALIDATION - PLAN AND RESULTS
 
 ## Objetivo
 
@@ -390,7 +390,7 @@ Leitura:
 
 Se o resultado final for `validado`, registrar no arquivo:
 
-- [05_DECISOES_TECNICAS.md](C:/social_media-analytics/sql/docs/05_DECISOES_TECNICAS.md:1)
+- [05_DECISOES_TECNICAS.md](C:/social_media-analytics/docs/project/05_DECISOES_TECNICAS.md:1)
 
 Texto sugerido:
 
@@ -400,3 +400,4 @@ Validacao em producao:
 - resultado: FIFO por `next_check` dentro da banda validado
 - efeito observado: maior rotacao dentro das bandas, com preservacao da prioridade macro por score
 ```
+

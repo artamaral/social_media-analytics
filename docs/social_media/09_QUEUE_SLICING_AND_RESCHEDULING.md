@@ -1,4 +1,4 @@
-# QUEUE SLICING AND RESCHEDULING
+﻿# QUEUE SLICING AND RESCHEDULING
 
 ## Objetivo
 
@@ -275,8 +275,8 @@ Com a mudanca, espera-se:
 
 Esta mudanca deve ser validada em conjunto com:
 
-- [07_QUEUE_VALIDATION_CHECKLIST.md](C:/social_media-analytics/sql/docs/07_QUEUE_VALIDATION_CHECKLIST.md:1)
-- [08_QUEUE_CAPACITY_TEST.md](C:/social_media-analytics/sql/docs/08_QUEUE_CAPACITY_TEST.md:1)
+- [07_QUEUE_VALIDATION_CHECKLIST.md](C:/social_media-analytics/docs/social_media/07_QUEUE_VALIDATION_CHECKLIST.md:1)
+- [08_QUEUE_CAPACITY_TEST.md](C:/social_media-analytics/docs/social_media/08_QUEUE_CAPACITY_TEST.md:1)
 
 Pontos principais de validacao:
 
@@ -311,3 +311,4 @@ Qualquer mudanca futura em:
 - limite de itens por execucao
 
 deve atualizar este documento, o checklist de validacao e o teste de capacidade.
+

@@ -1,4 +1,4 @@
-# HYBRID SCORE VALIDATION PLAN
+﻿# HYBRID SCORE VALIDATION PLAN
 
 ## Objetivo
 
@@ -15,7 +15,7 @@ Este plano assume que:
 
 Baseline atual:
 
-- `sql/docs/26_HYBRID_SCORE_V2_BASELINE_2026-05-17.md`
+- `docs/social_media/26_HYBRID_SCORE_V2_BASELINE_2026-05-17.md`
 - usar esse arquivo como ponto inicial de comparacao para proximas iteracoes
 
 ---
@@ -490,3 +490,4 @@ O `v2` so deve virar padrao se:
 - houver ganho claro de rotacao ou sensibilidade temporal
 - nao houver perda relevante de cobertura de posts importantes
 - o guardrail continuar como camada independente de `4` slots
+

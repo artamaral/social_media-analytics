@@ -1,4 +1,4 @@
-# VALIDACAO DA FILA DE RECHECK
+﻿# VALIDACAO DA FILA DE RECHECK
 
 ## Objetivo
 
@@ -46,7 +46,7 @@ Resultado: rechecagem voltou a ocorrer para posts recentes e fila segue reagenda
 
 Mudanca estrutural relacionada:
 
-- [09_QUEUE_SLICING_AND_RESCHEDULING.md](C:/social_media-analytics/sql/docs/09_QUEUE_SLICING_AND_RESCHEDULING.md:1)
+- [09_QUEUE_SLICING_AND_RESCHEDULING.md](C:/social_media-analytics/docs/social_media/09_QUEUE_SLICING_AND_RESCHEDULING.md:1)
 
 ---
 
@@ -310,3 +310,4 @@ A mudanca pode ser considerada validada quando:
 - ausencia de erro no deploy nao prova que a regra de negocio esta correta
 - a validacao precisa ser feita em dados reais apos algumas execucoes do scheduler
 - qualquer alteracao futura de prioridade ou frequencia deve atualizar este checklist
+

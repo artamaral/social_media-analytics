@@ -1,4 +1,4 @@
-# HYBRID SCORE EVALUATION STRATEGY
+﻿# HYBRID SCORE EVALUATION STRATEGY
 
 ## Objetivo
 
@@ -221,7 +221,7 @@ Depois da estrategia definida, a validacao deve seguir um plano pratico com:
 
 Referencia:
 
-- [14_HYBRID_SCORE_VALIDATION_PLAN.md](C:/social_media-analytics/sql/docs/14_HYBRID_SCORE_VALIDATION_PLAN.md:1)
+- [14_HYBRID_SCORE_VALIDATION_PLAN.md](C:/social_media-analytics/docs/social_media/14_HYBRID_SCORE_VALIDATION_PLAN.md:1)
 
 ---
 
@@ -230,3 +230,4 @@ Referencia:
 Esta estrategia descreve como avaliar o modelo `v2` sem dobrar custo operacional.
 
 Ainda nao representa implementacao aprovada do score hibrido.
+

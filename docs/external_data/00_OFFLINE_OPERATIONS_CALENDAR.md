@@ -1,4 +1,4 @@
-# Calendario operacional offline
+﻿# Calendario operacional offline
 
 Data: 2026-05-15
 
@@ -32,7 +32,7 @@ Responsavel:
 
 Documentacao:
 
-- `sql/docs/23_FENABRAVE_PHASE1_INGESTION_SPEC.md`
+- `docs/external_data/23_FENABRAVE_PHASE1_INGESTION_SPEC.md`
 - `scripts/fenabrave_ingestion/README.md`
 
 Etapas:
@@ -133,8 +133,8 @@ Responsavel:
 
 Documentacao:
 
-- `sql/docs/25_MINIMUM_HISTORY_COVERAGE_GUARDRAIL_SPEC.md`
-- `sql/docs/04_PIPELINE_STATUS.md`
+- `docs/social_media/25_MINIMUM_HISTORY_COVERAGE_GUARDRAIL_SPEC.md`
+- `docs/project/04_PIPELINE_STATUS.md`
 
 Objetivo:
 
@@ -200,11 +200,11 @@ Responsavel:
 
 Documentacao:
 
-- `sql/docs/17_LEGACY_LOW_OFFLINE_BACKFILL_SPEC.md`
-- `sql/docs/18_LEGACY_LOW_OFFLINE_BACKFILL_PHASE1_SPEC.md`
-- `sql/docs/19_LEGACY_LOW_OFFLINE_BACKFILL_SCRIPT_DESIGN.md`
-- `sql/docs/20_LEGACY_LOW_BACKFILL_RESULTS_2026-05-14.md`
-- `sql/docs/21_WINDOWS_SCHEDULER_BACKFILL_SETUP.md`
+- `docs/social_media/17_LEGACY_LOW_OFFLINE_BACKFILL_SPEC.md`
+- `docs/social_media/18_LEGACY_LOW_OFFLINE_BACKFILL_PHASE1_SPEC.md`
+- `docs/social_media/19_LEGACY_LOW_OFFLINE_BACKFILL_SCRIPT_DESIGN.md`
+- `docs/social_media/20_LEGACY_LOW_BACKFILL_RESULTS_2026-05-14.md`
+- `docs/social_media/21_WINDOWS_SCHEDULER_BACKFILL_SETUP.md`
 
 Script:
 
@@ -233,3 +233,4 @@ Estas atividades ainda nao fazem parte do calendario recorrente:
 - criacao de rotina automatizada no Scheduler
 
 Elas so devem entrar neste calendario quando houver script, runbook e criterio de validacao definidos.
+

@@ -1,4 +1,4 @@
-# Social Media Analytics
+﻿# Social Media Analytics
 
 Plataforma de inteligencia automotiva organizada em 3 frentes principais:
 
@@ -48,7 +48,7 @@ Escopo atual:
 
 ### Scripts principais
 
-- `scripts/youtube_main_scraper/main.py`
+- `scripts/cloud_run/youtube_main_scraper/main.py`
 - `scripts/cloud_run/postMetrics/main.py`
 - `scripts/offline_backfill/legacy_low_backfill_phase1.py`
 
@@ -66,8 +66,8 @@ Responsabilidades:
 
 Arquivos principais:
 
-- `scripts/youtube_main_scraper/main.py`
-- `scripts/youtube_main_scraper/requirements.txt`
+- `scripts/cloud_run/youtube_main_scraper/main.py`
+- `scripts/cloud_run/youtube_main_scraper/requirements.txt`
 
 Arquivo de apoio:
 
@@ -146,8 +146,8 @@ Implementacao atual:
 
 Documentos principais:
 
-- `sql/docs/22_EXTERNAL_MARKET_DATA_STUDY_PLAN.md`
-- `sql/docs/23_FENABRAVE_PHASE1_INGESTION_SPEC.md`
+- `docs/external_data/22_EXTERNAL_MARKET_DATA_STUDY_PLAN.md`
+- `docs/external_data/23_FENABRAVE_PHASE1_INGESTION_SPEC.md`
 
 ### Subfrente B. Carros na Web
 
@@ -170,7 +170,7 @@ Estado atual:
 
 Documento principal:
 
-- `sql/docs/27_CARROSNAWEB_VEHICLE_SPECS_INGESTION_PLAN.md`
+- `docs/external_data/27_CARROSNAWEB_VEHICLE_SPECS_INGESTION_PLAN.md`
 
 ### Subfrente C. SENATRAN / RENAVAM
 
@@ -191,7 +191,7 @@ Estado atual:
 
 Documento principal:
 
-- `sql/docs/22_EXTERNAL_MARKET_DATA_STUDY_PLAN.md`
+- `docs/external_data/22_EXTERNAL_MARKET_DATA_STUDY_PLAN.md`
 
 ### Regra geral desta frente
 
@@ -229,7 +229,7 @@ Direcao atual:
 
 ### Documento principal
 
-- `sql/docs/16_ONLINE_DASHBOARD_SUPABASE_SPEC.md`
+- `docs/dashboard/16_ONLINE_DASHBOARD_SUPABASE_SPEC.md`
 
 ## Relacao Entre as Frentes
 
@@ -242,6 +242,12 @@ Direcao atual:
 ```text
 .
 ├── README.md
+├── docs
+│   ├── dashboard
+│   ├── data_model
+│   ├── external_data
+│   ├── project
+│   └── social_media
 ├── scripts
 │   ├── cloud_run
 │   │   ├── postMetrics
@@ -259,13 +265,13 @@ Direcao atual:
 │       └── requirements.txt
 └── sql
     ├── ddl
+    │   ├── functions
     │   ├── indexes
     │   ├── schema
     │   ├── tables
     │   ├── triggers
     │   └── views
     ├── dml
-    ├── docs
     ├── maintenance
     └── migrations
 ```
@@ -274,7 +280,7 @@ Direcao atual:
 
 #### Social media
 
-- `scripts/youtube_main_scraper/`
+- `scripts/cloud_run/youtube_main_scraper/`
 - `scripts/cloud_run/postMetrics/`
 - `scripts/offline_backfill/`
 
@@ -286,7 +292,7 @@ Direcao atual:
 #### Dashboard
 
 - views SQL em `sql/ddl/views/`
-- docs analiticas em `sql/docs/`
+- docs analiticas em `docs/dashboard/`
 - futura app Streamlit
 
 ## Estrutura SQL
@@ -297,6 +303,7 @@ O diretorio `sql/` esta organizado por finalidade.
 
 Definicao estrutural do banco:
 
+- `functions/`: funcoes SQL reutilizaveis e auxiliares
 - `tables/`: criacao das tabelas principais
 - `views/`: views operacionais, analiticas e de revisao
 - `triggers/`: funcoes e triggers de sincronizacao e queue
@@ -314,10 +321,6 @@ Scripts de manutencao e saneamento.
 ### `sql/migrations`
 
 Migrations versionadas com arquivos `_up.sql` e `_down.sql`.
-
-### `sql/docs`
-
-Documentacao interna do projeto.
 
 ## Setup Local
 
@@ -354,7 +357,7 @@ pip install -r scripts/cloud_run/postMetrics/requirements.txt
 Para o pipeline de discovery:
 
 ```powershell
-pip install -r scripts/youtube_main_scraper/requirements.txt
+pip install -r scripts/cloud_run/youtube_main_scraper/requirements.txt
 ```
 
 Para Fenabrave:
@@ -395,14 +398,14 @@ Aplicar:
 
 1. `sql/ddl/triggers/001_trg_sync_post.sql`
 2. `sql/ddl/triggers/002_add_to_queue.sql`
-3. `sql/ddl/triggers/002_queue_scheduling_functions.sql`
+3. `sql/ddl/functions/002_queue_scheduling_functions.sql`
 4. `sql/ddl/triggers/003_refresh_post_queue_on_metrics.sql`
 
 ### 4. Criar indices e auxiliares
 
 Aplicar:
 
-1. `sql/ddl/indexes/001_create_publish_entity_intake_function.sql`
+1. `sql/ddl/functions/001_create_publish_entity_intake_function.sql`
 2. `sql/ddl/indexes/002_create_unique_index_entities_normalized_name.sql`
 
 ### 5. Aplicar migrations posteriores
@@ -419,20 +422,20 @@ Documentos importantes por frente:
 
 ### Social media
 
-- `sql/docs/04_PIPELINE_STATUS.md`
-- `sql/docs/05_DECISOES_TECNICAS.md`
-- `sql/docs/08_QUEUE_CAPACITY_TEST.md`
-- `sql/docs/09_QUEUE_SLICING_AND_RESCHEDULING.md`
+- `docs/project/04_PIPELINE_STATUS.md`
+- `docs/project/05_DECISOES_TECNICAS.md`
+- `docs/social_media/08_QUEUE_CAPACITY_TEST.md`
+- `docs/social_media/09_QUEUE_SLICING_AND_RESCHEDULING.md`
 
 ### Fontes externas
 
-- `sql/docs/22_EXTERNAL_MARKET_DATA_STUDY_PLAN.md`
-- `sql/docs/23_FENABRAVE_PHASE1_INGESTION_SPEC.md`
-- `sql/docs/27_CARROSNAWEB_VEHICLE_SPECS_INGESTION_PLAN.md`
+- `docs/external_data/22_EXTERNAL_MARKET_DATA_STUDY_PLAN.md`
+- `docs/external_data/23_FENABRAVE_PHASE1_INGESTION_SPEC.md`
+- `docs/external_data/27_CARROSNAWEB_VEHICLE_SPECS_INGESTION_PLAN.md`
 
 ### Dashboard
 
-- `sql/docs/16_ONLINE_DASHBOARD_SUPABASE_SPEC.md`
+- `docs/dashboard/16_ONLINE_DASHBOARD_SUPABASE_SPEC.md`
 
 ## Estado Atual do Projeto
 
@@ -460,3 +463,4 @@ Documentos importantes por frente:
 - expandir a documentacao de multiplataforma para alem do YouTube
 - consolidar a frente de fontes externas em schema e ingestao versionados
 - implementar o app inicial do dashboard consumindo as views do Supabase
+

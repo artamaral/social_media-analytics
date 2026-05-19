@@ -1,4 +1,4 @@
-# REPOSITORY STRUCTURE GUIDELINES
+﻿# REPOSITORY STRUCTURE GUIDELINES
 
 ## Objetivo
 
@@ -29,9 +29,7 @@ Regra pratica:
 
 - se o arquivo e executavel, ele deve ficar em `scripts/`
 - se o arquivo e SQL executavel, ele deve ficar em `sql/`
-- se o arquivo e documentacao, ele deve ficar em `docs/` no desenho alvo
-- enquanto a migracao nao acontece, a documentacao central continua em
-  `sql/docs/`, mas deve seguir desde ja a classificacao definida neste arquivo
+- se o arquivo e documentacao, ele deve ficar em `docs/`
 
 ## Estrutura alvo de alto nivel
 
@@ -74,10 +72,8 @@ Deve concentrar:
 
 Observacao:
 
-- hoje boa parte dessa documentacao ainda esta em `sql/docs/`
-- isso e aceito como estado de transicao
-- novos documentos de documentacao devem ja seguir a classificacao desta
-  diretriz, mesmo antes da migracao fisica para `/docs`
+- esta e a raiz oficial da documentacao de projeto
+- novos documentos devem nascer aqui, ja classificados pela frente correta
 
 #### `scripts/`
 
@@ -107,15 +103,13 @@ Deve concentrar:
 - scripts de manutencao
 - snapshots de schema
 
-Nao deve concentrar permanentemente:
+Nao deve concentrar:
 
 - backlog
 - roadmap
 - status geral do projeto
 - padroes de commit
 - documentacao de produto
-
-Esses itens estao em `sql/docs/` apenas por legado e transicao.
 
 ## Diretriz para `docs/`
 
@@ -199,6 +193,7 @@ Exemplos:
 ```text
 sql/
   ddl/
+    functions/
     tables/
     views/
     triggers/
@@ -236,28 +231,19 @@ Usar para:
 - trigger functions
 - logica operacional fortemente acoplada ao fluxo do banco
 
-Observacao:
-
-- hoje tambem existem funcoes que nao sao triggers puras, como score hibrido
-- enquanto estiverem acopladas ao fluxo operacional de fila e historico, esse
-  local e aceitavel
-- se no futuro surgir um conjunto grande de funcoes SQL genericas, vale criar
-  `sql/ddl/functions/`
-
 ### `sql/ddl/indexes/`
 
 Usar para:
 
 - indices
-- funcoes auxiliares pequenas quando o repositorio ainda nao tiver uma pasta
-  `functions/`
 
-Observacao:
+### `sql/ddl/functions/`
 
-- `001_create_publish_entity_intake_function.sql` hoje esta em `indexes/`
-- estruturalmente isso nao e o nome ideal para funcao
-- no desenho futuro, funcoes SQL nao relacionadas a trigger nem a indice
-  deveriam migrar para `sql/ddl/functions/`
+Usar para:
+
+- funcoes SQL reutilizaveis
+- funcoes auxiliares de fila, score, validacao e publicacao
+- funcoes que nao sao, por si so, triggers nem indices
 
 ### `sql/ddl/schema/`
 
@@ -305,7 +291,6 @@ Regra:
 
 ```text
 scripts/
-  youtube_main_scraper/
   cloud_run/
   offline_backfill/
   fenabrave_ingestion/
@@ -327,10 +312,6 @@ uma integracao concreta.
 
 Nao deve representar apenas um assunto conceitual.
 
-### `scripts/youtube_main_scraper/`
-
-Usar para o discovery principal de social media.
-
 ### `scripts/cloud_run/`
 
 Usar para entrypoints e pacotes preparados para execucao serverless.
@@ -339,6 +320,8 @@ Regra:
 
 - se um fluxo e desenhado para Cloud Run ou runtime semelhante, ele deve morar
   aqui
+- isso inclui o worker de metricas e o discovery principal quando a execucao
+  oficial for empacotada para Cloud Run
 
 ### `scripts/offline_backfill/`
 
@@ -457,9 +440,9 @@ Antes de criar um arquivo novo, responder:
 
 - manter junto do fluxo local, nunca como centro da estrutura do projeto
 
-## Mapeamento dos arquivos atuais para o desenho futuro
+## Mapeamento dos arquivos atuais
 
-### Documentacao hoje em `sql/docs/` que pertence a `docs/project/`
+### Documentacao em `docs/project/`
 
 - `01_BACKLOG.md`
 - `02_ROADMAP.md`
@@ -470,7 +453,7 @@ Antes de criar um arquivo novo, responder:
 - `README_GESTAO_PROJETO.md`
 - `28_REPOSITORY_STRUCTURE_GUIDELINES.md`
 
-### Documentacao hoje em `sql/docs/` que pertence a `docs/social_media/`
+### Documentacao em `docs/social_media/`
 
 - `07_QUEUE_VALIDATION_CHECKLIST.md`
 - `08_QUEUE_CAPACITY_TEST.md`
@@ -490,18 +473,18 @@ Antes de criar um arquivo novo, responder:
 - `25_MINIMUM_HISTORY_COVERAGE_GUARDRAIL_SPEC.md`
 - `26_HYBRID_SCORE_V2_BASELINE_2026-05-17.md`
 
-### Documentacao hoje em `sql/docs/` que pertence a `docs/external_data/`
+### Documentacao em `docs/external_data/`
 
 - `00_OFFLINE_OPERATIONS_CALENDAR.md`
 - `22_EXTERNAL_MARKET_DATA_STUDY_PLAN.md`
 - `23_FENABRAVE_PHASE1_INGESTION_SPEC.md`
 - `27_CARROSNAWEB_VEHICLE_SPECS_INGESTION_PLAN.md`
 
-### Documentacao hoje em `sql/docs/` que pertence a `docs/dashboard/`
+### Documentacao em `docs/dashboard/`
 
 - `16_ONLINE_DASHBOARD_SUPABASE_SPEC.md`
 
-### Documentacao hoje em `sql/docs/` que pertence a `docs/data_model/`
+### Documentacao em `docs/data_model/`
 
 - `03_DATA_QUALITY_CHECKS.md`
 - `entity_intake_process.md`
@@ -511,12 +494,6 @@ Antes de criar um arquivo novo, responder:
 
 Todo item novo gerado em documentacao deve ser incorporado ao indice de
 documentacao.
-
-Referencia atual:
-
-- `sql/docs/README.md`
-
-No desenho futuro:
 
 - `docs/README.md`
 
@@ -528,3 +505,4 @@ incompleta.
 Quando houver duvida sobre onde um arquivo deve ficar, escolher o local pelo
 papel estrutural do arquivo e nao pela tarefa momentanea que motivou sua
 criacao.
+

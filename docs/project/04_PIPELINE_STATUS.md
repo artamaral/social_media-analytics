@@ -1,4 +1,4 @@
-# PIPELINE STATUS
+﻿# PIPELINE STATUS
 
 ## Visao geral
 
@@ -23,7 +23,7 @@ O objetivo e manter uma leitura simples de:
 ### 1.1 Scraper principal
 
 - Status: operacional
-- Implementacao principal: `scripts/youtube_main_scraper/main.py`
+- Implementacao principal: `scripts/cloud_run/youtube_main_scraper/main.py`
 - Objetivo: descoberta e ingestao principal de posts
 - Observacao: continua sendo a origem normal de novos posts e alimenta a fila
 
@@ -131,7 +131,7 @@ O objetivo e manter uma leitura simples de:
 #### Guarda de cobertura minima
 
 - especificacao registrada em:
-  - `sql/docs/25_MINIMUM_HISTORY_COVERAGE_GUARDRAIL_SPEC.md`
+  - `docs/social_media/25_MINIMUM_HISTORY_COVERAGE_GUARDRAIL_SPEC.md`
 - objetivo:
   - impedir que posts com menos de `3` checagens fiquem para tras
 - proximo passo:
@@ -154,13 +154,13 @@ O objetivo e manter uma leitura simples de:
 - desbloqueada do ponto de vista operacional
 - depende agora de definicao da estrategia de promocao temporal entre snapshots
 - baseline inicial registrado em:
-  - `sql/docs/24_PHASE2_INITIAL_DATA_BASELINE_2026-05-17.md`
+  - `docs/social_media/24_PHASE2_INITIAL_DATA_BASELINE_2026-05-17.md`
 
 #### Score hibrido `v2`
 
 - status: analitico, nao ativo
 - baseline atual registrado em:
-  - `sql/docs/26_HYBRID_SCORE_V2_BASELINE_2026-05-17.md`
+  - `docs/social_media/26_HYBRID_SCORE_V2_BASELINE_2026-05-17.md`
 - leitura atual:
   - overlap baixo entre fila ativa e `v2`
   - `v2` ainda favorece muitos `low` em bandas altas
@@ -217,7 +217,7 @@ O objetivo e manter uma leitura simples de:
 ### 2.2 Carros na Web
 
 - Status: em fase de planejamento de ingestao
-- Documento principal: `sql/docs/27_CARROSNAWEB_VEHICLE_SPECS_INGESTION_PLAN.md`
+- Documento principal: `docs/external_data/27_CARROSNAWEB_VEHICLE_SPECS_INGESTION_PLAN.md`
 - Papel na arquitetura: base estruturada de catalogo automotivo, versoes e
   ficha tecnica
 
@@ -231,7 +231,7 @@ O objetivo e manter uma leitura simples de:
 ### 2.3 SENATRAN / RENAVAM
 
 - Status: em fase de estudo
-- Documento principal: `sql/docs/22_EXTERNAL_MARKET_DATA_STUDY_PLAN.md`
+- Documento principal: `docs/external_data/22_EXTERNAL_MARKET_DATA_STUDY_PLAN.md`
 - Papel na arquitetura: camada governamental de frota registrada e validacao
   estrutural
 
@@ -259,7 +259,7 @@ O objetivo e manter uma leitura simples de:
 - Status: estrategia definida, app inicial ainda nao implementado
 - Solucao atual: Streamlit Community Cloud
 - Fonte de dados: Supabase sob demanda
-- Documento principal: `sql/docs/16_ONLINE_DASHBOARD_SUPABASE_SPEC.md`
+- Documento principal: `docs/dashboard/16_ONLINE_DASHBOARD_SUPABASE_SPEC.md`
 
 ### 3.2 Base analitica
 
@@ -323,3 +323,4 @@ O objetivo e manter uma leitura simples de:
   - frente Carros na Web segue em planejamento
   - frente SENATRAN / RENAVAM segue em estudo
   - frente dashboard esta com estrategia pronta e aguarda implementacao do app
+
