@@ -51,6 +51,10 @@ Objetivo:
 
 - preparar o ambiente onde o dashboard sera publicado.
 
+Status:
+
+- conta Streamlit Community Cloud ja esta linkada ao GitHub
+
 Tarefas:
 
 - criar ou confirmar conta no Streamlit Community Cloud
@@ -64,6 +68,13 @@ Criterio de pronto:
 - Streamlit Community Cloud conectado ao repositorio
 - app vazio ou placeholder pronto para deploy
 - caminho do app definido
+
+Pendencias:
+
+- confirmar branch de deploy
+- confirmar caminho do arquivo principal
+- criar placeholder `dashboard/streamlit_app.py`
+- executar primeiro deploy vazio ou quase vazio
 
 ## Etapa 2 - Ligacao segura com Supabase
 

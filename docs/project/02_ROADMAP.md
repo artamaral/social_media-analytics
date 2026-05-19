@@ -55,6 +55,7 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 
 - [x] Preparar camada SQL para dashboard online sob demanda no Supabase.
 - [x] Definir stack e deploy do dashboard online: Streamlit Community Cloud + Supabase.
+- [x] Confirmar conta Streamlit Community Cloud linkada ao GitHub.
 
 ### MVP do app
 
