@@ -93,6 +93,7 @@ considerada incompleta.
 
 - [03_DATA_QUALITY_CHECKS.md](/C:/social_media-analytics/sql/docs/03_DATA_QUALITY_CHECKS.md)
 - [06_COMMIT_PATTERN.md](/C:/social_media-analytics/sql/docs/06_COMMIT_PATTERN.md)
+- [28_REPOSITORY_STRUCTURE_GUIDELINES.md](/C:/social_media-analytics/sql/docs/28_REPOSITORY_STRUCTURE_GUIDELINES.md)
 - [README_GESTAO_PROJETO.md](/C:/social_media-analytics/sql/docs/README_GESTAO_PROJETO.md)
 
 ## Ordem sugerida de leitura
