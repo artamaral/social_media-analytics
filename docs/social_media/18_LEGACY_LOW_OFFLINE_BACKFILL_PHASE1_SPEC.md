@@ -38,36 +38,62 @@ O foco desta especificacao e apenas o conjunto `legacy_low`.
 
 ---
 
-## Regra de elegibilidade
+## Atualizacao operacional - guardrail cleanup
 
-Um post entra na fase 1 do backfill quando:
+Depois da avaliacao do backlog de guardrail, a rotina offline deixa de ser
+tratada como um backfill exclusivo de `legacy_low`.
 
-- `created_at < now() - interval '7 days'`
-- `total_checagens <= 2`
+A partir desta decisao, o objetivo operacional e limpar a divida de cobertura
+minima para que o guardrail consiga voltar a proteger posts novos em fase de
+crescimento.
+
+Regra simplificada:
+
+```text
+warm_8_30d e old_30d_plus -> limpar ate 3 checagens
+new_0_3d e recent_4_7d -> limpar ate 2 checagens
+```
+
+O script ainda esta em `scripts/offline_backfill/legacy_low_backfill_phase1.py`
+por continuidade operacional, mas a selecao ativa passa a ser de
+`guardrail cleanup`.
+
+## Regra de elegibilidade atual
+
+Um post entra no cleanup quando:
+
+- `needs_update = true`
+- nao esta confirmado como `unavailable` em `post_collection_failures`
+- `video_age_bucket in ('warm_8_30d', 'old_30d_plus')` e
+  `total_checagens < 3`
+- ou `video_age_bucket in ('new_0_3d', 'recent_4_7d')` e
+  `total_checagens < 2`
 
 Interpretacao:
 
-- o post nao e novo
 - o post esta subobservado
-- o caso representa divida historica, nao cold start
+- warm e old representam divida de cobertura minima que deve ser limpa ate `3`
+- new e recent devem chegar ate `2` para nao ficarem invisiveis, mas a terceira
+  checagem fica para o guardrail permanente
+- `history_level` nao deve ser usado como criterio de elegibilidade
 
 ### Observacao de estrategia
 
-Inicialmente a fase 1 foi pensada para atacar `<= 1` checagem.
+Inicialmente a fase 1 foi pensada para atacar `legacy_low` e depois
+`<= 2` checagens com apoio de `priority_score_v2`.
 
-Com a observacao operacional da base e o baixo consumo da API do YouTube sob
-agendamento frequente, a estrategia foi ajustada para priorizar neste momento
-os posts com:
+Com a observacao atual, a estrategia muda para uma limpeza por meta de idade:
 
-- `0` checagens
-- `1` checagem
-- `2` checagens
+1. limpar todos os `warm_8_30d` e `old_30d_plus` ate `3` checagens
+2. limpar `new_0_3d` e `recent_4_7d` ate `2` checagens
+3. deixar o guardrail permanente completar a terceira checagem dos novos
 
 Objetivo:
 
-- acelerar a drenagem do `legacy_low`
-- concentrar o esforco nos posts ainda mais proximos do estado sem contexto
-- deixar a base mais preparada antes da fase 2
+- limpar todos os posts muito antigos que ainda ocupam o guardrail
+- garantir que nenhum post novo ou recente fique totalmente invisivel
+- abrir espaco para o guardrail normal cuidar dos posts novos
+- reduzir rapidamente a divida de cobertura minima
 
 ---
 
@@ -77,19 +103,20 @@ Nao usar prioridade por banda.
 
 Na estrategia operacional atual, o lote deve ser ordenado por:
 
-1. `total_checagens asc`
-2. `priority_score_v2 desc`
-3. `collected_at asc nulls first`
-4. `post_id`
+1. `warm_8_30d` e `old_30d_plus` primeiro
+2. `total_checagens asc`
+3. `post_date asc`
+4. `priority_score desc`
+5. `post_id`
 
 Motivo:
 
-- o objetivo imediato e drenar todo o conjunto `legacy_low` com `0`, `1` e `2`
-  checagens
-- como o script deve percorrer todo esse universo, a prioridade principal passa
-  a ser o nivel de falta de contexto
-- dentro de cada bucket (`0`, `1`, `2`), `priority_score_v2` continua sendo o
-  criterio de valor
+- o objetivo imediato e limpar todo warm e old ate `3` checagens
+- new e recent devem chegar ate `2`, deixando a terceira para o guardrail
+- `total_checagens` vem primeiro para limpar por camada
+- `post_date` vem depois para atacar os videos mais velhos dentro da mesma camada
+- `priority_score` e apenas desempate de valor
+- `priority_score_v2` e `history_level` nao participam mais da selecao
 
 ### Implicacao operacional
 
@@ -100,9 +127,10 @@ Isso significa que:
 
 - nao existe cota por banda
 - nao existe refill por banda
-- o objetivo e corrigir historico legado, nao simular a fila online
-- a prioridade principal e a carencia de historico (`0`, `1`, `2`)
-- `priority_score_v2` atua como criterio secundario dentro de cada grupo
+- o objetivo e corrigir a divida de cobertura minima
+- a prioridade principal e limpar divida warm/old ate `3`
+- new/recent entram ate `2` para nao ficarem sem base inicial
+- a idade do video decide quem entra primeiro dentro de cada camada
 
 ---
 
@@ -123,8 +151,8 @@ Justificativa:
 ## Fluxo do script
 
 ```text
-1. Selecionar lote de legacy_low
-2. Ordenar por `total_checagens asc` e `priority_score_v2 desc`
+1. Selecionar lote de guardrail cleanup
+2. Ordenar por bucket alvo, `total_checagens asc`, `post_date asc` e `priority_score desc`
 3. Chamar YouTube API para os post_ids do lote
 4. Normalizar resposta
 5. Inserir snapshots em post_metrics_history

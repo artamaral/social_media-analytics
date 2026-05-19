@@ -207,6 +207,19 @@ posts
         segue fila normal por priority_band
 ```
 
+## Fluxo de cleanup temporario
+
+```text
+posts elegiveis para cleanup
+  -> video_age_bucket em warm_8_30d ou old_30d_plus?
+     -> sim:
+        limpar ate total_checagens >= 3
+     -> nao:
+        video_age_bucket em new_0_3d ou recent_4_7d
+        limpar ate total_checagens >= 2
+        terceira checagem fica para o guardrail permanente
+```
+
 Para diagnostico, a leitura pode continuar separando `bootstrap_low`,
 `at_risk_bootstrap` e `recovery_low`:
 
@@ -251,6 +264,55 @@ Motivo:
 - `4` slots por hora geram ate `96` checagens por dia
 - isso cobre a media atual com margem moderada sem consumir capacidade demais
   da fila normal
+
+---
+
+## Cleanup temporario da divida de guardrail
+
+A politica permanente de `4` slots por execucao e suficiente para operacao
+normal, mas nao e adequada para limpar rapidamente uma divida acumulada grande.
+
+Quando houver muitos posts antigos com `total_checagens < 3`, deve ser usada
+uma rotina offline temporaria de cleanup. A rotina nao precisa levar todos os
+posts novos ate `3`; a terceira checagem de novos e recentes deve ser absorvida
+pelo guardrail permanente.
+
+Regra de selecao do cleanup:
+
+```text
+needs_update = true
+status != unavailable
+warm_8_30d ou old_30d_plus: total_checagens < 3
+new_0_3d ou recent_4_7d: total_checagens < 2
+```
+
+Ordem operacional:
+
+```text
+1. warm_8_30d e old_30d_plus primeiro
+2. total_checagens asc
+3. post_date asc
+4. priority_score desc
+5. post_id
+```
+
+Interpretacao:
+
+- posts `warm_8_30d` e `old_30d_plus` sao limpos ate `3` checagens
+- posts `new_0_3d` e `recent_4_7d` sao limpos apenas ate `2` checagens
+- a terceira checagem dos novos e recentes fica para o guardrail permanente
+- dentro de cada grupo, os menos observados entram primeiro
+- dentro de cada camada, os videos mais velhos entram primeiro
+
+Esta regra evita que a divida antiga continue ocupando a fatia permanente do
+guardrail e libera capacidade para posts novos em janela de crescimento.
+
+Importante:
+
+- `history_level` nao deve ser usado como criterio de cleanup
+- `priority_score_v2` nao deve ser usado como criterio de cleanup
+- `priority_score` atual serve apenas como desempate
+- videos confirmados como `unavailable` devem ser excluidos
 
 ---
 

@@ -193,7 +193,7 @@ def chunk_list(values, chunk_size):
 
 def fetch_old_posts():
     """
-    Busca os posts antigos o suficiente para concorrerem como legado.
+    Busca posts candidatos ao cleanup temporario do guardrail.
 
     Aqui aplicamos apenas o primeiro filtro estrutural do problema:
     `created_at < now() - 7 days`.
@@ -207,6 +207,7 @@ def fetch_old_posts():
 
     Saida esperada por item:
     - post_id
+    - post_date
     - created_at
     - collected_at
     """
@@ -218,10 +219,72 @@ def fetch_old_posts():
     return fetch_paginated(
         "posts",
         {
-            "select": "post_id,created_at,collected_at",
-            "created_at": f"lt.{cutoff}",
+            "select": "post_id,post_date,created_at,collected_at",
+            "post_id": "not.is.null",
         },
     )
+
+
+def parse_supabase_datetime(value):
+    if not value:
+        return None
+
+    normalized = value.replace("Z", "+00:00")
+
+    try:
+        return datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+
+
+def classify_video_age_bucket(row):
+    """
+    Classifica o post pela idade do video.
+
+    Entrada:
+    - linha de `posts` contendo `post_date` e `created_at`
+
+    Saida:
+    - `new_0_3d`
+    - `recent_4_7d`
+    - `warm_8_30d`
+    - `old_30d_plus`
+    """
+    reference_date = parse_supabase_datetime(row.get("post_date"))
+
+    if reference_date is None:
+        reference_date = parse_supabase_datetime(row.get("created_at"))
+
+    if reference_date is None:
+        return "old_30d_plus"
+
+    if reference_date.tzinfo is None:
+        reference_date = reference_date.replace(tzinfo=UTC)
+
+    age_days = (datetime.now(UTC) - reference_date).total_seconds() / 86400.0
+
+    if age_days <= 3:
+        return "new_0_3d"
+    if age_days <= 7:
+        return "recent_4_7d"
+    if age_days <= 30:
+        return "warm_8_30d"
+
+    return "old_30d_plus"
+
+
+def target_checks_for_age_bucket(age_bucket):
+    """
+    Define a meta temporaria de cleanup por idade do video.
+
+    Saida:
+    - `3` para `warm_8_30d` e `old_30d_plus`
+    - `2` para `new_0_3d` e `recent_4_7d`
+    """
+    if age_bucket in {"warm_8_30d", "old_30d_plus"}:
+        return 3
+
+    return 2
 
 
 def fetch_low_feature_scores(post_ids):
@@ -271,6 +334,98 @@ def fetch_low_feature_scores(post_ids):
             features_by_post[row["post_id"]] = row
 
     return features_by_post
+
+
+def fetch_queue_scores(post_ids):
+    """
+    Busca a pontuacao operacional atual da fila para os candidatos de cleanup.
+
+    A estrategia nova de limpeza do guardrail nao depende mais de
+    `history_level` nem de `priority_score_v2`. Ainda assim, `priority_score`
+    segue util como desempate dentro do mesmo nivel de checagem e idade.
+
+    Responsabilidade:
+    - consultar `post_update_queue`
+    - restringir aos `post_id` informados
+    - trazer apenas posts ainda marcados como `needs_update = true`
+    - devolver um mapa por `post_id`
+
+    Saida:
+    - dicionario {post_id: {priority_score, next_check, needs_update}}
+    """
+    print("🧮 Buscando priority_score atual da fila...")
+
+    queue_by_post = {}
+
+    for chunk in chunk_list(post_ids, SUPABASE_CHUNK_SIZE):
+        ids_filter = ",".join(chunk)
+        response = requests.get(
+            f"{SUPABASE_URL}/rest/v1/post_update_queue",
+            headers=HEADERS,
+            params={
+                "select": "post_id,priority_score,next_check,needs_update",
+                "post_id": f"in.({ids_filter})",
+                "needs_update": "eq.true",
+                "limit": SUPABASE_PAGE_SIZE,
+            },
+            timeout=60,
+        )
+
+        print("📡 post_update_queue status:", response.status_code)
+
+        if response.status_code != 200:
+            raise RuntimeError(
+                "Erro ao buscar post_update_queue: "
+                f"{response.status_code} - {response.text}"
+            )
+
+        for row in response.json():
+            queue_by_post[row["post_id"]] = row
+
+    return queue_by_post
+
+
+def fetch_unavailable_status(post_ids):
+    """
+    Busca videos ja confirmados como indisponiveis para remove-los do cleanup.
+
+    A mesma regra existe na fila online. O cleanup offline deve respeitar esse
+    estado para nao gastar quota tentando coletar videos que ja foram
+    confirmados como indisponiveis.
+
+    Saida:
+    - conjunto de post_ids com `status = unavailable`
+    """
+    print("🧮 Buscando videos indisponiveis confirmados...")
+
+    unavailable_ids = set()
+
+    for chunk in chunk_list(post_ids, SUPABASE_CHUNK_SIZE):
+        ids_filter = ",".join(chunk)
+        response = requests.get(
+            f"{SUPABASE_URL}/rest/v1/post_collection_failures",
+            headers=HEADERS,
+            params={
+                "select": "post_id,status",
+                "post_id": f"in.({ids_filter})",
+                "status": "eq.unavailable",
+                "limit": SUPABASE_PAGE_SIZE,
+            },
+            timeout=60,
+        )
+
+        print("📡 post_collection_failures status:", response.status_code)
+
+        if response.status_code != 200:
+            raise RuntimeError(
+                "Erro ao buscar post_collection_failures: "
+                f"{response.status_code} - {response.text}"
+            )
+
+        for row in response.json():
+            unavailable_ids.add(row["post_id"])
+
+    return unavailable_ids
 
 
 def fetch_history_counts(post_ids):
@@ -381,32 +536,35 @@ def fetch_legacy_low_batch_priority_first(batch_size=DEFAULT_BATCH_SIZE):
 
 def fetch_legacy_low_batch(batch_size=DEFAULT_BATCH_SIZE):
     """
-    Seleciona o lote offline ativo de `legacy_low` para a fase 1.
+    Seleciona o lote offline ativo para limpeza temporaria do guardrail.
 
-    Esta e a estrategia operacional atual do backfill. Nesta fase, o objetivo
-    principal e drenar todo o conjunto legado com `0`, `1` e `2` checagens ate
-    que cada item alcance pelo menos `3` snapshots.
+    Esta funcao manteve o nome historico para reduzir impacto no restante do
+    script, mas a estrategia deixou de ser `legacy_low`.
 
-    A regra de elegibilidade continua sendo:
-    1. post antigo o suficiente para nao ser `bootstrap_low`
-    2. `history_level = low`
-    3. `total_checagens <= 2`
+    A regra de elegibilidade agora e:
+    1. `warm_8_30d` e `old_30d_plus` com menos de `3` checagens
+    2. `new_0_3d` e `recent_4_7d` com menos de `2` checagens
+    3. `needs_update = true`
+    4. nao estar confirmado como `unavailable`
 
-    Como o script vai percorrer todo o conjunto elegivel, a prioridade fina por
-    score deixa de ser a regra principal. O lote passa a ser ordenado por:
+    O cleanup nao usa mais `history_level` nem `priority_score_v2`. Como o
+    objetivo e abrir espaco no guardrail, o lote e ordenado por prioridade de
+    cleanup:
+    - `warm_8_30d` e `old_30d_plus` primeiro
     - `total_checagens asc`
-    - `priority_score_v2 desc`
-    - `collected_at asc nulls first`
+    - `post_date asc`
+    - `priority_score desc`
     - `post_id`
 
     Isso faz com que:
-    - posts com `0` checagens venham primeiro
-    - depois os de `1`
-    - depois os de `2`
-    - dentro de cada grupo, os mais fortes por `priority_score_v2` entrem antes
+    - posts warm e old sejam limpos ate `3` checagens
+    - posts new e recent sejam limpos ate `2` checagens
+    - dentro de cada grupo, os menos observados venham primeiro
+    - dentro de cada camada, os videos mais velhos venham primeiro
+    - `priority_score` seja apenas desempate de valor
 
     Responsabilidade:
-    - produzir o lote final ativo do backfill
+    - produzir o lote final ativo do cleanup de guardrail
     - devolver a estrutura simples esperada pelas proximas etapas
     """
     old_posts = fetch_old_posts()
@@ -416,7 +574,8 @@ def fetch_legacy_low_batch(batch_size=DEFAULT_BATCH_SIZE):
         return []
 
     post_ids = [row["post_id"] for row in old_posts]
-    features_by_post = fetch_low_feature_scores(post_ids)
+    queue_by_post = fetch_queue_scores(post_ids)
+    unavailable_ids = fetch_unavailable_status(post_ids)
     history_counts = fetch_history_counts(post_ids)
 
     batch_candidates = []
@@ -424,39 +583,47 @@ def fetch_legacy_low_batch(batch_size=DEFAULT_BATCH_SIZE):
     for row in old_posts:
         post_id = row["post_id"]
         total_checks = history_counts.get(post_id, 0)
-        feature_row = features_by_post.get(post_id)
+        queue_row = queue_by_post.get(post_id)
+        age_bucket = classify_video_age_bucket(row)
+        target_checks = target_checks_for_age_bucket(age_bucket)
 
-        if not feature_row:
+        if not queue_row:
             continue
 
-        if total_checks > MAX_TOTAL_CHECKS:
+        if post_id in unavailable_ids:
+            continue
+
+        if total_checks >= target_checks:
             continue
 
         batch_candidates.append(
             {
                 "post_id": post_id,
+                "post_date": row.get("post_date"),
                 "created_at": row.get("created_at"),
                 "collected_at": row.get("collected_at"),
                 "total_checagens": total_checks,
-                "priority_score_v2": float(feature_row.get("priority_score_v2", 0)),
-                "history_level": feature_row.get("history_level"),
+                "target_checagens": target_checks,
+                "video_age_bucket": age_bucket,
+                "priority_score": float(queue_row.get("priority_score", 0)),
+                "next_check": queue_row.get("next_check"),
             }
         )
 
     batch_candidates.sort(
         key=lambda item: (
+            0 if item["video_age_bucket"] in {"old_30d_plus", "warm_8_30d"} else 1,
             item["total_checagens"],
-            -item["priority_score_v2"],
-            item["collected_at"] is not None,
-            item["collected_at"] or "",
+            item["post_date"] or item["created_at"] or "",
+            -item["priority_score"],
             item["post_id"],
         )
     )
 
     selected = batch_candidates[:batch_size]
 
-    print(f"?? Legacy low candidatos: {len(batch_candidates)}")
-    print(f"? Legacy low selecionados: {len(selected)}")
+    print(f"?? Guardrail cleanup candidatos: {len(batch_candidates)}")
+    print(f"? Guardrail cleanup selecionados: {len(selected)}")
 
     return selected
 
@@ -592,11 +759,11 @@ def log_missing_posts(requested_ids, returned_items):
 
 def run_backfill_batch(batch_size=DEFAULT_BATCH_SIZE):
     """
-    Executa uma rodada completa do backfill offline fase 1.
+    Executa uma rodada completa do cleanup offline do guardrail.
 
     Esta funcao equivale ao `run_pipeline()` do worker online, mas a origem dos
-    IDs vem da selecao de `legacy_low`. Todo o restante do pipeline segue a
-    mesma logica operacional:
+    IDs vem da selecao de posts antigos com `total_checagens < 3`. Todo o
+    restante do pipeline segue a mesma logica operacional:
     - selecionar origem
     - extrair IDs
     - buscar estatisticas
