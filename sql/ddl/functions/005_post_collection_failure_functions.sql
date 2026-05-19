@@ -86,7 +86,7 @@ begin
       'unavailable_candidate',
       'not_returned_by_youtube_videos_list'
     )
-    on conflict (post_id) do update
+    on conflict on constraint post_collection_failures_pkey do update
       set
         failure_count = public.post_collection_failures.failure_count + 1,
         last_failed_at = now(),
