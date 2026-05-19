@@ -1,24 +1,243 @@
 # Social Media Analytics
 
-Pipeline de coleta e atualização de métricas de redes sociais, com foco atual em YouTube e persistência em Supabase.
+Plataforma de inteligencia automotiva organizada em 3 frentes principais:
 
-O projeto cobre três frentes principais:
+1. Dados social media
+2. Dados de fontes externas
+3. Dashboard
 
-- discovery e ingestão inicial de vídeos por creator
-- atualização recorrente de métricas dos posts já cadastrados
-- intake e governança de entidades via SQL
+## Visao Geral
 
-## Resumo Rápido
+O projeto conecta dados de conteudo, mercado e produto para apoiar analises de creators, videos, marcas, modelos e movimentos do setor automotivo.
 
-O sistema funciona em torno destes blocos:
+As tres frentes trabalham de forma complementar:
 
-1. `entities` e `creators` definem quem será monitorado
-2. o pipeline de discovery busca vídeos dos creators no YouTube e grava em `posts`
-3. triggers e funções alimentam e reprogramam a fila `post_update_queue`
-4. o pipeline de métricas salva snapshots em `post_metrics_history` e atualiza os valores correntes em `posts`
-5. o intake de entidades permite revisar e publicar novas entradas com mais controle
+- dados social media mostram atencao, conteudo e performance
+- dados de fontes externas mostram mercado, catalogo e contexto estrutural
+- o dashboard organiza o consumo analitico desses dados
 
-## Estrutura do Repositório
+## Frente 1. Dados Social Media
+
+Objetivo:
+
+- coletar, atualizar e analisar dados de creators e posts nas plataformas sociais
+
+Escopo atual:
+
+- YouTube como plataforma ativa
+- arquitetura preparada para expansao futura para outras plataformas
+
+### Atividades principais
+
+- discovery e ingestao inicial de posts por creator
+- atualizacao recorrente de metricas dos posts ja coletados
+- historico temporal de views, likes e comments
+- priorizacao e rechecagem por fila
+- qualidade de coleta e cobertura minima de historico
+- intake e governanca de entities e creators
+
+### Estruturas principais
+
+- `entities`
+- `creators`
+- `posts`
+- `post_metrics_history`
+- `post_update_queue`
+- `pipeline_state`
+- `entity_intake`
+
+### Scripts principais
+
+- `scripts/youtube_main_scraper/main.py`
+- `scripts/cloud_run/postMetrics/main.py`
+- `scripts/offline_backfill/legacy_low_backfill_phase1.py`
+
+### Fluxos internos desta frente
+
+#### A. Discovery / carga inicial de posts
+
+Responsabilidades:
+
+- ler creators da tabela `creators`
+- controlar progresso com cursor em `pipeline_state`
+- buscar uploads de canais do YouTube
+- classificar videos como `short` ou `long`
+- fazer upsert dos posts na tabela `posts`
+
+Arquivos principais:
+
+- `scripts/youtube_main_scraper/main.py`
+- `scripts/youtube_main_scraper/requirements.txt`
+
+Arquivo de apoio:
+
+- `scripts/pipedream/youtube_scraper.py.txt`
+
+#### B. Atualizacao de metricas
+
+Responsabilidades:
+
+- buscar posts pendentes em `post_update_queue`
+- consultar estatisticas atualizadas na API do YouTube
+- registrar historico em `post_metrics_history`
+- atualizar os campos correntes em `posts`
+- manter a fila reagendada para proximas rodadas
+
+Arquivos principais:
+
+- `scripts/cloud_run/postMetrics/main.py`
+- `scripts/cloud_run/postMetrics/requirements.txt`
+
+Arquivo de apoio:
+
+- `scripts/pipedream/social_media-analytics__youtube_scraper_postMetrics.txt`
+
+#### C. Backfill e cobertura minima
+
+Responsabilidades:
+
+- reduzir passivos historicos de posts com baixa cobertura
+- preservar qualidade minima de historico
+- alimentar futuras analises de crescimento, velocity e acceleration
+
+Arquivos principais:
+
+- `scripts/offline_backfill/legacy_low_backfill_phase1.py`
+- `scripts/offline_backfill/run_legacy_low_backfill_phase1.ps1`
+
+#### D. Intake e governanca
+
+Responsabilidades:
+
+- receber entradas controladas de entities
+- revisar consistencia e duplicidade
+- publicar registros aprovados para as tabelas definitivas
+
+Arquivos principais:
+
+- `sql/ddl/tables/009_create_entity_intake.sql`
+- `sql/ddl/views/001_create_v_entity_intake_review.sql`
+- `sql/dml/review_entity_intake.sql`
+- `sql/dml/publish_entity_intake_manual_run.sql`
+
+## Frente 2. Dados de Fontes Externas
+
+Objetivo:
+
+- incorporar dados estruturados de mercado e catalogo automotivo para enriquecer analises e cruzamentos com social media
+
+### Subfrente A. Fenabrave
+
+Objetivo:
+
+- ingestao de emplacamentos e leitura mensal de mercado
+
+Atividades principais:
+
+- captura de arquivo fonte
+- extracao e validacao de dados mensais
+- normalizacao por segmento, marca e modelo
+- rastreabilidade por arquivo, periodo e execucao
+
+Implementacao atual:
+
+- `scripts/fenabrave_ingestion/ingest_fenabrave_phase1.py`
+- `scripts/fenabrave_ingestion/README.md`
+
+Documentos principais:
+
+- `sql/docs/22_EXTERNAL_MARKET_DATA_STUDY_PLAN.md`
+- `sql/docs/23_FENABRAVE_PHASE1_INGESTION_SPEC.md`
+
+### Subfrente B. Carros na Web
+
+Objetivo:
+
+- formar base estruturada de catalogo automotivo, versoes e ficha tecnica
+
+Atividades principais:
+
+- discovery de fabricantes
+- discovery de modelos
+- discovery de fichas validas
+- coleta de HTML bruto
+- parsing de ficha tecnica
+- geracao inicial em CSV antes de schema definitivo no Supabase
+
+Estado atual:
+
+- frente em fase de plano de ingestao
+
+Documento principal:
+
+- `sql/docs/27_CARROSNAWEB_VEHICLE_SPECS_INGESTION_PLAN.md`
+
+### Subfrente C. SENATRAN / RENAVAM
+
+Objetivo:
+
+- adicionar camada governamental de frota registrada e validacao estrutural
+
+Atividades previstas:
+
+- avaliar os dados abertos disponiveis
+- definir granularidade util
+- separar claramente frota de venda e emplacamento
+- modelar futura camada normalizada no Supabase
+
+Estado atual:
+
+- frente em fase de estudo e definicao de granularidade
+
+Documento principal:
+
+- `sql/docs/22_EXTERNAL_MARKET_DATA_STUDY_PLAN.md`
+
+### Regra geral desta frente
+
+- Fenabrave sustenta leitura de emplacamento e mercado
+- Carros na Web sustenta leitura tecnica de produto e catalogo
+- SENATRAN / RENAVAM sustenta leitura de frota registrada e validacao governamental
+
+## Frente 3. Dashboard
+
+Objetivo:
+
+- transformar os dados das frentes 1 e 2 em uma camada de consumo analitico online
+
+Direcao atual:
+
+- dashboard interno
+- Streamlit como solucao atual
+- Supabase como fonte sob demanda
+
+### Atividades principais
+
+- criacao de views analiticas no banco
+- exibicao de indicadores de qualidade dos dados
+- overview executivo
+- ranking de creators
+- crescimento semanal
+- cruzamento entre conteudo, mercado e catalogo
+- consumo seguro sem expor credenciais sensiveis
+
+### Views principais
+
+- `v_dashboard_creator_summary`
+- `v_dashboard_post_growth_7d`
+- `v_dashboard_data_quality_status`
+
+### Documento principal
+
+- `sql/docs/16_ONLINE_DASHBOARD_SUPABASE_SPEC.md`
+
+## Relacao Entre as Frentes
+
+- a frente de dados social media mostra comportamento de conteudo e audiencia
+- a frente de fontes externas adiciona mercado, emplacamento, frota e ficha tecnica
+- a frente de dashboard reune tudo em visualizacao analitica e consulta operacional
+
+## Estrutura do Repositorio
 
 ```text
 .
@@ -29,9 +248,12 @@ O sistema funciona em torno destes blocos:
 │   │   │   ├── main.py
 │   │   │   └── requirements.txt
 │   │   └── youtube_main_scraper
+│   ├── fenabrave_ingestion
+│   ├── offline_backfill
 │   ├── pipedream
 │   │   ├── social_media-analytics__youtube_scraper_postMetrics.txt
 │   │   └── youtube_scraper.py.txt
+│   ├── postMetrics
 │   └── youtube_main_scraper
 │       ├── main.py
 │       └── requirements.txt
@@ -48,165 +270,66 @@ O sistema funciona em torno destes blocos:
     └── migrations
 ```
 
-## Arquitetura dos Pipelines
+### Leitura por frente
 
-### 1. Discovery / ingestão inicial
+#### Social media
 
-Arquivos principais:
+- `scripts/youtube_main_scraper/`
+- `scripts/cloud_run/postMetrics/`
+- `scripts/offline_backfill/`
 
-- `scripts/youtube_main_scraper/main.py`
-- `scripts/youtube_main_scraper/requirements.txt`
+#### Fontes externas
 
-Responsabilidades:
+- `scripts/fenabrave_ingestion/`
+- futura `scripts/carrosnaweb_ingestion/`
 
-- ler creators da tabela `creators`
-- controlar progresso com cursor em `pipeline_state`
-- buscar uploads de canais do YouTube
-- classificar vídeos como `short` ou `long`
-- fazer upsert dos posts na tabela `posts`
+#### Dashboard
 
-Também existe uma versão de apoio em:
-
-- `scripts/pipedream/youtube_scraper.py.txt`
-
-### 2. Atualização de métricas
-
-Arquivos principais:
-
-- `scripts/cloud_run/postMetrics/main.py`
-- `scripts/cloud_run/postMetrics/requirements.txt`
-
-Responsabilidades:
-
-- buscar posts pendentes em `post_update_queue`
-- consultar estatísticas atualizadas na API do YouTube
-- registrar histórico em `post_metrics_history`
-- atualizar os campos correntes em `posts`
-- marcar itens da fila como processados
-
-Também existe uma versão de apoio em:
-
-- `scripts/pipedream/social_media-analytics__youtube_scraper_postMetrics.txt`
-
-### 3. Intake e revisão de entidades
-
-Arquivos principais no banco:
-
-- `sql/ddl/tables/009_create_entity_intake.sql`
-- `sql/ddl/views/001_create_v_entity_intake_review.sql`
-- `sql/dml/review_entity_intake.sql`
-- `sql/dml/publish_entity_intake_manual_run.sql`
-
-Responsabilidades:
-
-- receber entradas brutas de entidades
-- normalizar nomes
-- revisar duplicidade e consistência
-- publicar registros aprovados para as tabelas definitivas
+- views SQL em `sql/ddl/views/`
+- docs analiticas em `sql/docs/`
+- futura app Streamlit
 
 ## Estrutura SQL
 
-O diretório `sql/` está organizado por finalidade.
+O diretorio `sql/` esta organizado por finalidade.
 
 ### `sql/ddl`
 
-Definição estrutural do banco:
+Definicao estrutural do banco:
 
-- `tables/`: criação das tabelas principais
-- `views/`: views operacionais e de revisão
-- `triggers/`: funções e triggers de sincronização e queue
-- `indexes/`: índices e funções auxiliares
+- `tables/`: criacao das tabelas principais
+- `views/`: views operacionais, analiticas e de revisao
+- `triggers/`: funcoes e triggers de sincronizacao e queue
+- `indexes/`: indices e funcoes auxiliares
 - `schema/`: snapshot consolidado do schema
-
-Exemplos:
-
-- `sql/ddl/tables/001_create_entities.sql`
-- `sql/ddl/tables/004_create_posts.sql`
-- `sql/ddl/tables/008_create_post_update_queue.sql`
-- `sql/ddl/views/002_create_v_post_update_queue_batch.sql`
-- `sql/ddl/triggers/002_queue_scheduling_functions.sql`
 
 ### `sql/dml`
 
-Scripts operacionais de leitura, revisão e publicação.
-
-Exemplos:
-
-- `sql/dml/review_entity_intake.sql`
-- `sql/dml/publish_entity_intake_manual_run.sql`
-- `sql/dml/intake_normalization_check.sql`
+Scripts operacionais de leitura, revisao e publicacao.
 
 ### `sql/maintenance`
 
-Scripts de manutenção e saneamento.
-
-Exemplos:
-
-- `sql/maintenance/deduplicate_entities.sql`
-- `sql/maintenance/validate_entity_link.sql`
+Scripts de manutencao e saneamento.
 
 ### `sql/migrations`
 
 Migrations versionadas com arquivos `_up.sql` e `_down.sql`.
 
-Exemplos:
-
-- `sql/migrations/2026-04-17_001_queue_recheck_rules_up.sql`
-- `sql/migrations/2026-04-17_001_queue_recheck_rules_down.sql`
-
 ### `sql/docs`
 
-Documentação interna do projeto.
-
-Exemplos:
-
-- `sql/docs/02_ROADMAP.md`
-- `sql/docs/05_DECISOES_TECNICAS.md`
-- `sql/docs/07_QUEUE_VALIDATION_CHECKLIST.md`
-- `sql/docs/09_QUEUE_SLICING_AND_RESCHEDULING.md`
-- `sql/docs/entity_intake_process.md`
-
-## Modelo de Dados
-
-### `entities`
-
-Entidades de negócio monitoradas, como marcas, pessoas ou operações.
-
-### `creators`
-
-Perfis ou canais ligados a uma entidade. O schema suporta múltiplas plataformas, mas a automação atual está focada em YouTube.
-
-### `posts`
-
-Tabela principal de posts ou vídeos coletados, com os valores mais recentes de views, likes e comments.
-
-### `post_metrics_history`
-
-Histórico temporal das métricas coletadas.
-
-### `post_update_queue`
-
-Fila de atualização incremental dos posts.
-
-### `pipeline_state`
-
-Armazena estados simples do pipeline, como cursor de processamento.
-
-### `entity_intake`
-
-Tabela de entrada controlada para revisão e publicação de novas entidades.
+Documentacao interna do projeto.
 
 ## Setup Local
 
-### Pré-requisitos
+### Pre-requisitos
 
 - Python 3.10+ recomendado
-- projeto Supabase já provisionado
+- projeto Supabase ja provisionado
 - chave de API do YouTube Data API
 
-### Variáveis de ambiente
+### Variaveis de ambiente
 
-Os scripts dependem destas variáveis:
+Os scripts dependem destas variaveis:
 
 ```env
 YOUTUBE_API_KEY=your_youtube_api_key
@@ -217,12 +340,12 @@ BATCH_SIZE=3
 
 Notas:
 
-- `BATCH_SIZE` é usado no pipeline de discovery e define quantos creators são processados por execução
-- `SUPABASE_KEY` precisa ter permissão para leitura e escrita nas tabelas utilizadas
+- `BATCH_SIZE` e usado no pipeline de discovery e define quantos creators sao processados por execucao
+- `SUPABASE_KEY` precisa ter permissao para leitura e escrita nas tabelas utilizadas
 
-### Instalação de dependências
+### Instalacao de dependencias
 
-Para o pipeline de métricas:
+Para o pipeline de metricas:
 
 ```powershell
 pip install -r scripts/cloud_run/postMetrics/requirements.txt
@@ -234,9 +357,16 @@ Para o pipeline de discovery:
 pip install -r scripts/youtube_main_scraper/requirements.txt
 ```
 
+Para Fenabrave:
+
+```powershell
+cd scripts\fenabrave_ingestion
+pip install -r requirements.txt
+```
+
 ## Ordem Recomendada de Provisionamento SQL
 
-Se você estiver montando um ambiente novo no Supabase, esta é uma ordem segura para aplicar os artefatos.
+Se voce estiver montando um ambiente novo no Supabase, esta e uma ordem segura para aplicar os artefatos.
 
 ### 1. Criar tabelas base
 
@@ -259,7 +389,7 @@ Aplicar:
 1. `sql/ddl/views/001_create_v_entity_intake_review.sql`
 2. `sql/ddl/views/002_create_v_post_update_queue_batch.sql`
 
-### 3. Criar funções e triggers
+### 3. Criar funcoes e triggers
 
 Aplicar:
 
@@ -268,7 +398,7 @@ Aplicar:
 3. `sql/ddl/triggers/002_queue_scheduling_functions.sql`
 4. `sql/ddl/triggers/003_refresh_post_queue_on_metrics.sql`
 
-### 4. Criar índices e auxiliares
+### 4. Criar indices e auxiliares
 
 Aplicar:
 
@@ -277,106 +407,56 @@ Aplicar:
 
 ### 5. Aplicar migrations posteriores
 
-Se o ambiente exigir a lógica mais recente de fila e rechecagem:
+Se o ambiente exigir a logica mais recente de fila e rechecagem:
 
 1. `sql/migrations/2026-04-17_001_queue_recheck_rules_up.sql`
 
 Use o respectivo arquivo `_down.sql` apenas para rollback controlado.
 
-## Fluxos de Uso
+## Documentacao Operacional
 
-### Fluxo A: discovery / carga inicial de posts
+Documentos importantes por frente:
 
-1. cadastrar `entities` e `creators`
-2. garantir que `pipeline_state` esteja inicializado
-3. executar o discovery script
-4. validar se `posts` foi populada
-5. confirmar se a fila começou a receber posts via trigger
-
-### Fluxo B: atualização de métricas
-
-1. consultar os itens elegíveis em `post_update_queue` ou `v_post_update_queue_batch`
-2. executar o pipeline de métricas
-3. validar inserts em `post_metrics_history`
-4. validar atualização dos campos correntes em `posts`
-5. conferir reagendamento de `next_check` na fila
-
-### Fluxo C: intake e governança de entidades
-
-1. inserir registros em `entity_intake`
-2. revisar itens pela view `v_entity_intake_review`
-3. executar scripts de revisão em `sql/dml`
-4. publicar manualmente os aprovados
-5. rodar scripts de manutenção quando necessário
-
-## Como Rodar
-
-### Discovery local
-
-O script em `scripts/youtube_main_scraper/main.py` expõe a função `run(request)`, mas a lógica principal está em `run_pipeline()`. Para uso local, o caminho mais simples é adaptar uma chamada Python que importe o módulo e execute `run_pipeline()`.
-
-Uso típico:
-
-- preparar variáveis de ambiente
-- instalar dependências
-- executar o módulo/script no ambiente escolhido
-
-### Métricas em Cloud Run
-
-O diretório `scripts/cloud_run/postMetrics` contém uma função Python preparada para ambiente serverless com `functions-framework`.
-
-Dependências atuais:
-
-```text
-requests==2.31.0
-functions-framework==3.*
-```
-
-### Pipedream
-
-Os arquivos em `scripts/pipedream` parecem representar exportações ou versões de apoio dos workflows principais.
-
-## Lógica da Fila
-
-A fila de rechecagem não é apenas uma lista de pendências; ela já incorpora prioridade e reagendamento.
-
-Pontos importantes:
-
-- `add_to_queue()` insere um post novo na fila com `next_check = now()`
-- `calculate_post_priority()` gera um score a partir de views, likes e comments
-- `calculate_next_check()` define o próximo horário de rechecagem por faixa de prioridade
-- `refresh_post_queue_on_metrics()` atualiza score, `last_checked`, `next_check` e `needs_update`
-- `v_post_update_queue_batch` monta um lote balanceado por faixas de prioridade, com limite total de 20 itens
-
-Isso significa que a lógica operacional da fila está parcialmente centralizada no SQL, não apenas no código Python.
-
-## Documentação Operacional
-
-Além deste README, há documentação interna útil em:
+### Social media
 
 - `sql/docs/04_PIPELINE_STATUS.md`
 - `sql/docs/05_DECISOES_TECNICAS.md`
 - `sql/docs/08_QUEUE_CAPACITY_TEST.md`
 - `sql/docs/09_QUEUE_SLICING_AND_RESCHEDULING.md`
-- `sql/docs/README_GESTAO_PROJETO.md`
+
+### Fontes externas
+
+- `sql/docs/22_EXTERNAL_MARKET_DATA_STUDY_PLAN.md`
+- `sql/docs/23_FENABRAVE_PHASE1_INGESTION_SPEC.md`
+- `sql/docs/27_CARROSNAWEB_VEHICLE_SPECS_INGESTION_PLAN.md`
+
+### Dashboard
+
+- `sql/docs/16_ONLINE_DASHBOARD_SUPABASE_SPEC.md`
 
 ## Estado Atual do Projeto
 
-O projeto já tem uma base funcional de MVP para:
+### Dados social media
 
-- cadastrar e organizar entidades e creators
-- coletar vídeos no YouTube
-- classificar vídeos curtos e longos
-- armazenar métricas atuais
-- manter histórico temporal
-- atualizar posts por fila
-- operar intake e revisão de entidades no banco
+- YouTube operacional como plataforma principal
+- worker de metricas ativo
+- fila com priorizacao e rechecagem no SQL
+- backfill e cobertura historica em evolucao
 
-Ainda há espaço para evolução em:
+### Dados de fontes externas
 
-- documentação de deploy passo a passo
-- testes automatizados
-- observabilidade e logs
-- retries e tratamento de falhas externas
-- padronização final entre scripts Python, Cloud Run e Pipedream
-- consolidação do papel de `scripts/cloud_run/youtube_main_scraper`, que hoje existe sem implementação visível
+- Fenabrave com implementacao inicial no repositorio
+- Carros na Web em fase de plano de ingestao
+- SENATRAN / RENAVAM em fase de estudo
+
+### Dashboard
+
+- estrategia definida
+- views analiticas principais ja preparadas
+- app Streamlit inicial ainda pendente
+
+## Proximos Passos Sugeridos
+
+- expandir a documentacao de multiplataforma para alem do YouTube
+- consolidar a frente de fontes externas em schema e ingestao versionados
+- implementar o app inicial do dashboard consumindo as views do Supabase
