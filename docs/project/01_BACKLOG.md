@@ -2,8 +2,6 @@
 
 ## Pipeline
 
-- [ ] Alta prioridade: tratar videos indisponiveis na YouTube API para evitar posts presos na fila. Casos observados: `BH0gnUODKwI` (`https://www.youtube.com/watch?v=BH0gnUODKwI`) e `lFodaSeTE9A` (`https://www.youtube.com/watch?v=lFodaSeTE9A`). Evidencia: os IDs entram na fila de atualizacao, mas a execucao processa apenas `38` itens de um lote de `40`, sugerindo que esses videos nao retornam no `videos.list`. Proposta inicial documentada em `docs/social_media/27_UNAVAILABLE_VIDEO_HANDLING_SPEC.md`: registrar IDs ausentes como `unavailable_candidate`, contar falhas recorrentes, expor `youtube_url` em view do dashboard e remover da fila ativa depois de limite definido.
-- [ ] Alta prioridade: criar limpeza temporaria do backlog de guardrail para posts com `total_checagens = 2`, especialmente `old_30d_plus` e `warm_8_30d`, pois muitos posts precisam de apenas mais 1 coleta para sair da cobertura minima.
 - [ ] Melhorar controle de fim de lista no scraper
 - [ ] Validar duplicidade de coleta
 - [ ] Retry automatico para falhas API
@@ -21,7 +19,11 @@
 - [ ] Query de crescimento por intervalo
 - [ ] Ranking de creators emergentes
 - [ ] Identificacao de outliers
-- [ ] Manter `priority_score_v2` em modo analitico/segundo plano ate existir necessidade clara de uma fila operacional mais inteligente.
+
+## Operacional / Monitoramento
+
+- [ ] Monitorar semanalmente videos indisponiveis em `v_dashboard_unavailable_video_review` e confirmar manualmente candidatos quando necessario.
+- [ ] Monitorar o cleanup temporario do guardrail ate `warm_8_30d` e `old_30d_plus` chegarem a `3` checagens, e `new_0_3d` e `recent_4_7d` chegarem a `2`.
 
 ## Visualizacao / Estudos de mercado
 
@@ -36,3 +38,9 @@
 
 - [ ] Classificar videos por tipo
 - [ ] Melhorar subnicho automatico
+
+## Itens tratados / arquivados
+
+- [x] Tratar videos indisponiveis na YouTube API para evitar posts presos na fila. Implementado com `post_collection_failures`, RPC `register_post_collection_result(...)`, view `v_dashboard_unavailable_video_review`, exclusao de `status = unavailable` da fila ativa e processo de confirmacao manual documentado em `docs/social_media/27_UNAVAILABLE_VIDEO_HANDLING_SPEC.md`.
+- [x] Criar limpeza temporaria do backlog de guardrail. Implementado no script `scripts/offline_backfill/legacy_low_backfill_phase1.py`, documentado em `docs/social_media/25_MINIMUM_HISTORY_COVERAGE_GUARDRAIL_SPEC.md` e em execucao controlada via scheduler `guardrail-cleanup-backfill`.
+- [x] Manter `priority_score_v2` em modo analitico/segundo plano. Decisao registrada em `docs/project/05_DECISOES_TECNICAS.md`; o `v2` nao deve ser promovido para a fila ativa enquanto o foco for analise temporal de videos quentes no momento.

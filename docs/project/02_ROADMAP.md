@@ -14,7 +14,7 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 
 - [ ] Avaliar e garantir que os posts estao sendo atualizados.
 - [x] Confirmar que posts nao estavam sendo atualizados e que o novo codigo esta rodando.
-- [ ] Avaliar limpeza temporaria do backlog de guardrail: priorizar posts com `total_checagens = 2`, principalmente `old_30d_plus` e `warm_8_30d`, para reduzir rapidamente a divida de cobertura minima.
+- [ ] Monitorar conclusao do cleanup temporario do guardrail: `warm_8_30d` e `old_30d_plus` ate `3` checagens; `new_0_3d` e `recent_4_7d` ate `2` checagens.
 - [ ] Executar teste pendente descrito em `08_QUEUE_CAPACITY_TEST.md` e `09_QUEUE_SLICING_AND_RESCHEDULING.md`.
 - [ ] Garantir que scraper percorre todos creators.
 - [ ] Validar integridade de `post_metrics_history`.
@@ -24,7 +24,6 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 
 ### Prioridade estrategica - modelo de priorizacao
 
-- [ ] Manter score hibrido `v2` em espera/segundo plano. Nao promover para a fila ativa enquanto o objetivo principal for analise temporal de videos quentes no momento.
 - [ ] Criar abordagem analitica simples para `hot now`, baseada em `velocity_6h`, `previous_velocity` e `acceleration`, usando views SQL para dashboard.
 
 ### Itens concluidos nesta frente
@@ -32,6 +31,9 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 - [x] Validacao da mudanca para FIFO dentro da banda ao inves de score. Usar arquivo `11_QUEUE_FIFO_VALIDATION_2026-05-08.md` como referencia e deixar rodar por dois dias. Validacao em 2026-05-10.
 - [x] Validar impacto FinOps e custos apos aumento do lote do worker para 40 posts por execucao. Resultado observado apos alguns dias em producao: nao houve aumento relevante de custos no Cloud Run.
 - [x] Open point: reavaliar se o refill global da `v_post_update_queue_batch` deve continuar assim ou migrar para cascata por banda. Hoje, cotas nao usadas por uma banda vao para um pool global ordenado por antiguidade, e nao automaticamente para a proxima banda mais alta.
+- [x] Tratar videos indisponiveis na YouTube API para evitar posts presos na fila. Implementado com tabela de falhas, RPC, view de dashboard e exclusao de `unavailable` da fila ativa.
+- [x] Implementar limpeza temporaria do backlog de guardrail. Rotina em execucao controlada via Windows Scheduler; proximo passo e monitorar conclusao.
+- [x] Pausar promocao do score hibrido `v2` para a fila ativa. O `v2` fica em segundo plano e a prioridade analitica passa a ser `hot now` temporal.
 
 ## Frente 2. Dados de fontes externas
 
