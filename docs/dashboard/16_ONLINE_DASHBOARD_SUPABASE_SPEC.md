@@ -43,6 +43,7 @@ Consumir preferencialmente:
 - `v_dashboard_creator_summary`
 - `v_dashboard_post_growth_7d`
 - `v_dashboard_data_quality_status`
+- `v_dashboard_unavailable_video_review`
 
 Essas views deixam o dashboard simples e evitam repetir logica analitica no app.
 
@@ -95,6 +96,33 @@ Componentes:
 - link ou identificador do video
 - creator associado
 
+### 4. Qualidade operacional da fila
+
+Objetivo:
+
+- identificar videos que nao voltaram da YouTube API
+- facilitar revisao humana sem depender de logs do Cloud Run
+- evitar que posts indisponiveis fiquem presos no guardrail ou na fila normal
+
+Componentes:
+
+- tabela de `unavailable_candidate` e `unavailable`
+- `post_id`
+- `youtube_url` completa e clicavel
+- `failure_count`
+- `last_failure_reason`
+- `first_failed_at` e `last_failed_at`
+- `human_review_status`
+- `human_review_notes`
+
+View recomendada:
+
+- `public.v_dashboard_unavailable_video_review`
+
+Referencia tecnica:
+
+- `docs/social_media/27_UNAVAILABLE_VIDEO_HANDLING_SPEC.md`
+
 ## Consultas sob demanda
 
 O MVP deve consultar o Supabase apenas quando:
@@ -129,6 +157,7 @@ Antes de liberar rankings como sinal de negocio, validar:
 - posts com `collected_at` nulo
 - posts sem atualizacao nas ultimas 24h
 - creators sem posts
+- videos indisponiveis presos na fila de atualizacao
 
 O dashboard deve exibir esses indicadores na tela inicial.
 
@@ -137,6 +166,7 @@ O dashboard deve exibir esses indicadores na tela inicial.
 ### Fase 1 - Base analitica
 
 - criar views SQL de consumo
+- criar view de revisao de videos indisponiveis com URL completa
 - criar indices para `post_metrics_history`
 - validar data quality
 - documentar contrato dos dados
@@ -194,5 +224,6 @@ Essa alternativa deve ser tratada como evolucao de produto, nao como prioridade 
 - overview mostra qualidade dos dados
 - ranking de creators funcionando
 - ranking de crescimento semanal funcionando
+- revisao de videos indisponiveis disponivel por view com URL clicavel
 - queries respondem sem leitura excessiva do historico
 - limitacao conhecida de frescor dos dados documentada

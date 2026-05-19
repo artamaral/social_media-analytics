@@ -184,6 +184,57 @@ Resultado esperado:
 - qualquer crescimento de `recovery_low` deve ser registrado em
   `04_PIPELINE_STATUS.md` e tratado como alerta operacional
 
+### Revisao de videos indisponiveis na YouTube API
+
+Frequencia:
+
+- semanal
+- sugestao: toda segunda-feira junto da guarda de cobertura minima
+
+Responsavel:
+
+- Arthur para abrir as URLs e confirmar o estado dos videos
+- Codex/ChatGPT para apoio tecnico, interpretacao e ajuste da regra SQL
+
+Documentacao:
+
+- `docs/social_media/27_UNAVAILABLE_VIDEO_HANDLING_SPEC.md`
+- `docs/dashboard/16_ONLINE_DASHBOARD_SUPABASE_SPEC.md`
+- `docs/project/04_PIPELINE_STATUS.md`
+
+Objetivo:
+
+- revisar videos enviados para `videos.list` que nao voltaram em `items`
+- confirmar manualmente videos indisponiveis usando `youtube_url` completa
+- impedir que posts indisponiveis fiquem presos na fila ativa
+
+Query semanal:
+
+```sql
+select
+  post_id,
+  youtube_url,
+  failure_count,
+  status,
+  last_failure_reason,
+  first_failed_at,
+  last_failed_at,
+  human_review_status,
+  human_reviewed_at
+from public.post_collection_failures
+where status in ('unavailable_candidate', 'unavailable')
+order by
+  status,
+  failure_count desc,
+  last_failed_at desc;
+```
+
+Resultado esperado:
+
+- todo `unavailable_candidate` com URL revisada periodicamente
+- videos confirmados como indisponiveis marcados como `unavailable`
+- nenhum `unavailable` retornando na `v_post_update_queue_batch`
+
 ## Atividades sob demanda
 
 ### Backfill offline de posts legacy_low
