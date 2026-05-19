@@ -4,7 +4,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from main import extract_returned_ids, find_missing_video_ids
+from video_id_segmentation import extract_returned_ids, find_missing_video_ids
 
 
 class MissingVideoIdsTest(unittest.TestCase):
