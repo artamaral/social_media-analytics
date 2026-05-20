@@ -137,6 +137,12 @@ def inject_theme() -> None:
             font-size: 1.5rem;
         }
 
+        .fenabrave-card-grid .metric-caption {
+            font-size: 1.17rem;
+            line-height: 1.2;
+            overflow-wrap: anywhere;
+        }
+
         .section-card {
             background: var(--card-dark);
             color: var(--text);
@@ -477,6 +483,7 @@ def format_month_label(period: pd.Timestamp) -> str:
 def render_fenabrave_page() -> None:
     rows, error = get_view_rows("v_dashboard_fenabrave_monthly_segments")
     st.title("Fenabrave")
+    st.markdown("### Emplacamento Automóveis (vendas diretas e venda varejo)")
     render_connection_notice(error)
 
     if not rows:
@@ -496,17 +503,32 @@ def render_fenabrave_page() -> None:
     )
     latest_period = df["reference_period"].max()
     latest_df = df[df["reference_period"] == latest_period].sort_values("segment_sort")
+    period_options = df.sort_values("reference_period")["reference_period"].drop_duplicates().tolist()
+    selected_period = st.selectbox(
+        "Mes dos blocos",
+        period_options,
+        index=len(period_options) - 1,
+        format_func=format_month_label,
+    )
+    selected_df = df[df["reference_period"] == selected_period].sort_values("segment_sort")
+    latest_accumulated_by_segment = latest_df.set_index("segment_code")[
+        "current_year_accumulated_units"
+    ].to_dict()
 
     st.caption(f"Mes de referencia: {format_month_label(latest_period)}")
 
     cards = []
-    for _, row in latest_df.iterrows():
+    for _, row in selected_df.iterrows():
         picto = FENABRAVE_PICTOS.get(str(row["picto_code"]), str(row["picto_code"]))
+        accumulated_units = latest_accumulated_by_segment.get(
+            row["segment_code"],
+            row["current_year_accumulated_units"],
+        )
         cards.append(
             metric_card_html(
                 str(row["segment_label"]),
                 format_int(row["monthly_units"]),
-                f"Acumulado ano: {format_int(row['current_year_accumulated_units'])}",
+                f"Acumulado ano: {format_int(accumulated_units)}",
                 picto,
                 str(row["color_hex"]),
             )
