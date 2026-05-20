@@ -151,7 +151,7 @@ Tarefas:
 - revisar logs e prints para evitar vazamento de secrets
 - confirmar que tabelas brutas pesadas nao sao carregadas sem filtro
 - registrar resultado dos dois KPIs de data quality:
-  - `recovery_low` em `v_dashboard_guardrail_coverage_status`
+  - posts legados abaixo de 3 checagens em `v_dashboard_guardrail_coverage_status`
   - `pending_human_review` em `v_dashboard_dead_post_validation_status`
 
 Views minimas:
@@ -182,6 +182,19 @@ Tarefas:
 ```sql
 SELECT * FROM public.v_dashboard_guardrail_coverage_status;
 ```
+
+Resultado esperado para guardrail:
+
+```text
+intervalo_video | total_checagens | total_posts
+```
+
+Com intervalos em portugues:
+
+- `Novos: 0 a 3 dias`
+- `Recentes: 4 a 7 dias`
+- `Em aquecimento: 8 a 30 dias`
+- `Legado: mais de 30 dias`
 
 ```sql
 SELECT * FROM public.v_dashboard_dead_post_validation_status;

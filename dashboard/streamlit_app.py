@@ -252,6 +252,16 @@ def load_single_row_view(view_name: str) -> dict[str, Any] | None:
     return response.data[0]
 
 
+@st.cache_data(ttl=300, show_spinner=False)
+def load_view_rows(view_name: str) -> list[dict[str, Any]]:
+    client = get_supabase_client()
+    if client is None:
+        return []
+
+    response = client.table(view_name).select("*").execute()
+    return response.data or []
+
+
 def get_single_row_view(view_name: str) -> tuple[dict[str, Any] | None, str | None]:
     if not is_supabase_configured():
         return None, "Supabase ainda nao configurado. Adicione SUPABASE_URL e SUPABASE_ANON_KEY nos secrets."
@@ -262,6 +272,16 @@ def get_single_row_view(view_name: str) -> tuple[dict[str, Any] | None, str | No
         return None, f"Falha ao consultar {view_name}: {exc}"
 
 
+def get_view_rows(view_name: str) -> tuple[list[dict[str, Any]], str | None]:
+    if not is_supabase_configured():
+        return [], "Supabase ainda nao configurado. Adicione SUPABASE_URL e SUPABASE_ANON_KEY nos secrets."
+
+    try:
+        return load_view_rows(view_name), None
+    except Exception as exc:
+        return [], f"Falha ao consultar {view_name}: {exc}"
+
+
 def render_connection_notice(error: str | None) -> None:
     if error:
         st.warning(error)
@@ -270,7 +290,7 @@ def render_connection_notice(error: str | None) -> None:
 
 
 def render_data_quality_cards(
-    guardrail: dict[str, Any] | None,
+    guardrail_rows: list[dict[str, Any]],
     dead_posts: dict[str, Any] | None,
     errors: list[str],
 ) -> None:
@@ -279,14 +299,18 @@ def render_data_quality_cards(
 
     col1, col2 = st.columns(2)
 
-    if guardrail:
-        recovery_low = int(guardrail.get("recovery_low") or 0)
-        under_minimum = int(guardrail.get("total_under_minimum") or 0)
-        legacy_ready = bool(guardrail.get("legacy_ready"))
+    if guardrail_rows:
+        legacy_posts = sum(
+            int(row.get("total_posts") or 0)
+            for row in guardrail_rows
+            if row.get("is_legacy_guardrail")
+        )
+        under_minimum = sum(int(row.get("total_posts") or 0) for row in guardrail_rows)
+        legacy_ready = legacy_posts == 0
         with col1:
             status_card(
                 "Legado guardrail",
-                recovery_low,
+                legacy_posts,
                 "ok" if legacy_ready else "warning",
                 "LG",
             )
@@ -314,21 +338,35 @@ def render_data_quality_cards(
             st.caption("View v_dashboard_dead_post_validation_status indisponivel.")
 
 
-def load_data_quality_context() -> tuple[dict[str, Any] | None, dict[str, Any] | None, list[str]]:
-    guardrail, guardrail_error = get_single_row_view("v_dashboard_guardrail_coverage_status")
+def load_data_quality_context() -> tuple[list[dict[str, Any]], dict[str, Any] | None, list[str]]:
+    guardrail_rows, guardrail_error = get_view_rows("v_dashboard_guardrail_coverage_status")
     dead_posts, dead_posts_error = get_single_row_view("v_dashboard_dead_post_validation_status")
     errors = [error for error in [guardrail_error, dead_posts_error] if error]
-    return guardrail, dead_posts, errors
+    return guardrail_rows, dead_posts, errors
 
 
 def render_data_quality_raw_tables(
-    guardrail: dict[str, Any] | None,
+    guardrail_rows: list[dict[str, Any]],
     dead_posts: dict[str, Any] | None,
 ) -> None:
-    if guardrail:
+    if guardrail_rows:
+        guardrail_rows = sorted(
+            guardrail_rows,
+            key=lambda row: (int(row.get("bucket_sort") or 0), int(row.get("total_checagens") or 0)),
+        )
         st.write("")
         st.markdown("### Legado guardrail")
-        st.dataframe([guardrail], use_container_width=True)
+        st.dataframe(
+            guardrail_rows,
+            use_container_width=True,
+            hide_index=True,
+            column_order=["intervalo_video", "total_checagens", "total_posts"],
+            column_config={
+                "intervalo_video": "Intervalo do video",
+                "total_checagens": "Total de checagens",
+                "total_posts": "Total de posts",
+            },
+        )
     if dead_posts:
         st.write("")
         st.markdown("### Posts mortos e validacao humana")
@@ -337,7 +375,7 @@ def render_data_quality_raw_tables(
 
 
 def render_overview() -> None:
-    guardrail, dead_posts, errors = load_data_quality_context()
+    guardrail_rows, dead_posts, errors = load_data_quality_context()
     st.markdown(
         """
         <div class="dashboard-title">
@@ -352,7 +390,7 @@ def render_overview() -> None:
     )
 
     render_connection_notice(errors[0] if errors else None)
-    render_data_quality_cards(guardrail, dead_posts, errors)
+    render_data_quality_cards(guardrail_rows, dead_posts, errors)
 
     st.write("")
     left, right = st.columns([1, 2])
@@ -374,11 +412,11 @@ def render_placeholder_page(title: str, description: str) -> None:
 
 
 def render_data_quality_page() -> None:
-    guardrail, dead_posts, errors = load_data_quality_context()
+    guardrail_rows, dead_posts, errors = load_data_quality_context()
     st.title("Data quality")
     render_connection_notice(errors[0] if errors else None)
-    render_data_quality_cards(guardrail, dead_posts, errors)
-    render_data_quality_raw_tables(guardrail, dead_posts)
+    render_data_quality_cards(guardrail_rows, dead_posts, errors)
+    render_data_quality_raw_tables(guardrail_rows, dead_posts)
 
 
 inject_theme()

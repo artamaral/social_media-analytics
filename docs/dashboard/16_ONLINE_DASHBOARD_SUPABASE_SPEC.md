@@ -214,8 +214,13 @@ O bloco de Data Quality do dashboard deve ter exatamente dois KPIs principais:
 1. Legado guardrail
    - fonte: `v_dashboard_guardrail_coverage_status`
    - mede a cobertura minima descrita em `docs/social_media/25_MINIMUM_HISTORY_COVERAGE_GUARDRAIL_SPEC.md`
-   - KPI principal: `recovery_low`
-   - contexto: `total_under_minimum`, `bootstrap_low`, `at_risk_bootstrap`
+   - KPI principal: total de posts legados abaixo de 3 checagens
+   - tabela obrigatoria por `intervalo_video`, `total_checagens` e `total_posts`
+   - intervalos exibidos em portugues:
+     - `Novos: 0 a 3 dias`
+     - `Recentes: 4 a 7 dias`
+     - `Em aquecimento: 8 a 30 dias`
+     - `Legado: mais de 30 dias`
 
 2. Posts mortos
    - fonte: `v_dashboard_dead_post_validation_status`
