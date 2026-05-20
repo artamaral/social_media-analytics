@@ -399,6 +399,36 @@ Meta de curto prazo:
 - depois disso, pausar o cleanup offline e deixar o guardrail permanente
   completar a terceira checagem dos novos e recentes
 
+### Resultado parcial apos cleanup - 2026-05-19
+
+O scheduler `guardrail-cleanup-backfill` foi pausado pelo usuario apos reduzir
+o backlog operacional a um residual pequeno.
+
+| video_age_bucket | total_checagens | total_posts |
+| --- | ---: | ---: |
+| warm_8_30d | 2 | 6 |
+| old_30d_plus | 1 | 1 |
+| old_30d_plus | 2 | 2 |
+
+Leitura:
+
+- restam `9` posts no alvo do cleanup temporario
+- se todos estiverem vivos, faltariam `10` coletas para cumprir a meta
+  temporaria
+- `4` dos `9` posts ja constam na lista de possiveis dead posts, mas ainda
+  aparecem com baixa cobertura
+- posts confirmados manualmente como dead/unavailable continuam aparecendo em
+  outras metricas; isso indica que a exclusao por status precisa ser
+  padronizada fora da fila ativa
+
+Decisao operacional:
+
+- manter o scheduler pausado ate auditar os `9` residuos
+- confirmar manualmente possiveis dead posts e marcar `status = 'unavailable'`
+  quando aplicavel
+- antes de considerar o guardrail limpo, ajustar metricas e views operacionais
+  para excluir posts confirmados como `unavailable`
+
 ---
 
 ## Query de monitoramento diario

@@ -130,7 +130,7 @@ O objetivo e manter uma leitura simples de:
 
 #### Cleanup temporario do guardrail
 
-- Status: em execucao controlada via Windows Scheduler
+- Status: pausado pelo usuario apos reducao forte do backlog operacional
 - Tarefa: `guardrail-cleanup-backfill`
 - Frequencia: a cada `10` minutos
 - Script: `scripts/offline_backfill/legacy_low_backfill_phase1.py`
@@ -152,11 +152,30 @@ Baseline inicial registrado em `2026-05-19 17h`:
 | old_30d_plus | 1 | 1 |
 | old_30d_plus | 2 | 806 |
 
+Resultado parcial apos pausa:
+
+| video_age_bucket | total_checagens | total_posts |
+| --- | ---: | ---: |
+| warm_8_30d | 2 | 6 |
+| old_30d_plus | 1 | 1 |
+| old_30d_plus | 2 | 2 |
+
+Leitura atual:
+
+- restam `9` posts no alvo do cleanup temporario
+- `4` dos `9` posts ja constam como possiveis dead posts, ainda com baixa
+  cobertura
+- posts confirmados manualmente como dead/unavailable continuam aparecendo em
+  outras metricas, portanto a exclusao por status ainda nao esta padronizada
+  em toda a camada analitica
+
 Proxima avaliacao:
 
-- comparar este baseline contra nova leitura apos algumas horas de scheduler
-- pausar a tarefa quando warm/old abaixo de `3` e new/recent abaixo de `2`
-  estiverem zerados
+- auditar os `9` posts residuais antes de retomar o scheduler
+- confirmar manualmente candidatos dead e marcar `status = 'unavailable'`
+  quando aplicavel
+- revisar views e metricas operacionais para excluir confirmados como
+  `unavailable` quando a analise nao for uma auditoria de indisponibilidade
 
 #### Guarda de cobertura minima
 
