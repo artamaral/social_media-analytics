@@ -197,6 +197,47 @@ Evitar:
 - calcular crescimento linha a linha no app quando uma view SQL puder resolver
 - consultas abertas sem limite de periodo
 
+## Atualizacao de dados no Streamlit
+
+Comportamento atual:
+
+- o app nao faz polling automatico em intervalo fixo
+- o app consulta o Supabase quando a pagina carrega ou quando o usuario interage com a interface
+- as leituras usam cache do Streamlit com TTL inicial de `300` segundos
+- dentro do TTL, o app tende a reutilizar o resultado em cache
+- depois do TTL, a proxima interacao ou reload pode disparar nova leitura do Supabase
+- as views SQL sao recalculadas pelo Supabase/Postgres no momento da consulta
+
+Fluxo atual:
+
+```text
+Streamlit
+  -> Supabase Python client
+  -> PostgREST
+  -> views SQL
+  -> cache Streamlit por 300s
+```
+
+RPC:
+
+- o app ainda nao usa RPC para as views atuais
+- o acesso atual usa `client.table("nome_da_view").select("*").execute()`
+- RPC deve ser considerada quando a consulta precisar de parametros complexos, regras de negocio encapsuladas, resposta muito customizada ou execucao transacional controlada
+
+Quando considerar outro padrao:
+
+- leitura simples de view pequena: manter `select` em view
+- filtros simples em colunas expostas: usar view + filtros do Supabase client
+- consulta parametrizada complexa: considerar RPC
+- pergunta analitica ad hoc com GPT: gerar contexto controlado a partir de views permitidas, nao liberar SQL arbitrario no app
+- necessidade de quase tempo real: avaliar botao manual de refresh antes de polling automatico
+
+Diretriz:
+
+- o dashboard deve priorizar refresh manual ou TTL curto em vez de polling continuo
+- para uso interno de estudo de mercado, `300` segundos e um valor inicial aceitavel
+- se uma pagina precisar de dados mais frescos, adicionar botao `Atualizar dados` para limpar cache e recarregar as views daquela pagina
+
 ## Seguranca
 
 Regras obrigatorias:
@@ -229,6 +270,65 @@ O bloco de Data Quality do dashboard deve ter exatamente dois KPIs principais:
    - contexto: `total_dead_posts`, `confirmed_unavailable`, `available_on_manual_check`, `unclear`
 
 O dashboard deve exibir esses indicadores na tela inicial.
+
+## GPT dentro do dashboard
+
+Se um GPT/assistente for implementado dentro do Streamlit, ele nao deve depender de "ler a tela" de forma implicita. O app deve montar explicitamente um pacote de contexto com os dados relevantes da pagina atual.
+
+Contexto minimo recomendado:
+
+- pagina atual
+- filtros ativos
+- periodo selecionado
+- views consultadas
+- linhas agregadas visiveis ou top N linhas relevantes
+- definicoes de metricas usadas na pagina
+- alertas de Data Quality ativos
+- timestamp da ultima consulta
+
+Fluxo recomendado:
+
+```text
+Usuario faz pergunta
+  -> Streamlit captura pergunta + estado da pagina
+  -> app monta context packet com dados ja carregados ou queries permitidas
+  -> modelo recebe pergunta + contexto + regras do projeto
+  -> resposta cita quais dados/views usou
+```
+
+Regra de seguranca:
+
+- o GPT nao deve receber `SUPABASE_SERVICE_ROLE_KEY`
+- o GPT nao deve executar SQL arbitrario diretamente contra o banco
+- perguntas devem ser respondidas com base em views aprovadas ou funcoes/RPCs controladas
+- quando faltar dado, o GPT deve dizer que a view atual nao cobre a pergunta
+
+Exemplo de context packet:
+
+```json
+{
+  "page": "Data quality",
+  "filters": {
+    "period": "current",
+    "platform": "youtube"
+  },
+  "views": [
+    "v_dashboard_guardrail_coverage_status",
+    "v_dashboard_dead_post_validation_status"
+  ],
+  "data_quality": {
+    "guardrail_rows": [],
+    "dead_post_status": {}
+  },
+  "last_refreshed_at": "2026-05-19T23:39:00Z"
+}
+```
+
+Quando usar dados carregados vs nova consulta:
+
+- se a pergunta for sobre o que esta visivel na pagina, usar o contexto ja carregado
+- se a pergunta pedir comparacao ou filtro nao carregado, usar uma view/RPC permitida
+- se a pergunta exigir dado inexistente, registrar como nova necessidade analitica em backlog
 
 ## Roadmap tecnico
 

@@ -266,6 +266,33 @@ Criterio de pronto:
 - posts com historico insuficiente sao tratados explicitamente
 - view nao altera a fila operacional
 
+## Etapa 5.1 - Politica de refresh e contexto para GPT
+
+Objetivo:
+
+- registrar como os dados sao atualizados no Streamlit e preparar o desenho futuro de um GPT interno ao dashboard.
+
+Status:
+
+- app usa Supabase Python client com leitura direta de views
+- app nao usa RPC nas views atuais
+- app usa cache Streamlit com TTL inicial de `300` segundos
+- app nao faz polling automatico
+
+Tarefas:
+
+- manter TTL de `300` segundos como padrao inicial
+- adicionar futuramente botao manual de refresh por pagina
+- definir quais paginas podem montar contexto para GPT
+- criar funcao futura para gerar `context packet` por pagina
+- impedir qualquer execucao de SQL arbitrario pelo GPT
+
+Criterio de pronto:
+
+- politica de refresh documentada
+- contexto minimo para GPT documentado
+- fluxo de pergunta/resposta definido sem expor secrets
+
 ## Etapa 6 - App local Streamlit MVP
 
 Objetivo:
