@@ -1,4 +1,6 @@
-create or replace view public.v_dashboard_guardrail_coverage_status as
+drop view if exists public.v_dashboard_guardrail_coverage_status;
+
+create view public.v_dashboard_guardrail_coverage_status as
 with checks as (
   select
     post_id,
@@ -73,3 +75,6 @@ group by
 order by
   bucket_sort,
   total_checagens;
+
+grant select on public.v_dashboard_guardrail_coverage_status to anon;
+grant select on public.v_dashboard_guardrail_coverage_status to authenticated;

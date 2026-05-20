@@ -196,6 +196,12 @@ Com intervalos em portugues:
 - `Em aquecimento: 8 a 30 dias`
 - `Legado: mais de 30 dias`
 
+Observacao:
+
+- esta view usa `DROP VIEW IF EXISTS` antes de `CREATE VIEW`, porque o contrato de colunas mudou durante a evolucao do dashboard
+- ao reaplicar no Supabase SQL Editor, executar o arquivo completo
+- o arquivo tambem aplica `GRANT SELECT` para `anon` e `authenticated`
+
 ```sql
 SELECT * FROM public.v_dashboard_dead_post_validation_status;
 ```

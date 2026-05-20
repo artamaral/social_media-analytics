@@ -1,4 +1,6 @@
-create or replace view public.v_dashboard_dead_post_validation_status as
+drop view if exists public.v_dashboard_dead_post_validation_status;
+
+create view public.v_dashboard_dead_post_validation_status as
 with dead_posts as (
   select
     post_id,
@@ -22,3 +24,6 @@ select
     else false
   end as dead_posts_review_ready
 from dead_posts;
+
+grant select on public.v_dashboard_dead_post_validation_status to anon;
+grant select on public.v_dashboard_dead_post_validation_status to authenticated;
