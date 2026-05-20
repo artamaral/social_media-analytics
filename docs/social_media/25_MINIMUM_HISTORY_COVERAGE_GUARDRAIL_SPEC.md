@@ -319,6 +319,62 @@ Importante:
 Este baseline registra o estado inicial antes de avaliar a evolucao do
 scheduler `guardrail-cleanup-backfill`.
 
+Query usada para gerar o baseline:
+
+```sql
+with checks as (
+  select
+    post_id,
+    count(*) as total_checagens
+  from public.post_metrics_history
+  group by post_id
+),
+classified as (
+  select
+    p.post_id,
+    case
+      when p.post_date >= now() - interval '3 days' then 'new_0_3d'
+      when p.post_date >= now() - interval '7 days' then 'recent_4_7d'
+      when p.post_date >= now() - interval '30 days' then 'warm_8_30d'
+      else 'old_30d_plus'
+    end as video_age_bucket,
+    coalesce(c.total_checagens, 0) as total_checagens
+  from public.posts p
+  join public.post_update_queue q
+    on q.post_id = p.post_id
+  left join checks c
+    on c.post_id = p.post_id
+  left join public.post_collection_failures f
+    on f.post_id = p.post_id
+  where q.needs_update = true
+    and coalesce(f.status, 'active') <> 'unavailable'
+    and (
+      (
+        p.post_date < now() - interval '7 days'
+        and coalesce(c.total_checagens, 0) < 3
+      )
+      or (
+        p.post_date >= now() - interval '7 days'
+        and coalesce(c.total_checagens, 0) < 2
+      )
+    )
+)
+select
+  video_age_bucket,
+  total_checagens,
+  count(*) as total_posts
+from classified
+group by 1, 2
+order by
+  case video_age_bucket
+    when 'new_0_3d' then 1
+    when 'recent_4_7d' then 2
+    when 'warm_8_30d' then 3
+    else 4
+  end,
+  total_checagens;
+```
+
 | video_age_bucket | total_checagens | total_posts |
 | --- | ---: | ---: |
 | new_0_3d | 0 | 41 |
