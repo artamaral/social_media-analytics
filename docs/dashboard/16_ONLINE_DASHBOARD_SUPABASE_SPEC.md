@@ -102,6 +102,7 @@ Consumir preferencialmente:
 - `v_dashboard_guardrail_coverage_status`
 - `v_dashboard_dead_post_validation_status`
 - `v_dashboard_unavailable_video_review`
+- `v_dashboard_fenabrave_monthly_segments`
 
 Essas views deixam o dashboard simples e evitam repetir logica analitica no app.
 
@@ -180,6 +181,35 @@ View recomendada:
 Referencia tecnica:
 
 - `docs/social_media/27_UNAVAILABLE_VIDEO_HANDLING_SPEC.md`
+
+### 5. Fenabrave
+
+Objetivo:
+
+- acompanhar emplacamentos mensais por categoria principal
+- usar Fenabrave como leitura estruturada de mercado automotivo
+- comparar categorias em blocos e em grafico mensal
+
+Categorias iniciais:
+
+- Autos
+- Comerciais leves
+- Caminhoes
+- Onibus
+- Motos
+- Implementos rodoviarios
+
+Componentes:
+
+- seis blocos de consolidado por categoria
+- picto por categoria inspirado no padrao visual da tabela Fenabrave
+- valor mensal do ultimo periodo disponivel
+- acumulado do ano por categoria
+- grafico de barras mensal por categoria
+
+View recomendada:
+
+- `public.v_dashboard_fenabrave_monthly_segments`
 
 ## Consultas sob demanda
 

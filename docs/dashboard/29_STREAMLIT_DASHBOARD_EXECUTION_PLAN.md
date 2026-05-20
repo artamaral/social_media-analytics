@@ -161,6 +161,7 @@ Views minimas:
 - `public.v_dashboard_creator_summary`
 - `public.v_dashboard_post_growth_7d`
 - `public.v_dashboard_unavailable_video_review`
+- `public.v_dashboard_fenabrave_monthly_segments`
 
 Criterio de pronto:
 
@@ -224,6 +225,12 @@ LIMIT 20;
 SELECT *
 FROM public.v_dashboard_unavailable_video_review
 LIMIT 20;
+```
+
+```sql
+SELECT *
+FROM public.v_dashboard_fenabrave_monthly_segments
+ORDER BY reference_period, segment_sort;
 ```
 
 - validar tempo de resposta

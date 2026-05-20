@@ -1,5 +1,7 @@
 from typing import Any
 
+import pandas as pd
+import plotly.express as px
 import streamlit as st
 
 
@@ -158,7 +160,18 @@ def inject_theme() -> None:
     )
 
 
-def metric_card(title: str, value: str, caption: str, picto: str) -> None:
+FENABRAVE_PICTOS = {
+    "CAR": "🚙",
+    "VAN": "🚐",
+    "TRK": "🚚",
+    "BUS": "🚌",
+    "MOTO": "🏍️",
+    "TRL": "▰",
+}
+
+
+def metric_card(title: str, value: str, caption: str, picto: str, accent_color: str | None = None) -> None:
+    picto_style = f' style="color: {accent_color};"' if accent_color else ""
     st.markdown(
         f"""
         <div class="metric-card">
@@ -166,7 +179,7 @@ def metric_card(title: str, value: str, caption: str, picto: str) -> None:
             <div class="metric-card-body">
                 <div class="metric-value">
                     <span>{value}</span>
-                    <span class="metric-picto">{picto}</span>
+                    <span class="metric-picto"{picto_style}>{picto}</span>
                 </div>
                 <div class="metric-caption">{caption}</div>
             </div>
@@ -419,6 +432,78 @@ def render_data_quality_page() -> None:
     render_data_quality_raw_tables(guardrail_rows, dead_posts)
 
 
+def format_int(value: Any) -> str:
+    try:
+        return f"{int(value):,}".replace(",", ".")
+    except (TypeError, ValueError):
+        return "--"
+
+
+def render_fenabrave_page() -> None:
+    rows, error = get_view_rows("v_dashboard_fenabrave_monthly_segments")
+    st.title("Fenabrave")
+    render_connection_notice(error)
+
+    if not rows:
+        placeholder_card(
+            "Fenabrave",
+            "Aguardando a view v_dashboard_fenabrave_monthly_segments retornar dados.",
+        )
+        return
+
+    df = pd.DataFrame(rows)
+    df["reference_period"] = pd.to_datetime(df["reference_period"])
+    latest_period = df["reference_period"].max()
+    latest_df = df[df["reference_period"] == latest_period].sort_values("segment_sort")
+
+    st.caption(f"Mes de referencia: {latest_period.strftime('%Y-%m')}")
+
+    top_cols = st.columns(3)
+    bottom_cols = st.columns(3)
+    cols = list(top_cols) + list(bottom_cols)
+
+    for idx, (_, row) in enumerate(latest_df.iterrows()):
+        with cols[idx]:
+            picto = FENABRAVE_PICTOS.get(str(row["picto_code"]), str(row["picto_code"]))
+            metric_card(
+                str(row["segment_label"]),
+                format_int(row["monthly_units"]),
+                f"Acumulado ano: {format_int(row['current_year_accumulated_units'])}",
+                picto,
+                str(row["color_hex"]),
+            )
+
+    st.write("")
+    st.markdown("### Resultados mensais por categoria")
+
+    fig = px.bar(
+        df.sort_values(["reference_period", "segment_sort"]),
+        x="reference_month_label",
+        y="monthly_units",
+        color="segment_label",
+        barmode="group",
+        color_discrete_map={
+            row["segment_label"]: row["color_hex"]
+            for _, row in df.drop_duplicates("segment_label").iterrows()
+        },
+        labels={
+            "reference_month_label": "Mes",
+            "monthly_units": "Emplacamentos",
+            "segment_label": "Categoria",
+        },
+    )
+    fig.update_layout(
+        paper_bgcolor="#15171c",
+        plot_bgcolor="#24272f",
+        font_color="#f5f7fa",
+        legend_title_text="Categoria",
+        margin=dict(l=16, r=16, t=24, b=16),
+    )
+    fig.update_xaxes(gridcolor="#343844")
+    fig.update_yaxes(gridcolor="#343844")
+    st.plotly_chart(fig, use_container_width=True)
+
+
 inject_theme()
 
 with st.sidebar:
@@ -432,6 +517,7 @@ with st.sidebar:
             "Videos em crescimento",
             "Hot now",
             "Data quality",
+            "Fenabrave",
             "Fila operacional",
         ],
     )
@@ -446,5 +532,7 @@ elif page == "Hot now":
     render_placeholder_page("Hot now", "View futura para velocidade recente, velocidade anterior e aceleracao.")
 elif page == "Data quality":
     render_data_quality_page()
+elif page == "Fenabrave":
+    render_fenabrave_page()
 else:
     render_placeholder_page("Fila operacional", "Revisao de videos indisponiveis e problemas de coleta.")
