@@ -1,3 +1,4 @@
+from html import escape
 from typing import Any
 
 import pandas as pd
@@ -124,6 +125,18 @@ def inject_theme() -> None:
             font-weight: 700;
         }
 
+        .fenabrave-card-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 1rem;
+            margin-top: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .fenabrave-card-grid .metric-picto {
+            font-size: 1.5rem;
+        }
+
         .section-card {
             background: var(--card-dark);
             color: var(--text);
@@ -170,21 +183,25 @@ FENABRAVE_PICTOS = {
 }
 
 
-def metric_card(title: str, value: str, caption: str, picto: str, accent_color: str | None = None) -> None:
+def metric_card_html(title: str, value: str, caption: str, picto: str, accent_color: str | None = None) -> str:
     picto_style = f' style="color: {accent_color};"' if accent_color else ""
-    st.markdown(
-        f"""
+    return f"""
         <div class="metric-card">
-            <div class="metric-card-header">{title}</div>
+            <div class="metric-card-header">{escape(title)}</div>
             <div class="metric-card-body">
                 <div class="metric-value">
-                    <span>{value}</span>
-                    <span class="metric-picto"{picto_style}>{picto}</span>
+                    <span>{escape(value)}</span>
+                    <span class="metric-picto"{picto_style}>{escape(picto)}</span>
                 </div>
-                <div class="metric-caption">{caption}</div>
+                <div class="metric-caption">{escape(caption)}</div>
             </div>
         </div>
-        """,
+    """
+
+
+def metric_card(title: str, value: str, caption: str, picto: str, accent_color: str | None = None) -> None:
+    st.markdown(
+        metric_card_html(title, value, caption, picto, accent_color),
         unsafe_allow_html=True,
     )
 
@@ -439,6 +456,24 @@ def format_int(value: Any) -> str:
         return "--"
 
 
+def format_month_label(period: pd.Timestamp) -> str:
+    month_names = {
+        1: "jan",
+        2: "fev",
+        3: "mar",
+        4: "abr",
+        5: "mai",
+        6: "jun",
+        7: "jul",
+        8: "ago",
+        9: "set",
+        10: "out",
+        11: "nov",
+        12: "dez",
+    }
+    return f"{month_names[int(period.month)]}/{int(period.year)}"
+
+
 def render_fenabrave_page() -> None:
     rows, error = get_view_rows("v_dashboard_fenabrave_monthly_segments")
     st.title("Fenabrave")
@@ -453,41 +488,51 @@ def render_fenabrave_page() -> None:
 
     df = pd.DataFrame(rows)
     df["reference_period"] = pd.to_datetime(df["reference_period"])
+    df["month_display"] = df["reference_period"].apply(format_month_label)
+    month_order = (
+        df.sort_values("reference_period")
+        .drop_duplicates("reference_period")["month_display"]
+        .tolist()
+    )
     latest_period = df["reference_period"].max()
     latest_df = df[df["reference_period"] == latest_period].sort_values("segment_sort")
 
-    st.caption(f"Mes de referencia: {latest_period.strftime('%Y-%m')}")
+    st.caption(f"Mes de referencia: {format_month_label(latest_period)}")
 
-    top_cols = st.columns(3)
-    bottom_cols = st.columns(3)
-    cols = list(top_cols) + list(bottom_cols)
-
-    for idx, (_, row) in enumerate(latest_df.iterrows()):
-        with cols[idx]:
-            picto = FENABRAVE_PICTOS.get(str(row["picto_code"]), str(row["picto_code"]))
-            metric_card(
+    cards = []
+    for _, row in latest_df.iterrows():
+        picto = FENABRAVE_PICTOS.get(str(row["picto_code"]), str(row["picto_code"]))
+        cards.append(
+            metric_card_html(
                 str(row["segment_label"]),
                 format_int(row["monthly_units"]),
                 f"Acumulado ano: {format_int(row['current_year_accumulated_units'])}",
                 picto,
                 str(row["color_hex"]),
             )
+        )
+
+    st.markdown(
+        f"""<div class="fenabrave-card-grid">{''.join(cards)}</div>""",
+        unsafe_allow_html=True,
+    )
 
     st.write("")
     st.markdown("### Resultados mensais por categoria")
 
     fig = px.bar(
         df.sort_values(["reference_period", "segment_sort"]),
-        x="reference_month_label",
+        x="month_display",
         y="monthly_units",
         color="segment_label",
         barmode="group",
+        category_orders={"month_display": month_order},
         color_discrete_map={
             row["segment_label"]: row["color_hex"]
             for _, row in df.drop_duplicates("segment_label").iterrows()
         },
         labels={
-            "reference_month_label": "Mes",
+            "month_display": "Mes",
             "monthly_units": "Emplacamentos",
             "segment_label": "Categoria",
         },
@@ -499,7 +544,7 @@ def render_fenabrave_page() -> None:
         legend_title_text="Categoria",
         margin=dict(l=16, r=16, t=24, b=16),
     )
-    fig.update_xaxes(gridcolor="#343844")
+    fig.update_xaxes(type="category", gridcolor="#343844")
     fig.update_yaxes(gridcolor="#343844")
     st.plotly_chart(fig, use_container_width=True)
 
