@@ -185,18 +185,18 @@ FENABRAVE_PICTOS = {
 
 def metric_card_html(title: str, value: str, caption: str, picto: str, accent_color: str | None = None) -> str:
     picto_style = f' style="color: {accent_color};"' if accent_color else ""
-    return f"""
-        <div class="metric-card">
-            <div class="metric-card-header">{escape(title)}</div>
-            <div class="metric-card-body">
-                <div class="metric-value">
-                    <span>{escape(value)}</span>
-                    <span class="metric-picto"{picto_style}>{escape(picto)}</span>
-                </div>
-                <div class="metric-caption">{escape(caption)}</div>
-            </div>
-        </div>
-    """
+    return (
+        '<div class="metric-card">'
+        f'<div class="metric-card-header">{escape(title)}</div>'
+        '<div class="metric-card-body">'
+        '<div class="metric-value">'
+        f"<span>{escape(value)}</span>"
+        f'<span class="metric-picto"{picto_style}>{escape(picto)}</span>'
+        "</div>"
+        f'<div class="metric-caption">{escape(caption)}</div>'
+        "</div>"
+        "</div>"
+    )
 
 
 def metric_card(title: str, value: str, caption: str, picto: str, accent_color: str | None = None) -> None:
@@ -513,7 +513,7 @@ def render_fenabrave_page() -> None:
         )
 
     st.markdown(
-        f"""<div class="fenabrave-card-grid">{''.join(cards)}</div>""",
+        '<div class="fenabrave-card-grid">' + "".join(cards) + "</div>",
         unsafe_allow_html=True,
     )
 
