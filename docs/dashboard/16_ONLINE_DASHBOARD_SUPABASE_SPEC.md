@@ -317,9 +317,9 @@ Regra importante:
 
 - a view `v_dashboard_worker_health_status` cobre apenas o worker de
   `Atualizacao de posts`
-- o worker de `Descoberta de novos posts` nao deve reutilizar esse status
-- enquanto a view dedicada do segundo worker nao existir, o dashboard deve
-  mostrar esse estado como `aguardando view`
+- a view `v_dashboard_new_post_discovery_status` cobre o worker de
+  `Descoberta de novos posts`
+- o segundo worker deve usar `posts.created_at` como evidencia de descoberta
 
 ## GPT dentro do dashboard
 

@@ -337,7 +337,11 @@ Contrato sugerido:
 public.v_dashboard_worker_health_status
 ```
 
-- uma segunda view futura para o worker de descoberta de novos posts
+- uma segunda view para o worker de descoberta de novos posts:
+
+```text
+public.v_dashboard_new_post_discovery_status
+```
 
 Campos minimos esperados:
 
@@ -354,7 +358,7 @@ Leitura correta da fase atual:
 
 - a view atual cobre apenas o worker de `Atualizacao de posts`
 - o worker de `Descoberta de novos posts` deve aparecer no Streamlit com rotulo proprio
-- enquanto a view dedicada nao existir, o dashboard deve mostrar esse segundo worker como `aguardando view`, nunca como se estivesse monitorado
+- a view dedicada do segundo worker deve usar `posts.created_at` como evidencia de descoberta
 
 Passo a passo de implementacao:
 

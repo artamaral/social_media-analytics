@@ -877,11 +877,14 @@ def render_fenabrave_page() -> None:
 
 def render_collection_integrity_section() -> None:
     worker_status, error = get_single_row_view("v_dashboard_worker_health_status")
+    discovery_status, discovery_error = get_single_row_view("v_dashboard_new_post_discovery_status")
     st.write("")
     st.markdown("### Integridade da coleta")
 
     if error:
         st.warning(error)
+    if discovery_error:
+        st.warning(discovery_error)
 
     if worker_status:
         raw_status_code = str(worker_status.get("status_code") or "atencao").lower()
@@ -907,11 +910,21 @@ def render_collection_integrity_section() -> None:
         status_label = "Aguardando a view consolidada"
         status_reason = "A view ainda nao retornou a justificativa do estado."
 
-    discovery_status_code = "neutral"
-    discovery_status_label = "Aguardando view"
-    discovery_status_reason = "Worker de descoberta roda a cada 6 horas e ainda precisa de uma view propria."
-    discovery_snapshot_value = "--"
-    discovery_new_posts = "--"
+    if discovery_status:
+        discovery_status_code = str(discovery_status.get("status_code") or "atencao").lower()
+        discovery_status_label = str(discovery_status.get("status_label") or "Sem classificacao")
+        discovery_status_reason = str(discovery_status.get("status_reason") or "Sem detalhe adicional.")
+        discovery_snapshot_value = str(
+            discovery_status.get("ultima_descoberta_de_post_br")
+            or format_timestamp_br(discovery_status.get("ultima_descoberta_de_post"))
+        )
+        discovery_new_posts = format_int(discovery_status.get("novos_posts_24h"))
+    else:
+        discovery_status_code = "neutral"
+        discovery_status_label = "Aguardando view"
+        discovery_status_reason = "Worker de descoberta roda a cada 6 horas e ainda precisa de uma view propria."
+        discovery_snapshot_value = "--"
+        discovery_new_posts = "--"
 
     panels = [
         worker_panel_html(
