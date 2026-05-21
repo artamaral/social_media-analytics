@@ -69,12 +69,12 @@ from classified
 where atraso_minutos >= 60
    or coverage_status in ('at_risk_bootstrap', 'recovery_low')
 order by
-  case signal_scope
-    when 'atrasado_e_recovery_low' then 1
-    when 'atrasado_e_at_risk_bootstrap' then 2
-    when 'recovery_low' then 3
-    when 'item_atrasado' then 4
-    when 'at_risk_bootstrap' then 5
+  case
+    when atraso_minutos >= 60 and coverage_status = 'recovery_low' then 1
+    when atraso_minutos >= 60 and coverage_status = 'at_risk_bootstrap' then 2
+    when coverage_status = 'recovery_low' then 3
+    when atraso_minutos >= 60 then 4
+    when coverage_status = 'at_risk_bootstrap' then 5
     else 6
   end,
   atraso_minutos desc,
