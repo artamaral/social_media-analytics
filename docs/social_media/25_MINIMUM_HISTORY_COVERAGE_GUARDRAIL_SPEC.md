@@ -253,17 +253,20 @@ A politica de acao deve ser unica:
 
 Configuracao inicial recomendada:
 
-- lote total do worker: `40`
-- fatia guardrail: `4`
-- fatia normal por bandas: `36`
+- lote total do worker: `50`
+- fatia guardrail: `6`
+- fatia normal por bandas: `44`
 
 Motivo:
 
 - a media observada de posts novos e aproximadamente `27` por dia
 - cada post precisa de `3` checagens para sair do guardrail
-- `4` slots por hora geram ate `96` checagens por dia
-- isso cobre a media atual com margem moderada sem consumir capacidade demais
-  da fila normal
+- `6` slots por hora geram ate `144` checagens por dia, assumindo execucao
+  horaria do worker
+- isso aumenta a margem do guardrail sem consumir capacidade demais da fila
+  normal
+- o lote total fica em `50`, ainda dentro de uma unica chamada
+  `videos.list`
 
 ---
 
@@ -319,6 +322,62 @@ Importante:
 Este baseline registra o estado inicial antes de avaliar a evolucao do
 scheduler `guardrail-cleanup-backfill`.
 
+Query usada para gerar o baseline:
+
+```sql
+with checks as (
+  select
+    post_id,
+    count(*) as total_checagens
+  from public.post_metrics_history
+  group by post_id
+),
+classified as (
+  select
+    p.post_id,
+    case
+      when p.post_date >= now() - interval '3 days' then 'new_0_3d'
+      when p.post_date >= now() - interval '7 days' then 'recent_4_7d'
+      when p.post_date >= now() - interval '30 days' then 'warm_8_30d'
+      else 'old_30d_plus'
+    end as video_age_bucket,
+    coalesce(c.total_checagens, 0) as total_checagens
+  from public.posts p
+  join public.post_update_queue q
+    on q.post_id = p.post_id
+  left join checks c
+    on c.post_id = p.post_id
+  left join public.post_collection_failures f
+    on f.post_id = p.post_id
+  where q.needs_update = true
+    and coalesce(f.status, 'active') <> 'unavailable'
+    and (
+      (
+        p.post_date < now() - interval '7 days'
+        and coalesce(c.total_checagens, 0) < 3
+      )
+      or (
+        p.post_date >= now() - interval '7 days'
+        and coalesce(c.total_checagens, 0) < 2
+      )
+    )
+)
+select
+  video_age_bucket,
+  total_checagens,
+  count(*) as total_posts
+from classified
+group by 1, 2
+order by
+  case video_age_bucket
+    when 'new_0_3d' then 1
+    when 'recent_4_7d' then 2
+    when 'warm_8_30d' then 3
+    else 4
+  end,
+  total_checagens;
+```
+
 | video_age_bucket | total_checagens | total_posts |
 | --- | ---: | ---: |
 | new_0_3d | 0 | 41 |
@@ -342,6 +401,36 @@ Meta de curto prazo:
 - reduzir `new_0_3d` e `recent_4_7d` abaixo de `2` checagens para zero
 - depois disso, pausar o cleanup offline e deixar o guardrail permanente
   completar a terceira checagem dos novos e recentes
+
+### Resultado parcial apos cleanup - 2026-05-19
+
+O scheduler `guardrail-cleanup-backfill` foi pausado pelo usuario apos reduzir
+o backlog operacional a um residual pequeno.
+
+| video_age_bucket | total_checagens | total_posts |
+| --- | ---: | ---: |
+| warm_8_30d | 2 | 6 |
+| old_30d_plus | 1 | 1 |
+| old_30d_plus | 2 | 2 |
+
+Leitura:
+
+- restam `9` posts no alvo do cleanup temporario
+- se todos estiverem vivos, faltariam `10` coletas para cumprir a meta
+  temporaria
+- `4` dos `9` posts ja constam na lista de possiveis dead posts, mas ainda
+  aparecem com baixa cobertura
+- posts confirmados manualmente como dead/unavailable continuam aparecendo em
+  outras metricas; isso indica que a exclusao por status precisa ser
+  padronizada fora da fila ativa
+
+Decisao operacional:
+
+- manter o scheduler pausado ate auditar os `9` residuos
+- confirmar manualmente possiveis dead posts e marcar `status = 'unavailable'`
+  quando aplicavel
+- antes de considerar o guardrail limpo, ajustar metricas e views operacionais
+  para excluir posts confirmados como `unavailable`
 
 ---
 
@@ -593,8 +682,8 @@ Estado atual:
 
 Desenho alvo futuro, se o `v2` for aprovado:
 
-- `4` slots guardrail por `total_checagens < 3`
-- `36` slots normais por score `v2` recalibrado
+- `6` slots guardrail por `total_checagens < 3`
+- `44` slots normais por score `v2` recalibrado
 
 Regra:
 
@@ -650,7 +739,7 @@ fila ativa.
 
 Implementado:
 
-- fatia guardrail de ate `4` slots dentro de `public.v_post_update_queue_batch`
+- fatia guardrail de ate `6` slots dentro de `public.v_post_update_queue_batch`
 - regra operacional `total_checagens < 3`
 - ordenacao da fatia guardrail por:
   - `total_checagens asc`

@@ -288,6 +288,35 @@ git commit -m "docs(roadmap): atualiza prioridades"
 
 ---
 
+## REGRA DE BRANCH ANTES DE COMMITAR
+
+Antes de criar qualquer commit ou atualizar qualquer documento, verificar a branch correta.
+
+Regra principal:
+
+* `main` deve receber documentacao geral, decisoes tecnicas gerais, roadmap geral, SQL, pipelines, dados externos, schema, migrations e qualquer mudanca que afete o projeto como um todo.
+* `codex/dashboard-streamlit-mvp` deve receber apenas trabalho diretamente relacionado ao dashboard Streamlit, incluindo app Streamlit, layout, tema visual, componentes, requirements do dashboard, secrets example do dashboard e documentacao especifica de execucao do Streamlit.
+
+Checklist obrigatorio antes de editar:
+
+1. Rodar `git branch --show-current`.
+2. Confirmar se a tarefa e de Streamlit ou do projeto geral.
+3. Se for Streamlit, trabalhar em `codex/dashboard-streamlit-mvp`.
+4. Se for documentacao geral ou qualquer outra frente, trabalhar em `main`.
+5. Nunca misturar mudancas de Streamlit com pipeline, SQL operacional, dados externos ou docs gerais no mesmo commit.
+
+Exemplos:
+
+```bash
+# Correto em main
+git commit -m "docs(workflow): define regra de branches"
+
+# Correto na branch codex/dashboard-streamlit-mvp
+git commit -m "feat(dashboard): cria cards de qualidade no streamlit"
+```
+
+---
+
 ## 🧭 DIRETRIZ FINAL
 
 > O commit é a memória técnica do projeto.

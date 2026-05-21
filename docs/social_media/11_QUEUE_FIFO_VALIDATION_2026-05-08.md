@@ -140,6 +140,16 @@ Leitura:
 - a validacao de custo do worker pode ser considerada satisfatoria
 - a decisao de manter lote `40` nao encontra impedimento relevante do lado de Cloud Run
 
+Atualizacao em 2026-05-21:
+
+- o lote operacional foi aumentado para `50` posts por execucao
+- a fatia de guardrail passou de `4` para `6` posts
+- a fila normal passou de `36` para `44` posts
+- a expectativa de risco de custo e baixa porque a chamada `videos.list`
+  continua em uma unica requisicao ate `50` IDs
+- esta alteracao deve ser acompanhada por alguns dias antes de ser considerada
+  validada do ponto de vista FinOps
+
 ---
 
 ## Query 2. Backlog vencido por banda
@@ -332,7 +342,7 @@ Leitura:
 
 Objetivo:
 
-- medir se o aumento para `40` posts por execucao melhora cobertura sem degradar custo unitario
+- medir se o aumento para `50` posts por execucao melhora cobertura sem degradar custo unitario
 
 Indicadores a registrar:
 
@@ -381,7 +391,7 @@ Leitura:
 - reavaliar politica de refill global versus cascata por banda
 - aumentar frequencia do worker
 - ajustar limite por execucao
-- revisar custo/FinOps antes de manter lote `40`
+- revisar custo/FinOps antes de manter lote `50`
 - outra: preencher
 
 ---

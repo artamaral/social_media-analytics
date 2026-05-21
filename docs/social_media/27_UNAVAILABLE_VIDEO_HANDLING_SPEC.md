@@ -319,6 +319,21 @@ Resultado esperado:
 - `human_reviewed_at` preenchido
 - a query contra `v_post_update_queue_batch` retorna zero linhas
 
+### Propagacao para metricas operacionais
+
+Confirmar um video como `unavailable` nao deve afetar apenas a fila ativa. O
+mesmo status precisa ser respeitado por metricas operacionais, queries de
+guardrail e views de dashboard que medem backlog, cobertura ou crescimento.
+
+Regra:
+
+- views de auditoria de indisponibilidade devem manter esses posts visiveis
+- views de fila, cobertura operacional, ranking e metricas de performance
+  devem excluir `status = 'unavailable'`, exceto quando a analise pedir
+  explicitamente videos mortos
+- qualquer vazamento de post confirmado como dead em metricas gerais deve ser
+  tratado como problema de qualidade de dados
+
 ---
 
 ## Query semanal de revisao
