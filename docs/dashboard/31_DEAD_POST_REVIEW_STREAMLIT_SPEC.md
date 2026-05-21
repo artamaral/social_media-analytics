@@ -1,15 +1,32 @@
-# Dead post review no Streamlit
+# Sanitizacao operacional no Streamlit
 
 ## Objetivo
 
-Criar uma tela operacional no dashboard Streamlit para revisar videos que a
-YouTube API deixou de retornar, confirmar manualmente dead posts e registrar a
-decisao no Supabase sem depender de SQL manual recorrente.
+Criar uma tela operacional no dashboard Streamlit para executar a
+sanitizacao manual de casos que exigem decisao humana, com foco inicial em
+videos que a YouTube API deixou de retornar.
+
+O objetivo nao e repetir os KPIs de `Data quality`, mas transformar os sinais
+de `Data quality` em acao auditavel dentro do dashboard.
 
 Esta tela deve apoiar o processo ja documentado em
 `docs/social_media/27_UNAVAILABLE_VIDEO_HANDLING_SPEC.md`.
 
-## Resumo da atividade
+## Papel da pagina
+
+Separacao de responsabilidade:
+
+- `Data quality`: monitora e resume o problema por KPI
+- `Sanitizacao operacional`: lista casos concretos e permite acao humana
+
+O bloco de `Data quality` deve continuar mostrando apenas:
+
+- legado guardrail
+- posts mortos / pendentes de validacao
+
+A decisao sobre itens especificos deve acontecer na tela de sanitizacao.
+
+## Resumo da atividade inicial
 
 Durante a operacao da fila, alguns `post_id` deixam de ser retornados pela
 chamada `videos.list` da YouTube API. O pipeline ja registra esses casos em
@@ -25,14 +42,34 @@ A melhoria proposta e criar um fluxo no dashboard:
 1. listar candidatos indisponiveis
 2. exibir `youtube_url` como link clicavel
 3. permitir selecao por checkbox
-4. confirmar selecionados como dead/unavailable via botao
+4. confirmar selecionados como `confirmed_unavailable`
 5. registrar auditoria humana no banco
 
-## Escopo
+## Nome recomendado da pagina
+
+Nome sugerido no app:
+
+```text
+Sanitizacao Operacional
+```
+
+Motivo:
+
+- nao limita a pagina apenas a dead posts
+- deixa claro que esta e a area de acao manual
+- permite incluir futuramente outras rotinas de sanitizacao controlada
+
+Subtitulo sugerido:
+
+```text
+Revisao manual e confirmacao de casos operacionais
+```
+
+## Escopo inicial
 
 Incluido:
 
-- tela Streamlit para revisar dead posts
+- tela Streamlit de sanitizacao
 - tabela baseada em `v_dashboard_unavailable_video_review`
 - links clicaveis para cada `youtube_url`
 - selecao por checkbox dos itens revisados
@@ -46,37 +83,9 @@ Fora do escopo inicial:
 - controlar navegador local a partir do Streamlit Cloud
 - apagar posts, historico ou snapshots
 - corrigir todas as views analiticas que ainda exibem dead posts confirmados
+- outras rotinas de sanitizacao ainda nao formalizadas
 
-## Observacoes importantes
-
-### Abrir todos no MS Edge
-
-Em ambiente local seria possivel tentar abrir URLs no navegador padrao via
-codigo Python local. No Streamlit Cloud isso nao funciona como esperado,
-porque o app roda no servidor e nao no Windows do usuario.
-
-Por isso, a decisao recomendada e:
-
-- usar links clicaveis na tabela
-- permitir que o usuario abra cada video em nova aba
-- opcionalmente gerar uma lista de links selecionados para abertura manual
-- evitar automacao que dependa de MS Edge local
-
-Essa abordagem e mais simples, portavel e compativel com Streamlit Cloud.
-
-### Selecao por checkbox
-
-A confirmacao nao deve ser feita automaticamente para todos os itens da view.
-O usuario deve selecionar explicitamente os videos revisados.
-
-Motivo:
-
-- evita confirmar como dead um video que voltou a ficar disponivel
-- cria uma etapa humana clara
-- reduz risco de update em massa acidental
-- mantém auditabilidade por `human_reviewed_by`, `human_reviewed_at` e notas
-
-## Fonte de dados
+## Fonte de dados inicial
 
 View principal:
 
@@ -104,14 +113,6 @@ Filtros iniciais recomendados:
 - ordenacao por `failure_count desc`, `last_failed_at desc`
 
 ## Experiencia da tela
-
-### Layout
-
-Nome sugerido da pagina:
-
-```text
-Dead Posts Review
-```
 
 Blocos:
 
@@ -239,18 +240,26 @@ Antes de considerar a tela pronta:
 
 - confirmar que os links abrem corretamente
 - confirmar que apenas linhas selecionadas sao atualizadas
-- confirmar que registros ja `confirmed_unavailable` nao precisam aparecer por
-  padrao
+- confirmar que registros ja `confirmed_unavailable` nao precisam aparecer por padrao
 - confirmar que videos confirmados saem de `v_post_update_queue_batch`
 - confirmar que a view de auditoria continua mostrando historico de revisao
 - confirmar que a tela nao usa `SUPABASE_SERVICE_ROLE_KEY`
 
-## Riscos
+## Evolucao futura
 
-- abrir muitas abas de uma vez pode ser bloqueado pelo navegador
-- update em massa sem checkbox pode confirmar videos errados
-- usar service role no Streamlit pode expor permissao sensivel
-- chamar SQL direto no app dificulta auditoria e reuso
+Esta pagina pode receber outras acoes de sanitizacao no futuro, desde que
+sigam o mesmo principio:
+
+- lista concreta de itens
+- selecao explicita
+- update controlado
+- auditoria humana registrada
+
+Exemplos possiveis, se forem formalizados depois:
+
+- reclassificacao de casos ambíguos
+- marcacao de itens revisados como disponiveis novamente
+- saneamento manual de residuos operacionais
 
 ## Decisao recomendada
 

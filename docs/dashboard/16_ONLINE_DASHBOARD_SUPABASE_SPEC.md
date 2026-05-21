@@ -301,6 +301,15 @@ O bloco de Data Quality do dashboard deve ter exatamente dois KPIs principais:
 
 O dashboard deve exibir esses indicadores na tela inicial.
 
+Regra de fronteira:
+
+- `Data quality` deve ficar restrito a KPI e monitoramento
+- a investigacao e a acao manual sobre casos concretos devem acontecer em uma
+  pagina operacional separada
+- nome recomendado dessa pagina: `Sanitizacao Operacional`
+- foco inicial da pagina operacional: revisar itens de
+  `v_dashboard_unavailable_video_review` e registrar validacao humana
+
 ## GPT dentro do dashboard
 
 Se um GPT/assistente for implementado dentro do Streamlit, ele nao deve depender de "ler a tela" de forma implicita. O app deve montar explicitamente um pacote de contexto com os dados relevantes da pagina atual.

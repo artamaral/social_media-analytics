@@ -325,7 +325,7 @@ Tarefas:
   - Videos em crescimento
   - Hot now
   - Data quality
-  - Fila / videos indisponiveis
+  - Sanitizacao operacional
 - criar tratamento de erro para falha de conexao
 
 Criterio de pronto:

@@ -298,6 +298,16 @@ Diretriz:
 - mostrar `pending_human_review` como sinal principal de posts mortos
 - manter detalhes brutos das duas views visiveis na pagina Data Quality
 
+Complemento:
+
+- `Data Quality` deve ficar restrito a KPI e monitoramento
+- a acao humana sobre casos concretos nao deve acontecer dentro da pagina de
+  `Data Quality`
+- a pagina operacional recomendada para esse fluxo passa a ser
+  `Sanitizacao Operacional`
+- o primeiro caso de uso dessa pagina e a revisao manual de itens de
+  `v_dashboard_unavailable_video_review`
+
 ---
 
 ## Logs persistentes como requisito para rotinas agendadas
