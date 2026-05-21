@@ -333,6 +333,71 @@ def inject_theme() -> None:
             color: var(--muted);
             font-size: 0.85rem;
         }
+
+        .process-banner {
+            background: linear-gradient(135deg, #252733 0%, #1e2027 100%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-left: 4px solid var(--accent);
+            border-radius: 8px;
+            padding: 1rem 1.05rem;
+            margin-bottom: 1rem;
+        }
+
+        .process-banner-title {
+            color: var(--text);
+            font-size: 1rem;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
+
+        .process-banner-copy {
+            color: var(--muted);
+            font-size: 0.92rem;
+            margin-top: 0.35rem;
+        }
+
+        .process-step-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .process-step-card {
+            background: var(--card-dark);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-top: 4px solid var(--accent);
+            border-radius: 8px;
+            padding: 0.95rem 1rem;
+            min-height: 170px;
+        }
+
+        .process-step-kicker {
+            color: var(--muted);
+            font-size: 0.76rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .process-step-title {
+            color: var(--text);
+            font-size: 1.05rem;
+            font-weight: 900;
+            line-height: 1.15;
+            margin-top: 0.35rem;
+        }
+
+        .process-step-copy {
+            color: var(--muted);
+            font-size: 0.88rem;
+            line-height: 1.35;
+            margin-top: 0.55rem;
+        }
+
+        .process-step-card .dq-chip-row {
+            margin-top: 0.8rem;
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -501,6 +566,37 @@ def normalize_worker_tone(status_code: str) -> str:
         "nok": "alert-red",
         "danger": "alert-red",
     }.get(status_code, "neutral")
+
+
+def process_banner(title: str, body: str) -> None:
+    st.markdown(
+        (
+            '<div class="process-banner">'
+            f'<div class="process-banner-title">{escape(title)}</div>'
+            f'<div class="process-banner-copy">{escape(body)}</div>'
+            "</div>"
+        ),
+        unsafe_allow_html=True,
+    )
+
+
+def process_step_card(step: str, title: str, body: str, tone: str, chip_text: str) -> str:
+    chip = dq_chip("Status", chip_text, tone)
+    return (
+        '<div class="process-step-card">'
+        f'<div class="process-step-kicker">{escape(step)}</div>'
+        f'<div class="process-step-title">{escape(title)}</div>'
+        f'<div class="process-step-copy">{escape(body)}</div>'
+        f'<div class="dq-chip-row">{chip}</div>'
+        "</div>"
+    )
+
+
+def process_step_grid(cards: list[str]) -> None:
+    st.markdown(
+        '<div class="process-step-grid">' + "".join(cards) + "</div>",
+        unsafe_allow_html=True,
+    )
 
 
 def apply_plotly_theme(fig: Any, legend_title: str = "Categoria") -> Any:
@@ -1039,6 +1135,236 @@ Para economizar tokens nas proximas sessoes:
         )
 
 
+def get_external_intake_mock_state() -> dict[str, Any]:
+    defaults = {
+        "entity_status": "nova_entity",
+        "taxonomy_status": "existente",
+        "review_ready": False,
+        "published": False,
+        "validated": False,
+        "creator_ready": False,
+    }
+    for key, value in defaults.items():
+        st.session_state.setdefault(key, value)
+    return {key: st.session_state[key] for key in defaults}
+
+
+def render_external_intake_page() -> None:
+    state = get_external_intake_mock_state()
+    page_header("Inclusao de dados externos", "Prototipo de metodo sem ligacao com SQL")
+    process_banner(
+        "Regra obrigatoria de governanca",
+        "A UI pode guiar o operador, mas nao pode pular o fluxo: entity_intake, revisao, publicacao, validacao e so depois cadastro do creator.",
+    )
+
+    step_cards = [
+        process_step_card(
+            "Etapa 1",
+            "Entity",
+            "Procurar entity existente. Se nao existir, abrir intake em vez de gravar direto em public.entities.",
+            "ok-green" if state["entity_status"] == "existente" else "alert-yellow",
+            "entity existente" if state["entity_status"] == "existente" else "solicitar via intake",
+        ),
+        process_step_card(
+            "Etapa 2",
+            "Nicho e subnicho",
+            "Usar classificacao existente quando possivel. Novo nicho ou subnicho entra como solicitacao controlada e nunca como escrita direta.",
+            "ok-green" if state["taxonomy_status"] == "existente" else "alert-yellow",
+            "classificacao pronta" if state["taxonomy_status"] == "existente" else "solicitacao pendente",
+        ),
+        process_step_card(
+            "Etapa 3",
+            "Revisao e publicacao",
+            "A entity precisa passar por review, depois publish_entity_intake e por fim validacao de vinculos antes do creator.",
+            "ok-green" if state["validated"] else "alert-yellow",
+            "validado" if state["validated"] else "aguardando fluxo manual",
+        ),
+        process_step_card(
+            "Etapa 4",
+            "Creator",
+            "So liberar platform, channel_id e followers para cadastro final quando entity_id e classificacao estiverem resolvidos.",
+            "ok-green" if state["creator_ready"] else "neutral",
+            "liberado" if state["creator_ready"] else "bloqueado",
+        ),
+    ]
+    process_step_grid(step_cards)
+
+    tab_form, tab_review, tab_rules = st.tabs(
+        ["Novo criador de conteudo", "Simulacao de review", "Regras da governanca"]
+    )
+
+    with tab_form:
+        col_left, col_right = st.columns([1.35, 1])
+
+        with col_left:
+            st.markdown("### 1. Procurar ou criar entity")
+            raw_name = st.text_input("Nome exibido", value="Auto Mercado Brasil")
+            normalized_name = st.text_input("Nome normalizado sugerido", value="auto mercado brasil")
+            creator_type = st.selectbox("Tipo de creator", ["mid-tier", "editorial", "independente"])
+            entity_status = st.radio(
+                "Resultado da busca de entity",
+                [
+                    ("existente", "Entity ja existe"),
+                    ("nova_entity", "Entity nao existe, criar intake"),
+                    ("duplicada", "Possivel duplicidade, exigir revisao"),
+                ],
+                format_func=lambda item: item[1],
+                index=["existente", "nova_entity", "duplicada"].index(state["entity_status"]),
+            )[0]
+            st.session_state["entity_status"] = entity_status
+
+            st.markdown("### 2. Resolver nicho e subnicho")
+            niche = st.selectbox("Nicho", ["Mercado automotivo", "Eletricos", "Performance", "Manutencao"])
+            sub_niche_name = st.text_input("Subnicho", value="Analise de mercado")
+            taxonomy_status = st.radio(
+                "Situacao da classificacao",
+                [
+                    ("existente", "Nicho e subnicho ja existem"),
+                    ("novo_subnicho", "Novo subnicho"),
+                    ("novo_nicho", "Novo nicho e novo subnicho"),
+                ],
+                format_func=lambda item: item[1],
+                index=["existente", "novo_subnicho", "novo_nicho"].index(state["taxonomy_status"]),
+            )[0]
+            st.session_state["taxonomy_status"] = taxonomy_status
+
+            st.markdown("### 3. Rascunho do creator")
+            platform = st.selectbox("Plataforma", ["youtube", "instagram", "tiktok"])
+            username = st.text_input("Username", value="@automercadobrasil")
+            channel_id = st.text_input("Channel ID", value="UC1234567890ABCDE")
+            followers = st.number_input("Followers", min_value=0, value=185000, step=1000)
+            notes = st.text_area(
+                "Notas operacionais",
+                value="Creator focado em emplacamento, tendencias de vendas e leitura setorial.",
+                height=110,
+            )
+
+        with col_right:
+            st.markdown("### Leitura da UI")
+            creator_blocked = entity_status != "existente" or taxonomy_status != "existente" or not state["validated"]
+            local_warnings = []
+            if entity_status == "nova_entity":
+                local_warnings.append("A entity ainda precisa entrar em public.entity_intake.")
+            if entity_status == "duplicada":
+                local_warnings.append("A busca encontrou risco de duplicidade. O fluxo deve parar para revisao.")
+            if taxonomy_status != "existente":
+                local_warnings.append("A taxonomia nao pode ser criada diretamente na UI sem intake controlado.")
+            if not channel_id.strip():
+                local_warnings.append("Channel ID e obrigatorio para o cadastro final do creator.")
+            if creator_blocked:
+                local_warnings.append("O cadastro final em public.creators deve continuar bloqueado nesta etapa.")
+
+            chips = [
+                dq_chip("Entity", "resolvida" if entity_status == "existente" else "pendente", "ok-green" if entity_status == "existente" else "alert-yellow"),
+                dq_chip("Taxonomia", "pronta" if taxonomy_status == "existente" else "revisar", "ok-green" if taxonomy_status == "existente" else "alert-yellow"),
+                dq_chip("Creator", "bloqueado" if creator_blocked else "liberado", "neutral" if creator_blocked else "ok-green"),
+            ]
+            st.markdown(
+                dq_kpi_card(
+                    "Prontidao do cadastro",
+                    "Bloqueado" if creator_blocked else "Liberado",
+                    "A UI so libera o creator depois do fluxo manual obrigatorio.",
+                    "#ff8069" if creator_blocked else "#98df96",
+                    chips,
+                ),
+                unsafe_allow_html=True,
+            )
+
+            st.markdown("### Payload que iria para entity_intake")
+            st.json(
+                {
+                    "raw_name": raw_name,
+                    "normalized_name": normalized_name,
+                    "sub_niche_name": sub_niche_name,
+                    "niche": niche,
+                    "creator_type": creator_type,
+                    "notes": notes,
+                    "status": "pending",
+                }
+            )
+
+            st.markdown("### Payload que ficaria retido ate o fim do fluxo")
+            st.json(
+                {
+                    "platform": platform,
+                    "username": username,
+                    "channel_id": channel_id,
+                    "followers": followers,
+                }
+            )
+
+            if local_warnings:
+                st.warning(" | ".join(local_warnings))
+            else:
+                st.success("A estrutura do rascunho respeita o processo de governanca atual.")
+
+    with tab_review:
+        st.markdown("### Simulacao guiada do processo manual")
+        flow_col1, flow_col2, flow_col3, flow_col4 = st.columns(4)
+
+        with flow_col1:
+            if st.button("Marcar review pronto", use_container_width=True):
+                st.session_state["review_ready"] = True
+        with flow_col2:
+            if st.button("Simular publicacao", use_container_width=True):
+                st.session_state["published"] = True
+        with flow_col3:
+            if st.button("Simular validacao", use_container_width=True):
+                st.session_state["validated"] = True
+        with flow_col4:
+            if st.button("Liberar creator", use_container_width=True):
+                st.session_state["creator_ready"] = True
+
+        review_rows = [
+            {
+                "raw_name": "Auto Mercado Brasil",
+                "sub_niche_name": "Analise de mercado",
+                "status": "pending" if not st.session_state["published"] else "published",
+                "review_result": "READY_TO_INSERT" if st.session_state["review_ready"] else "CHECK_DUPLICATE",
+                "existing_entity_id": 128 if st.session_state["entity_status"] == "existente" else None,
+                "existing_entity_name": "Auto Mercado Brasil" if st.session_state["entity_status"] == "existente" else None,
+                "sub_niche_id": 42 if st.session_state["taxonomy_status"] == "existente" else None,
+                "matched_sub_niche_name": "Analise de mercado" if st.session_state["taxonomy_status"] == "existente" else None,
+                "notes": "Mock de avaliacao sem SQL.",
+            }
+        ]
+        st.dataframe(pd.DataFrame(review_rows), use_container_width=True, hide_index=True)
+
+        timeline = [
+            ("Cadastro em entity_intake", "ok"),
+            ("Review via v_entity_intake_review", "ok" if st.session_state["review_ready"] else "atencao"),
+            ("Publish via public.publish_entity_intake()", "ok" if st.session_state["published"] else "atencao"),
+            ("Validacao de vinculos", "ok" if st.session_state["validated"] else "atencao"),
+            ("Cadastro final em public.creators", "ok" if st.session_state["creator_ready"] else "neutral"),
+        ]
+        st.markdown("### Estado atual do processo")
+        st.markdown(
+            "".join(dq_chip(label, status.upper(), "ok-green" if status == "ok" else "alert-yellow" if status == "atencao" else "neutral") for label, status in timeline),
+            unsafe_allow_html=True,
+        )
+
+        if st.button("Reiniciar simulacao", use_container_width=False):
+            for key in ["review_ready", "published", "validated", "creator_ready"]:
+                st.session_state[key] = False
+            st.rerun()
+
+    with tab_rules:
+        st.markdown("### O que a UI precisa respeitar")
+        st.info(
+            "Nunca inserir direto em public.entities ou public.entity_sub_niches. Toda entrada manual continua passando por public.entity_intake."
+        )
+        st.markdown(
+            """
+- A busca de entity vem antes de qualquer tentativa de criar creator.
+- Se a entity nao existir, a UI deve abrir intake e nao gravar na tabela final.
+- Nicho e subnicho precisam existir ou entrar como solicitacao controlada.
+- Review vem antes de publish, e publish vem antes de validate.
+- `platform`, `channel_id` e `followers` podem existir no rascunho da tela, mas nao podem virar creator final antes do fim do fluxo.
+- O Streamlit deve funcionar como camada de operacao guiada, nao como editor SQL.
+"""
+        )
+
+
 inject_theme()
 
 with st.sidebar:
@@ -1053,6 +1379,7 @@ with st.sidebar:
             "Hot now",
             "Data quality",
             "Fenabrave",
+            "Inclusao de dados externos",
             "Sanitizacao operacional",
         ],
     )
@@ -1069,6 +1396,8 @@ elif page == "Data quality":
     render_data_quality_page()
 elif page == "Fenabrave":
     render_fenabrave_page()
+elif page == "Inclusao de dados externos":
+    render_external_intake_page()
 else:
     render_placeholder_page(
         "Sanitizacao operacional",
