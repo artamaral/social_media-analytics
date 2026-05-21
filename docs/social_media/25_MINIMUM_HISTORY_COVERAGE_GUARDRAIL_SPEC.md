@@ -253,17 +253,20 @@ A politica de acao deve ser unica:
 
 Configuracao inicial recomendada:
 
-- lote total do worker: `40`
-- fatia guardrail: `4`
-- fatia normal por bandas: `36`
+- lote total do worker: `50`
+- fatia guardrail: `6`
+- fatia normal por bandas: `44`
 
 Motivo:
 
 - a media observada de posts novos e aproximadamente `27` por dia
 - cada post precisa de `3` checagens para sair do guardrail
-- `4` slots por hora geram ate `96` checagens por dia
-- isso cobre a media atual com margem moderada sem consumir capacidade demais
-  da fila normal
+- `6` slots por hora geram ate `144` checagens por dia, assumindo execucao
+  horaria do worker
+- isso aumenta a margem do guardrail sem consumir capacidade demais da fila
+  normal
+- o lote total fica em `50`, ainda dentro de uma unica chamada
+  `videos.list`
 
 ---
 
@@ -679,8 +682,8 @@ Estado atual:
 
 Desenho alvo futuro, se o `v2` for aprovado:
 
-- `4` slots guardrail por `total_checagens < 3`
-- `36` slots normais por score `v2` recalibrado
+- `6` slots guardrail por `total_checagens < 3`
+- `44` slots normais por score `v2` recalibrado
 
 Regra:
 
@@ -736,7 +739,7 @@ fila ativa.
 
 Implementado:
 
-- fatia guardrail de ate `4` slots dentro de `public.v_post_update_queue_batch`
+- fatia guardrail de ate `6` slots dentro de `public.v_post_update_queue_batch`
 - regra operacional `total_checagens < 3`
 - ordenacao da fatia guardrail por:
   - `total_checagens asc`

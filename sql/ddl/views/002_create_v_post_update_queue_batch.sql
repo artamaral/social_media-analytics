@@ -52,7 +52,7 @@ guardrail_slice as (
     g.priority_band,
     0 as slice_order
   from guardrail_ranked g
-  where g.guardrail_rank <= 4
+  where g.guardrail_rank <= 6
 ),
 normal_eligible as (
   select e.*
@@ -63,12 +63,12 @@ quotas as (
   select *
   from (
     values
-      (6, 7),
-      (5, 7),
-      (4, 7),
-      (3, 6),
-      (2, 5),
-      (1, 4)
+      (6, 8),
+      (5, 8),
+      (4, 8),
+      (3, 7),
+      (2, 7),
+      (1, 6)
   ) as t(priority_band, quota)
 ),
 ranked as (
@@ -140,7 +140,7 @@ final_batch as (
     2 as slice_order
   from remaining
   where refill_rank <= greatest(
-    40
+    50
     - (select count(*) from guardrail_slice)
     - (select count(*) from primary_slice),
     0
@@ -168,4 +168,4 @@ order by
   next_check asc,
   last_checked asc nulls first,
   post_id
-limit 40;
+limit 50;

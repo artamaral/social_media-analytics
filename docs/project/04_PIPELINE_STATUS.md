@@ -32,9 +32,14 @@ O objetivo e manter uma leitura simples de:
 - Status: operacional
 - Implementacao principal: `scripts/cloud_run/postMetrics/main.py`
 - Fonte da fila: `public.v_post_update_queue_batch`
-- Lote atual: `40` posts por execucao
-- Validacao de custo: sem aumento relevante de custo no Cloud Run apos alguns
-  dias em producao
+- Lote atual: `50` posts por execucao
+- Guardrail atual: ate `6` posts com menos de `3` checagens
+- Fila normal atual: ate `44` posts por bandas de prioridade
+- Validacao de custo:
+  - lote `40`: sem aumento relevante de custo no Cloud Run apos alguns dias em
+    producao
+  - lote `50`: em validacao controlada; risco esperado baixo porque a chamada
+    `videos.list` continua em uma unica requisicao ate `50` IDs
 
 #### Comportamento validado
 

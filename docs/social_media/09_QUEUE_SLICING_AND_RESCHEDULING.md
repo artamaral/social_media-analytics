@@ -164,6 +164,21 @@ As cotas nominais da fila normal passaram a ser:
 - banda `2`: `5`
 - banda `1`: `4`
 
+Em 2026-05-21, o lote operacional foi aumentado para `50` itens por execucao,
+com reforco moderado do guardrail:
+
+- guardrail: ate `6` posts com `total_checagens < 3`
+- fila normal por bandas: ate `44` posts
+
+As cotas nominais da fila normal passaram a ser:
+
+- banda `6`: `8`
+- banda `5`: `8`
+- banda `4`: `8`
+- banda `3`: `7`
+- banda `2`: `7`
+- banda `1`: `6`
+
 Motivo:
 
 - impedir que posts com menos de `3` snapshots fiquem para tras
@@ -218,6 +233,9 @@ Observacao FinOps:
 - a chamada `videos.list` deve continuar em uma unica requisicao enquanto o lote ficar ate `50` IDs
 - a mudanca foi observada em producao por alguns dias e nao apresentou aumento relevante de custos no Cloud Run
 - a validacao de custo do worker pode ser considerada satisfatoria
+- para o lote `50`, a validacao deve ser repetida por alguns dias antes de
+  considerar a configuracao definitiva; o risco esperado e baixo, mas o custo
+  por snapshot e o volume de writes no Supabase devem ser acompanhados
 
 ---
 
