@@ -110,7 +110,7 @@ Filtros iniciais recomendados:
 Nome sugerido da pagina:
 
 ```text
-Dead Posts Review
+Sanitizacao Operacional
 ```
 
 Blocos:

@@ -262,7 +262,7 @@ Páginas no escopo:
    - acumulado do ano sempre baseado no último mês disponível
    - gráfico de barras mensal por categoria
 
-4. `Fila operacional`
+4. `Sanitizacao operacional`
    - tabela de vídeos indisponíveis quando `v_dashboard_unavailable_video_review` estiver validada
 
 Views usadas:
@@ -343,7 +343,7 @@ Pré-condição:
 2. Ajustar `Overview` para usar os componentes e mostrar somente blocos reais.
 3. Padronizar `Data quality` com os mesmos cards e tabelas.
 4. Manter `Fenabrave` como primeira página de referência visual conectada.
-5. Implementar `Fila operacional` com `v_dashboard_unavailable_video_review`.
+5. Implementar `Sanitizacao operacional` com `v_dashboard_unavailable_video_review`.
 6. Depois disso, iniciar `Creators` e `Vídeos em crescimento`.
 
 ## Regra de Controle

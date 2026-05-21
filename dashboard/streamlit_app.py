@@ -603,7 +603,7 @@ with st.sidebar:
             "Hot now",
             "Data quality",
             "Fenabrave",
-            "Fila operacional",
+            "Sanitizacao operacional",
         ],
     )
 
@@ -620,4 +620,7 @@ elif page == "Data quality":
 elif page == "Fenabrave":
     render_fenabrave_page()
 else:
-    render_placeholder_page("Fila operacional", "Revisao de videos indisponiveis e problemas de coleta.")
+    render_placeholder_page(
+        "Sanitizacao operacional",
+        "Revisao manual de casos operacionais e confirmacao de sanitizacao.",
+    )
