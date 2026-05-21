@@ -744,6 +744,7 @@ def render_data_quality_page() -> None:
     page_header("Data quality", "Confiabilidade operacional antes das análises")
     render_connection_notice(errors[0] if errors else None)
     render_data_quality_cards(guardrail_rows, dead_posts, errors)
+    render_collection_integrity_section()
     render_data_quality_raw_tables(guardrail_rows, dead_posts)
 
 
@@ -852,10 +853,13 @@ def render_fenabrave_page() -> None:
     st.plotly_chart(fig, use_container_width=True)
 
 
-def render_worker_health_page() -> None:
+def render_collection_integrity_section() -> None:
     worker_status, error = get_single_row_view("v_dashboard_worker_health_status")
-    page_header("Saude do worker", "Monitoramento indireto do processamento")
-    render_connection_notice(error)
+    st.write("")
+    st.markdown("### Integridade da coleta")
+
+    if error:
+        st.warning(error)
 
     if worker_status:
         status_code = normalize_worker_tone(str(worker_status.get("status_code") or "neutral").lower())
@@ -878,10 +882,10 @@ def render_worker_health_page() -> None:
 
     panels = [
         worker_panel_html(
-            "Saude do worker",
-            "Leitura executiva do estado geral do processamento.",
+            "Integridade da coleta",
+            "Leitura executiva do estado geral da coleta automatica.",
             [
-                worker_stat_html("Status geral", status_label, "Leitura consolidada do heartbeat operacional.", status_code),
+                worker_stat_html("Status geral", status_label, "Leitura consolidada do estado operacional.", status_code),
                 worker_stat_html("Atraso da execucao", delay_minutes, "Minutos desde a ultima evidencia observada.", status_code),
             ],
             "#ff8069",
@@ -933,7 +937,7 @@ Para economizar tokens nas proximas sessoes:
 1. Pedir sempre alteracoes em um unico arquivo por vez quando a mudanca for visual.
 2. Trabalhar primeiro com a view consolidada, evitando discutir varias queries em paralelo.
 3. Validar o texto e a hierarquia dos cards antes de abrir o detalhamento tecnico.
-4. Usar prompts curtos do tipo: `ajuste apenas a pagina Saude do worker, sem ler outros arquivos`.
+4. Usar prompts curtos do tipo: `ajuste apenas o bloco Integridade da coleta, sem ler outros arquivos`.
 """
         )
 
@@ -952,7 +956,6 @@ with st.sidebar:
             "Hot now",
             "Data quality",
             "Fenabrave",
-            "Saude do worker",
             "Sanitizacao operacional",
         ],
     )
@@ -969,8 +972,6 @@ elif page == "Data quality":
     render_data_quality_page()
 elif page == "Fenabrave":
     render_fenabrave_page()
-elif page == "Saude do worker":
-    render_worker_health_page()
 else:
     render_placeholder_page(
         "Sanitizacao operacional",

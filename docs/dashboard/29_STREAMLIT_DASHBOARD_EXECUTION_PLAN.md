@@ -306,17 +306,17 @@ Criterio de pronto:
 - contexto minimo para GPT documentado
 - fluxo de pergunta/resposta definido sem expor secrets
 
-## Etapa 5.2 - Saude do worker no dashboard
+## Etapa 5.2 - Integridade da coleta em Data quality
 
 Objetivo:
 
-- adicionar uma pagina operacional para monitorar se o worker esta produzindo efeito real no banco, sem depender do retorno do script
+- adicionar um topico dentro de `Data quality` para monitorar se a coleta esta produzindo efeito real no banco, sem depender do retorno do script
 
 Escopo inicial:
 
-- pagina `Saude do worker`
+- topico `Integridade da coleta` dentro de `Data quality`
 - 3 blocos principais:
-  - `Saude do worker`
+  - `Integridade da coleta`
   - `Evidencia de processamento`
   - `Heartbeat operacional`
 - 5 sinais visiveis:
@@ -348,7 +348,7 @@ Campos minimos esperados:
 Passo a passo de implementacao:
 
 1. criar e validar a view unica antes de pensar em detalhamento por tabela
-2. conectar a pagina Streamlit usando apenas `get_single_row_view`
+2. conectar o topico em `Data quality` usando apenas `get_single_row_view`
 3. renderizar primeiro os 3 blocos com texto executivo
 4. aplicar cache no mesmo TTL das outras paginas
 5. testar comportamento com view ausente, nulos e zeros
@@ -360,13 +360,13 @@ Regra de economia de tokens:
 2. trabalhar um arquivo por vez quando a mudanca for apenas visual
 3. validar a hierarquia dos cards antes de abrir detalhamento tecnico
 4. manter prompts curtos e fechados, por exemplo:
-   - `ajuste apenas a pagina Saude do worker`
+   - `ajuste apenas o bloco Integridade da coleta`
    - `nao leia arquivos fora de dashboard/streamlit_app.py e docs/dashboard/`
    - `nao refatore fora do escopo`
 
 Criterio de pronto:
 
-- a pagina carrega sem quebrar mesmo quando a view ainda nao existe
+- o topico carrega sem quebrar mesmo quando a view ainda nao existe
 - os 3 blocos aparecem com linguagem executiva clara
 - os 5 sinais principais ficam visiveis na primeira dobra
 - o app continua sem polling automatico e sem escrita no Supabase
@@ -390,7 +390,6 @@ Tarefas:
   - Videos em crescimento
   - Hot now
   - Data quality
-  - Saude do worker
   - Fila / videos indisponiveis
 - criar tratamento de erro para falha de conexao
 
