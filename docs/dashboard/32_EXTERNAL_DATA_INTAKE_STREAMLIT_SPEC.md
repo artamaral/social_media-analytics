@@ -77,13 +77,81 @@ Novo criador de conteudo
 Objetivo:
 
 - registrar um creator/canal novo de forma guiada
-- garantir que a entity canonicamente associada exista ou seja criada pelo
-  fluxo de intake
+- garantir que a entity canonicamente associada exista antes de criar o creator
+- criar a entity pelo fluxo de intake quando ela ainda nao existir
+- garantir que os nichos/subnichos estejam resolvidos antes de associar o
+  creator ao modelo analitico
+- permitir solicitacao controlada de novos nichos/subnichos quando a
+  classificacao ainda nao existir
 - preparar o cadastro do canal em `public.creators` sem quebrar governanca
 
 ## Fluxo operacional
 
-### 1. Entrada de dados
+### Principio do fluxo na UI
+
+A experiencia da tela deve seguir esta ordem:
+
+1. Procurar entity existente.
+2. Se a entity nao existir, criar solicitacao de entity pelo intake atual.
+3. Resolver nicho/subnicho existente ou solicitar criacao de novo nicho/subnicho.
+4. Criar o creator somente depois de `entity_id` e classificacao estarem
+   resolvidos.
+5. Confirmar que o creator entrou no fluxo normal de discovery/coleta.
+
+O procedimento manual documentado continua valido e deve seguir do mesmo jeito.
+A diferenca e que a UI deve transformar esse processo em uma jornada guiada,
+sem exigir que o operador lembre a ordem tecnica das tabelas.
+
+### 1. Procurar ou criar entity
+
+Antes de qualquer cadastro em `public.creators`, a sub-view deve verificar se a
+entity ja existe.
+
+Entrada minima:
+
+- `raw_name`
+- `normalized_name` calculado ou sugerido
+- `creator_type`
+- `notes`
+
+Resultados possiveis:
+
+- entity encontrada: seguir para resolucao de nichos
+- entity nao encontrada: criar registro em `public.entity_intake`
+- duplicidade provavel: bloquear o fluxo e pedir revisao manual
+
+Regra:
+
+- nenhuma linha em `public.creators` pode ser criada sem `entity_id` resolvido
+
+### 2. Resolver ou criar nicho/subnicho
+
+Depois de identificar a entity, a UI deve confirmar a classificacao analitica
+que sera vinculada ao creator.
+
+Entrada minima:
+
+- `niche`
+- `sub_niche_name`
+
+Resultados possiveis:
+
+- nicho/subnicho existente: seguir para cadastro do creator
+- subnicho inexistente, mas nicho existente: solicitar criacao controlada de
+  novo subnicho
+- nicho inexistente: solicitar criacao controlada de novo nicho e subnicho
+- classificacao ambigua: bloquear o fluxo e pedir revisao manual
+
+Metodo esperado para novos nichos:
+
+- a UI deve oferecer uma acao de solicitacao de novo nicho/subnicho
+- a criacao nao deve ser feita por SQL livre no Streamlit
+- a implementacao futura deve usar RPC controlada ou um intake especifico para
+  taxonomia
+- enquanto esse metodo nao existir, novos nichos/subnichos devem continuar pelo
+  procedimento manual documentado
+
+### 3. Criar creator
 
 Campos iniciais da sub-view:
 
@@ -117,6 +185,8 @@ Regra:
 
 - os campos de creator devem ficar em estado pendente ate a entity existir e
   possuir `entity_id` resolvido
+- o creator tambem deve aguardar a classificacao de nicho/subnicho estar
+  resolvida ou explicitamente marcada para revisao
 - a primeira implementacao pode manter esses campos apenas na interface ou em
   uma tabela de intake propria futura, porque `public.entity_intake` atual nao
   possui colunas para `platform`, `username`, `channel_id` e `followers`
@@ -128,10 +198,12 @@ Regra:
 Uso:
 
 - formulario preenchido, ainda nao enviado
+- pode conter dados de entity, nicho/subnicho e canal
 
 Acao:
 
 - validar campos obrigatorios localmente
+- sugerir possiveis entities existentes antes de permitir nova criacao
 
 ### Enviado para intake
 
@@ -143,29 +215,30 @@ Acao:
 
 - exibir o registro na revisao baseada em `public.v_entity_intake_review`
 
-### Pronto para publicar entity
+### Entity resolvida
 
 Uso:
 
 - `review_result = READY_TO_INSERT`
 - ou entity ja existente com `existing_entity_id` preenchido
-- `sub_niche_id` resolvido
+- ou entity ja publicada e localizada em `public.entities`
 
 Acao:
 
 - permitir publicacao controlada via `public.publish_entity_intake()`
 - depois reconsultar a view de revisao
 
-### Entity publicada
+### Nicho/subnicho resolvido
 
 Uso:
 
-- registro em `entity_intake` esta `published`
-- entity ja existe em `public.entities`
+- `sub_niche_id` resolvido
+- ou solicitacao de novo nicho/subnicho registrada para revisao
 
 Acao:
 
-- liberar etapa de cadastro do canal em `public.creators`
+- liberar cadastro do creator quando a classificacao estiver confirmada
+- manter bloqueado quando a classificacao estiver ambigua
 
 ### Creator pronto para coleta
 
@@ -236,6 +309,24 @@ Comportamento esperado:
 - nao inserir diretamente em `public.entities`
 - nao inserir diretamente em `public.entity_sub_niches`
 
+RPC futura para taxonomia:
+
+```text
+public.create_taxonomy_intake_entry(
+  p_niche text,
+  p_sub_niche_name text,
+  p_reason text,
+  p_notes text
+)
+```
+
+Comportamento esperado:
+
+- registrar solicitacao de novo nicho/subnicho
+- validar duplicidade por nome normalizado
+- nao publicar automaticamente classificacoes novas
+- permitir revisao antes de uso analitico
+
 ## Lacuna atual: cadastro em `public.creators`
 
 O procedimento documentado hoje cobre bem a criacao de `entities` e vinculos de
@@ -243,11 +334,12 @@ O procedimento documentado hoje cobre bem a criacao de `entities` e vinculos de
 `public.creators`.
 
 Como `public.creators` exige `entity_id`, `platform` e `channel_id`, a sub-view
-deve tratar isso como segunda etapa.
+deve tratar isso como etapa final da jornada de inclusao.
 
 Regra recomendada:
 
 - nao criar creator enquanto `entity_id` nao estiver resolvido
+- nao criar creator enquanto nicho/subnicho estiver inexistente ou ambiguo
 - validar unicidade de `channel_id`
 - validar unicidade de `(platform, channel_id)`
 - validar `platform` contra os valores aceitos:
@@ -295,7 +387,8 @@ Sub-views iniciais:
 
 Blocos:
 
-- formulario de entity
+- busca/criacao de entity
+- resolucao/criacao de nicho e subnicho
 - formulario de canal/plataforma
 - validacao local
 - resultado de revisao
@@ -346,14 +439,16 @@ Filtros:
 ## Sequencia recomendada de implementacao
 
 1. Criar a pagina Streamlit `Inclusao de dados externos`.
-2. Criar a sub-view `Novo criador de conteudo` apenas como formulario e revisao,
+2. Criar a etapa de busca de entity existente.
+3. Criar a etapa de solicitacao de nova entity via `public.entity_intake`,
    sem escrita direta em tabelas finais.
-3. Conectar a leitura de `public.v_entity_intake_review`.
-4. Definir ou criar RPC para inserir em `public.entity_intake`.
-5. Definir ou criar RPC separada para cadastrar `public.creators` apenas quando
-   `entity_id` estiver resolvido.
-6. Validar o fluxo completo com um creator de teste.
-7. Documentar o resultado no pipeline status antes de considerar a tela pronta.
+4. Conectar a leitura de `public.v_entity_intake_review`.
+5. Criar a etapa de resolucao de nicho/subnicho existente.
+6. Definir o metodo controlado para solicitacao de novos nichos/subnichos.
+7. Definir ou criar RPC separada para cadastrar `public.creators` apenas quando
+   `entity_id` e classificacao estiverem resolvidos.
+8. Validar o fluxo completo com um creator de teste.
+9. Documentar o resultado no pipeline status antes de considerar a tela pronta.
 
 ## Validacoes obrigatorias
 
@@ -361,6 +456,8 @@ Antes de considerar a sub-view pronta:
 
 - confirmar que `raw_name` nao gera duplicidade inesperada em `entities`
 - confirmar que `sub_niche_name` encontra `sub_niche_id`
+- confirmar que novos nichos/subnichos possuem metodo de intake ou procedimento
+  manual documentado
 - confirmar que `channel_id` nao existe em `public.creators`
 - confirmar que `(platform, channel_id)` nao existe em `public.creators`
 - confirmar que nenhum segredo sensivel e usado no Streamlit
@@ -374,14 +471,18 @@ Antes de considerar a sub-view pronta:
 - permitir SQL livre no Streamlit reduz auditabilidade
 - duplicidade de `channel_id` pode afetar discovery e historico
 - sub_niche inexistente pode publicar uma entity sem classificacao util
+- criar nicho/subnicho direto pela UI sem revisao pode degradar a taxonomia
 
 ## Decisao recomendada
 
-Implementar a tela em duas etapas:
+Implementar a tela em quatro etapas guiadas:
 
-1. Intake e revisao de entity/sub_niche usando o fluxo existente.
-2. Cadastro de creator em `public.creators` somente depois de `entity_id`
-   resolvido.
+1. Busca ou intake de entity usando o fluxo existente.
+2. Resolucao ou solicitacao controlada de nicho/subnicho.
+3. Cadastro de creator em `public.creators` somente depois de `entity_id` e
+   classificacao resolvidos.
+4. Confirmacao de entrada do creator no fluxo normal de discovery/coleta.
 
-Essa separacao preserva a governanca ja documentada e evita que o dashboard
-vire uma porta de escrita direta nas tabelas finais.
+Essa separacao preserva a governanca ja documentada, respeita o fluxo manual
+atual e transforma a UI em uma camada guiada de operacao, nao em uma porta de
+escrita direta nas tabelas finais.
