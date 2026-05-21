@@ -18,9 +18,9 @@ classified as (
 )
 select
   checked_at,
-  to_char(checked_at, 'DD/MM/YYYY HH24:MI') as checked_at_br,
+  to_char(checked_at - interval '3 hours', 'DD/MM/YYYY HH24:MI') as checked_at_br,
   ultima_evidencia_de_execucao,
-  to_char(ultima_evidencia_de_execucao, 'DD/MM/YYYY HH24:MI') as ultima_evidencia_de_execucao_br,
+  to_char(ultima_evidencia_de_execucao - interval '3 hours', 'DD/MM/YYYY HH24:MI') as ultima_evidencia_de_execucao_br,
   idade_da_ultima_evidencia_minutos,
   case
     when ultima_evidencia_de_execucao is null then 'nok'

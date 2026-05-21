@@ -244,6 +244,8 @@ def inject_theme() -> None:
             color: var(--text);
             font-size: 0.78rem;
             font-weight: 700;
+            line-height: 1;
+            white-space: nowrap;
         }
 
         .dq-chip.alert-red {
@@ -264,7 +266,10 @@ def inject_theme() -> None:
         }
 
         .dq-chip strong {
-            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            font-size: inherit;
+            line-height: 1;
             color: var(--text);
         }
 
