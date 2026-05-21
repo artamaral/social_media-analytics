@@ -325,14 +325,11 @@ Para o worker de `Atualizacao de posts`, o subtipo `Sinais operacionais` deve
 priorizar KPIs de fluxo e risco de cobertura, nao volume bruto de lote:
 
 - `itens_atrasados`
-  - mede quantos posts ja passaram do `next_check` alem da tolerancia definida
+  - mede a fila em faixas de atraso `Ate 1h`, `Ate 6h` e `Ate 24h`
   - responde se o worker horario esta conseguindo respeitar o agendamento
 - `at_risk_bootstrap`
   - mede posts novos em risco de nao atingir cobertura minima no tempo esperado
   - antecipa degradacao antes de virar passivo consolidado
-- `recovery_low`
-  - mede posts mais antigos que ja ficaram abaixo da cobertura minima
-  - representa falha de cobertura ja consumada
 
 Sinais que nao devem ser KPI principal neste bloco:
 
@@ -341,6 +338,8 @@ Sinais que nao devem ser KPI principal neste bloco:
     nao representa bem a saude real do fluxo
 - `falhas_recentes_24h`
   - sobrepoe a leitura ja coberta por `Posts mortos` e validacao humana
+- `recovery_low`
+  - essa leitura ja e acompanhada pelo bloco de `Monitoramento de posts sem checagem`
 
 Leitura correta dos blocos:
 

@@ -449,7 +449,7 @@ def placeholder_card(title: str, body: str) -> None:
     )
 
 
-def worker_stat_html(label: str, value: str, caption: str, tone: str = "neutral") -> str:
+def worker_stat_html(label: str, value: str, caption: str, tone: str | None = "neutral") -> str:
     chip_class = {
         "ok": "ok-green",
         "atencao": "alert-yellow",
@@ -458,12 +458,18 @@ def worker_stat_html(label: str, value: str, caption: str, tone: str = "neutral"
         "danger": "alert-red",
         "neutral": "neutral",
     }.get(tone, "neutral")
+    caption_html = f'<div class="worker-stat-caption">{escape(caption)}</div>' if caption else ""
+    chip_html = (
+        f'<div class="dq-chip-row"><span class="dq-chip {escape(chip_class)}">{escape(tone)}</span></div>'
+        if tone
+        else ""
+    )
     return (
         '<div class="worker-stat">'
         f'<div class="worker-stat-label">{escape(label)}</div>'
         f'<div class="worker-stat-value">{escape(value)}</div>'
-        f'<div class="worker-stat-caption">{escape(caption)}</div>'
-        f'<div class="dq-chip-row"><span class="dq-chip {escape(chip_class)}">{escape(tone)}</span></div>'
+        f"{caption_html}"
+        f"{chip_html}"
         "</div>"
     )
 
@@ -931,43 +937,21 @@ def render_collection_integrity_section() -> None:
 
     if operational_signals:
         operational_status_code = str(operational_signals.get("status_code") or "atencao").lower()
-        itens_atrasados = format_int(operational_signals.get("itens_atrasados"))
-        maior_atraso = f"{format_int(operational_signals.get('maior_atraso_minutos'))} min"
+        itens_atrasados_ate_1h = format_int(operational_signals.get("itens_atrasados_ate_1h"))
+        itens_atrasados_ate_6h = format_int(operational_signals.get("itens_atrasados_ate_6h"))
+        itens_atrasados_ate_24h = format_int(operational_signals.get("itens_atrasados_ate_24h"))
         at_risk_bootstrap = format_int(operational_signals.get("at_risk_bootstrap"))
-        recovery_low = format_int(operational_signals.get("recovery_low"))
-        itens_atrasados_reason = str(
-            operational_signals.get("itens_atrasados_status_reason")
-            or "Leitura de atraso nao disponivel."
-        )
         at_risk_reason = str(
-            operational_signals.get("at_risk_bootstrap_status_reason")
+            operational_signals.get("status_reason")
             or "Leitura de bootstrap nao disponivel."
         )
-        recovery_reason = str(
-            operational_signals.get("recovery_low_status_reason")
-            or "Leitura de recovery nao disponivel."
-        )
-        itens_atrasados_status = str(
-            operational_signals.get("itens_atrasados_status_code") or operational_status_code
-        ).lower()
-        at_risk_status = str(
-            operational_signals.get("at_risk_bootstrap_status_code") or operational_status_code
-        ).lower()
-        recovery_status = str(
-            operational_signals.get("recovery_low_status_code") or operational_status_code
-        ).lower()
     else:
         operational_status_code = "neutral"
-        itens_atrasados = "--"
-        maior_atraso = "--"
+        itens_atrasados_ate_1h = "--"
+        itens_atrasados_ate_6h = "--"
+        itens_atrasados_ate_24h = "--"
         at_risk_bootstrap = "--"
-        recovery_low = "--"
-        itens_atrasados_reason = "Aguardando a view v_dashboard_post_update_operational_signals."
         at_risk_reason = "Aguardando a view v_dashboard_post_update_operational_signals."
-        recovery_reason = "Aguardando a view v_dashboard_post_update_operational_signals."
-        itens_atrasados_status = "neutral"
-        at_risk_status = "neutral"
-        recovery_status = "neutral"
 
     panels = [
         worker_panel_html(
@@ -1002,25 +986,31 @@ def render_collection_integrity_section() -> None:
         ),
         worker_panel_html(
             "Sinais operacionais",
-            "Leitura de atraso, bootstrap e recuperacao do worker horario.",
+            "Leitura de atraso e risco de cobertura do worker horario.",
             [
                 worker_stat_html(
-                    "Itens atrasados",
-                    itens_atrasados,
-                    f"Tolerancia operacional de 60 min | Maior atraso observado: {maior_atraso}. {itens_atrasados_reason}",
-                    itens_atrasados_status,
+                    "Ate 1h",
+                    itens_atrasados_ate_1h,
+                    "",
+                    None,
+                ),
+                worker_stat_html(
+                    "Ate 6h",
+                    itens_atrasados_ate_6h,
+                    "",
+                    None,
+                ),
+                worker_stat_html(
+                    "Ate 24h",
+                    itens_atrasados_ate_24h,
+                    "",
+                    None,
                 ),
                 worker_stat_html(
                     "At risk bootstrap",
                     at_risk_bootstrap,
                     at_risk_reason,
-                    at_risk_status,
-                ),
-                worker_stat_html(
-                    "Recovery low",
-                    recovery_low,
-                    recovery_reason,
-                    recovery_status,
+                    operational_status_code,
                 ),
             ],
             "#f2c14e",
@@ -1036,7 +1026,7 @@ def render_collection_integrity_section() -> None:
 1. Consolidar no Supabase uma unica view `v_dashboard_worker_health_status`.
 2. Validar apenas os campos do card antes de pensar em tabelas detalhadas.
 3. Manter uma leitura por pagina com cache e sem polling automatico.
-4. Liberar primeiro os sinais executivos: ultimo snapshot, posts 24h, itens atrasados, at risk bootstrap e recovery low.
+4. Liberar primeiro os sinais executivos: ultimo snapshot, posts 24h, faixas de atraso e at risk bootstrap.
 5. So depois adicionar detalhamento por fila, banda ou erro especifico.
 
 Para economizar tokens nas proximas sessoes:

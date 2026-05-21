@@ -367,20 +367,19 @@ Escopo revisado para `Sinais operacionais` do worker horario:
     esse numero mascara a composicao real do fluxo
 - nao usar `falhas_recentes_24h` como KPI principal
   - esse sinal sobrepoe o bloco de `Posts mortos e validacao humana`
-- priorizar os 3 KPIs abaixo:
+- nao usar `recovery_low` como KPI principal
+  - essa leitura ja e acompanhada pelo bloco de `Monitoramento de posts sem checagem`
+- priorizar os 2 KPIs abaixo:
   - `itens_atrasados`
   - `at_risk_bootstrap`
-  - `recovery_low`
 
 Leitura esperada:
 
 - `itens_atrasados`
-  - mostra se o worker horario esta respeitando `next_check`
+  - mostra a fila em faixas de atraso `Ate 1h`, `Ate 6h` e `Ate 24h`
 - `at_risk_bootstrap`
   - mostra posts novos em risco de nao atingir cobertura minima no tempo
     esperado
-- `recovery_low`
-  - mostra posts mais antigos que ja ficaram abaixo da cobertura minima
 
 Separacao semantica obrigatoria:
 
@@ -405,7 +404,7 @@ Sequencia minima de execucao:
 1. criar primeiro a view de `Integridade da coleta` para `Atualizacao de posts`
 2. criar a view de `Descoberta de novos posts`
 3. criar a view ou contrato de `Sinais operacionais` do worker horario com
-   `itens_atrasados`, `at_risk_bootstrap` e `recovery_low`
+   faixas de atraso `Ate 1h`, `Ate 6h`, `Ate 24h` e `at_risk_bootstrap`
 4. ligar cada bloco no Streamlit sem tabela detalhada no primeiro momento
 5. validar texto, cor e semantica antes de abrir detalhamento tecnico
 

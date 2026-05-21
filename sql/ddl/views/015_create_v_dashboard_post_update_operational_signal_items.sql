@@ -22,7 +22,6 @@ classified as (
     floor(extract(epoch from (now() - q.next_check)) / 60)::int as atraso_minutos,
     case
       when coalesce(c.total_checagens, 0) >= 3 then 'covered'
-      when p.created_at < now() - interval '7 days' then 'recovery_low'
       when p.created_at < now() - interval '5 days' then 'at_risk_bootstrap'
       else 'bootstrap_low'
     end as coverage_status
@@ -58,24 +57,20 @@ select
   priority_score,
   coverage_status,
   case
-    when atraso_minutos >= 60 and coverage_status = 'recovery_low' then 'atrasado_e_recovery_low'
     when atraso_minutos >= 60 and coverage_status = 'at_risk_bootstrap' then 'atrasado_e_at_risk_bootstrap'
     when atraso_minutos >= 60 then 'item_atrasado'
-    when coverage_status = 'recovery_low' then 'recovery_low'
     when coverage_status = 'at_risk_bootstrap' then 'at_risk_bootstrap'
     else 'outro'
   end as signal_scope
 from classified
 where atraso_minutos >= 60
-   or coverage_status in ('at_risk_bootstrap', 'recovery_low')
+   or coverage_status = 'at_risk_bootstrap'
 order by
   case
-    when atraso_minutos >= 60 and coverage_status = 'recovery_low' then 1
-    when atraso_minutos >= 60 and coverage_status = 'at_risk_bootstrap' then 2
-    when coverage_status = 'recovery_low' then 3
-    when atraso_minutos >= 60 then 4
-    when coverage_status = 'at_risk_bootstrap' then 5
-    else 6
+    when atraso_minutos >= 60 and coverage_status = 'at_risk_bootstrap' then 1
+    when atraso_minutos >= 60 then 2
+    when coverage_status = 'at_risk_bootstrap' then 3
+    else 4
   end,
   atraso_minutos desc,
   total_checagens asc,
