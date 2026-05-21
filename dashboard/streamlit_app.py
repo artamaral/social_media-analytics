@@ -196,15 +196,19 @@ def inject_theme() -> None:
             border: 1px solid rgba(255, 255, 255, 0.06);
             border-top: 4px solid var(--accent);
             padding: 1rem 1.05rem 1.05rem;
-            min-height: 230px;
+            min-height: 250px;
             overflow: hidden;
         }
 
         .dq-kpi-title {
-            font-size: 0.95rem;
+            font-size: 1.425rem;
             font-weight: 900;
             text-transform: uppercase;
             letter-spacing: 0;
+            line-height: 1.1;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            min-height: 3.15rem;
         }
 
         .dq-kpi-value {
@@ -219,6 +223,8 @@ def inject_theme() -> None:
             color: var(--muted);
             font-size: 0.95rem;
             font-weight: 700;
+            line-height: 1.2;
+            overflow-wrap: anywhere;
         }
 
         .dq-chip-row {
@@ -469,7 +475,7 @@ def render_data_quality_cards(
         with col1:
             st.markdown(
                 dq_kpi_card(
-                    "Cobertura de legado",
+                    "Monitoramento de posts sem checagem",
                     format_int(total_guardrail_posts),
                     "Posts com menos de 3 checagens",
                     "#f2c14e",
@@ -477,12 +483,12 @@ def render_data_quality_cards(
                 ),
                 unsafe_allow_html=True,
             )
-            st.caption(f"Posts de legado com baixa cobertura: {format_int(legacy_posts)}.")
+            st.caption(f"Posts sem checagem suficiente na faixa de risco: {format_int(legacy_posts)}.")
     else:
         with col1:
             st.markdown(
                 dq_kpi_card(
-                    "Cobertura de legado",
+                    "Monitoramento de posts sem checagem",
                     "Erro",
                     "View v_dashboard_guardrail_coverage_status indisponivel.",
                     "#f2c14e",
