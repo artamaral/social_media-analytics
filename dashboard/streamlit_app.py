@@ -353,12 +353,12 @@ def dq_chip(label: str, amount: str, tone: str = "neutral") -> str:
 
 def review_state_chip(review_ready: bool | None, pending_review: int, confirmed: int, candidates: int) -> str:
     if review_ready and pending_review == 0:
-        return dq_chip("Estado", "Dados OK", "ok-green")
+        return dq_chip("Estado", "Dados OK", "alert-yellow")
     if pending_review > 0:
         return dq_chip("Estado", "Necessita validação", "alert-yellow")
     if confirmed > 0 and candidates == 0:
-        return dq_chip("Estado", "Confirmado", "neutral")
-    return dq_chip("Estado", "Estado indefinido", "neutral")
+        return dq_chip("Estado", "Confirmado", "alert-yellow")
+    return dq_chip("Estado", "Estado indefinido", "alert-yellow")
 
 
 def status_card(title: str, value: Any, status: str, picto: str) -> None:
@@ -546,8 +546,8 @@ def render_data_quality_cards(
             st.markdown(
                 dq_kpi_card(
                     "Posts mortos e validação humana",
-                    format_int(total_dead_posts),
-                    "Total de posts mortos monitorados",
+                    f"{format_int(confirmed)}/{format_int(total_dead_posts)}",
+                    "Confirmados / monitorados",
                     "#ff8069",
                     chips,
                 ),
