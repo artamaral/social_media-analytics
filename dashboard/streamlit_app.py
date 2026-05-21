@@ -878,6 +878,7 @@ def render_fenabrave_page() -> None:
 def render_collection_integrity_section() -> None:
     worker_status, error = get_single_row_view("v_dashboard_worker_health_status")
     discovery_status, discovery_error = get_single_row_view("v_dashboard_new_post_discovery_status")
+    operational_signals, operational_signals_error = get_single_row_view("v_dashboard_post_update_operational_signals")
     st.write("")
     st.markdown("### Integridade da coleta")
 
@@ -885,6 +886,8 @@ def render_collection_integrity_section() -> None:
         st.warning(error)
     if discovery_error:
         st.warning(discovery_error)
+    if operational_signals_error:
+        st.warning(operational_signals_error)
 
     if worker_status:
         raw_status_code = str(worker_status.get("status_code") or "atencao").lower()
@@ -926,6 +929,46 @@ def render_collection_integrity_section() -> None:
         discovery_snapshot_value = "--"
         discovery_new_posts = "--"
 
+    if operational_signals:
+        operational_status_code = str(operational_signals.get("status_code") or "atencao").lower()
+        itens_atrasados = format_int(operational_signals.get("itens_atrasados"))
+        maior_atraso = f"{format_int(operational_signals.get('maior_atraso_minutos'))} min"
+        at_risk_bootstrap = format_int(operational_signals.get("at_risk_bootstrap"))
+        recovery_low = format_int(operational_signals.get("recovery_low"))
+        itens_atrasados_reason = str(
+            operational_signals.get("itens_atrasados_status_reason")
+            or "Leitura de atraso nao disponivel."
+        )
+        at_risk_reason = str(
+            operational_signals.get("at_risk_bootstrap_status_reason")
+            or "Leitura de bootstrap nao disponivel."
+        )
+        recovery_reason = str(
+            operational_signals.get("recovery_low_status_reason")
+            or "Leitura de recovery nao disponivel."
+        )
+        itens_atrasados_status = str(
+            operational_signals.get("itens_atrasados_status_code") or operational_status_code
+        ).lower()
+        at_risk_status = str(
+            operational_signals.get("at_risk_bootstrap_status_code") or operational_status_code
+        ).lower()
+        recovery_status = str(
+            operational_signals.get("recovery_low_status_code") or operational_status_code
+        ).lower()
+    else:
+        operational_status_code = "neutral"
+        itens_atrasados = "--"
+        maior_atraso = "--"
+        at_risk_bootstrap = "--"
+        recovery_low = "--"
+        itens_atrasados_reason = "Aguardando a view v_dashboard_post_update_operational_signals."
+        at_risk_reason = "Aguardando a view v_dashboard_post_update_operational_signals."
+        recovery_reason = "Aguardando a view v_dashboard_post_update_operational_signals."
+        itens_atrasados_status = "neutral"
+        at_risk_status = "neutral"
+        recovery_status = "neutral"
+
     panels = [
         worker_panel_html(
             "Integridade da coleta",
@@ -958,23 +1001,30 @@ def render_collection_integrity_section() -> None:
             raw_status_code,
         ),
         worker_panel_html(
-            "Heartbeat operacional",
-            "Leitura de fila e sinais de degradacao recente.",
+            "Sinais operacionais",
+            "Leitura de atraso, bootstrap e recuperacao do worker horario.",
             [
-                worker_stat_html("Fila com movimento", queue_ready, "Itens prontos para processamento na fila."),
                 worker_stat_html(
-                    "Falhas recentes",
-                    recent_failures,
-                    "Eventos recentes que merecem acompanhamento.",
+                    "Itens atrasados",
+                    itens_atrasados,
+                    f"Tolerancia operacional de 60 min | Maior atraso observado: {maior_atraso}. {itens_atrasados_reason}",
+                    itens_atrasados_status,
                 ),
                 worker_stat_html(
-                    "Fila atrasada",
-                    queue_delayed,
-                    "Itens ja vencidos ou sem giro esperado.",
+                    "At risk bootstrap",
+                    at_risk_bootstrap,
+                    at_risk_reason,
+                    at_risk_status,
+                ),
+                worker_stat_html(
+                    "Recovery low",
+                    recovery_low,
+                    recovery_reason,
+                    recovery_status,
                 ),
             ],
             "#f2c14e",
-            raw_status_code,
+            operational_status_code,
         ),
     ]
     worker_panel_grid(panels)
@@ -986,7 +1036,7 @@ def render_collection_integrity_section() -> None:
 1. Consolidar no Supabase uma unica view `v_dashboard_worker_health_status`.
 2. Validar apenas os campos do card antes de pensar em tabelas detalhadas.
 3. Manter uma leitura por pagina com cache e sem polling automatico.
-4. Liberar primeiro os sinais executivos: ultimo snapshot, posts 24h, fila com movimento, atraso e falhas recentes.
+4. Liberar primeiro os sinais executivos: ultimo snapshot, posts 24h, itens atrasados, at risk bootstrap e recovery low.
 5. So depois adicionar detalhamento por fila, banda ou erro especifico.
 
 Para economizar tokens nas proximas sessoes:
