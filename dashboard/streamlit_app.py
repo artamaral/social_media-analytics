@@ -410,7 +410,7 @@ def dq_chip(label: str, amount: str, tone: str = "neutral") -> str:
 
 def review_state_chip(review_ready: bool | None, pending_review: int, confirmed: int, candidates: int) -> str:
     if review_ready and pending_review == 0:
-        return dq_chip("Estado", "Dados OK", "alert-yellow")
+        return dq_chip("Estado", "Dados OK", "ok-green")
     if pending_review > 0:
         return dq_chip("Estado", "Necessita validação", "alert-yellow")
     if confirmed > 0 and candidates == 0:
@@ -444,28 +444,23 @@ def placeholder_card(title: str, body: str) -> None:
     )
 
 
-def worker_stat_html(label: str, value: str, caption: str, tone: str = "neutral") -> str:
-    chip_class = {
-        "ok": "ok-green",
-        "warning": "alert-yellow",
-        "danger": "alert-red",
-        "neutral": "neutral",
-    }.get(tone, "neutral")
+def worker_stat_html(label: str, value: str, caption: str) -> str:
     return (
         '<div class="worker-stat">'
         f'<div class="worker-stat-label">{escape(label)}</div>'
         f'<div class="worker-stat-value">{escape(value)}</div>'
         f'<div class="worker-stat-caption">{escape(caption)}</div>'
-        f'<div class="dq-chip-row"><span class="dq-chip {escape(chip_class)}">{escape(value)}</span></div>'
         "</div>"
     )
 
 
-def worker_panel_html(title: str, subtitle: str, stats: list[str], accent_color: str) -> str:
+def worker_panel_html(title: str, subtitle: str, stats: list[str], accent_color: str, status_code: str) -> str:
+    status_tone = normalize_worker_tone(status_code)
     return (
         f'<div class="worker-panel" style="border-top-color: {escape(accent_color)};">'
         f'<div class="worker-panel-title">{escape(title)}</div>'
         f'<div class="worker-panel-subtitle">{escape(subtitle)}</div>'
+        f'<div class="dq-chip-row"><span class="dq-chip {escape(status_tone)}">Status <strong>{escape(status_code)}</strong></span></div>'
         f'{"".join(stats)}'
         "</div>"
     )
@@ -755,6 +750,19 @@ def format_int(value: Any) -> str:
         return "--"
 
 
+def format_timestamp_br(value: Any) -> str:
+    if value in (None, ""):
+        return "--"
+    if isinstance(value, str):
+        try:
+            value = pd.to_datetime(value, errors="coerce")
+        except Exception:
+            return str(value)
+    if pd.isna(value):
+        return "--"
+    return pd.Timestamp(value).strftime("%d/%m/%Y %H:%M")
+
+
 def format_month_label(period: pd.Timestamp) -> str:
     month_names = {
         1: "jan",
@@ -862,16 +870,16 @@ def render_collection_integrity_section() -> None:
         st.warning(error)
 
     if worker_status:
-        status_code = normalize_worker_tone(str(worker_status.get("status_code") or "neutral").lower())
-        snapshot_value = str(worker_status.get("ultima_evidencia_de_execucao") or "--")
+        raw_status_code = str(worker_status.get("status_code") or "atencao").lower()
+        snapshot_value = format_timestamp_br(worker_status.get("ultima_evidencia_de_execucao"))
         updated_posts = format_int(worker_status.get("posts_atualizados_24h"))
-        delay_minutes = format_int(worker_status.get("idade_da_ultima_evidencia_minutos"))
+        delay_minutes = f"{format_int(worker_status.get('idade_da_ultima_evidencia_minutos'))} min"
         queue_ready = format_int(worker_status.get("fila_itens_prontos"))
         queue_delayed = format_int(worker_status.get("fila_itens_atrasados"))
         recent_failures = format_int(worker_status.get("falhas_recentes_24h"))
         status_label = str(worker_status.get("status_label") or "Sem classificacao")
     else:
-        status_code = "warning"
+        raw_status_code = "atencao"
         snapshot_value = "--"
         updated_posts = "--"
         delay_minutes = "--"
@@ -885,39 +893,40 @@ def render_collection_integrity_section() -> None:
             "Integridade da coleta",
             "Leitura executiva do estado geral da coleta automatica.",
             [
-                worker_stat_html("Status geral", status_label, "Leitura consolidada do estado operacional.", status_code),
-                worker_stat_html("Atraso da execucao", delay_minutes, "Minutos desde a ultima evidencia observada.", status_code),
+                worker_stat_html("Status geral", status_label, "Leitura consolidada do estado operacional."),
+                worker_stat_html("Tempo de ultima coleta", delay_minutes, "Tempo desde a ultima coleta validada."),
             ],
             "#ff8069",
+            raw_status_code,
         ),
         worker_panel_html(
             "Evidencia de processamento",
             "Sinais de que o worker realmente gerou efeito no banco.",
             [
-                worker_stat_html("Ultimo snapshot", snapshot_value, "Maior evidencia recente em historico coletado.", status_code),
-                worker_stat_html("Posts atualizados 24h", updated_posts, "Posts distintos com nova coleta na janela.", status_code),
+                worker_stat_html("Ultimo snapshot", snapshot_value, "Data e hora da evidencia mais recente."),
+                worker_stat_html("Posts atualizados 24h", updated_posts, "Posts distintos com nova coleta na janela."),
             ],
             "#98df96",
+            raw_status_code,
         ),
         worker_panel_html(
             "Heartbeat operacional",
             "Leitura de fila e sinais de degradacao recente.",
             [
-                worker_stat_html("Fila com movimento", queue_ready, "Itens prontos para processamento na fila.", status_code),
+                worker_stat_html("Fila com movimento", queue_ready, "Itens prontos para processamento na fila."),
                 worker_stat_html(
                     "Falhas recentes",
                     recent_failures,
                     "Eventos recentes que merecem acompanhamento.",
-                    "warning" if recent_failures not in {"0", "--"} else "ok",
                 ),
                 worker_stat_html(
                     "Fila atrasada",
                     queue_delayed,
                     "Itens ja vencidos ou sem giro esperado.",
-                    "warning" if queue_delayed not in {"0", "--"} else "ok",
                 ),
             ],
             "#f2c14e",
+            raw_status_code,
         ),
     ]
     worker_panel_grid(panels)
