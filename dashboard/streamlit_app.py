@@ -246,6 +246,23 @@ def inject_theme() -> None:
             font-weight: 700;
         }
 
+        .dq-chip.alert-red {
+            background: #7a2323;
+        }
+
+        .dq-chip.alert-yellow {
+            background: #8b6b10;
+            color: #fff7d6;
+        }
+
+        .dq-chip.ok-green {
+            background: #214d37;
+        }
+
+        .dq-chip.neutral {
+            background: #252733;
+        }
+
         .dq-chip strong {
             font-size: 0.85rem;
             color: var(--text);
@@ -318,11 +335,8 @@ def metric_card_grid(cards: list[str], class_name: str = "fenabrave-card-grid") 
     )
 
 
-def dq_kpi_card(title: str, value: str, subtitle: str, accent_color: str, chips: list[tuple[str, str]]) -> str:
-    chip_html = "".join(
-        f'<span class="dq-chip">{escape(label)} <strong>{escape(amount)}</strong></span>'
-        for label, amount in chips
-    )
+def dq_kpi_card(title: str, value: str, subtitle: str, accent_color: str, chips: list[str]) -> str:
+    chip_html = "".join(chips)
     return (
         f'<div class="dq-kpi-card" style="border-top-color: {escape(accent_color)};">'
         f'<div class="dq-kpi-title">{escape(title)}</div>'
@@ -331,6 +345,10 @@ def dq_kpi_card(title: str, value: str, subtitle: str, accent_color: str, chips:
         f'<div class="dq-chip-row">{chip_html}</div>'
         "</div>"
     )
+
+
+def dq_chip(label: str, amount: str, tone: str = "neutral") -> str:
+    return f'<span class="dq-chip {escape(tone)}">{escape(label)} <strong>{escape(amount)}</strong></span>'
 
 
 def status_card(title: str, value: Any, status: str, picto: str) -> None:
@@ -467,10 +485,10 @@ def render_data_quality_cards(
             if row.get("is_legacy_guardrail")
         )
         chips = [
-            ("Novos", str(sum(int(row.get("total_posts") or 0) for row in guardrail_rows if row.get("video_age_bucket") == "new_0_3d"))),
-            ("Recentes", str(sum(int(row.get("total_posts") or 0) for row in guardrail_rows if row.get("video_age_bucket") == "recent_4_7d"))),
-            ("Em aquecimento", str(sum(int(row.get("total_posts") or 0) for row in guardrail_rows if row.get("video_age_bucket") == "warm_8_30d"))),
-            ("Legado", str(sum(int(row.get("total_posts") or 0) for row in guardrail_rows if row.get("video_age_bucket") == "old_30d_plus"))),
+            dq_chip("Novos", str(sum(int(row.get("total_posts") or 0) for row in guardrail_rows if row.get("video_age_bucket") == "new_0_3d"))),
+            dq_chip("Recentes", str(sum(int(row.get("total_posts") or 0) for row in guardrail_rows if row.get("video_age_bucket") == "recent_4_7d"))),
+            dq_chip("Em aquecimento", str(sum(int(row.get("total_posts") or 0) for row in guardrail_rows if row.get("video_age_bucket") == "warm_8_30d"))),
+            dq_chip("Sem checagem", str(sum(int(row.get("total_posts") or 0) for row in guardrail_rows if row.get("video_age_bucket") == "old_30d_plus")), "alert-red" if legacy_posts > 0 else "neutral"),
         ]
         with col1:
             st.markdown(
@@ -492,7 +510,12 @@ def render_data_quality_cards(
                     "Erro",
                     "View v_dashboard_guardrail_coverage_status indisponivel.",
                     "#f2c14e",
-                    [("Novos", "--"), ("Recentes", "--"), ("Em aquecimento", "--"), ("Legado", "--")],
+                    [
+                        dq_chip("Novos", "--"),
+                        dq_chip("Recentes", "--"),
+                        dq_chip("Em aquecimento", "--"),
+                        dq_chip("Sem checagem", "--", "alert-red"),
+                    ],
                 ),
                 unsafe_allow_html=True,
             )
@@ -504,10 +527,10 @@ def render_data_quality_cards(
         candidates = int(dead_posts.get("unavailable_candidates") or 0)
         review_ready = bool(dead_posts.get("dead_posts_review_ready"))
         chips = [
-            ("Pendente de revisão", str(pending_review)),
-            ("Confirmados", str(confirmed)),
-            ("Candidatos", str(candidates)),
-            ("Validação pronta", "Sim" if review_ready else "Não"),
+            dq_chip("Pendente de revisão", str(pending_review), "alert-yellow" if pending_review > 0 else "neutral"),
+            dq_chip("Confirmados", str(confirmed), "neutral"),
+            dq_chip("Candidatos", str(candidates), "neutral"),
+            dq_chip("Revisão pronta", "Sim" if review_ready else "Não", "ok-green" if review_ready else "alert-red"),
         ]
         with col2:
             st.markdown(
@@ -529,7 +552,12 @@ def render_data_quality_cards(
                     "Erro",
                     "View v_dashboard_dead_post_validation_status indisponivel.",
                     "#ff8069",
-                    [("Pendente de revisão", "--"), ("Confirmados", "--"), ("Candidatos", "--"), ("Validação pronta", "--")],
+                    [
+                        dq_chip("Pendente de revisão", "--", "alert-yellow"),
+                        dq_chip("Confirmados", "--"),
+                        dq_chip("Candidatos", "--"),
+                        dq_chip("Revisão pronta", "--"),
+                    ],
                 ),
                 unsafe_allow_html=True,
             )
