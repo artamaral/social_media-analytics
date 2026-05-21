@@ -351,6 +351,16 @@ def dq_chip(label: str, amount: str, tone: str = "neutral") -> str:
     return f'<span class="dq-chip {escape(tone)}">{escape(label)} <strong>{escape(amount)}</strong></span>'
 
 
+def review_state_chip(review_ready: bool | None, pending_review: int, confirmed: int, candidates: int) -> str:
+    if review_ready and pending_review == 0:
+        return dq_chip("Estado", "Dados OK", "ok-green")
+    if pending_review > 0:
+        return dq_chip("Estado", "Necessita validação", "alert-yellow")
+    if confirmed > 0 and candidates == 0:
+        return dq_chip("Estado", "Confirmado", "neutral")
+    return dq_chip("Estado", "Estado indefinido", "neutral")
+
+
 def status_card(title: str, value: Any, status: str, picto: str) -> None:
     status_color = {
         "ok": "#98df96",
@@ -530,7 +540,7 @@ def render_data_quality_cards(
             dq_chip("Pendente de revisão", str(pending_review), "alert-yellow" if pending_review > 0 else "neutral"),
             dq_chip("Confirmados", str(confirmed), "neutral"),
             dq_chip("Candidatos", str(candidates), "neutral"),
-            dq_chip("Revisão pronta", "Sim" if review_ready else "Não", "ok-green" if review_ready else "alert-red"),
+            review_state_chip(review_ready, pending_review, confirmed, candidates),
         ]
         with col2:
             st.markdown(
@@ -556,7 +566,7 @@ def render_data_quality_cards(
                         dq_chip("Pendente de revisão", "--", "alert-yellow"),
                         dq_chip("Confirmados", "--"),
                         dq_chip("Candidatos", "--"),
-                        dq_chip("Revisão pronta", "--"),
+                        dq_chip("Estado", "--"),
                     ],
                 ),
                 unsafe_allow_html=True,
