@@ -301,6 +301,26 @@ O bloco de Data Quality do dashboard deve ter exatamente dois KPIs principais:
 
 O dashboard deve exibir esses indicadores na tela inicial.
 
+## Data quality operacional
+
+Dentro de `Data quality`, o bloco de integridade operacional deve diferenciar os
+2 workers do projeto:
+
+- `Atualizacao de posts`
+  - worker horario
+  - foco em evidencias de novos snapshots em `post_metrics_history`
+- `Descoberta de novos posts`
+  - worker com execucao a cada 6 horas
+  - foco em evidencias de novos posts encontrados pelo fluxo principal
+
+Regra importante:
+
+- a view `v_dashboard_worker_health_status` cobre apenas o worker de
+  `Atualizacao de posts`
+- o worker de `Descoberta de novos posts` nao deve reutilizar esse status
+- enquanto a view dedicada do segundo worker nao existir, o dashboard deve
+  mostrar esse estado como `aguardando view`
+
 ## GPT dentro do dashboard
 
 Se um GPT/assistente for implementado dentro do Streamlit, ele nao deve depender de "ler a tela" de forma implicita. O app deve montar explicitamente um pacote de contexto com os dados relevantes da pagina atual.

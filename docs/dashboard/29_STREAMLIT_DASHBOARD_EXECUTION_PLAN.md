@@ -315,6 +315,9 @@ Objetivo:
 Escopo inicial:
 
 - topico `Integridade da coleta` dentro de `Data quality`
+- diferenciar explicitamente os 2 workers do projeto:
+  - `Atualizacao de posts` com execucao a cada 1 hora
+  - `Descoberta de novos posts` com execucao a cada 6 horas
 - 3 blocos principais:
   - `Integridade da coleta`
   - `Evidencia de processamento`
@@ -328,11 +331,13 @@ Escopo inicial:
 
 Contrato sugerido:
 
-- uma unica view:
+- uma view inicial para o worker de atualizacao:
 
 ```text
 public.v_dashboard_worker_health_status
 ```
+
+- uma segunda view futura para o worker de descoberta de novos posts
 
 Campos minimos esperados:
 
@@ -344,6 +349,12 @@ Campos minimos esperados:
 - `falhas_recentes_24h`
 - `status_code`
 - `status_label`
+
+Leitura correta da fase atual:
+
+- a view atual cobre apenas o worker de `Atualizacao de posts`
+- o worker de `Descoberta de novos posts` deve aparecer no Streamlit com rotulo proprio
+- enquanto a view dedicada nao existir, o dashboard deve mostrar esse segundo worker como `aguardando view`, nunca como se estivesse monitorado
 
 Passo a passo de implementacao:
 

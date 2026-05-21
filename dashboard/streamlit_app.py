@@ -449,12 +449,21 @@ def placeholder_card(title: str, body: str) -> None:
     )
 
 
-def worker_stat_html(label: str, value: str, caption: str) -> str:
+def worker_stat_html(label: str, value: str, caption: str, tone: str = "neutral") -> str:
+    chip_class = {
+        "ok": "ok-green",
+        "atencao": "alert-yellow",
+        "warning": "alert-yellow",
+        "nok": "alert-red",
+        "danger": "alert-red",
+        "neutral": "neutral",
+    }.get(tone, "neutral")
     return (
         '<div class="worker-stat">'
         f'<div class="worker-stat-label">{escape(label)}</div>'
         f'<div class="worker-stat-value">{escape(value)}</div>'
         f'<div class="worker-stat-caption">{escape(caption)}</div>'
+        f'<div class="dq-chip-row"><span class="dq-chip {escape(chip_class)}">{escape(tone)}</span></div>'
         "</div>"
     )
 
@@ -898,23 +907,39 @@ def render_collection_integrity_section() -> None:
         status_label = "Aguardando a view consolidada"
         status_reason = "A view ainda nao retornou a justificativa do estado."
 
+    discovery_status_code = "neutral"
+    discovery_status_label = "Aguardando view"
+    discovery_status_reason = "Worker de descoberta roda a cada 6 horas e ainda precisa de uma view propria."
+    discovery_snapshot_value = "--"
+    discovery_new_posts = "--"
+
     panels = [
         worker_panel_html(
             "Integridade da coleta",
-            "Leitura executiva do estado geral da coleta automatica.",
+            "Leitura executiva separada por worker operacional.",
             [
-                worker_stat_html("Status geral", status_label, status_reason),
-                worker_stat_html("Tempo de ultima coleta", delay_minutes, "Tempo desde a ultima coleta validada."),
+                worker_stat_html("Atualizacao de posts", status_label, status_reason, raw_status_code),
+                worker_stat_html("Descoberta de novos posts", discovery_status_label, discovery_status_reason, discovery_status_code),
             ],
             "#ff8069",
             raw_status_code,
         ),
         worker_panel_html(
             "Evidencia de processamento",
-            "Sinais de que o worker realmente gerou efeito no banco.",
+            "Sinais concretos de execucao para cada fluxo.",
             [
-                worker_stat_html("Ultimo snapshot", snapshot_value, "Data e hora da evidencia mais recente."),
-                worker_stat_html("Posts atualizados 24h", updated_posts, "Posts distintos com nova coleta na janela."),
+                worker_stat_html(
+                    "Atualizacao de posts",
+                    snapshot_value,
+                    f"Tempo de ultima coleta: {delay_minutes} | Posts atualizados 24h: {updated_posts}",
+                    raw_status_code,
+                ),
+                worker_stat_html(
+                    "Descoberta de novos posts",
+                    discovery_snapshot_value,
+                    f"Novos posts 24h: {discovery_new_posts} | {discovery_status_reason}",
+                    discovery_status_code,
+                ),
             ],
             "#98df96",
             raw_status_code,
