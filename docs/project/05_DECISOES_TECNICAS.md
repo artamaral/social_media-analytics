@@ -457,6 +457,48 @@ Impacto esperado:
 
 ---
 
+## Revisao de `next_check` orientada por sinais operacionais
+
+Data:
+
+- 2026-05-21
+
+Decisao:
+
+- abrir revisao de prioridade alta sobre a regra de geracao de `next_check`
+- nao alterar a funcao ainda sem analisar a distribuicao por banda, idade do
+  post e cobertura minima
+
+Contexto:
+
+- os sinais operacionais do dashboard passaram a mostrar concentracao relevante
+  em faixas de atraso maiores do que a janela desejada
+- observacao atual dos sinais:
+  - `Ate 1h = 48`
+  - `Ate 6h = 199`
+  - `Ate 24h = 430`
+- esses numeros sugerem que o agendamento atual merece reavaliacao, mas ainda
+  nao fecham sozinhos a regra ideal
+
+Motivo:
+
+- o problema nao e apenas atraso pontual; e preciso entender se a funcao de
+  `next_check` esta calibrada para a rotacao real da fila
+- uma mudanca precipitada pode piorar cobertura ou deslocar o backlog para uma
+  faixa errada
+- a leitura precisa continuar conectada ao guardrail, ao tamanho do bucket e a
+  idade dos posts
+
+Diretriz:
+
+- tratar essa revisao como prioridade alta na `main`
+- manter os sinais operacionais como base de analise antes de mexer em
+  `calculate_next_check(...)`
+- documentar qualquer nova regra de agendamento com os criterios usados para
+  separar `Ate 1h`, `Ate 6h` e `Ate 24h`
+
+---
+
 ## Score hibrido v2 em espera e foco em analise temporal
 
 Data:

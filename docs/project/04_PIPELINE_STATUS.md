@@ -68,6 +68,21 @@ O objetivo e manter uma leitura simples de:
     minima no tempo esperado
   - `recovery_low` mostra falha de cobertura ja consumada em posts mais antigos
 
+#### Revisao de `next_check`
+
+- Status: prioridade alta
+- Sinais observados no dashboard:
+  - `Ate 1h = 48`
+  - `Ate 6h = 199`
+  - `Ate 24h = 430`
+- Leitura preliminar:
+  - os numeros sugerem que a regra atual de `next_check` precisa de revisao
+  - ainda falta entender qual faixa de atraso deve orientar a nova regra de
+    agendamento
+- Proximo passo:
+  - analisar distribuicao por banda, idade do post e cobertura minima antes de
+    alterar `calculate_next_check(...)`
+
 ### 1.3 Backfill offline de `legacy_low` - fase 1
 
 - Status: concluida

@@ -26,6 +26,7 @@
 - [ ] Monitorar semanalmente videos indisponiveis em `v_dashboard_unavailable_video_review` e confirmar manualmente candidatos quando necessario.
 - [ ] Auditar os `9` posts residuais do cleanup temporario do guardrail antes de retomar o scheduler; `4` deles ja constam como possiveis dead posts.
 - [ ] Monitorar o cleanup temporario do guardrail ate `warm_8_30d` e `old_30d_plus` chegarem a `3` checagens, e `new_0_3d` e `recent_4_7d` chegarem a `2`.
+- [ ] Prioridade alta: revisar a regra de geracao de `next_check` com base nos sinais operacionais do worker horario. Sinais observados: `Ate 1h = 48`, `Ate 6h = 199`, `Ate 24h = 430`.
 
 ## Visualizacao / Estudos de mercado
 
