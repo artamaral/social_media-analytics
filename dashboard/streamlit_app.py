@@ -181,6 +181,73 @@ def inject_theme() -> None:
             font-weight: 800;
             text-transform: uppercase;
         }
+
+        .dq-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .dq-kpi-card {
+            background: var(--card-dark);
+            color: var(--text);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-top: 4px solid var(--accent);
+            padding: 1rem 1.05rem 1.05rem;
+            min-height: 230px;
+            overflow: hidden;
+        }
+
+        .dq-kpi-title {
+            font-size: 0.95rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0;
+        }
+
+        .dq-kpi-value {
+            font-size: 2.35rem;
+            line-height: 1.05;
+            font-weight: 900;
+            margin-top: 0.35rem;
+        }
+
+        .dq-kpi-subtitle {
+            margin-top: 0.45rem;
+            color: var(--muted);
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+
+        .dq-chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+            margin-top: 0.9rem;
+        }
+
+        .dq-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.35rem 0.65rem;
+            border-radius: 999px;
+            background: #252733;
+            color: var(--text);
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+
+        .dq-chip strong {
+            font-size: 0.85rem;
+            color: var(--text);
+        }
+
+        .dq-detail {
+            margin-top: 1rem;
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -242,6 +309,21 @@ def metric_card_grid(cards: list[str], class_name: str = "fenabrave-card-grid") 
     st.markdown(
         f'<div class="{escape(class_name)}">' + "".join(cards) + "</div>",
         unsafe_allow_html=True,
+    )
+
+
+def dq_kpi_card(title: str, value: str, subtitle: str, accent_color: str, chips: list[tuple[str, str]]) -> str:
+    chip_html = "".join(
+        f'<span class="dq-chip">{escape(label)} <strong>{escape(amount)}</strong></span>'
+        for label, amount in chips
+    )
+    return (
+        f'<div class="dq-kpi-card" style="border-top-color: {escape(accent_color)};">'
+        f'<div class="dq-kpi-title">{escape(title)}</div>'
+        f'<div class="dq-kpi-value">{escape(value)}</div>'
+        f'<div class="dq-kpi-subtitle">{escape(subtitle)}</div>'
+        f'<div class="dq-chip-row">{chip_html}</div>'
+        "</div>"
     )
 
 
@@ -372,42 +454,79 @@ def render_data_quality_cards(
     col1, col2 = st.columns(2)
 
     if guardrail_rows:
+        total_guardrail_posts = sum(int(row.get("total_posts") or 0) for row in guardrail_rows)
         legacy_posts = sum(
             int(row.get("total_posts") or 0)
             for row in guardrail_rows
             if row.get("is_legacy_guardrail")
         )
-        under_minimum = sum(int(row.get("total_posts") or 0) for row in guardrail_rows)
-        legacy_ready = legacy_posts == 0
+        chips = [
+            ("Novos", str(sum(int(row.get("total_posts") or 0) for row in guardrail_rows if row.get("video_age_bucket") == "new_0_3d"))),
+            ("Recentes", str(sum(int(row.get("total_posts") or 0) for row in guardrail_rows if row.get("video_age_bucket") == "recent_4_7d"))),
+            ("Em aquecimento", str(sum(int(row.get("total_posts") or 0) for row in guardrail_rows if row.get("video_age_bucket") == "warm_8_30d"))),
+            ("Legado", str(sum(int(row.get("total_posts") or 0) for row in guardrail_rows if row.get("video_age_bucket") == "old_30d_plus"))),
+        ]
         with col1:
-            status_card(
-                "Legado guardrail",
-                legacy_posts,
-                "ok" if legacy_ready else "warning",
-                "LG",
+            st.markdown(
+                dq_kpi_card(
+                    "Cobertura de legado",
+                    format_int(total_guardrail_posts),
+                    "Posts com menos de 3 checagens",
+                    "#f2c14e",
+                    chips,
+                ),
+                unsafe_allow_html=True,
             )
-            st.caption(f"{under_minimum} posts abaixo de 3 checagens.")
+            st.caption(f"Posts de legado com baixa cobertura: {format_int(legacy_posts)}.")
     else:
         with col1:
-            status_card("Legado guardrail", "Erro", "danger", "LG")
-            st.caption("View v_dashboard_guardrail_coverage_status indisponivel.")
+            st.markdown(
+                dq_kpi_card(
+                    "Cobertura de legado",
+                    "Erro",
+                    "View v_dashboard_guardrail_coverage_status indisponivel.",
+                    "#f2c14e",
+                    [("Novos", "--"), ("Recentes", "--"), ("Em aquecimento", "--"), ("Legado", "--")],
+                ),
+                unsafe_allow_html=True,
+            )
 
     if dead_posts:
-        pending_review = int(dead_posts.get("pending_human_review") or 0)
         total_dead_posts = int(dead_posts.get("total_dead_posts") or 0)
+        pending_review = int(dead_posts.get("pending_human_review") or 0)
+        confirmed = int(dead_posts.get("confirmed_unavailable") or 0)
+        candidates = int(dead_posts.get("unavailable_candidates") or 0)
         review_ready = bool(dead_posts.get("dead_posts_review_ready"))
+        chips = [
+            ("Pendente de revisão", str(pending_review)),
+            ("Confirmados", str(confirmed)),
+            ("Candidatos", str(candidates)),
+            ("Validação pronta", "Sim" if review_ready else "Não"),
+        ]
         with col2:
-            status_card(
-                "Posts mortos",
-                pending_review,
-                "ok" if review_ready else "warning",
-                "PM",
+            st.markdown(
+                dq_kpi_card(
+                    "Posts mortos e validação humana",
+                    format_int(total_dead_posts),
+                    "Total de posts mortos monitorados",
+                    "#ff8069",
+                    chips,
+                ),
+                unsafe_allow_html=True,
             )
-            st.caption(f"{total_dead_posts} posts mortos/candidatos monitorados.")
+            st.caption(f"Pendentes de revisão humana: {format_int(pending_review)}.")
     else:
         with col2:
-            status_card("Posts mortos", "Erro", "danger", "PM")
-            st.caption("View v_dashboard_dead_post_validation_status indisponivel.")
+            st.markdown(
+                dq_kpi_card(
+                    "Posts mortos e validação humana",
+                    "Erro",
+                    "View v_dashboard_dead_post_validation_status indisponivel.",
+                    "#ff8069",
+                    [("Pendente de revisão", "--"), ("Confirmados", "--"), ("Candidatos", "--"), ("Validação pronta", "--")],
+                ),
+                unsafe_allow_html=True,
+            )
 
 
 def load_data_quality_context() -> tuple[list[dict[str, Any]], dict[str, Any] | None, list[str]]:
@@ -421,29 +540,28 @@ def render_data_quality_raw_tables(
     guardrail_rows: list[dict[str, Any]],
     dead_posts: dict[str, Any] | None,
 ) -> None:
-    if guardrail_rows:
-        guardrail_rows = sorted(
-            guardrail_rows,
-            key=lambda row: (int(row.get("bucket_sort") or 0), int(row.get("total_checagens") or 0)),
-        )
-        st.write("")
-        st.markdown("### Legado guardrail")
-        st.dataframe(
-            guardrail_rows,
-            use_container_width=True,
-            hide_index=True,
-            column_order=["intervalo_video", "total_checagens", "total_posts"],
-            column_config={
-                "intervalo_video": "Intervalo do video",
-                "total_checagens": "Total de checagens",
-                "total_posts": "Total de posts",
-            },
-        )
-    if dead_posts:
-        st.write("")
-        st.markdown("### Posts mortos e validacao humana")
-        st.dataframe([dead_posts], use_container_width=True)
-        return
+    with st.expander("Detalhamento tecnico", expanded=False):
+        if guardrail_rows:
+            guardrail_rows = sorted(
+                guardrail_rows,
+                key=lambda row: (int(row.get("bucket_sort") or 0), int(row.get("total_checagens") or 0)),
+            )
+            st.markdown("### Legado guardrail")
+            st.dataframe(
+                guardrail_rows,
+                use_container_width=True,
+                hide_index=True,
+                column_order=["intervalo_video", "total_checagens", "total_posts"],
+                column_config={
+                    "intervalo_video": "Intervalo do video",
+                    "total_checagens": "Total de checagens",
+                    "total_posts": "Total de posts",
+                },
+            )
+        if dead_posts:
+            st.write("")
+            st.markdown("### Posts mortos e validacao humana")
+            st.dataframe([dead_posts], use_container_width=True)
 
 
 def render_overview() -> None:
