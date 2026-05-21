@@ -47,6 +47,8 @@ O objetivo e manter uma leitura simples de:
 - `next_check` controlado no SQL
 - FIFO dentro da banda
 - refill global entre bandas quando ha sobra de cota
+- monitoramento indireto do worker deve usar evidencia no banco, nao apenas
+  retorno do script; ver `docs/social_media/28_WORKER_HEALTH_MONITORING_SPEC.md`
 
 ### 1.3 Backfill offline de `legacy_low` - fase 1
 

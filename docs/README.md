@@ -37,6 +37,7 @@ considerada incompleta.
 ### Operacao e status
 
 - [04_PIPELINE_STATUS.md](/C:/social_media-analytics/docs/project/04_PIPELINE_STATUS.md)
+- [28_WORKER_HEALTH_MONITORING_SPEC.md](/C:/social_media-analytics/docs/social_media/28_WORKER_HEALTH_MONITORING_SPEC.md)
 - [07_QUEUE_VALIDATION_CHECKLIST.md](/C:/social_media-analytics/docs/social_media/07_QUEUE_VALIDATION_CHECKLIST.md)
 - [08_QUEUE_CAPACITY_TEST.md](/C:/social_media-analytics/docs/social_media/08_QUEUE_CAPACITY_TEST.md)
 - [09_QUEUE_SLICING_AND_RESCHEDULING.md](/C:/social_media-analytics/docs/social_media/09_QUEUE_SLICING_AND_RESCHEDULING.md)
