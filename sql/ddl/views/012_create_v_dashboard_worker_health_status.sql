@@ -3,7 +3,7 @@ drop view if exists public.v_dashboard_worker_health_status;
 create view public.v_dashboard_worker_health_status as
 with latest_snapshot as (
   select
-    max(created_at) as ultima_evidencia_de_execucao
+    max(collected_at) as ultima_evidencia_de_execucao
   from public.post_metrics_history
 ),
 classified as (
