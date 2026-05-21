@@ -321,6 +321,36 @@ Regra importante:
   `Descoberta de novos posts`
 - o segundo worker deve usar `posts.created_at` como evidencia de descoberta
 
+Para o worker de `Atualizacao de posts`, o subtipo `Sinais operacionais` deve
+priorizar KPIs de fluxo e risco de cobertura, nao volume bruto de lote:
+
+- `itens_atrasados`
+  - mede quantos posts ja passaram do `next_check` alem da tolerancia definida
+  - responde se o worker horario esta conseguindo respeitar o agendamento
+- `at_risk_bootstrap`
+  - mede posts novos em risco de nao atingir cobertura minima no tempo esperado
+  - antecipa degradacao antes de virar passivo consolidado
+- `recovery_low`
+  - mede posts mais antigos que ja ficaram abaixo da cobertura minima
+  - representa falha de cobertura ja consumada
+
+Sinais que nao devem ser KPI principal neste bloco:
+
+- `fila_itens_prontos`
+  - a view de lote continua desenhada para devolver `50` linhas e esse total
+    nao representa bem a saude real do fluxo
+- `falhas_recentes_24h`
+  - sobrepoe a leitura ja coberta por `Posts mortos` e validacao humana
+
+Leitura correta dos blocos:
+
+- `Monitoramento de posts sem checagem`
+  - mostra estoque e cobertura acumulada
+- `Sinais operacionais`
+  - mostra fluxo, atraso e risco de degradacao do worker horario
+- `Posts mortos`
+  - mostra indisponibilidade e validacao humana
+
 ## GPT dentro do dashboard
 
 Se um GPT/assistente for implementado dentro do Streamlit, ele nao deve depender de "ler a tela" de forma implicita. O app deve montar explicitamente um pacote de contexto com os dados relevantes da pagina atual.

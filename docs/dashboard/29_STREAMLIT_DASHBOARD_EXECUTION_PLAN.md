@@ -321,13 +321,13 @@ Escopo inicial:
 - 3 blocos principais:
   - `Integridade da coleta`
   - `Evidencia de processamento`
-  - `Heartbeat operacional`
+  - `Sinais operacionais`
 - 5 sinais visiveis:
   - `Ultimo snapshot`
   - `Posts atualizados nas ultimas 24h`
-  - `Fila com movimento`
-  - `Atraso da execucao`
-  - `Falhas recentes`
+  - `Posts descobertos nas ultimas 24h`
+  - `Tempo da ultima coleta`
+  - `Tempo da ultima descoberta`
 
 Contrato sugerido:
 
@@ -348,9 +348,9 @@ Campos minimos esperados:
 - `ultima_evidencia_de_execucao`
 - `posts_atualizados_24h`
 - `idade_da_ultima_evidencia_minutos`
-- `fila_itens_prontos`
-- `fila_itens_atrasados`
-- `falhas_recentes_24h`
+- `ultima_descoberta_de_post`
+- `novos_posts_24h`
+- `idade_da_ultima_descoberta_minutos`
 - `status_code`
 - `status_label`
 
@@ -360,6 +360,37 @@ Leitura correta da fase atual:
 - o worker de `Descoberta de novos posts` deve aparecer no Streamlit com rotulo proprio
 - a view dedicada do segundo worker deve usar `posts.created_at` como evidencia de descoberta
 
+Escopo revisado para `Sinais operacionais` do worker horario:
+
+- nao usar `fila_itens_prontos` como KPI principal
+  - a `v_post_update_queue_batch` continua desenhada para devolver lote cheio e
+    esse numero mascara a composicao real do fluxo
+- nao usar `falhas_recentes_24h` como KPI principal
+  - esse sinal sobrepoe o bloco de `Posts mortos e validacao humana`
+- priorizar os 3 KPIs abaixo:
+  - `itens_atrasados`
+  - `at_risk_bootstrap`
+  - `recovery_low`
+
+Leitura esperada:
+
+- `itens_atrasados`
+  - mostra se o worker horario esta respeitando `next_check`
+- `at_risk_bootstrap`
+  - mostra posts novos em risco de nao atingir cobertura minima no tempo
+    esperado
+- `recovery_low`
+  - mostra posts mais antigos que ja ficaram abaixo da cobertura minima
+
+Separacao semantica obrigatoria:
+
+- `Monitoramento de posts sem checagem`
+  - KPI de estoque e cobertura acumulada
+- `Sinais operacionais`
+  - KPI de fluxo, atraso e risco
+- `Posts mortos e validacao humana`
+  - KPI de indisponibilidade e acao manual
+
 Passo a passo de implementacao:
 
 1. criar e validar a view unica antes de pensar em detalhamento por tabela
@@ -368,6 +399,15 @@ Passo a passo de implementacao:
 4. aplicar cache no mesmo TTL das outras paginas
 5. testar comportamento com view ausente, nulos e zeros
 6. so depois discutir filtros, tabelas auxiliares ou drill-down
+
+Sequencia minima de execucao:
+
+1. criar primeiro a view de `Integridade da coleta` para `Atualizacao de posts`
+2. criar a view de `Descoberta de novos posts`
+3. criar a view ou contrato de `Sinais operacionais` do worker horario com
+   `itens_atrasados`, `at_risk_bootstrap` e `recovery_low`
+4. ligar cada bloco no Streamlit sem tabela detalhada no primeiro momento
+5. validar texto, cor e semantica antes de abrir detalhamento tecnico
 
 Regra de economia de tokens:
 
