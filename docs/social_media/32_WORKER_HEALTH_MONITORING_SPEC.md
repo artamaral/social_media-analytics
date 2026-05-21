@@ -185,4 +185,3 @@ Antes de considerar essa leitura pronta:
 - confirmar que a fila muda entre leituras
 - confirmar que a ausencia de insert altera o status para `atencao` ou `nok`
 - confirmar que a representacao visual usa a mesma cor em toda a interface
-
