@@ -475,11 +475,11 @@ def worker_panel_grid(panels: list[str]) -> None:
 
 def normalize_worker_tone(status_code: str) -> str:
     return {
-        "ok": "ok",
-        "atencao": "warning",
-        "warning": "warning",
-        "nok": "danger",
-        "danger": "danger",
+        "ok": "ok-green",
+        "atencao": "alert-yellow",
+        "warning": "alert-yellow",
+        "nok": "alert-red",
+        "danger": "alert-red",
     }.get(status_code, "neutral")
 
 
@@ -871,13 +871,17 @@ def render_collection_integrity_section() -> None:
 
     if worker_status:
         raw_status_code = str(worker_status.get("status_code") or "atencao").lower()
-        snapshot_value = format_timestamp_br(worker_status.get("ultima_evidencia_de_execucao"))
+        snapshot_value = str(
+            worker_status.get("ultima_evidencia_de_execucao_br")
+            or format_timestamp_br(worker_status.get("ultima_evidencia_de_execucao"))
+        )
         updated_posts = format_int(worker_status.get("posts_atualizados_24h"))
         delay_minutes = f"{format_int(worker_status.get('idade_da_ultima_evidencia_minutos'))} min"
         queue_ready = format_int(worker_status.get("fila_itens_prontos"))
         queue_delayed = format_int(worker_status.get("fila_itens_atrasados"))
         recent_failures = format_int(worker_status.get("falhas_recentes_24h"))
         status_label = str(worker_status.get("status_label") or "Sem classificacao")
+        status_reason = str(worker_status.get("status_reason") or "Sem detalhe adicional.")
     else:
         raw_status_code = "atencao"
         snapshot_value = "--"
@@ -887,13 +891,14 @@ def render_collection_integrity_section() -> None:
         queue_delayed = "--"
         recent_failures = "--"
         status_label = "Aguardando a view consolidada"
+        status_reason = "A view ainda nao retornou a justificativa do estado."
 
     panels = [
         worker_panel_html(
             "Integridade da coleta",
             "Leitura executiva do estado geral da coleta automatica.",
             [
-                worker_stat_html("Status geral", status_label, "Leitura consolidada do estado operacional."),
+                worker_stat_html("Status geral", status_label, status_reason),
                 worker_stat_html("Tempo de ultima coleta", delay_minutes, "Tempo desde a ultima coleta validada."),
             ],
             "#ff8069",
