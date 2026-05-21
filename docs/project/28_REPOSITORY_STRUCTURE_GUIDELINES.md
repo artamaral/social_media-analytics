@@ -440,6 +440,48 @@ Antes de criar um arquivo novo, responder:
 
 - manter junto do fluxo local, nunca como centro da estrutura do projeto
 
+## Regra de branches para criacao e atualizacao de arquivos
+
+A `main` e a fonte canonica para documentacao geral, decisoes tecnicas,
+roadmap, status operacional, indices e regras estruturais.
+
+Branches de feature podem manter documentos de trabalho enquanto a entrega
+esta em descoberta ou implementacao, mas nao devem reter por muito tempo
+decisoes que ja viraram verdade do projeto.
+
+### Criar arquivo novo
+
+- se o arquivo descreve uma ideia, experimento visual ou proposta ainda nao
+  implementada, criar na branch da feature correspondente
+- se o arquivo descreve uma decisao aprovada, contrato de dados, runbook
+  operacional, roadmap ou status real do projeto, criar ou sincronizar na
+  `main`
+- arquivos de design ainda nao implementados podem permanecer apenas na branch
+  de feature ate virarem execucao aprovada
+
+### Atualizar arquivo existente
+
+Antes de alterar um documento existente, verificar:
+
+1. o arquivo e especifico da feature?
+2. o arquivo e uma fonte global de verdade do projeto?
+3. a alteracao deve existir na `main` agora?
+
+Se a alteracao afetar `README.md`, `docs/README.md`, roadmap, status,
+decisoes tecnicas, regras de workflow ou contrato de dados aprovado, a mudanca
+deve ser levada para a `main` no mesmo ciclo de trabalho ou em um commit de
+documentacao separado.
+
+### Sincronizacao entre branches
+
+- trazer `main` para a branch de feature antes de sessoes relevantes de trabalho
+- levar docs globais da feature para `main` quando um marco funcional for
+  validado
+- preferir commits pequenos de documentacao quando o codigo da feature ainda
+  nao deve entrar na `main`
+- deixar na branch de feature apenas documentos de proposta, design ou
+  experimento que ainda nao representam estado real do projeto
+
 ## Mapeamento dos arquivos atuais
 
 ### Documentacao em `docs/project/`
@@ -483,6 +525,7 @@ Antes de criar um arquivo novo, responder:
 ### Documentacao em `docs/dashboard/`
 
 - `16_ONLINE_DASHBOARD_SUPABASE_SPEC.md`
+- `29_STREAMLIT_DASHBOARD_EXECUTION_PLAN.md`
 
 ### Documentacao em `docs/data_model/`
 

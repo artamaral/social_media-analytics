@@ -14,6 +14,8 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 
 - [ ] Avaliar e garantir que os posts estao sendo atualizados.
 - [x] Confirmar que posts nao estavam sendo atualizados e que o novo codigo esta rodando.
+- [ ] Auditar residual do cleanup temporario do guardrail antes de retomar o scheduler; restam `9` posts, sendo `4` ja listados como possiveis dead posts.
+- [ ] Padronizar exclusao de posts confirmados como dead/unavailable nas views e metricas antes de considerar o guardrail limpo.
 - [ ] Monitorar conclusao do cleanup temporario do guardrail: `warm_8_30d` e `old_30d_plus` ate `3` checagens; `new_0_3d` e `recent_4_7d` ate `2` checagens.
 - [ ] Executar teste pendente descrito em `08_QUEUE_CAPACITY_TEST.md` e `09_QUEUE_SLICING_AND_RESCHEDULING.md`.
 - [ ] Garantir que scraper percorre todos creators.

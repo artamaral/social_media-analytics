@@ -32,9 +32,14 @@ O objetivo e manter uma leitura simples de:
 - Status: operacional
 - Implementacao principal: `scripts/cloud_run/postMetrics/main.py`
 - Fonte da fila: `public.v_post_update_queue_batch`
-- Lote atual: `40` posts por execucao
-- Validacao de custo: sem aumento relevante de custo no Cloud Run apos alguns
-  dias em producao
+- Lote atual: `50` posts por execucao
+- Guardrail atual: ate `6` posts com menos de `3` checagens
+- Fila normal atual: ate `44` posts por bandas de prioridade
+- Validacao de custo:
+  - lote `40`: sem aumento relevante de custo no Cloud Run apos alguns dias em
+    producao
+  - lote `50`: em validacao controlada; risco esperado baixo porque a chamada
+    `videos.list` continua em uma unica requisicao ate `50` IDs
 
 #### Comportamento validado
 
@@ -130,7 +135,7 @@ O objetivo e manter uma leitura simples de:
 
 #### Cleanup temporario do guardrail
 
-- Status: em execucao controlada via Windows Scheduler
+- Status: pausado pelo usuario apos reducao forte do backlog operacional
 - Tarefa: `guardrail-cleanup-backfill`
 - Frequencia: a cada `10` minutos
 - Script: `scripts/offline_backfill/legacy_low_backfill_phase1.py`
@@ -152,11 +157,30 @@ Baseline inicial registrado em `2026-05-19 17h`:
 | old_30d_plus | 1 | 1 |
 | old_30d_plus | 2 | 806 |
 
+Resultado parcial apos pausa:
+
+| video_age_bucket | total_checagens | total_posts |
+| --- | ---: | ---: |
+| warm_8_30d | 2 | 6 |
+| old_30d_plus | 1 | 1 |
+| old_30d_plus | 2 | 2 |
+
+Leitura atual:
+
+- restam `9` posts no alvo do cleanup temporario
+- `4` dos `9` posts ja constam como possiveis dead posts, ainda com baixa
+  cobertura
+- posts confirmados manualmente como dead/unavailable continuam aparecendo em
+  outras metricas, portanto a exclusao por status ainda nao esta padronizada
+  em toda a camada analitica
+
 Proxima avaliacao:
 
-- comparar este baseline contra nova leitura apos algumas horas de scheduler
-- pausar a tarefa quando warm/old abaixo de `3` e new/recent abaixo de `2`
-  estiverem zerados
+- auditar os `9` posts residuais antes de retomar o scheduler
+- confirmar manualmente candidatos dead e marcar `status = 'unavailable'`
+  quando aplicavel
+- revisar views e metricas operacionais para excluir confirmados como
+  `unavailable` quando a analise nao for uma auditoria de indisponibilidade
 
 #### Guarda de cobertura minima
 
@@ -286,7 +310,7 @@ Proxima avaliacao:
 
 ### 3.1 Direcao atual
 
-- Status: estrategia definida, app inicial ainda nao implementado
+- Status: estrategia definida, app inicial criado na branch `codex/dashboard-streamlit-mvp`
 - Solucao atual: Streamlit Community Cloud
 - Fonte de dados: Supabase sob demanda
 - Documento principal: `docs/dashboard/16_ONLINE_DASHBOARD_SUPABASE_SPEC.md`
@@ -314,7 +338,6 @@ Proxima avaliacao:
 
 ### 3.4 Proximos checkpoints desta frente
 
-- criar o app Streamlit inicial
 - implementar overview, creators e crescimento semanal
 - expor indicadores de qualidade dos dados antes dos rankings
 - manter consumo sob demanda do Supabase sem expor `service role key`
