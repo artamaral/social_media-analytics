@@ -70,6 +70,14 @@ def inject_theme() -> None:
             font-size: 0.9rem;
         }
 
+        .page-subtitle {
+            color: var(--muted);
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-top: -0.35rem;
+            margin-bottom: 1rem;
+        }
+
         .metric-card {
             background: var(--card);
             color: var(--text-dark);
@@ -189,6 +197,24 @@ FENABRAVE_PICTOS = {
 }
 
 
+def page_header(title: str, subtitle: str | None = None, badge: str | None = None) -> None:
+    badge_html = f'<span class="status-pill">{escape(badge)}</span>' if badge else ""
+    subtitle_html = f"<small>{escape(subtitle)}</small>" if subtitle else ""
+    st.markdown(
+        (
+            '<div class="dashboard-title">'
+            f"<div><h1>{escape(title)}</h1>{subtitle_html}</div>"
+            f"{badge_html}"
+            "</div>"
+        ),
+        unsafe_allow_html=True,
+    )
+
+
+def page_subtitle(text: str) -> None:
+    st.markdown(f'<div class="page-subtitle">{escape(text)}</div>', unsafe_allow_html=True)
+
+
 def metric_card_html(title: str, value: str, caption: str, picto: str, accent_color: str | None = None) -> str:
     picto_style = f' style="color: {accent_color};"' if accent_color else ""
     return (
@@ -212,6 +238,13 @@ def metric_card(title: str, value: str, caption: str, picto: str, accent_color: 
     )
 
 
+def metric_card_grid(cards: list[str], class_name: str = "fenabrave-card-grid") -> None:
+    st.markdown(
+        f'<div class="{escape(class_name)}">' + "".join(cards) + "</div>",
+        unsafe_allow_html=True,
+    )
+
+
 def status_card(title: str, value: Any, status: str, picto: str) -> None:
     status_color = {
         "ok": "#98df96",
@@ -219,33 +252,36 @@ def status_card(title: str, value: Any, status: str, picto: str) -> None:
         "danger": "#ff6f61",
         "neutral": "#aeb4bf",
     }.get(status, "#aeb4bf")
-    st.markdown(
-        f"""
-        <div class="metric-card">
-            <div class="metric-card-header">{title}</div>
-            <div class="metric-card-body">
-                <div class="metric-value">
-                    <span>{value}</span>
-                    <span class="metric-picto" style="color: {status_color};">{picto}</span>
-                </div>
-                <div class="metric-caption">Status de confiabilidade</div>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    metric_card(title, str(value), "Status de confiabilidade", picto, status_color)
+
+
+def section_card_html(title: str, body: str) -> str:
+    return (
+        '<div class="section-card">'
+        f"<h3>{escape(title)}</h3>"
+        f"<p>{escape(body)}</p>"
+        "</div>"
     )
 
 
 def placeholder_card(title: str, body: str) -> None:
     st.markdown(
-        f"""
-        <div class="section-card">
-            <h3>{title}</h3>
-            <p>{body}</p>
-        </div>
-        """,
+        section_card_html(title, body),
         unsafe_allow_html=True,
     )
+
+
+def apply_plotly_theme(fig: Any, legend_title: str = "Categoria") -> Any:
+    fig.update_layout(
+        paper_bgcolor="#15171c",
+        plot_bgcolor="#24272f",
+        font_color="#f5f7fa",
+        legend_title_text=legend_title,
+        margin=dict(l=16, r=16, t=24, b=16),
+    )
+    fig.update_xaxes(type="category", gridcolor="#343844")
+    fig.update_yaxes(gridcolor="#343844")
+    return fig
 
 
 def get_secret(name: str) -> str | None:
@@ -412,17 +448,10 @@ def render_data_quality_raw_tables(
 
 def render_overview() -> None:
     guardrail_rows, dead_posts, errors = load_data_quality_context()
-    st.markdown(
-        """
-        <div class="dashboard-title">
-            <div>
-                <h1>Social Media Analytics</h1>
-                <small>Dashboard interno para estudos de mercado automotivo</small>
-            </div>
-            <span class="status-pill">Setup inicial</span>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    page_header(
+        "Social Media Analytics",
+        "Dashboard interno para estudos de mercado automotivo",
+        "Setup inicial",
     )
 
     render_connection_notice(errors[0] if errors else None)
@@ -449,7 +478,7 @@ def render_placeholder_page(title: str, description: str) -> None:
 
 def render_data_quality_page() -> None:
     guardrail_rows, dead_posts, errors = load_data_quality_context()
-    st.title("Data quality")
+    page_header("Data quality", "Confiabilidade operacional antes das análises")
     render_connection_notice(errors[0] if errors else None)
     render_data_quality_cards(guardrail_rows, dead_posts, errors)
     render_data_quality_raw_tables(guardrail_rows, dead_posts)
@@ -482,8 +511,8 @@ def format_month_label(period: pd.Timestamp) -> str:
 
 def render_fenabrave_page() -> None:
     rows, error = get_view_rows("v_dashboard_fenabrave_monthly_segments")
-    st.title("Fenabrave")
-    st.markdown("### Emplacamento Automóveis (vendas diretas e venda varejo)")
+    page_header("Fenabrave")
+    page_subtitle("Emplacamento Automóveis (vendas diretas e venda varejo)")
     render_connection_notice(error)
 
     if not rows:
@@ -505,7 +534,7 @@ def render_fenabrave_page() -> None:
     latest_df = df[df["reference_period"] == latest_period].sort_values("segment_sort")
     period_options = df.sort_values("reference_period")["reference_period"].drop_duplicates().tolist()
     selected_period = st.selectbox(
-        "Mes dos blocos",
+        "Mês dos blocos",
         period_options,
         index=len(period_options) - 1,
         format_func=format_month_label,
@@ -515,7 +544,7 @@ def render_fenabrave_page() -> None:
         "current_year_accumulated_units"
     ].to_dict()
 
-    st.caption(f"Mes de referencia: {format_month_label(latest_period)}")
+    st.caption(f"Mês de referência: {format_month_label(latest_period)}")
 
     cards = []
     for _, row in selected_df.iterrows():
@@ -534,10 +563,7 @@ def render_fenabrave_page() -> None:
             )
         )
 
-    st.markdown(
-        '<div class="fenabrave-card-grid">' + "".join(cards) + "</div>",
-        unsafe_allow_html=True,
-    )
+    metric_card_grid(cards)
 
     st.write("")
     st.markdown("### Resultados mensais por categoria")
@@ -559,15 +585,7 @@ def render_fenabrave_page() -> None:
             "segment_label": "Categoria",
         },
     )
-    fig.update_layout(
-        paper_bgcolor="#15171c",
-        plot_bgcolor="#24272f",
-        font_color="#f5f7fa",
-        legend_title_text="Categoria",
-        margin=dict(l=16, r=16, t=24, b=16),
-    )
-    fig.update_xaxes(type="category", gridcolor="#343844")
-    fig.update_yaxes(gridcolor="#343844")
+    apply_plotly_theme(fig)
     st.plotly_chart(fig, use_container_width=True)
 
 

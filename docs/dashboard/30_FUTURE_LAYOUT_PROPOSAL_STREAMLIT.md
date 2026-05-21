@@ -1,158 +1,377 @@
-# Proposta de layout futuro (referência visual enviada em 2026-05-20)
+# Proposta de Layout Futuro do Streamlit
+
+Referência visual registrada a partir do mockup enviado em 2026-05-20.
+
+Este documento pertence à branch `codex/dashboard-streamlit-mvp` enquanto a proposta visual ainda não estiver implementada. Ele deve ir para a `main` somente quando deixar de ser ideia de design e virar contrato real do dashboard.
 
 ## Objetivo
-Registrar a referência de UI enviada pelo time como **proposta futura** do dashboard e avaliar se é viável implementar com Streamlit + bibliotecas Python já usadas no repositório.
 
-## Veredito de viabilidade
-**Sim, é viável** implementar o layout proposto usando:
-- `streamlit` (estrutura de páginas, colunas, containers, filtros e tabelas interativas);
-- `plotly` (gráficos de linha, barras, rosca e sparklines);
-- `pandas` (modelagem e transformação dos dados);
-- CSS customizado injetado via `st.markdown(..., unsafe_allow_html=True)` para aproximar identidade visual (sidebar escura, cards, badges e tipografia).
+Registrar a direção visual futura do dashboard e organizar a implementação de forma faseada, usando o stack atual:
 
-Bibliotecas já presentes no projeto (`dashboard/requirements.txt`) cobrem praticamente tudo que aparece no mockup.
+- `streamlit` para estrutura de páginas, navegação, filtros e tabelas
+- `plotly` para gráficos de barras, linhas, rosca e séries temporais
+- `pandas` para transformação e modelagem dos dados no app
+- CSS customizado via `st.markdown(..., unsafe_allow_html=True)` para aproximar a identidade visual
 
-## Mapeamento do mockup para recursos técnicos
+## Veredito de Viabilidade
 
-### 1) Sidebar fixa com navegação
-- **Possível em Streamlit** com `st.sidebar` + controle de página por `radio/selectbox` (ou multipage nativo).
-- Estilização escura e destaque do item ativo: possível via CSS customizado.
+É viável seguir a direção do mockup com Streamlit, desde que ele seja tratado como referência de alta fidelidade, não como requisito pixel-perfect imediato.
 
-### 2) Barra superior com filtros globais
-- **Possível** usando `st.columns` para distribuir filtros (`selectbox`, `multiselect`, `date_input`).
-- Botões "Filtrar" e "Exportar": `st.button` + geração CSV em memória com `st.download_button`.
+O stack atual já cobre o necessário para:
 
-### 3) Cards de KPI (Overview e Creator Detail)
-- **Possível** com `st.metric` ou cards HTML/CSS como já existe em `dashboard/streamlit_app.py`.
-- Delta positivo/negativo e indicadores em cor: possível com lógica condicional e classes CSS.
+- sidebar escura
+- cards de KPI
+- grids visuais
+- filtros globais
+- tabelas interativas
+- gráficos com Plotly
+- estados de erro, vazio e conexão
+- blocos futuros de insights
 
-### 4) Tabelas de ranking/outliers
-- **Possível** com `st.dataframe` (ordenação, largura fluida, colunas configuradas).
-- Paginação "estética" igual ao mockup não é nativa; opções:
-  1. paginação lógica manual em pandas;
-  2. componente customizado (maior esforço).
+## Limitações Práticas
 
-### 5) Gráficos de evolução, distribuição e tendências
-- **Possível** com Plotly:
-  - linhas multi-série (views/subscribers/engagement);
-  - barras agrupadas;
-  - pizza/rosca para distribuição;
-  - mini sparklines para cards laterais.
+- Streamlit não oferece liberdade total de layout como React.
+- CSS global precisa ser controlado para não afetar componentes nativos.
+- Paginação rica, animações e interações complexas podem exigir componentes customizados.
+- Algumas páginas do mockup dependem de views SQL que ainda não existem.
 
-### 6) Blocos de IA insights
-- **Possível** como cards com prioridade/severidade (`success`, `warning`, `danger`) usando HTML/CSS.
-- Botão "Gerar insights" pode acionar pipeline já existente no backend (ou placeholder inicial).
+## Mapeamento do Mockup
 
-### 7) Data Health / qualidade de dados
-- **Possível** com cards de status, percentuais e tabelas resumidas.
-- Já existe base técnica no app atual para guardrail/posts mortos, reduzindo esforço inicial.
+### 1. Sidebar Fixa
 
-## Limitações práticas (não bloqueantes)
-1. **Pixel-perfect** do mockup pode exigir iterações de CSS (Streamlit não é framework front-end livre como React).
-2. Alguns comportamentos avançados (ex.: drag-and-drop complexo, paginação rica nativa, animações detalhadas) podem exigir componente customizado.
-3. Consistência visual depende de padronizar tokens de design (cores, espaçamentos, tipografia) em um único bloco de tema.
+Viável com `st.sidebar` e navegação por `radio` ou multipage nativo.
 
-## Estratégia recomendada de implementação
+Uso recomendado agora:
 
-### Fase 1 — Estrutura visual (rápida)
-- Implementar navegação lateral e páginas: Overview, Creator Ranking, Creator Detail, Content Analytics, Outliers, Niche Trends, AI Insights, Data Health.
-- Criar tema base (cores, cards, tabela, filtros).
-- Ligar dados reais apenas onde já houver view consolidada.
+- manter navegação simples
+- destacar apenas páginas com dado real ou placeholder explícito
+- evitar excesso de páginas antes dos contratos SQL
 
-### Fase 2 — Componentes analíticos
-- Construir KPIs e gráficos por página com Plotly.
-- Incluir exportação CSV e estados de loading/empty/error.
-- Padronizar formatação (número, %, variação por período).
+### 2. Barra Superior com Filtros
 
-### Fase 3 — Refino e escala
-- Melhorar UX (responsividade, densidade, tooltips, performance).
-- Introduzir componentes customizados apenas se houver gap crítico de UX.
-- Definir baseline de performance e monitorar tempo de carregamento por página.
+Viável com `st.columns`, `selectbox`, `multiselect`, `date_input` e botões.
 
-## Conclusão
-A proposta é **tecnicamente factível** com o stack atual do projeto, sem necessidade obrigatória de trocar Streamlit nesta etapa. O principal cuidado é tratar o mockup como **guia visual** (alta fidelidade), e não como requisito de pixel-perfect imediato.
+Uso recomendado agora:
 
+- filtros por página, não uma barra global ainda
+- filtros globais só quando mais de uma página usar o mesmo período/nicho
 
-## Extração de métricas visíveis no mockup (por view)
+### 3. Cards de KPI
 
-Observação: os valores abaixo foram lidos visualmente da imagem de referência e devem ser tratados como **exemplo de layout**, não como contrato de negócio.
+Viável com HTML/CSS customizado, já iniciado no app atual.
 
-### View 1 — Overview
-Métricas visíveis no cabeçalho:
-- Creators Ativos: **285**
-- Novos Vídeos: **124**
-- Crescimento Médio: **+3.6 p.p.**
-- Engajamento Médio: **3.2%**
-- Creators em Aceleração: **28**
-- Nicho em Alta: **Elétricos** com **+18.5%**
+Uso recomendado agora:
 
-Blocos adicionais visíveis:
-- Evolução temporal de Views, Subscribers, Vídeos e Engajamento.
-- Lista “Top Movers (Crescimento de Views)”.
-- Bloco “Insights Rápidos” com cards de trend/oportunidade/atenção.
+- criar helper único para cards
+- padronizar título, valor, legenda, picto e cor
+- evitar HTML duplicado por página
 
-### View 2 — Creator Ranking
-Métricas e colunas visíveis:
-- Tabela com creator, subnicho, subscribers, variação de views, engajamento, vídeos e score.
-- Paginação no rodapé e filtro por período/plataforma/nicho/subnicho/tipo de creator.
+### 4. Tabelas de Ranking e Outliers
 
-### View 3 — Creator Detail
-Métricas visíveis:
-- Subscribers: **1.45M**
-- Views Growth (30d): **+42.1%**
-- Engajamento: **4.2%**
-- Vídeos (30d): **8**
-- Frequência: **1.1 vídeos/dia**
-- “Desde”: **2012**
+Viável com `st.dataframe`.
 
-Blocos adicionais visíveis:
-- Evolução de métricas por aba (Views/Conteúdo/Tendências/Audiência etc.).
-- Top vídeos.
-- Distribuição de conteúdo.
-- Insights do creator (IA).
+Uso recomendado agora:
 
-### View 4 — Content Analytics
-Métricas/estrutura visível:
-- Tabela de desempenho de conteúdo com colunas de growth, engajamento, outlier score e data.
-- Filtros por subnicho/tipo de conteúdo/tipo de vídeo.
+- usar tabelas nativas
+- formatar colunas
+- adiar paginação customizada
 
-### View 5 — Outliers
-Métricas/estrutura visível:
-- Tabela com growth, esperado, outlier score e baseline por vídeo.
-- Resumo com cards (ex.: “Outliers encontrados”, “Score médio”, “% acima do esperado”).
+### 5. Gráficos
 
-### View 6 — Niche Trends
-Métricas visíveis:
-- Tabela por subnicho com creators, vídeos, avg growth, engajamento e aceleração.
-- Blocos laterais “Subnicho em Alta” (ex.: Elétricos +18.5%) e “Acelerando Mais”.
+Viável com Plotly.
 
-### View 7 — AI Insights
-Estrutura visível:
-- Cards de insights por categoria (tendência, oportunidade, alerta, recomendação).
-- Bloco de “Resumo Executivo (IA)” e botão para gerar relatório.
+Uso recomendado agora:
 
-### View 8 — Data Health
-Métricas visíveis:
-- Pipeline status (scraper/processamento/enriquecimento/agregações).
-- Gaps de coleta (itens sem coleta e histórico).
-- Qualidade dos dados com score geral (ex.: **92%**).
-- Resumo de cobertura (creators, posts, registros, cobertura 30d).
+- criar função comum de tema Plotly
+- aplicar fundo, fonte, grid e margens de forma consistente
+- não repetir `fig.update_layout` em cada página
 
-## Alinhamento com a documentação atual
+### 6. Blocos de IA Insights
+
+Viável, mas fora do MVP visual imediato.
+
+Pré-condições:
+
+- definir quais views podem alimentar o contexto
+- impedir SQL arbitrário
+- montar `context packet` por página
+- registrar data de referência e filtros usados
+
+### 7. Data Health
+
+Viável e já alinhado ao app atual.
+
+Contrato inicial:
+
+- `v_dashboard_guardrail_coverage_status`
+- `v_dashboard_dead_post_validation_status`
+
+## Métricas Visíveis no Mockup
+
+Os valores abaixo foram lidos visualmente da referência e são exemplos de layout, não contrato de negócio.
+
+### Overview
+
+- Creators ativos
+- Novos vídeos
+- Crescimento médio
+- Engajamento médio
+- Creators em aceleração
+- Nicho em alta
+- evolução temporal
+- top movers
+- insights rápidos
+
+### Creator Ranking
+
+- creator
+- subnicho
+- subscribers
+- variação de views
+- engajamento
+- vídeos
+- score
+
+### Creator Detail
+
+- subscribers
+- crescimento de views
+- engajamento
+- vídeos no período
+- frequência
+- desde quando o creator existe
+- top vídeos
+- distribuição de conteúdo
+
+### Content Analytics
+
+- desempenho por conteúdo
+- growth
+- engajamento
+- outlier score
+- data
+
+### Outliers
+
+- growth observado
+- valor esperado
+- outlier score
+- baseline por vídeo
+
+### Niche Trends
+
+- creators por subnicho
+- vídeos
+- crescimento médio
+- engajamento
+- aceleração
+
+### AI Insights
+
+- tendência
+- oportunidade
+- alerta
+- recomendação
+- resumo executivo
+
+### Data Health
+
+- status de pipeline
+- gaps de coleta
+- qualidade dos dados
+- cobertura por creators/posts/histórico
+
+## Alinhamento com a Documentação Atual
 
 ### Alinhado
-- **Overview com KPIs e visão operacional** está alinhado ao MVP descrito no spec de dashboard (creators, posts, views, engajamento e status de qualidade). 
-- **Creators/Ranking e Crescimento** estão alinhados com o escopo do MVP (comparativo de creators e crescimento semanal).
-- **Data Health/Data Quality** está alinhado com a exigência de indicadores na tela inicial e com a direção de qualidade operacional.
-- **Linguagem visual editorial** (sidebar escura, cards, contraste) está alinhada com a direção visual já documentada.
 
-### Parcialmente alinhado (exige formalização extra)
-- **AI Insights**: o spec atual descreve regras de uso de GPT no dashboard, mas o mockup adiciona produto visual mais completo (cards prontos, resumo executivo e fluxo de relatório). Deve virar item explícito de escopo funcional.
-- **Niche Trends e Outliers dedicados**: há referência conceitual na documentação, porém o detalhamento de métricas/queries por página ainda precisa virar contrato de dados (views SQL e definições de campo).
-- **Creator Detail avançado**: o mockup propõe uma profundidade analítica maior (top vídeos, distribuição, abas), acima do MVP inicial; recomenda-se fasear.
+- Overview com KPIs e visão operacional
+- Ranking de creators e crescimento semanal
+- Data Quality antes de análises fortes
+- linguagem visual escura, com cards e pictos
+- uso de Supabase sob demanda
 
-## Recomendação de ajuste documental
-Para reduzir ambiguidade entre mockup e entrega técnica:
-1. Atualizar o spec principal com uma tabela “Métrica -> definição -> view SQL -> periodicidade”.
-2. Marcar explicitamente o que é **MVP** vs **fase 2/3** para cada uma das 8 views do mockup.
-3. Fixar quais métricas são obrigatórias já na primeira versão (ex.: Data Quality principal, ranking creators, crescimento 7d).
+### Parcialmente Alinhado
+
+- AI Insights ainda precisa virar escopo funcional.
+- Niche Trends e Outliers precisam de contrato SQL.
+- Creator Detail avançado está acima do MVP inicial.
+
+## Plano de Implementação Proposto
+
+### Decisão de Escopo
+
+Implementar primeiro uma base visual reutilizável e páginas conectadas apenas quando já existir view SQL estável.
+
+Não implementar ainda:
+
+- AI Insights completo
+- Creator Detail avançado
+- Niche Trends completo
+- Outliers dedicado
+- paginação customizada
+- componentes Streamlit customizados
+
+Esses itens dependem de contrato de dados, definição de métricas e validação de valor analítico antes de virar UI.
+
+## Fase 0 - Preparação Visual
+
+Objetivo:
+
+- criar uma base visual consistente para todas as páginas atuais
+- reduzir HTML/CSS duplicado no app
+- aproximar o layout do mockup sem buscar pixel-perfect
+
+Tarefas:
+
+- criar helpers de UI para título, subtítulo, card, grid, seção, estado vazio e aviso de erro
+- centralizar tokens de design no bloco de tema
+- padronizar estilo Plotly
+- revisar a sidebar atual e manter navegação controlada
+- aplicar os helpers em `Overview`, `Data quality` e `Fenabrave`
+
+Critério de pronto:
+
+- páginas atuais usam os mesmos componentes base
+- não há HTML renderizado como texto
+- app compila sem erro
+- layout não quebra em desktop estreito
+- não há mudança de SQL
+
+## Fase 1 - MVP Visual Conectado
+
+Objetivo:
+
+- transformar o app atual em uma primeira experiência navegável com dados reais.
+
+Páginas no escopo:
+
+1. `Overview`
+   - KPIs de Data Quality
+   - bloco Fenabrave resumido
+   - placeholders explícitos para creators e crescimento
+
+2. `Data quality`
+   - KPI guardrail legado
+   - KPI posts mortos/validação
+   - tabelas brutas das views atuais
+
+3. `Fenabrave`
+   - blocos por categoria
+   - seletor de mês
+   - acumulado do ano sempre baseado no último mês disponível
+   - gráfico de barras mensal por categoria
+
+4. `Fila operacional`
+   - tabela de vídeos indisponíveis quando `v_dashboard_unavailable_video_review` estiver validada
+
+Views usadas:
+
+- `v_dashboard_guardrail_coverage_status`
+- `v_dashboard_dead_post_validation_status`
+- `v_dashboard_fenabrave_monthly_segments`
+- `v_dashboard_unavailable_video_review`
+
+Critério de pronto:
+
+- toda página do MVP consome apenas views aprovadas
+- erros de secrets/view aparecem como aviso amigável
+- carregamento usa cache com TTL documentado
+- não há escrita no Supabase
+
+## Fase 2 - Analytics Social Media
+
+Objetivo:
+
+- conectar telas de creators e vídeos depois de validar os contratos de dados.
+
+Páginas no escopo:
+
+1. `Creators`
+   - ranking de creators
+   - subscribers/views/posts quando disponíveis
+   - filtros simples
+
+2. `Vídeos em crescimento`
+   - ranking por crescimento 7d
+   - link do vídeo
+   - creator
+   - views atuais e delta
+
+3. `Hot now`
+   - somente após criação de `v_dashboard_hot_now`
+   - separar velocidade analítica da lógica operacional da fila
+
+Views usadas:
+
+- `v_dashboard_creator_summary`
+- `v_dashboard_post_growth_7d`
+- `v_dashboard_hot_now` ainda pendente
+
+Critério de pronto:
+
+- cada tabela tem ordenação padrão
+- números são formatados consistentemente
+- filtros não disparam consultas desnecessárias
+- Data Quality segue visível antes de conclusões analíticas fortes
+
+## Fase 3 - Mockup Avançado
+
+Objetivo:
+
+- aproximar as telas restantes do mockup depois de provar valor no MVP.
+
+Itens candidatos:
+
+- Creator Detail
+- Content Analytics
+- Outliers
+- Niche Trends
+- AI Insights
+- exportação CSV por página
+- resumo executivo gerado por GPT com `context packet`
+
+Pré-condição:
+
+- cada página deve ter contrato de dados documentado antes da implementação
+- nenhuma página deve depender de SQL arbitrário gerado pelo app
+- prompts/contextos de GPT devem citar views usadas e data de referência
+
+## Ordem Recomendada de Execução Imediata
+
+1. Refatorar componentes visuais comuns no `dashboard/streamlit_app.py`.
+2. Ajustar `Overview` para usar os componentes e mostrar somente blocos reais.
+3. Padronizar `Data quality` com os mesmos cards e tabelas.
+4. Manter `Fenabrave` como primeira página de referência visual conectada.
+5. Implementar `Fila operacional` com `v_dashboard_unavailable_video_review`.
+6. Depois disso, iniciar `Creators` e `Vídeos em crescimento`.
+
+## Regra de Controle
+
+Não criar página nova apenas porque ela existe no mockup.
+
+Criar página nova somente quando pelo menos uma destas condições for verdadeira:
+
+- a view SQL já existe e foi validada
+- a página é necessária para validar uma view em desenvolvimento
+- a página é um placeholder temporário explicitamente marcado como pendente
+
+## Primeiro Pacote de Implementação
+
+Commit alvo:
+
+```text
+refactor(dashboard): padroniza componentes visuais
+```
+
+Arquivos prováveis:
+
+- `dashboard/streamlit_app.py`
+- `docs/dashboard/30_FUTURE_LAYOUT_PROPOSAL_STREAMLIT.md`
+
+Resultado esperado:
+
+- base visual mais limpa
+- menos duplicação
+- componentes prontos para receber as próximas views
+- nenhuma mudança de banco
