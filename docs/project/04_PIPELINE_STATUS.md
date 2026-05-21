@@ -50,6 +50,24 @@ O objetivo e manter uma leitura simples de:
 - monitoramento indireto do worker deve usar evidencia no banco, nao apenas
   retorno do script; ver `docs/social_media/32_WORKER_HEALTH_MONITORING_SPEC.md`
 
+#### Leitura operacional priorizada
+
+- `fila_itens_prontos` nao deve ser usado como KPI principal do worker horario,
+  porque a view de lote continua devolvendo `50` linhas elegiveis por desenho e
+  esse numero mascara a composicao real do lote
+- `falhas_recentes_24h` nao deve ser KPI principal deste worker, porque
+  sobrepoe o sinal ja acompanhado em posts mortos e validacao humana
+- os sinais operacionais priorizados para o worker horario passam a ser:
+  - `itens_atrasados`
+  - `at_risk_bootstrap`
+  - `recovery_low`
+- leitura recomendada:
+  - `itens_atrasados` mede aderencia do worker ao agendamento definido em
+    `next_check`
+  - `at_risk_bootstrap` mostra posts novos em risco de nao atingir cobertura
+    minima no tempo esperado
+  - `recovery_low` mostra falha de cobertura ja consumada em posts mais antigos
+
 ### 1.3 Backfill offline de `legacy_low` - fase 1
 
 - Status: concluida
@@ -196,6 +214,8 @@ Proxima avaliacao:
     diagnosticos de monitoramento
   - acompanhar se a fatia de `4` slots e suficiente para manter o guardrail
     sob controle
+  - usar `itens_atrasados`, `at_risk_bootstrap` e `recovery_low` como trio
+    principal de sinais operacionais do worker horario
 
 #### Backfill legado fase 1
 

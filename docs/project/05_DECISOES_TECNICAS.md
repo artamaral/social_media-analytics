@@ -398,6 +398,65 @@ Documento de referencia:
 
 ---
 
+## Monitoramento operacional do worker horario por fluxo e risco de cobertura
+
+Data:
+
+- 2026-05-21
+
+Decisao:
+
+- o bloco de sinais operacionais do worker horario nao deve usar
+  `fila_itens_prontos` como KPI principal
+- o bloco de sinais operacionais do worker horario nao deve usar
+  `falhas_recentes_24h` como KPI principal
+- os tres KPIs iniciais priorizados passam a ser:
+  - `itens_atrasados`
+  - `at_risk_bootstrap`
+  - `recovery_low`
+
+Contexto:
+
+- a `v_post_update_queue_batch` continua sendo desenhada para devolver um lote
+  completo por execucao
+- por isso, `fila_itens_prontos` pode permanecer aparentemente saudavel mesmo
+  quando o lote esta mascarando itens pouco uteis, atraso real ou baixa
+  rotacao entre bandas
+- `falhas_recentes_24h` sobrepoe o problema ja acompanhado na camada de posts
+  mortos e validacao humana
+- os problemas historicos observados no projeto foram mais proximos de
+  capacidade, atraso e cobertura do que de volume bruto da fila:
+  - starvation em bandas intermediarias
+  - posts recentes presos com `1` coleta
+  - crescimento de passivo com menos de `3` checagens
+  - envelhecimento de posts para `recovery_low`
+
+Motivo:
+
+- medir o fluxo real do worker e nao apenas o volume aparente da view de lote
+- detectar cedo quando a capacidade horaria deixa de sustentar a cobertura
+  minima
+- separar causa operacional de efeito acumulado na camada de Data Quality
+
+Diretriz:
+
+- `Monitoramento de posts sem checagem` continua sendo KPI de estoque e
+  cobertura acumulada
+- `Sinais operacionais` deve medir fluxo, atraso e risco de degradacao
+- leitura recomendada:
+  - `itens_atrasados` responde se o worker esta respeitando `next_check`
+  - `at_risk_bootstrap` antecipa posts novos que podem falhar na cobertura
+    minima
+  - `recovery_low` mostra falha de cobertura ja consumada
+
+Impacto esperado:
+
+- leitura mais fiel da capacidade real do worker horario
+- melhor capacidade de avaliar se o bucket atual esta dimensionado
+- menor duplicacao de KPI entre fluxo operacional e posts mortos
+
+---
+
 ## Score hibrido v2 em espera e foco em analise temporal
 
 Data:

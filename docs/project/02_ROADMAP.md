@@ -23,6 +23,7 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 - [ ] Criar query de auditoria de coleta.
 - [ ] Detectar gaps de coleta por post.
 - [ ] Validar atualizacao de `collected_at`.
+- [ ] Implementar monitoramento operacional do worker horario com KPIs de fluxo: `itens_atrasados`, `at_risk_bootstrap` e `recovery_low`.
 
 ### Prioridade estrategica - modelo de priorizacao
 
