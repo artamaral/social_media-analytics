@@ -86,6 +86,7 @@ considerada incompleta.
 ### Estrategia e implementacao
 
 - [16_ONLINE_DASHBOARD_SUPABASE_SPEC.md](/C:/social_media-analytics/docs/dashboard/16_ONLINE_DASHBOARD_SUPABASE_SPEC.md)
+- [29_STREAMLIT_DASHBOARD_EXECUTION_PLAN.md](/C:/social_media-analytics/docs/dashboard/29_STREAMLIT_DASHBOARD_EXECUTION_PLAN.md)
 
 ## 4. Documentacao transversal
 

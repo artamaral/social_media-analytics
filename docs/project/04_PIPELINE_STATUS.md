@@ -310,7 +310,7 @@ Proxima avaliacao:
 
 ### 3.1 Direcao atual
 
-- Status: estrategia definida, app inicial ainda nao implementado
+- Status: estrategia definida, app inicial criado na branch `codex/dashboard-streamlit-mvp`
 - Solucao atual: Streamlit Community Cloud
 - Fonte de dados: Supabase sob demanda
 - Documento principal: `docs/dashboard/16_ONLINE_DASHBOARD_SUPABASE_SPEC.md`
@@ -320,21 +320,24 @@ Proxima avaliacao:
 - views principais ja definidas:
   - `v_dashboard_creator_summary`
   - `v_dashboard_post_growth_7d`
-  - `v_dashboard_data_quality_status`
+  - `v_dashboard_guardrail_coverage_status`
+  - `v_dashboard_dead_post_validation_status`
+  - `v_dashboard_unavailable_video_review`
 - principio mantido:
-  - qualidade dos dados deve aparecer antes dos rankings
+  - Data Quality deve aparecer antes dos rankings com 2 KPIs: legado guardrail e posts mortos/validacao
 
 ### 3.3 Estado atual
 
-- a camada SQL de consumo ja foi preparada
+- a camada SQL de consumo inicial ja foi preparada
 - a stack do dashboard ja foi decidida
 - o posicionamento como ferramenta interna de estudo de mercado ja foi
   confirmado
-- o app Streamlit inicial continua pendente
+- o app Streamlit inicial ja existe na branch `codex/dashboard-streamlit-mvp`
+- a conexao com Supabase via secrets ja foi validada no app
+- Data Quality esta sendo ajustado para usar dois KPIs operacionais
 
 ### 3.4 Proximos checkpoints desta frente
 
-- criar o app Streamlit inicial
 - implementar overview, creators e crescimento semanal
 - expor indicadores de qualidade dos dados antes dos rankings
 - manter consumo sob demanda do Supabase sem expor `service role key`

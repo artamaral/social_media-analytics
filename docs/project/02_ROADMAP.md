@@ -58,6 +58,7 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 - [x] Preparar camada SQL para dashboard online sob demanda no Supabase.
 - [x] Definir stack e deploy do dashboard online: Streamlit Community Cloud + Supabase.
 - [x] Confirmar conta Streamlit Community Cloud linkada ao GitHub.
+- [x] Validar conexao online do Streamlit com Supabase via secrets.
 
 ### MVP do app
 
@@ -67,9 +68,10 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 - [ ] Seguir plano de execucao do dashboard em `docs/dashboard/29_STREAMLIT_DASHBOARD_EXECUTION_PLAN.md`.
 - [ ] Implementar MVP online com overview, creators e crescimento semanal.
 - [ ] Exibir status de qualidade dos dados antes dos rankings.
-- [ ] Garantir que o app use Supabase sob demanda sem expor service role key.
+- [x] Garantir que o app use Supabase sob demanda sem expor service role key.
 - [ ] Criar app Streamlit inicial consumindo as views do Supabase.
 - [ ] Aplicar tema visual do dashboard com fundo em escala de cinza, sidebar escura, cards contrastados e pictos.
+- [ ] Aplicar views de Data Quality do dashboard: guardrail legado e posts mortos/validados.
 
 ### Direcao desta frente
 

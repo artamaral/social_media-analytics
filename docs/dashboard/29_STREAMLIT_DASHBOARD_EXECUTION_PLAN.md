@@ -54,6 +54,8 @@ Objetivo:
 Status:
 
 - conta Streamlit Community Cloud ja esta linkada ao GitHub
+- branch de trabalho criada: `codex/dashboard-streamlit-mvp`
+- placeholder inicial criado em `dashboard/streamlit_app.py`
 
 Tarefas:
 
@@ -73,7 +75,6 @@ Pendencias:
 
 - confirmar branch de deploy
 - confirmar caminho do arquivo principal
-- criar placeholder `dashboard/streamlit_app.py`
 - executar primeiro deploy vazio ou quase vazio
 
 ## Etapa 2 - Ligacao segura com Supabase
@@ -81,6 +82,17 @@ Pendencias:
 Objetivo:
 
 - permitir leitura sob demanda do Supabase sem expor credenciais sensiveis.
+
+Status:
+
+- metodo inicial definido: Supabase Python client com `SUPABASE_URL` e `SUPABASE_ANON_KEY`
+- app preparado para abrir mesmo sem secrets configurados
+- primeira leitura de data quality redesenhada para dois KPIs:
+  - `v_dashboard_guardrail_coverage_status`
+  - `v_dashboard_dead_post_validation_status`
+- cache inicial configurado com TTL de 300 segundos
+- conexao online validada no Streamlit Cloud
+- `v_dashboard_data_quality_status` foi validada, mas deixou de ser a view alvo do Data Quality do dashboard
 
 Tarefas:
 
@@ -111,11 +123,24 @@ Criterio de pronto:
 - Streamlit Cloud possui secrets configurados
 - nenhuma credencial real esta versionada
 
+Pendencias:
+
+- aplicar as novas views de Data Quality no Supabase
+- validar grants/RLS para `v_dashboard_guardrail_coverage_status`
+- validar grants/RLS para `v_dashboard_dead_post_validation_status`
+- testar retorno real das duas views no app online
+
 ## Etapa 3 - Analise de seguranca e permissao
 
 Objetivo:
 
 - reduzir risco antes de publicar o dashboard online.
+
+Status:
+
+- iniciada apos validacao da conexao com Supabase
+- a anon key ja conseguiu ler `v_dashboard_data_quality_status`
+- proximo passo e validar escopo minimo de leitura para as demais views do MVP
 
 Tarefas:
 
@@ -125,19 +150,25 @@ Tarefas:
 - validar que o app nao permite escrita no Supabase
 - revisar logs e prints para evitar vazamento de secrets
 - confirmar que tabelas brutas pesadas nao sao carregadas sem filtro
+- registrar resultado dos dois KPIs de data quality:
+  - posts legados abaixo de 3 checagens em `v_dashboard_guardrail_coverage_status`
+  - `pending_human_review` em `v_dashboard_dead_post_validation_status`
 
 Views minimas:
 
-- `public.v_dashboard_data_quality_status`
+- `public.v_dashboard_guardrail_coverage_status`
+- `public.v_dashboard_dead_post_validation_status`
 - `public.v_dashboard_creator_summary`
 - `public.v_dashboard_post_growth_7d`
 - `public.v_dashboard_unavailable_video_review`
+- `public.v_dashboard_fenabrave_monthly_segments`
 
 Criterio de pronto:
 
 - checklist de seguranca aprovado
 - consulta de leitura funciona
 - tentativa de escrita nao e necessaria nem implementada
+- Data Quality explicado pelos dois KPIs definidos, nao por checks genericos de frescor
 
 ## Etapa 4 - Validacao das views existentes
 
@@ -150,7 +181,30 @@ Tarefas:
 - executar no Supabase:
 
 ```sql
-SELECT * FROM public.v_dashboard_data_quality_status;
+SELECT * FROM public.v_dashboard_guardrail_coverage_status;
+```
+
+Resultado esperado para guardrail:
+
+```text
+intervalo_video | total_checagens | total_posts
+```
+
+Com intervalos em portugues:
+
+- `Novos: 0 a 3 dias`
+- `Recentes: 4 a 7 dias`
+- `Em aquecimento: 8 a 30 dias`
+- `Legado: mais de 30 dias`
+
+Observacao:
+
+- esta view usa `DROP VIEW IF EXISTS` antes de `CREATE VIEW`, porque o contrato de colunas mudou durante a evolucao do dashboard
+- ao reaplicar no Supabase SQL Editor, executar o arquivo completo
+- o arquivo tambem aplica `GRANT SELECT` para `anon` e `authenticated`
+
+```sql
+SELECT * FROM public.v_dashboard_dead_post_validation_status;
 ```
 
 ```sql
@@ -171,6 +225,12 @@ LIMIT 20;
 SELECT *
 FROM public.v_dashboard_unavailable_video_review
 LIMIT 20;
+```
+
+```sql
+SELECT *
+FROM public.v_dashboard_fenabrave_monthly_segments
+ORDER BY reference_period, segment_sort;
 ```
 
 - validar tempo de resposta
@@ -218,6 +278,33 @@ Criterio de pronto:
 - view retorna ranking temporal coerente
 - posts com historico insuficiente sao tratados explicitamente
 - view nao altera a fila operacional
+
+## Etapa 5.1 - Politica de refresh e contexto para GPT
+
+Objetivo:
+
+- registrar como os dados sao atualizados no Streamlit e preparar o desenho futuro de um GPT interno ao dashboard.
+
+Status:
+
+- app usa Supabase Python client com leitura direta de views
+- app nao usa RPC nas views atuais
+- app usa cache Streamlit com TTL inicial de `300` segundos
+- app nao faz polling automatico
+
+Tarefas:
+
+- manter TTL de `300` segundos como padrao inicial
+- adicionar futuramente botao manual de refresh por pagina
+- definir quais paginas podem montar contexto para GPT
+- criar funcao futura para gerar `context packet` por pagina
+- impedir qualquer execucao de SQL arbitrario pelo GPT
+
+Criterio de pronto:
+
+- politica de refresh documentada
+- contexto minimo para GPT documentado
+- fluxo de pergunta/resposta definido sem expor secrets
 
 ## Etapa 6 - App local Streamlit MVP
 
@@ -366,8 +453,9 @@ Primeiro sprint:
 
 - criar estrutura `dashboard/`
 - criar app Streamlit local com pagina Overview
-- conectar em `v_dashboard_data_quality_status`
-- exibir cards de data quality
+- conectar em `v_dashboard_guardrail_coverage_status`
+- conectar em `v_dashboard_dead_post_validation_status`
+- exibir os 2 cards de data quality
 - aplicar tema visual base
 - rodar localmente
 

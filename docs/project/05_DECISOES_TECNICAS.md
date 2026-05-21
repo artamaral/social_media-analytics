@@ -183,7 +183,7 @@ Views iniciais:
 
 - `v_dashboard_creator_summary`
 - `v_dashboard_post_growth_7d`
-- `v_dashboard_data_quality_status`
+- `v_dashboard_data_quality_status` foi a primeira view generica de validacao, mas nao e mais o contrato principal de Data Quality do dashboard
 
 Motivo:
 
@@ -231,7 +231,7 @@ Diretriz de implementacao:
 
 - guardar credenciais no Streamlit secrets
 - nunca usar service role key exposta em codigo ou navegador
-- consultar `v_dashboard_data_quality_status` antes de rankings
+- consultar os KPIs de Data Quality antes de rankings
 - usar filtros de periodo antes de carregar historico
 - usar cache com TTL curto para reduzir leituras repetidas no Supabase
 
@@ -268,6 +268,35 @@ Diretriz de implementacao:
 - usar cards com raio baixo, cabecalhos escuros e informacao densa
 - preservar legibilidade em tabelas e graficos
 - reservar cores fortes para sinal analitico: crescimento, alerta, erro e selecao
+
+---
+
+## Data Quality do dashboard com dois KPIs operacionais
+
+Data:
+
+- 2026-05-19
+
+Decisao:
+
+- o bloco de Data Quality do dashboard deve ter exatamente dois KPIs principais
+- KPI 1: legado guardrail, usando `v_dashboard_guardrail_coverage_status`
+- KPI 2: posts mortos e validacao humana, usando `v_dashboard_dead_post_validation_status`
+- a view generica `v_dashboard_data_quality_status` pode continuar existindo como auditoria auxiliar, mas nao deve guiar o bloco principal de Data Quality do app
+
+Motivo:
+
+- o objetivo do dashboard nao e corrigir todos os dados em tempo real
+- o objetivo e garantir que os dados relevantes para analise estao linkados e monitorados
+- o guardrail responde se existe legado/recovery abaixo da cobertura minima descrita em `25_MINIMUM_HISTORY_COVERAGE_GUARDRAIL_SPEC.md`
+- posts mortos precisam ser acompanhados pelo status de validacao humana, nao misturados com checks genericos de frescor
+
+Diretriz:
+
+- nao usar `posts_stale_24h` como bloqueio geral do dashboard
+- mostrar `recovery_low` como sinal principal de legado guardrail
+- mostrar `pending_human_review` como sinal principal de posts mortos
+- manter detalhes brutos das duas views visiveis na pagina Data Quality
 
 ---
 
