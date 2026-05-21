@@ -271,6 +271,63 @@ def inject_theme() -> None:
         .dq-detail {
             margin-top: 1rem;
         }
+
+        .worker-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .worker-panel {
+            background: var(--card-dark);
+            color: var(--text);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-top: 4px solid var(--accent);
+            padding: 1rem 1.05rem 1.05rem;
+            min-height: 240px;
+        }
+
+        .worker-panel-title {
+            font-size: 1.25rem;
+            font-weight: 900;
+            line-height: 1.1;
+            text-transform: uppercase;
+        }
+
+        .worker-panel-subtitle {
+            margin-top: 0.35rem;
+            color: var(--muted);
+            font-size: 0.92rem;
+            font-weight: 700;
+        }
+
+        .worker-stat {
+            margin-top: 0.9rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .worker-stat-label {
+            color: var(--muted);
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .worker-stat-value {
+            margin-top: 0.2rem;
+            font-size: 1.5rem;
+            font-weight: 900;
+            line-height: 1.1;
+        }
+
+        .worker-stat-caption {
+            margin-top: 0.25rem;
+            color: var(--muted);
+            font-size: 0.85rem;
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -385,6 +442,50 @@ def placeholder_card(title: str, body: str) -> None:
         section_card_html(title, body),
         unsafe_allow_html=True,
     )
+
+
+def worker_stat_html(label: str, value: str, caption: str, tone: str = "neutral") -> str:
+    chip_class = {
+        "ok": "ok-green",
+        "warning": "alert-yellow",
+        "danger": "alert-red",
+        "neutral": "neutral",
+    }.get(tone, "neutral")
+    return (
+        '<div class="worker-stat">'
+        f'<div class="worker-stat-label">{escape(label)}</div>'
+        f'<div class="worker-stat-value">{escape(value)}</div>'
+        f'<div class="worker-stat-caption">{escape(caption)}</div>'
+        f'<div class="dq-chip-row"><span class="dq-chip {escape(chip_class)}">{escape(value)}</span></div>'
+        "</div>"
+    )
+
+
+def worker_panel_html(title: str, subtitle: str, stats: list[str], accent_color: str) -> str:
+    return (
+        f'<div class="worker-panel" style="border-top-color: {escape(accent_color)};">'
+        f'<div class="worker-panel-title">{escape(title)}</div>'
+        f'<div class="worker-panel-subtitle">{escape(subtitle)}</div>'
+        f'{"".join(stats)}'
+        "</div>"
+    )
+
+
+def worker_panel_grid(panels: list[str]) -> None:
+    st.markdown(
+        '<div class="worker-grid">' + "".join(panels) + "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def normalize_worker_tone(status_code: str) -> str:
+    return {
+        "ok": "ok",
+        "atencao": "warning",
+        "warning": "warning",
+        "nok": "danger",
+        "danger": "danger",
+    }.get(status_code, "neutral")
 
 
 def apply_plotly_theme(fig: Any, legend_title: str = "Categoria") -> Any:
@@ -751,6 +852,92 @@ def render_fenabrave_page() -> None:
     st.plotly_chart(fig, use_container_width=True)
 
 
+def render_worker_health_page() -> None:
+    worker_status, error = get_single_row_view("v_dashboard_worker_health_status")
+    page_header("Saude do worker", "Monitoramento indireto do processamento")
+    render_connection_notice(error)
+
+    if worker_status:
+        status_code = normalize_worker_tone(str(worker_status.get("status_code") or "neutral").lower())
+        snapshot_value = str(worker_status.get("ultima_evidencia_de_execucao") or "--")
+        updated_posts = format_int(worker_status.get("posts_atualizados_24h"))
+        delay_minutes = format_int(worker_status.get("idade_da_ultima_evidencia_minutos"))
+        queue_ready = format_int(worker_status.get("fila_itens_prontos"))
+        queue_delayed = format_int(worker_status.get("fila_itens_atrasados"))
+        recent_failures = format_int(worker_status.get("falhas_recentes_24h"))
+        status_label = str(worker_status.get("status_label") or "Sem classificacao")
+    else:
+        status_code = "warning"
+        snapshot_value = "--"
+        updated_posts = "--"
+        delay_minutes = "--"
+        queue_ready = "--"
+        queue_delayed = "--"
+        recent_failures = "--"
+        status_label = "Aguardando a view consolidada"
+
+    panels = [
+        worker_panel_html(
+            "Saude do worker",
+            "Leitura executiva do estado geral do processamento.",
+            [
+                worker_stat_html("Status geral", status_label, "Leitura consolidada do heartbeat operacional.", status_code),
+                worker_stat_html("Atraso da execucao", delay_minutes, "Minutos desde a ultima evidencia observada.", status_code),
+            ],
+            "#ff8069",
+        ),
+        worker_panel_html(
+            "Evidencia de processamento",
+            "Sinais de que o worker realmente gerou efeito no banco.",
+            [
+                worker_stat_html("Ultimo snapshot", snapshot_value, "Maior evidencia recente em historico coletado.", status_code),
+                worker_stat_html("Posts atualizados 24h", updated_posts, "Posts distintos com nova coleta na janela.", status_code),
+            ],
+            "#98df96",
+        ),
+        worker_panel_html(
+            "Heartbeat operacional",
+            "Leitura de fila e sinais de degradacao recente.",
+            [
+                worker_stat_html("Fila com movimento", queue_ready, "Itens prontos para processamento na fila.", status_code),
+                worker_stat_html(
+                    "Falhas recentes",
+                    recent_failures,
+                    "Eventos recentes que merecem acompanhamento.",
+                    "warning" if recent_failures not in {"0", "--"} else "ok",
+                ),
+                worker_stat_html(
+                    "Fila atrasada",
+                    queue_delayed,
+                    "Itens ja vencidos ou sem giro esperado.",
+                    "warning" if queue_delayed not in {"0", "--"} else "ok",
+                ),
+            ],
+            "#f2c14e",
+        ),
+    ]
+    worker_panel_grid(panels)
+
+    st.write("")
+    with st.expander("Passo a passo enxuto de implementacao", expanded=True):
+        st.markdown(
+            """
+1. Consolidar no Supabase uma unica view `v_dashboard_worker_health_status`.
+2. Validar apenas os campos do card antes de pensar em tabelas detalhadas.
+3. Manter uma leitura por pagina com cache e sem polling automatico.
+4. Liberar primeiro os sinais executivos: ultimo snapshot, posts 24h, fila com movimento, atraso e falhas recentes.
+5. So depois adicionar detalhamento por fila, banda ou erro especifico.
+
+Para economizar tokens nas proximas sessoes:
+
+1. Pedir sempre alteracoes em um unico arquivo por vez quando a mudanca for visual.
+2. Trabalhar primeiro com a view consolidada, evitando discutir varias queries em paralelo.
+3. Validar o texto e a hierarquia dos cards antes de abrir o detalhamento tecnico.
+4. Usar prompts curtos do tipo: `ajuste apenas a pagina Saude do worker, sem ler outros arquivos`.
+"""
+        )
+
+
 inject_theme()
 
 with st.sidebar:
@@ -765,6 +952,7 @@ with st.sidebar:
             "Hot now",
             "Data quality",
             "Fenabrave",
+            "Saude do worker",
             "Sanitizacao operacional",
         ],
     )
@@ -781,6 +969,8 @@ elif page == "Data quality":
     render_data_quality_page()
 elif page == "Fenabrave":
     render_fenabrave_page()
+elif page == "Saude do worker":
+    render_worker_health_page()
 else:
     render_placeholder_page(
         "Sanitizacao operacional",

@@ -306,6 +306,71 @@ Criterio de pronto:
 - contexto minimo para GPT documentado
 - fluxo de pergunta/resposta definido sem expor secrets
 
+## Etapa 5.2 - Saude do worker no dashboard
+
+Objetivo:
+
+- adicionar uma pagina operacional para monitorar se o worker esta produzindo efeito real no banco, sem depender do retorno do script
+
+Escopo inicial:
+
+- pagina `Saude do worker`
+- 3 blocos principais:
+  - `Saude do worker`
+  - `Evidencia de processamento`
+  - `Heartbeat operacional`
+- 5 sinais visiveis:
+  - `Ultimo snapshot`
+  - `Posts atualizados nas ultimas 24h`
+  - `Fila com movimento`
+  - `Atraso da execucao`
+  - `Falhas recentes`
+
+Contrato sugerido:
+
+- uma unica view:
+
+```text
+public.v_dashboard_worker_health_status
+```
+
+Campos minimos esperados:
+
+- `ultima_evidencia_de_execucao`
+- `posts_atualizados_24h`
+- `idade_da_ultima_evidencia_minutos`
+- `fila_itens_prontos`
+- `fila_itens_atrasados`
+- `falhas_recentes_24h`
+- `status_code`
+- `status_label`
+
+Passo a passo de implementacao:
+
+1. criar e validar a view unica antes de pensar em detalhamento por tabela
+2. conectar a pagina Streamlit usando apenas `get_single_row_view`
+3. renderizar primeiro os 3 blocos com texto executivo
+4. aplicar cache no mesmo TTL das outras paginas
+5. testar comportamento com view ausente, nulos e zeros
+6. so depois discutir filtros, tabelas auxiliares ou drill-down
+
+Regra de economia de tokens:
+
+1. discutir primeiro o contrato da view, nao varias queries paralelas
+2. trabalhar um arquivo por vez quando a mudanca for apenas visual
+3. validar a hierarquia dos cards antes de abrir detalhamento tecnico
+4. manter prompts curtos e fechados, por exemplo:
+   - `ajuste apenas a pagina Saude do worker`
+   - `nao leia arquivos fora de dashboard/streamlit_app.py e docs/dashboard/`
+   - `nao refatore fora do escopo`
+
+Criterio de pronto:
+
+- a pagina carrega sem quebrar mesmo quando a view ainda nao existe
+- os 3 blocos aparecem com linguagem executiva clara
+- os 5 sinais principais ficam visiveis na primeira dobra
+- o app continua sem polling automatico e sem escrita no Supabase
+
 ## Etapa 6 - App local Streamlit MVP
 
 Objetivo:
@@ -325,6 +390,7 @@ Tarefas:
   - Videos em crescimento
   - Hot now
   - Data quality
+  - Saude do worker
   - Fila / videos indisponiveis
 - criar tratamento de erro para falha de conexao
 
