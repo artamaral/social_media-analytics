@@ -124,6 +124,32 @@ Se o worker retornar erro `new row violates row-level security policy`, aplicar
 novamente a migration `_up.sql` ou executar o bloco de grants/policy da
 documentacao de migration.
 
+## Status de implementacao
+
+Status:
+
+- implementado
+- testado ponta a ponta
+- validado em 2026-05-22
+
+Evidencias de validacao:
+
+- worker executado com `errors = 0`, `processed = 3` e `error_details = []`;
+- snapshots reais gravados em `creator_metrics_history` com
+  `source = 'youtube_channels_api'`;
+- trigger sincronizou `creators.followers`, `followers_collected_at`,
+  `followers_source`, `channel_view_count`, `channel_video_count` e
+  `hidden_subscriber_count`;
+- validacao confirmou creators atualizados como `garagem do bellote`,
+  `canal da mecanica`, `flatout`, `jacare racing`, `corte de giro` e
+  `fator premium`.
+
+Conclusao:
+
+- nao existe pendencia aberta no backlog para essa atividade;
+- proximas melhorias devem ser tratadas como novas tarefas, por exemplo views
+  analiticas de crescimento de followers por periodo.
+
 ## Analises suportadas
 
 Com os snapshots sera possivel medir:

@@ -25,7 +25,6 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 - [ ] Validar atualizacao de `collected_at`.
 - [ ] Implementar monitoramento operacional do worker horario com KPIs de fluxo: `itens_atrasados`, `at_risk_bootstrap` e `recovery_low`.
 - [ ] Prioridade alta: revisar a regra de calculo de `next_check` com base nos sinais operacionais do worker horario e nos intervalos observados no dashboard.
-- [ ] Implementar historico de followers de creators por snapshot com `creator_metrics_history` e sincronizacao do valor corrente em `creators`.
 
 ### Prioridade estrategica - modelo de priorizacao
 
@@ -39,6 +38,7 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 - [x] Tratar videos indisponiveis na YouTube API para evitar posts presos na fila. Implementado com tabela de falhas, RPC, view de dashboard e exclusao de `unavailable` da fila ativa.
 - [x] Implementar limpeza temporaria do backlog de guardrail. Rotina em execucao controlada via Windows Scheduler; proximo passo e monitorar conclusao.
 - [x] Pausar promocao do score hibrido `v2` para a fila ativa. O `v2` fica em segundo plano e a prioridade analitica passa a ser `hot now` temporal.
+- [x] Implementar historico de followers de creators por snapshot. Validado em 2026-05-22 com inserts reais em `creator_metrics_history` e sincronizacao dos campos correntes em `creators`.
 
 ## Frente 2. Dados de fontes externas
 
