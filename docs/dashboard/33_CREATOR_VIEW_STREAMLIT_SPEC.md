@@ -4,14 +4,14 @@ Data: 2026-05-22
 
 ## Objetivo
 
-Definir a primeira versao da view de criadores no Streamlit, usando a referencia
-visual recebida como direcao de layout e a documentacao atual do projeto como
-limite do contrato de dados.
+Definir a primeira versao das views de criadores no Streamlit, usando a
+referencia visual recebida como direcao de layout e a documentacao atual do
+projeto como limite do contrato de dados.
 
 Esta spec cobre:
 
 - leitura critica da referencia visual
-- proposta de view de criadores
+- proposta das duas views de criadores
 - campos ja disponiveis na documentacao atual
 - campos que ainda faltam no contrato SQL
 - diretriz para o mockup inicial no app
@@ -45,10 +45,13 @@ Pontos que merecem cuidado ao adaptar para a nossa realidade:
 Conclusao:
 
 - a view de criadores deve seguir a hierarquia estrutural da referencia
-- o ranking comparativo continua util, mas nao pode substituir os paineis
-  analiticos centrais
+- precisamos separar a experiencia em duas views distintas
+  - uma geral para leitura comparativa da carteira
+  - uma individual para leitura aprofundada de um criador
+- o ranking comparativo continua util, mas ele pertence principalmente a view
+  geral
 - a tabela de top videos deve existir na primeira versao da tela
-- o bloco inferior deve mostrar padrao de publicacao do criador
+- o bloco inferior de cadencia deve ser removido por enquanto
 - a tela deve assumir explicitamente os gaps do contrato de dados atual
 
 ## Comparacao direta com o que foi feito antes
@@ -74,13 +77,54 @@ Correcao adotada:
 - adicionar blocos analiticos sustentados por dados documentados
 - registrar de forma visivel os campos que ainda faltam
 
-## Proposta de view
+## Proposta de views
 
-Nome da pagina:
+Estrutura de navegacao:
 
 - `Criadores`
+  - `Visao geral`
+  - `Criador individual`
 
-Estrutura recomendada:
+### 1. View geral de criadores
+
+Objetivo:
+
+- comparar a carteira monitorada
+- priorizar onde vale aprofundar leitura
+- responder quem concentra volume, tamanho de audiencia e engajamento
+
+Blocos recomendados:
+
+1. Cabecalho da pagina
+   - titulo
+   - subtitulo curto
+   - banner executivo explicando o papel da tela
+
+2. Filtros compactos
+   - plataforma
+   - no futuro, nicho e recorte temporal agregado
+
+3. KPIs superiores
+   - criadores ativos
+   - seguidores monitorados
+   - total de videos
+   - total de views
+   - total de likes
+   - total de comentarios
+
+4. Ranking comparativo principal
+   - linhas densas por criador
+   - seguidores
+   - views totais
+   - engajamento medio
+
+### 2. View de criador individual
+
+Objetivo:
+
+- analisar profundamente apenas um criador
+- manter leitura temporal
+- abrir o bloco editorial dos top videos
 
 1. Cabecalho da pagina
    - titulo
@@ -94,31 +138,99 @@ Estrutura recomendada:
    - modo de ordenacao
 
 3. KPIs superiores
-   - criadores ativos
-   - seguidores monitorados
-   - views totais
-   - media de views por post
-   - engajamento medio
+   - seguidores
+   - rank de engajamento medio
+   - total de videos
+   - total de views
+   - total de likes
+   - total de comentarios
 
 4. Linha analitica principal
    - distribuicao de engajamento
    - views mensais do criador
    - top videos por views
 
-5. Bloco inferior
-   - padrao de publicacao por semana do mes e dia da semana
-
-6. Painel de detalhe do criador
+5. Painel de detalhe do criador
    - leitura operacional
    - detalhe analitico
    - bloco explicito de campos faltantes
 
-7. Ranking comparativo de apoio
-   - leitura densa por linha, sem virar tabela tecnica
-
-8. Expander tecnico
+6. Expander tecnico
    - lista dos campos usados no mockup
    - origem de cada campo
+
+## Dados exatos para os blocos analiticos
+
+### Grafico 1: distribuicao de engajamento
+
+Objetivo:
+
+- reproduzir o papel visual do grafico circular da imagem
+- mostrar como o engajamento do criador esta distribuido dentro do que o nosso
+  contrato atual permite
+
+Dados usados:
+
+- `public.v_dashboard_creator_summary.total_likes`
+- `public.v_dashboard_creator_summary.total_comments`
+
+Formula:
+
+- fatia 1 = `total_likes`
+- fatia 2 = `total_comments`
+
+Limite atual:
+
+- nao temos `total_shares`
+- nao temos `total_dislikes`
+
+### Grafico 2: serie temporal clara
+
+Objetivo:
+
+- responder como o volume do criador evolui ao longo do tempo
+- manter uma leitura simples e confiavel
+
+Dados usados:
+
+- `public.posts.post_date`
+- `public.posts.views`
+- `public.posts.likes`
+
+Agregacao proposta:
+
+- agrupar por mes calendario com base em `post_date`
+- serie principal = `sum(views)` por mes
+- serie secundaria = `sum(likes)` por mes
+
+Observacao:
+
+- este grafico deve sempre ser de um unico criador por vez
+- quando a ligacao SQL acontecer, o ideal e filtrar por `creator_id`
+
+### Tabela editorial: top videos por views
+
+Objetivo:
+
+- reproduzir o painel editorial mais forte da imagem
+- mostrar rapidamente quais videos puxam o desempenho do criador
+
+Dados usados:
+
+- `public.posts.title`
+- `public.posts.post_date`
+- `public.posts.views`
+- `public.posts.likes`
+- `public.posts.comments`
+- `public.posts.video_type`
+
+Ordenacao proposta:
+
+- ordenar por `views desc`
+
+Gap atual:
+
+- `post_url` ainda nao existe no contrato
 
 ## Campos documentados que ja podem ser usados
 
@@ -154,7 +266,7 @@ Campos da tabela de posts que ajudam a aproximar a imagem:
 | Campo | Origem | Uso na view |
 |---|---|---|
 | `title` | `public.posts` | tabela de top videos |
-| `post_date` | `public.posts` | tabela de top videos e cadencia |
+| `post_date` | `public.posts` | tabela de top videos e serie temporal |
 | `views` | `public.posts` | top videos e serie temporal |
 | `likes` | `public.posts` | distribuicao e serie temporal |
 | `comments` | `public.posts` | distribuicao e tabela |
@@ -194,9 +306,9 @@ No mockup inicial do Streamlit:
 
 - `subnicho` aparece como placeholder visual
 - `curva de followers` aparece como gap explicito
-- `media de views por post` e derivada localmente apenas para leitura visual
 - `top videos` usa apenas os campos ja documentados em `public.posts`
-- `cadencia de publicacao` usa mock de apoio ate existir um agregado SQL proprio
+- `rank de engajamento medio` e derivado localmente para leitura visual
+- a cadencia de publicacao foi removida ate existir uma base confiavel
 
 Regra importante:
 
@@ -245,12 +357,15 @@ Prioridade dos campos novos:
 O mockup da pagina deve:
 
 - usar a paleta cinza escuro + coral ja definida no dashboard
+- separar claramente a view geral da view individual
 - manter filtros compactos no topo
 - usar cards superiores para KPIs
-- reproduzir a composicao da referencia em quatro camadas
+- reproduzir a composicao da referencia com foco em
+  - distribuicao
+  - serie temporal
+  - tabela editorial
 - mostrar tabela de top videos por views
-- mostrar bloco inferior de cadencia
-- mostrar um painel lateral com o criador selecionado
+- mostrar um painel lateral com o criador selecionado na view individual
 - deixar claros os gaps do contrato de dados
 
 O mockup nao deve:
@@ -265,9 +380,9 @@ O mockup nao deve:
 Esta fase estara pronta quando:
 
 - a analise critica da referencia estiver registrada
-- os campos atuais e faltantes estiverem mapeados por bloco da tela
+- os campos atuais e faltantes estiverem mapeados por bloco das duas telas
 - a documentacao da view estiver criada
-- o app Streamlit tiver um mockup navegavel da pagina `Criadores`
+- o app Streamlit tiver um mockup navegavel das duas telas de `Criadores`
 - a comparacao entre mockup e imagem estiver explicitada
 
 ## Proximo passo recomendado

@@ -1681,6 +1681,15 @@ def get_creator_cadence_matrix(entity_name: str) -> pd.DataFrame:
     return pd.DataFrame(cadence_map.get(entity_name, cadence_map["Auto Mercado Brasil"]), columns=columns)
 
 
+def get_engagement_rank(rows: list[dict[str, Any]], entity_name: str) -> tuple[int, int]:
+    ranked_rows = sorted(rows, key=lambda row: float(row["engagement_rate_pct"]), reverse=True)
+    total = len(ranked_rows)
+    for index, row in enumerate(ranked_rows, start=1):
+        if row["entity_name"] == entity_name:
+            return index, total
+    return total, total
+
+
 def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> None:
     state = get_external_intake_mock_state()
     mock_entities = get_mock_entity_bank()
@@ -1923,15 +1932,15 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
         )
 
 
-def render_creator_page() -> None:
+def render_creator_detail_page() -> None:
     rows = get_creator_mock_rows()
     selected_name = st.session_state.get("creator_selected_name", rows[0]["entity_name"])
     selected_default = next((row for row in rows if row["entity_name"] == selected_name), rows[0])
 
-    page_header("Criadores", "Mockup guiado pela imagem de referencia e pelos campos atuais documentados")
+    page_header("Criador individual", "Leitura aprofundada de um criador por vez")
     process_banner(
         "Comparacao com a imagem de referencia",
-        "A referencia tem quatro camadas muito claras: filtros no topo, faixa de KPIs, miolo analitico com graficos e uma area larga para conteudo editorial. O mockup anterior cobria so parte disso. Esta versao replica essa estrutura em linguagem dark e deixa explicitos os campos que ainda faltam.",
+        "Para o criador individual, mantivemos tres elementos-chave da referencia: faixa superior de KPIs, miolo analitico com distribuicao e serie temporal, e tabela editorial com top videos. O bloco de cadencia foi removido porque ainda nao temos base confiavel para essa leitura.",
     )
     st.markdown(
         (
@@ -1972,21 +1981,16 @@ def render_creator_page() -> None:
     selected_row = next((row for row in working_rows if row["entity_name"] == selected_creator_name), working_rows[0] if working_rows else rows[0])
     monthly_df = get_creator_monthly_series(selected_row["entity_name"])
     top_videos_df = get_creator_top_videos(selected_row["entity_name"])
-    cadence_df = get_creator_cadence_matrix(selected_row["entity_name"])
-
-    total_followers = sum(int(row["followers"]) for row in working_rows)
-    total_posts = sum(int(row["post_count"]) for row in working_rows)
-    avg_engagement = round(sum(float(row["engagement_rate_pct"]) for row in working_rows) / max(len(working_rows), 1), 2)
-    total_views = sum(int(row["total_views"]) for row in working_rows)
-    avg_views_per_post = round(total_views / max(total_posts, 1))
+    engagement_rank, engagement_total = get_engagement_rank(working_rows or rows, selected_row["entity_name"])
 
     metric_card_grid(
         [
-            metric_card_html("Criadores ativos", format_int(len(working_rows)), f"Filtro atual: {selected_period}", "CR"),
-            metric_card_html("Seguidores monitorados", format_int(total_followers), "Campo atual da view resumida", "SG"),
-            metric_card_html("Views totais", format_int(total_views), "Soma dos criadores filtrados", "VW"),
-            metric_card_html("Media views por post", format_int(avg_views_per_post), "Derivada local da base atual", "MP"),
-            metric_card_html("Engajamento medio", f"{avg_engagement:.2f}%", "Media simples por criador", "ER"),
+            metric_card_html("Seguidores", format_int(selected_row["followers"]), "Campo followers da view resumida", "SG"),
+            metric_card_html("Rank de engajamento medio", f"{engagement_rank} de {engagement_total}", f"{float(selected_row['engagement_rate_pct']):.2f}% na base filtrada", "RK"),
+            metric_card_html("Total de videos", format_int(selected_row["post_count"]), "Quantidade monitorada para o criador", "VD"),
+            metric_card_html("Total de views", format_int(selected_row["total_views"]), "Acumulado do criador", "VW"),
+            metric_card_html("Total de likes", format_int(selected_row["total_likes"]), "Acumulado do criador", "LK"),
+            metric_card_html("Total de comentarios", format_int(selected_row["total_comments"]), "Acumulado do criador", "CM"),
         ],
         class_name="fenabrave-card-grid",
     )
@@ -2029,16 +2033,6 @@ def render_creator_page() -> None:
     )
     apply_plotly_theme(monthly_fig, legend_title="Serie")
 
-    cadence_matrix = cadence_df.set_index("dia_semana")[["sem_1", "sem_2", "sem_3", "sem_4", "sem_5"]]
-    cadence_fig = px.imshow(
-        cadence_matrix,
-        color_continuous_scale=["#24272f", "#6a3e38", "#ff8069"],
-        aspect="auto",
-        labels=dict(x="Semana do mes", y="Dia da semana", color="Posts"),
-    )
-    cadence_fig.update_xaxes(side="top")
-    apply_plotly_theme(cadence_fig, legend_title="Posts")
-
     top_videos_display = top_videos_df.copy()
     top_videos_display["post_date"] = top_videos_display["post_date"].apply(format_timestamp_br)
     top_videos_display["views"] = top_videos_display["views"].apply(format_int)
@@ -2060,20 +2054,18 @@ def render_creator_page() -> None:
         chart_left, chart_right = st.columns([0.95, 1.05])
         with chart_left:
             st.markdown("#### Distribuicao de engajamento")
-            st.caption("Reflete a logica circular da imagem, mas limitada aos campos atuais de likes e comentarios.")
+            st.caption("Dados usados: total_likes e total_comments do criador em v_dashboard_creator_summary.")
             st.plotly_chart(donut_fig, use_container_width=True)
         with chart_right:
             st.markdown("#### Views mensais do criador")
-            st.caption("Replica o painel temporal da referencia. Likes entram como segunda serie para enriquecer a leitura.")
+            st.caption("Dados usados: agregacao mensal por post_date com soma de views e soma de likes em public.posts.")
             st.plotly_chart(monthly_fig, use_container_width=True)
 
-        st.markdown("#### Quando esse criador publica")
-        st.caption("Adaptacao do bloco inferior da imagem. Aqui mostramos intensidade de publicacao por semana do mes e dia da semana.")
-        st.plotly_chart(cadence_fig, use_container_width=True)
+    engagement_display = f"{float(selected_row['engagement_rate_pct']):.2f}%"
 
     with right_col:
         st.markdown("#### Top videos por views")
-        st.caption("Equivalente ao painel editorial da imagem. Usa campos ja documentados da tabela public.posts.")
+        st.caption("Dados usados: title, post_date, views, likes, comments e video_type de public.posts.")
         st.dataframe(top_videos_display, use_container_width=True, hide_index=True)
 
         st.markdown("#### Leitura do criador em foco")
@@ -2086,7 +2078,7 @@ def render_creator_page() -> None:
                 f'<div class="creator-detail-card"><div class="creator-detail-label">Plataforma</div><div class="creator-detail-value">{escape(str(selected_row["platform"]))}</div></div>'
                 f'<div class="creator-detail-card"><div class="creator-detail-label">Canal</div><div class="creator-detail-value">{escape(str(selected_row["channel_id"]))}</div></div>'
                 f'<div class="creator-detail-card"><div class="creator-detail-label">Posts monitorados</div><div class="creator-detail-value">{escape(format_int(selected_row["post_count"]))}</div></div>'
-                f'<div class="creator-detail-card"><div class="creator-detail-label">Media views/post</div><div class="creator-detail-value">{escape(format_int(selected_row["avg_views_per_post"]))}</div></div>'
+                f'<div class="creator-detail-card"><div class="creator-detail-label">Engajamento medio</div><div class="creator-detail-value">{escape(engagement_display)}</div></div>'
                 f'<div class="creator-detail-card"><div class="creator-detail-label">Likes totais</div><div class="creator-detail-value">{escape(format_int(selected_row["total_likes"]))}</div></div>'
                 f'<div class="creator-detail-card"><div class="creator-detail-label">Comentarios totais</div><div class="creator-detail-value">{escape(format_int(selected_row["total_comments"]))}</div></div>'
                 f'<div class="creator-detail-card"><div class="creator-detail-label">Ultimo post</div><div class="creator-detail-value">{escape(format_timestamp_br(selected_row["latest_post_date"]))}</div></div>'
@@ -2107,8 +2099,71 @@ def render_creator_page() -> None:
             unsafe_allow_html=True,
         )
 
+    with st.expander("Campos usados no mockup", expanded=False):
+        st.dataframe(
+            pd.DataFrame(
+                [
+                    {"campo": "entity_name", "origem": "v_dashboard_creator_summary", "uso": "titulo e ranking"},
+                    {"campo": "niche", "origem": "v_dashboard_creator_summary", "uso": "filtro"},
+                    {"campo": "creator_type", "origem": "v_dashboard_creator_summary", "uso": "painel lateral"},
+                    {"campo": "platform", "origem": "v_dashboard_creator_summary", "uso": "filtro e detalhe"},
+                    {"campo": "username", "origem": "v_dashboard_creator_summary", "uso": "identificacao"},
+                    {"campo": "channel_id", "origem": "v_dashboard_creator_summary", "uso": "identificacao tecnica"},
+                    {"campo": "followers", "origem": "v_dashboard_creator_summary", "uso": "kpi e ranking"},
+                    {"campo": "post_count", "origem": "v_dashboard_creator_summary", "uso": "kpi e ranking"},
+                    {"campo": "total_views", "origem": "v_dashboard_creator_summary", "uso": "kpi e ranking"},
+                    {"campo": "total_likes", "origem": "v_dashboard_creator_summary", "uso": "painel lateral"},
+                    {"campo": "total_comments", "origem": "v_dashboard_creator_summary", "uso": "painel lateral"},
+                    {"campo": "engagement_rate_pct", "origem": "v_dashboard_creator_summary", "uso": "kpi e ranking"},
+                    {"campo": "latest_post_date", "origem": "v_dashboard_creator_summary", "uso": "detalhe"},
+                    {"campo": "latest_collected_at", "origem": "v_dashboard_creator_summary", "uso": "detalhe operacional"},
+                    {"campo": "is_active", "origem": "v_dashboard_creator_summary", "uso": "status"},
+                    {"campo": "title", "origem": "public.posts", "uso": "tabela de top videos"},
+                    {"campo": "post_date", "origem": "public.posts", "uso": "tabela e serie temporal"},
+                    {"campo": "views", "origem": "public.posts", "uso": "tabela de top videos e serie temporal"},
+                    {"campo": "likes", "origem": "public.posts", "uso": "distribuicao e serie temporal"},
+                    {"campo": "comments", "origem": "public.posts", "uso": "distribuicao e tabela"},
+                    {"campo": "video_type", "origem": "public.posts", "uso": "classificacao visual dos top videos"},
+                ]
+            ),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+
+def render_creator_overview_page() -> None:
+    rows = get_creator_mock_rows()
+    page_header("Visao geral de criadores", "Leitura comparativa da base monitorada")
+    process_banner(
+        "Papel desta view",
+        "Esta tela resume a carteira monitorada. Ela responde quem esta maior, quem engaja melhor e quem concentra mais volume, sem entrar ainda no detalhe editorial profundo de um unico criador.",
+    )
+
+    selected_platform = st.selectbox("Plataforma", ["todas", "youtube", "instagram", "tiktok"], index=1)
+    working_rows = rows if selected_platform == "todas" else [row for row in rows if row["platform"] == selected_platform]
+    working_rows = sorted(working_rows, key=lambda row: int(row["total_views"]), reverse=True)
+
+    total_followers = sum(int(row["followers"]) for row in working_rows)
+    total_posts = sum(int(row["post_count"]) for row in working_rows)
+    total_views = sum(int(row["total_views"]) for row in working_rows)
+    total_likes = sum(int(row["total_likes"]) for row in working_rows)
+    total_comments = sum(int(row["total_comments"]) for row in working_rows)
+    avg_engagement = round(sum(float(row["engagement_rate_pct"]) for row in working_rows) / max(len(working_rows), 1), 2)
+
+    metric_card_grid(
+        [
+            metric_card_html("Criadores ativos", format_int(len(working_rows)), "Base atual filtrada", "CR"),
+            metric_card_html("Seguidores monitorados", format_int(total_followers), "Soma dos criadores filtrados", "SG"),
+            metric_card_html("Total de videos", format_int(total_posts), "Posts monitorados na base", "VD"),
+            metric_card_html("Total de views", format_int(total_views), "Volume acumulado da carteira", "VW"),
+            metric_card_html("Total de likes", format_int(total_likes), "Interacoes acumuladas", "LK"),
+            metric_card_html("Total de comentarios", format_int(total_comments), "Interacoes acumuladas", "CM"),
+        ],
+        class_name="fenabrave-card-grid",
+    )
+
     st.markdown("#### Ranking comparativo")
-    st.caption("Esse bloco continua importante, mas agora entra como apoio lateral a leitura principal da imagem, nao como o centro absoluto da tela.")
+    st.caption(f"Base filtrada em {selected_platform}. Engajamento medio atual da carteira: {avg_engagement:.2f}%.")
     ranking_items = []
     for row in working_rows:
         engagement_label = f"{float(row['engagement_rate_pct']):.2f}%"
@@ -2137,42 +2192,11 @@ def render_creator_page() -> None:
     st.markdown(
         '<div class="creator-panel">'
         '<div class="creator-panel-title">Comparativo dos criadores filtrados</div>'
-        '<div class="creator-panel-subtitle">Mantivemos o ranking porque ele ajuda na priorizacao operacional, mas ele agora conversa com o restante da estrutura analitica em vez de substituir os paines da imagem.</div>'
+        '<div class="creator-panel-subtitle">Esta e a view geral. O detalhe temporal e editorial completo fica reservado para a tela de criador individual.</div>'
         f'<div class="creator-ranking-list">{"".join(ranking_items)}</div>'
         '</div>',
         unsafe_allow_html=True,
     )
-
-    with st.expander("Campos usados no mockup", expanded=False):
-        st.dataframe(
-            pd.DataFrame(
-                [
-                    {"campo": "entity_name", "origem": "v_dashboard_creator_summary", "uso": "titulo e ranking"},
-                    {"campo": "niche", "origem": "v_dashboard_creator_summary", "uso": "filtro"},
-                    {"campo": "creator_type", "origem": "v_dashboard_creator_summary", "uso": "painel lateral"},
-                    {"campo": "platform", "origem": "v_dashboard_creator_summary", "uso": "filtro e detalhe"},
-                    {"campo": "username", "origem": "v_dashboard_creator_summary", "uso": "identificacao"},
-                    {"campo": "channel_id", "origem": "v_dashboard_creator_summary", "uso": "identificacao tecnica"},
-                    {"campo": "followers", "origem": "v_dashboard_creator_summary", "uso": "kpi e ranking"},
-                    {"campo": "post_count", "origem": "v_dashboard_creator_summary", "uso": "kpi e ranking"},
-                    {"campo": "total_views", "origem": "v_dashboard_creator_summary", "uso": "kpi e ranking"},
-                    {"campo": "total_likes", "origem": "v_dashboard_creator_summary", "uso": "painel lateral"},
-                    {"campo": "total_comments", "origem": "v_dashboard_creator_summary", "uso": "painel lateral"},
-                    {"campo": "engagement_rate_pct", "origem": "v_dashboard_creator_summary", "uso": "kpi e ranking"},
-                    {"campo": "latest_post_date", "origem": "v_dashboard_creator_summary", "uso": "detalhe"},
-                    {"campo": "latest_collected_at", "origem": "v_dashboard_creator_summary", "uso": "detalhe operacional"},
-                    {"campo": "is_active", "origem": "v_dashboard_creator_summary", "uso": "status"},
-                    {"campo": "title", "origem": "public.posts", "uso": "tabela de top videos"},
-                    {"campo": "post_date", "origem": "public.posts", "uso": "tabela e bloco de cadencia"},
-                    {"campo": "views", "origem": "public.posts", "uso": "tabela de top videos e serie temporal"},
-                    {"campo": "likes", "origem": "public.posts", "uso": "distribuicao e serie temporal"},
-                    {"campo": "comments", "origem": "public.posts", "uso": "distribuicao e tabela"},
-                    {"campo": "video_type", "origem": "public.posts", "uso": "classificacao visual dos top videos"},
-                ]
-            ),
-            use_container_width=True,
-            hide_index=True,
-        )
 
 
 def render_fenabrave_page() -> None:
@@ -2434,13 +2458,22 @@ with st.sidebar:
     st.caption("Automotivo Americas")
     if "nav_page" not in st.session_state:
         st.session_state["nav_page"] = "Overview"
+    if "creators_subpage" not in st.session_state:
+        st.session_state["creators_subpage"] = "Visao geral"
+    if "creators_menu_open" not in st.session_state:
+        st.session_state["creators_menu_open"] = False
     if "cadastro_subpage" not in st.session_state:
         st.session_state["cadastro_subpage"] = "Criadores"
     if "cadastro_menu_open" not in st.session_state:
         st.session_state["cadastro_menu_open"] = False
 
     def sidebar_nav_button(label: str, page_value: str, selected_value: str | None = None) -> None:
-        active = st.session_state["nav_page"] == page_value if selected_value is None else st.session_state["cadastro_subpage"] == selected_value
+        if selected_value is None:
+            active = st.session_state["nav_page"] == page_value
+        elif page_value == "Creators":
+            active = st.session_state["nav_page"] == "Creators" and st.session_state["creators_subpage"] == selected_value
+        else:
+            active = st.session_state["nav_page"] == "Cadastro" and st.session_state["cadastro_subpage"] == selected_value
         button_kwargs = {
             "label": label,
             "use_container_width": True,
@@ -2452,17 +2485,49 @@ with st.sidebar:
                 st.session_state["nav_page"] = page_value
                 if page_value != "Cadastro":
                     st.session_state["cadastro_menu_open"] = False
+                if page_value != "Creators":
+                    st.session_state["creators_menu_open"] = False
             else:
                 st.session_state["nav_page"] = page_value
-                st.session_state["cadastro_subpage"] = selected_value
-                st.session_state["cadastro_menu_open"] = True
+                if page_value == "Creators":
+                    st.session_state["creators_subpage"] = selected_value
+                    st.session_state["creators_menu_open"] = True
+                else:
+                    st.session_state["cadastro_subpage"] = selected_value
+                    st.session_state["cadastro_menu_open"] = True
             st.rerun()
 
     sidebar_nav_button("Overview", "Overview")
-    sidebar_nav_button("Creators", "Creators")
     sidebar_nav_button("Videos em crescimento", "Videos em crescimento")
     sidebar_nav_button("Hot now", "Hot now")
     sidebar_nav_button("Data quality", "Data quality")
+
+    creators_active = st.session_state["nav_page"] == "Creators"
+    creators_open = st.session_state["creators_menu_open"] or creators_active
+    if st.button(
+        "Criadores",
+        use_container_width=True,
+        key="nav-creators-toggle",
+        type="primary" if creators_open else "secondary",
+    ):
+        st.session_state["creators_menu_open"] = not creators_open
+        st.session_state["nav_page"] = "Creators"
+        if st.session_state["creators_menu_open"] and st.session_state["creators_subpage"] not in {"Visao geral", "Criador individual"}:
+            st.session_state["creators_subpage"] = "Visao geral"
+        st.rerun()
+
+    if creators_open:
+        st.markdown('<div class="sidebar-nav-spacer"></div>', unsafe_allow_html=True)
+        child_indent = st.columns([0.12, 0.88])
+        with child_indent[0]:
+            st.write("")
+        with child_indent[1]:
+            sidebar_nav_button("Visao geral", "Creators", "Visao geral")
+        child_indent = st.columns([0.12, 0.88])
+        with child_indent[0]:
+            st.write("")
+        with child_indent[1]:
+            sidebar_nav_button("Criador individual", "Creators", "Criador individual")
 
     cadastro_active = st.session_state["nav_page"] == "Cadastro"
     cadastro_open = st.session_state["cadastro_menu_open"] or cadastro_active
@@ -2494,12 +2559,16 @@ with st.sidebar:
     sidebar_nav_button("Sanitizacao operacional", "Sanitizacao operacional")
 
 page = st.session_state["nav_page"]
+creators_subpage = st.session_state.get("creators_subpage", "Visao geral")
 cadastro_subpage = st.session_state.get("cadastro_subpage", "Criadores")
 
 if page == "Overview":
     render_overview()
 elif page == "Creators":
-    render_creator_page()
+    if creators_subpage == "Criador individual":
+        render_creator_detail_page()
+    else:
+        render_creator_overview_page()
 elif page == "Videos em crescimento":
     render_placeholder_page("Videos em crescimento", "Ranking semanal de crescimento usando v_dashboard_post_growth_7d.")
 elif page == "Hot now":
