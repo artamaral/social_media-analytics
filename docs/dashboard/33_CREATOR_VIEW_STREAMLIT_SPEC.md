@@ -184,12 +184,13 @@ Limite atual:
 - nao temos `total_shares`
 - nao temos `total_dislikes`
 
-### Grafico 2: serie temporal clara
+### Grafico 2: serie temporal semanal clara
 
 Objetivo:
 
-- responder como o volume do criador evolui ao longo do tempo
+- responder como o volume do criador cresce ou encolhe semana a semana
 - manter uma leitura simples e confiavel
+- evitar excesso de ruido diario e ao mesmo tempo nao alongar demais a leitura
 
 Dados usados:
 
@@ -199,14 +200,16 @@ Dados usados:
 
 Agregacao proposta:
 
-- agrupar por mes calendario com base em `post_date`
-- serie principal = `sum(views)` por mes
-- serie secundaria = `sum(likes)` por mes
+- agrupar por semana calendario com base em `post_date`
+- serie principal = `sum(views)` por semana
+- serie secundaria = `sum(likes)` por semana
+- opcionalmente mostrar `comments` semanais como terceira leitura se nao poluir o grafico
 
 Observacao:
 
 - este grafico deve sempre ser de um unico criador por vez
 - quando a ligacao SQL acontecer, o ideal e filtrar por `creator_id`
+- a unidade recomendada para comparacao e a semana fechada, nao o dia isolado
 
 ### Tabela editorial: top videos por views
 
@@ -266,9 +269,9 @@ Campos da tabela de posts que ajudam a aproximar a imagem:
 | Campo | Origem | Uso na view |
 |---|---|---|
 | `title` | `public.posts` | tabela de top videos |
-| `post_date` | `public.posts` | tabela de top videos e serie temporal |
-| `views` | `public.posts` | top videos e serie temporal |
-| `likes` | `public.posts` | distribuicao e serie temporal |
+| `post_date` | `public.posts` | tabela de top videos e serie temporal semanal |
+| `views` | `public.posts` | top videos e serie temporal semanal |
+| `likes` | `public.posts` | distribuicao e serie temporal semanal |
 | `comments` | `public.posts` | distribuicao e tabela |
 | `video_type` | `public.posts` | etiqueta editorial |
 | `post_id` | `public.posts` | base potencial para URL futura |
@@ -308,6 +311,7 @@ No mockup inicial do Streamlit:
 - `curva de followers` aparece como gap explicito
 - `top videos` usa apenas os campos ja documentados em `public.posts`
 - `rank de engajamento medio` e derivado localmente para leitura visual
+- a serie temporal precisa priorizar janela semanal
 - a cadencia de publicacao foi removida ate existir uma base confiavel
 
 Regra importante:
