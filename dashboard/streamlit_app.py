@@ -2151,25 +2151,27 @@ def render_creator_detail_page() -> None:
     summary_rows, summary_error = get_view_rows("v_dashboard_creator_summary")
     rows = summary_rows or get_creator_mock_rows()
     selected_name = st.session_state.get("creator_selected_name", rows[0]["entity_name"])
-    selected_default = next((row for row in rows if row["entity_name"] == selected_name), rows[0])
-
     page_header("Criador individual")
 
-    filter_col1, filter_col2, filter_col3 = st.columns([1.5, 1.15, 1.0])
+    filter_col1, filter_col2, filter_col3, filter_col4 = st.columns([1.45, 1.05, 0.95, 1.0])
+    creator_options = sorted(rows, key=lambda row: float(row["engagement_rate_pct"]), reverse=True)
+    selected_default = next((row for row in creator_options if row["entity_name"] == selected_name), creator_options[0])
     with filter_col1:
         selected_creator_name = st.selectbox(
             "Criador em foco",
-            [row["entity_name"] for row in rows],
-            index=[row["entity_name"] for row in rows].index(selected_default["entity_name"]),
+            [row["entity_name"] for row in creator_options],
+            index=[row["entity_name"] for row in creator_options].index(selected_default["entity_name"]),
         )
     with filter_col2:
         selected_platform = st.selectbox("Plataforma", ["todas", "youtube", "instagram", "tiktok"], index=1)
+    with filter_col3:
+        selected_video_type = st.selectbox("Tipo de video", ["todos", "long", "short"], index=0)
 
     st.session_state["creator_selected_name"] = selected_creator_name
     working_rows = rows
     if selected_platform != "todas":
         working_rows = [row for row in working_rows if row["platform"] == selected_platform]
-    working_rows = sorted(working_rows, key=lambda row: int(row["total_views"]), reverse=True)
+    working_rows = sorted(working_rows, key=lambda row: float(row["engagement_rate_pct"]), reverse=True)
 
     selected_row = next((row for row in working_rows if row["entity_name"] == selected_creator_name), working_rows[0] if working_rows else rows[0])
 
@@ -2184,7 +2186,7 @@ def render_creator_detail_page() -> None:
 
     period_options = [str(row["week_label"]) for row in reversed(weekly_rows)]
     latest_period_label = period_options[0] if period_options else "Sem base semanal"
-    with filter_col3:
+    with filter_col4:
         selected_period_label = st.selectbox("Periodo", period_options or [latest_period_label], index=0)
 
     selected_week_row = next(
@@ -2218,6 +2220,10 @@ def render_creator_detail_page() -> None:
         top_videos_df = get_creator_top_videos(selected_row["entity_name"])
     else:
         top_videos_df = pd.DataFrame(top_videos_rows)
+    if selected_video_type != "todos" and "video_type" in top_videos_df.columns:
+        top_videos_df = top_videos_df[
+            top_videos_df["video_type"].astype(str).str.lower() == selected_video_type
+        ]
 
     engagement_rank, engagement_total = get_engagement_rank(working_rows or rows, selected_row["entity_name"])
     likes_growth_pct = calculate_delta_pct(
@@ -2465,7 +2471,7 @@ def render_creator_overview_page() -> None:
 
     selected_platform = st.selectbox("Plataforma", ["todas", "youtube", "instagram", "tiktok"], index=1)
     working_rows = rows if selected_platform == "todas" else [row for row in rows if row["platform"] == selected_platform]
-    working_rows = sorted(working_rows, key=lambda row: int(row["total_views"]), reverse=True)
+    working_rows = sorted(working_rows, key=lambda row: float(row["engagement_rate_pct"]), reverse=True)
 
     total_followers = sum(int(row["followers"]) for row in working_rows)
     total_posts = sum(int(row["post_count"]) for row in working_rows)
