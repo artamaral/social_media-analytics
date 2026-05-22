@@ -208,7 +208,7 @@ def inject_theme() -> None:
 
         .creator-kpi-section-title {
             color: var(--text);
-            font-size: 1.02rem;
+            font-size: 1.12rem;
             font-weight: 900;
             line-height: 1.1;
             text-transform: uppercase;
@@ -219,14 +219,14 @@ def inject_theme() -> None:
 
         .creator-kpi-section-subtitle {
             color: var(--muted);
-            font-size: 0.88rem;
+            font-size: 0.9rem;
             font-weight: 700;
             line-height: 1.25;
             margin-bottom: 0.35rem;
         }
 
         .creator-kpi-grid .metric-card {
-            min-height: 124px;
+            min-height: 126px;
         }
 
         .creator-kpi-grid .metric-card-header {
@@ -234,7 +234,7 @@ def inject_theme() -> None:
             align-items: center;
             min-height: 2.15rem;
             padding: 0.55rem 0.7rem;
-            font-size: 0.8rem;
+            font-size: 0.92rem;
             line-height: 1.05;
             white-space: nowrap;
             overflow: hidden;
@@ -246,7 +246,7 @@ def inject_theme() -> None:
         }
 
         .creator-kpi-grid .metric-value {
-            font-size: 1.25rem;
+            font-size: 1.3rem;
             gap: 0.6rem;
         }
 
@@ -257,7 +257,7 @@ def inject_theme() -> None:
         }
 
         .creator-kpi-grid .metric-caption {
-            font-size: 0.67rem;
+            font-size: 0.69rem;
             margin-top: 0.55rem;
         }
 
@@ -2233,11 +2233,14 @@ def render_creator_detail_page() -> None:
         int(selected_week_row.get("active_posts_delta_vs_prev_week")) if selected_week_row.get("active_posts_delta_vs_prev_week") is not None else None,
     )
 
-    st.markdown("#### Bloco total do criador")
+    st.markdown(
+        '<div class="creator-kpi-section-title">Bloco total do criador</div>',
+        unsafe_allow_html=True,
+    )
     metric_card_grid(
         [
             metric_card_html("Seguidores", format_int(selected_row["followers"]), "", "SG"),
-            metric_card_html("Rank de engajamento medio", f"{engagement_rank} de {engagement_total}", "", "RK"),
+            metric_card_html("Engajamento", f"{engagement_rank} de {engagement_total}", "", "RK"),
             metric_card_html("Videos", format_int(selected_row["post_count"]), "", "VD"),
             metric_card_html("Views", format_int(selected_row["total_views"]), "", "VW"),
             metric_card_html("Likes", format_int(selected_row["total_likes"]), "", "LK"),
@@ -2291,8 +2294,8 @@ def render_creator_detail_page() -> None:
     selected_status = "ativo" if bool(selected_row.get("is_active")) else "inativo"
 
     selected_week_label = str(selected_week_row.get("week_label") or "Sem base semanal")
-    weekly_followers_caption, weekly_followers_caption_color = format_growth_caption(None, None, "Sem serie semanal")
-    weekly_engagement_caption, weekly_engagement_caption_color = format_growth_caption(None, None, "Sem serie semanal")
+    weekly_followers_caption, weekly_followers_caption_color = "Acumulado ate a semana selecionada", "#aeb4bf"
+    weekly_engagement_caption, weekly_engagement_caption_color = "Acumulado ate a semana selecionada", "#aeb4bf"
     weekly_videos_caption, weekly_videos_caption_color = format_growth_caption(
         selected_week_row.get("active_posts_delta_vs_prev_week"),
         active_posts_growth_pct,
@@ -2310,12 +2313,15 @@ def render_creator_detail_page() -> None:
         comments_growth_pct,
     )
 
-    st.markdown(f"#### Semana selecionada: {selected_week_label}")
-    st.caption("Comparacao com a semana anterior usando apenas semanas completas.")
+    st.markdown(
+        f'<div class="creator-kpi-section-title">Semana selecionada: {escape(selected_week_label)}</div>',
+        unsafe_allow_html=True,
+    )
+    st.caption("Os valores desta faixa representam o acumulado ate o fim da semana selecionada; a linha de baixo mostra a variacao vs a semana anterior completa.")
     metric_card_grid(
         [
             metric_card_html("Seguidores", format_int(selected_row["followers"]), weekly_followers_caption, "SG", caption_color=weekly_followers_caption_color),
-            metric_card_html("Rank de engajamento medio", f"{engagement_rank} de {engagement_total}", weekly_engagement_caption, "RK", caption_color=weekly_engagement_caption_color),
+            metric_card_html("Engajamento", f"{engagement_rank} de {engagement_total}", weekly_engagement_caption, "RK", caption_color=weekly_engagement_caption_color),
             metric_card_html("Videos", format_int(selected_week_row.get("active_posts_in_week")), weekly_videos_caption, "VD", caption_color=weekly_videos_caption_color),
             metric_card_html("Views", format_int(selected_week_row.get("views_week_end")), weekly_views_caption, "VW", caption_color=weekly_views_caption_color),
             metric_card_html("Likes", format_int(selected_week_row.get("likes_week_end")), weekly_likes_caption, "LK", caption_color=weekly_likes_caption_color),
@@ -2340,37 +2346,6 @@ def render_creator_detail_page() -> None:
         if summary_error or weekly_error or top_videos_error:
             active_errors = [error for error in [summary_error, weekly_error, top_videos_error] if error]
             st.warning(" | ".join(active_errors))
-
-        st.markdown("#### Leitura do criador em foco")
-        st.markdown(
-            (
-                '<div class="creator-panel">'
-                f'<div class="creator-panel-title">{escape(str(selected_row["entity_name"]))}</div>'
-                f'<div class="creator-panel-subtitle">{escape(selected_sub_niche)} | {escape(selected_creator_type)} | ultima coleta {escape(selected_latest_collected_at)}</div>'
-                '<div class="creator-detail-grid">'
-                f'<div class="creator-detail-card"><div class="creator-detail-label">Plataforma</div><div class="creator-detail-value">{escape(str(selected_row["platform"]))}</div></div>'
-                f'<div class="creator-detail-card"><div class="creator-detail-label">Canal</div><div class="creator-detail-value">{escape(str(selected_row["channel_id"]))}</div></div>'
-                f'<div class="creator-detail-card"><div class="creator-detail-label">Posts monitorados</div><div class="creator-detail-value">{escape(format_int(selected_row["post_count"]))}</div></div>'
-                f'<div class="creator-detail-card"><div class="creator-detail-label">Engajamento medio</div><div class="creator-detail-value">{escape(engagement_display)}</div></div>'
-                f'<div class="creator-detail-card"><div class="creator-detail-label">Likes totais</div><div class="creator-detail-value">{escape(format_int(selected_row["total_likes"]))}</div></div>'
-                f'<div class="creator-detail-card"><div class="creator-detail-label">Comentarios totais</div><div class="creator-detail-value">{escape(format_int(selected_row["total_comments"]))}</div></div>'
-                f'<div class="creator-detail-card"><div class="creator-detail-label">Ultimo post</div><div class="creator-detail-value">{escape(selected_latest_post_date)}</div></div>'
-                f'<div class="creator-detail-card"><div class="creator-detail-label">Status</div><div class="creator-detail-value">{escape(selected_status)}</div></div>'
-                "</div>"
-                '<div class="dq-chip-row">'
-                f'{dq_chip("Subnicho", selected_sub_niche, "ok-green")}'
-                f'{dq_chip("Curva followers", "pendente", "alert-yellow")}'
-                f'{dq_chip("URL do post", "pendente", "alert-yellow")}'
-                "</div>"
-                '<div class="creator-gap-list">'
-                '<div class="creator-gap-item"><strong>Campo faltante: subnichos reais</strong><span>A view atual ainda nao sobe a associacao real de entity_sub_niches. O mockup mostra a necessidade, mas nao finge que o dado ja existe.</span></div>'
-                '<div class="creator-gap-item"><strong>Campo faltante: delta de audiencia</strong><span>A imagem sugere comparacoes temporais mais fortes. Para isso, precisamos de followers_delta_7d ou followers_delta_30d, alem da data da ultima coleta de audiencia.</span></div>'
-                '<div class="creator-gap-item"><strong>Campo faltante: URL e resumo editorial</strong><span>Conseguimos montar a tabela de top videos com titulo, data, views, likes e comentarios. Ainda faltam URL publica e agregados editoriais mais ricos.</span></div>'
-                "</div>"
-                "</div>"
-            ),
-            unsafe_allow_html=True,
-        )
 
     video_scope_weekly = st.checkbox("Mostrar videos da semana selecionada", value=False)
     videos_source_df = top_videos_df.copy()
@@ -2412,6 +2387,37 @@ def render_creator_detail_page() -> None:
     st.markdown("#### Videos")
     st.caption("Desmarcado exibe o historico completo; marcado exibe apenas os videos da semana selecionada.")
     st.dataframe(top_videos_display, use_container_width=True, hide_index=True)
+
+    st.markdown("#### Leitura do criador em foco")
+    st.markdown(
+        (
+            '<div class="creator-panel">'
+            f'<div class="creator-panel-title">{escape(str(selected_row["entity_name"]))}</div>'
+            f'<div class="creator-panel-subtitle">{escape(selected_sub_niche)} | {escape(selected_creator_type)} | ultima coleta {escape(selected_latest_collected_at)}</div>'
+            '<div class="creator-detail-grid">'
+            f'<div class="creator-detail-card"><div class="creator-detail-label">Plataforma</div><div class="creator-detail-value">{escape(str(selected_row["platform"]))}</div></div>'
+            f'<div class="creator-detail-card"><div class="creator-detail-label">Canal</div><div class="creator-detail-value">{escape(str(selected_row["channel_id"]))}</div></div>'
+            f'<div class="creator-detail-card"><div class="creator-detail-label">Posts monitorados</div><div class="creator-detail-value">{escape(format_int(selected_row["post_count"]))}</div></div>'
+            f'<div class="creator-detail-card"><div class="creator-detail-label">Engajamento</div><div class="creator-detail-value">{escape(engagement_display)}</div></div>'
+            f'<div class="creator-detail-card"><div class="creator-detail-label">Likes totais</div><div class="creator-detail-value">{escape(format_int(selected_row["total_likes"]))}</div></div>'
+            f'<div class="creator-detail-card"><div class="creator-detail-label">Comentarios totais</div><div class="creator-detail-value">{escape(format_int(selected_row["total_comments"]))}</div></div>'
+            f'<div class="creator-detail-card"><div class="creator-detail-label">Ultimo post</div><div class="creator-detail-value">{escape(selected_latest_post_date)}</div></div>'
+            f'<div class="creator-detail-card"><div class="creator-detail-label">Status</div><div class="creator-detail-value">{escape(selected_status)}</div></div>'
+            "</div>"
+            '<div class="dq-chip-row">'
+            f'{dq_chip("Subnicho", selected_sub_niche, "ok-green")}'
+            f'{dq_chip("Curva followers", "pendente", "alert-yellow")}'
+            f'{dq_chip("URL do post", "pendente", "alert-yellow")}'
+            "</div>"
+            '<div class="creator-gap-list">'
+            '<div class="creator-gap-item"><strong>Campo faltante: subnichos reais</strong><span>A view atual ainda nao sobe a associacao real de entity_sub_niches. O mockup mostra a necessidade, mas nao finge que o dado ja existe.</span></div>'
+            '<div class="creator-gap-item"><strong>Campo faltante: delta de audiencia</strong><span>A imagem sugere comparacoes temporais mais fortes. Para isso, precisamos de followers_delta_7d ou followers_delta_30d, alem da data da ultima coleta de audiencia.</span></div>'
+            '<div class="creator-gap-item"><strong>Campo faltante: URL e resumo editorial</strong><span>Conseguimos montar a tabela de top videos com titulo, data, views, likes e comentarios. Ainda faltam URL publica e agregados editoriais mais ricos.</span></div>'
+            "</div>"
+            "</div>"
+        ),
+        unsafe_allow_html=True,
+    )
 
     with st.expander("Campos usados no mockup", expanded=False):
         st.dataframe(
