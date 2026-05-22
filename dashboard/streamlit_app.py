@@ -206,13 +206,39 @@ def inject_theme() -> None:
             margin-bottom: 1.1rem;
         }
 
+        .creator-kpi-section-title {
+            color: var(--text);
+            font-size: 1.02rem;
+            font-weight: 900;
+            line-height: 1.1;
+            text-transform: uppercase;
+            letter-spacing: 0;
+            margin-top: 0.95rem;
+            margin-bottom: 0.2rem;
+        }
+
+        .creator-kpi-section-subtitle {
+            color: var(--muted);
+            font-size: 0.88rem;
+            font-weight: 700;
+            line-height: 1.25;
+            margin-bottom: 0.35rem;
+        }
+
         .creator-kpi-grid .metric-card {
-            min-height: 118px;
+            min-height: 124px;
         }
 
         .creator-kpi-grid .metric-card-header {
+            display: flex;
+            align-items: center;
+            min-height: 2.15rem;
             padding: 0.55rem 0.7rem;
-            font-size: 0.72rem;
+            font-size: 0.8rem;
+            line-height: 1.05;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: clip;
         }
 
         .creator-kpi-grid .metric-card-body {
@@ -233,6 +259,10 @@ def inject_theme() -> None:
         .creator-kpi-grid .metric-caption {
             font-size: 0.67rem;
             margin-top: 0.55rem;
+        }
+
+        .creator-kpi-grid.weekly-grid {
+            margin-top: 0.25rem;
         }
 
         @media (max-width: 1320px) {
@@ -704,6 +734,19 @@ def inject_theme() -> None:
             font-size: 0.82rem;
             line-height: 1.35;
             margin-top: 0.25rem;
+        }
+
+        .creator-videos-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin: 0.35rem 0 0.7rem;
+        }
+
+        .creator-videos-toolbar .stCheckbox {
+            margin-bottom: 0;
         }
 
         .creator-reference-note {
@@ -2190,33 +2233,15 @@ def render_creator_detail_page() -> None:
         int(selected_week_row.get("active_posts_delta_vs_prev_week")) if selected_week_row.get("active_posts_delta_vs_prev_week") is not None else None,
     )
 
-    followers_caption, followers_caption_color = "Sem base semanal", "#aeb4bf"
-    engagement_caption, engagement_caption_color = "Sem base semanal", "#aeb4bf"
-    videos_caption, videos_caption_color = format_growth_caption(
-        selected_week_row.get("active_posts_delta_vs_prev_week"),
-        active_posts_growth_pct,
-    )
-    views_caption, views_caption_color = format_growth_caption(
-        selected_week_row.get("views_delta_vs_prev_week"),
-        float(selected_week_row.get("views_growth_pct_vs_prev_week")) if selected_week_row.get("views_growth_pct_vs_prev_week") is not None else None,
-    )
-    likes_caption, likes_caption_color = format_growth_caption(
-        selected_week_row.get("likes_delta_vs_prev_week"),
-        likes_growth_pct,
-    )
-    comments_caption, comments_caption_color = format_growth_caption(
-        selected_week_row.get("comments_delta_vs_prev_week"),
-        comments_growth_pct,
-    )
-
+    st.markdown("#### Bloco total do criador")
     metric_card_grid(
         [
-            metric_card_html("Seguidores", format_int(selected_row["followers"]), followers_caption, "SG", caption_color=followers_caption_color),
-            metric_card_html("Rank de engajamento medio", f"{engagement_rank} de {engagement_total}", engagement_caption, "RK", caption_color=engagement_caption_color),
-            metric_card_html("Total de videos", format_int(selected_row["post_count"]), videos_caption, "VD", caption_color=videos_caption_color),
-            metric_card_html("Total de views", format_int(selected_row["total_views"]), views_caption, "VW", caption_color=views_caption_color),
-            metric_card_html("Total de likes", format_int(selected_row["total_likes"]), likes_caption, "LK", caption_color=likes_caption_color),
-            metric_card_html("Total de comentarios", format_int(selected_row["total_comments"]), comments_caption, "CM", caption_color=comments_caption_color),
+            metric_card_html("Seguidores", format_int(selected_row["followers"]), "", "SG"),
+            metric_card_html("Rank de engajamento medio", f"{engagement_rank} de {engagement_total}", "", "RK"),
+            metric_card_html("Videos", format_int(selected_row["post_count"]), "", "VD"),
+            metric_card_html("Views", format_int(selected_row["total_views"]), "", "VW"),
+            metric_card_html("Likes", format_int(selected_row["total_likes"]), "", "LK"),
+            metric_card_html("Comentarios", format_int(selected_row["total_comments"]), "", "CM"),
         ],
         class_name="creator-kpi-grid",
     )
@@ -2258,25 +2283,45 @@ def render_creator_detail_page() -> None:
     )
     apply_plotly_theme(weekly_fig, legend_title="Serie")
 
-    top_videos_display = top_videos_df.copy()
-    if "post_date" in top_videos_display.columns:
-        top_videos_display["post_date"] = top_videos_display["post_date"].apply(format_timestamp_br)
-    if "views" in top_videos_display.columns:
-        top_videos_display["views"] = top_videos_display["views"].apply(format_int)
-    if "likes" in top_videos_display.columns:
-        top_videos_display["likes"] = top_videos_display["likes"].apply(format_int)
-    if "comments" in top_videos_display.columns:
-        top_videos_display["comments"] = top_videos_display["comments"].apply(format_int)
-    top_videos_display = top_videos_display.rename(
-        columns={
-            "titulo": "Titulo",
-            "title": "Titulo",
-            "post_date": "Data do post",
-            "views": "Views",
-            "likes": "Likes",
-            "comments": "Comentarios",
-            "video_type": "Tipo",
-        }
+    engagement_display = f"{float(selected_row['engagement_rate_pct']):.2f}%"
+    selected_sub_niche = str(selected_row.get("sub_niche_display") or selected_row.get("niche") or "Sem classificacao fina")
+    selected_creator_type = str(selected_row.get("creator_type") or "--")
+    selected_latest_collected_at = format_timestamp_br(selected_row.get("latest_collected_at"))
+    selected_latest_post_date = format_timestamp_br(selected_row.get("latest_post_date"))
+    selected_status = "ativo" if bool(selected_row.get("is_active")) else "inativo"
+
+    selected_week_label = str(selected_week_row.get("week_label") or "Sem base semanal")
+    weekly_followers_caption, weekly_followers_caption_color = format_growth_caption(None, None, "Sem serie semanal")
+    weekly_engagement_caption, weekly_engagement_caption_color = format_growth_caption(None, None, "Sem serie semanal")
+    weekly_videos_caption, weekly_videos_caption_color = format_growth_caption(
+        selected_week_row.get("active_posts_delta_vs_prev_week"),
+        active_posts_growth_pct,
+    )
+    weekly_views_caption, weekly_views_caption_color = format_growth_caption(
+        selected_week_row.get("views_delta_vs_prev_week"),
+        float(selected_week_row.get("views_growth_pct_vs_prev_week")) if selected_week_row.get("views_growth_pct_vs_prev_week") is not None else None,
+    )
+    weekly_likes_caption, weekly_likes_caption_color = format_growth_caption(
+        selected_week_row.get("likes_delta_vs_prev_week"),
+        likes_growth_pct,
+    )
+    weekly_comments_caption, weekly_comments_caption_color = format_growth_caption(
+        selected_week_row.get("comments_delta_vs_prev_week"),
+        comments_growth_pct,
+    )
+
+    st.markdown(f"#### Semana selecionada: {selected_week_label}")
+    st.caption("Comparacao com a semana anterior usando apenas semanas completas.")
+    metric_card_grid(
+        [
+            metric_card_html("Seguidores", format_int(selected_row["followers"]), weekly_followers_caption, "SG", caption_color=weekly_followers_caption_color),
+            metric_card_html("Rank de engajamento medio", f"{engagement_rank} de {engagement_total}", weekly_engagement_caption, "RK", caption_color=weekly_engagement_caption_color),
+            metric_card_html("Videos", format_int(selected_week_row.get("active_posts_in_week")), weekly_videos_caption, "VD", caption_color=weekly_videos_caption_color),
+            metric_card_html("Views", format_int(selected_week_row.get("views_week_end")), weekly_views_caption, "VW", caption_color=weekly_views_caption_color),
+            metric_card_html("Likes", format_int(selected_week_row.get("likes_week_end")), weekly_likes_caption, "LK", caption_color=weekly_likes_caption_color),
+            metric_card_html("Comentarios", format_int(selected_week_row.get("comments_week_end")), weekly_comments_caption, "CM", caption_color=weekly_comments_caption_color),
+        ],
+        class_name="creator-kpi-grid weekly-grid",
     )
 
     left_col, right_col = st.columns([1.35, 1])
@@ -2291,20 +2336,10 @@ def render_creator_detail_page() -> None:
             st.caption("Dados usados: v_dashboard_creator_weekly_timeseries, apenas semanas completas.")
             st.plotly_chart(weekly_fig, use_container_width=True)
 
-    engagement_display = f"{float(selected_row['engagement_rate_pct']):.2f}%"
-    selected_sub_niche = str(selected_row.get("sub_niche_display") or selected_row.get("niche") or "Sem classificacao fina")
-    selected_creator_type = str(selected_row.get("creator_type") or "--")
-    selected_latest_collected_at = format_timestamp_br(selected_row.get("latest_collected_at"))
-    selected_latest_post_date = format_timestamp_br(selected_row.get("latest_post_date"))
-    selected_status = "ativo" if bool(selected_row.get("is_active")) else "inativo"
-
     with right_col:
         if summary_error or weekly_error or top_videos_error:
             active_errors = [error for error in [summary_error, weekly_error, top_videos_error] if error]
             st.warning(" | ".join(active_errors))
-        st.markdown("#### Top videos por views")
-        st.caption("Dados usados: title, post_date, views, likes, comments e video_type de public.posts.")
-        st.dataframe(top_videos_display, use_container_width=True, hide_index=True)
 
         st.markdown("#### Leitura do criador em foco")
         st.markdown(
@@ -2336,6 +2371,47 @@ def render_creator_detail_page() -> None:
             ),
             unsafe_allow_html=True,
         )
+
+    video_scope_weekly = st.checkbox("Mostrar videos da semana selecionada", value=False)
+    videos_source_df = top_videos_df.copy()
+    if video_scope_weekly and "post_date" in videos_source_df.columns:
+        videos_source_df["post_date"] = pd.to_datetime(videos_source_df["post_date"], errors="coerce")
+        week_start = pd.to_datetime(selected_week_row.get("week_start"), errors="coerce")
+        week_end = pd.to_datetime(selected_week_row.get("week_end"), errors="coerce")
+        if pd.notna(week_start) and pd.notna(week_end):
+            videos_source_df = videos_source_df[
+                (videos_source_df["post_date"] >= week_start) & (videos_source_df["post_date"] <= week_end)
+            ]
+    videos_source_df = videos_source_df.sort_values(by="views", ascending=False, na_position="last") if "views" in videos_source_df.columns else videos_source_df
+    top_videos_display = videos_source_df.copy()
+    drop_video_columns = [
+        column
+        for column in top_videos_display.columns
+        if "id" in str(column).lower() or "date" in str(column).lower()
+    ]
+    if drop_video_columns:
+        top_videos_display = top_videos_display.drop(columns=drop_video_columns, errors="ignore")
+    if "views" in top_videos_display.columns:
+        top_videos_display["views"] = top_videos_display["views"].apply(format_int)
+    if "likes" in top_videos_display.columns:
+        top_videos_display["likes"] = top_videos_display["likes"].apply(format_int)
+    if "comments" in top_videos_display.columns:
+        top_videos_display["comments"] = top_videos_display["comments"].apply(format_int)
+    top_videos_display = top_videos_display.rename(
+        columns={
+            "titulo": "Titulo",
+            "title": "Titulo",
+            "views": "Views",
+            "likes": "Likes",
+            "comments": "Comentarios",
+            "video_type": "Tipo",
+        }
+    )
+    top_videos_display = top_videos_display[[column for column in ["Titulo", "Views", "Likes", "Comentarios", "Tipo"] if column in top_videos_display.columns]]
+
+    st.markdown("#### Videos")
+    st.caption("Desmarcado exibe o historico completo; marcado exibe apenas os videos da semana selecionada.")
+    st.dataframe(top_videos_display, use_container_width=True, hide_index=True)
 
     with st.expander("Campos usados no mockup", expanded=False):
         st.dataframe(
