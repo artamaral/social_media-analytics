@@ -57,11 +57,16 @@ def inject_theme() -> None:
             font-size: 0.92rem;
             font-weight: 700;
             line-height: 1.2;
+            justify-content: flex-start;
         }
 
         section[data-testid="stSidebar"] [data-testid="stButton"] button:hover {
             background: rgba(255, 255, 255, 0.05);
             border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        section[data-testid="stSidebar"] [data-testid="stButton"] button > div {
+            justify-content: flex-start;
         }
 
         section[data-testid="stSidebar"] [data-testid="stButton"] button[kind="primary"] {
@@ -92,6 +97,10 @@ def inject_theme() -> None:
 
         .sidebar-nav-spacer {
             height: 0.25rem;
+        }
+
+        .sidebar-nav-child {
+            padding-left: 0.9rem;
         }
 
         .block-container {
@@ -1575,6 +1584,8 @@ with st.sidebar:
         st.session_state["nav_page"] = "Overview"
     if "cadastro_subpage" not in st.session_state:
         st.session_state["cadastro_subpage"] = "Criadores"
+    if "cadastro_menu_open" not in st.session_state:
+        st.session_state["cadastro_menu_open"] = False
 
     def sidebar_nav_button(label: str, page_value: str, selected_value: str | None = None) -> None:
         active = st.session_state["nav_page"] == page_value if selected_value is None else st.session_state["cadastro_subpage"] == selected_value
@@ -1587,9 +1598,12 @@ with st.sidebar:
         if st.button(**button_kwargs):
             if selected_value is None:
                 st.session_state["nav_page"] = page_value
+                if page_value != "Cadastro":
+                    st.session_state["cadastro_menu_open"] = False
             else:
                 st.session_state["nav_page"] = page_value
                 st.session_state["cadastro_subpage"] = selected_value
+                st.session_state["cadastro_menu_open"] = True
             st.rerun()
 
     sidebar_nav_button("Overview", "Overview")
@@ -1598,9 +1612,33 @@ with st.sidebar:
     sidebar_nav_button("Hot now", "Hot now")
     sidebar_nav_button("Data quality", "Data quality")
 
-    st.markdown('<div class="sidebar-nav-section">Cadastro</div>', unsafe_allow_html=True)
-    sidebar_nav_button("Criadores", "Cadastro", "Criadores")
-    sidebar_nav_button("Fenabrave", "Cadastro", "Fenabrave")
+    cadastro_active = st.session_state["nav_page"] == "Cadastro"
+    cadastro_open = st.session_state["cadastro_menu_open"] or cadastro_active
+    if st.button(
+        "Cadastro",
+        use_container_width=True,
+        key="nav-cadastro-toggle",
+        type="primary" if cadastro_open else "secondary",
+    ):
+        st.session_state["cadastro_menu_open"] = not cadastro_open
+        st.session_state["nav_page"] = "Cadastro"
+        if st.session_state["cadastro_menu_open"] and st.session_state["cadastro_subpage"] not in {"Criadores", "Fenabrave"}:
+            st.session_state["cadastro_subpage"] = "Criadores"
+        st.rerun()
+
+    if cadastro_open:
+        st.markdown('<div class="sidebar-nav-spacer"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="sidebar-nav-section">Cadastro</div>', unsafe_allow_html=True)
+        child_indent = st.columns([0.12, 0.88])
+        with child_indent[0]:
+            st.write("")
+        with child_indent[1]:
+            sidebar_nav_button("Criadores", "Cadastro", "Criadores")
+        child_indent = st.columns([0.12, 0.88])
+        with child_indent[0]:
+            st.write("")
+        with child_indent[1]:
+            sidebar_nav_button("Fenabrave", "Cadastro", "Fenabrave")
 
     sidebar_nav_button("Sanitizacao operacional", "Sanitizacao operacional")
 
