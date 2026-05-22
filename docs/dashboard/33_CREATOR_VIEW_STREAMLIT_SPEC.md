@@ -192,9 +192,19 @@ Objetivo:
 - manter uma leitura simples e confiavel
 - evitar excesso de ruido diario e ao mesmo tempo nao alongar demais a leitura
 
+Definicao obrigatoria dos cards semanais:
+
+- o bloco semanal representa o movimento geral do criador na semana fechada
+- `Videos` mede videos novos publicados na semana, a partir de `public.posts.post_date`
+- `Views` mede views novas na semana, considerando todos os posts monitorados do criador
+- `Likes` mede likes novos na semana, considerando todos os posts monitorados do criador
+- `Comentarios` mede comentarios novos na semana, considerando todos os posts monitorados do criador
+- `Views`, `Likes` e `Comentarios` devem vir do mesmo historico temporal de snapshots, nao dos valores atuais dos videos publicados naquela semana
+- analise de posts isolados permanece na tabela editorial de videos e em views especificas de detalhe por post
+
 Contrato recomendado:
 
-- `public.v_dashboard_creator_weekly_timeseries`
+- `public.v_dashboard_creator_weekly_activity`
 
 Dados esperados da view:
 
@@ -205,20 +215,22 @@ Dados esperados da view:
 - `week_start`
 - `week_end`
 - `week_label`
-- `views_week_end`
-- `views_delta_vs_prev_week`
+- `video_type`
+- `videos_publicados`
+- `views_novas`
 - `views_growth_pct_vs_prev_week`
-- `likes_week_end`
-- `likes_delta_vs_prev_week`
-- `comments_week_end`
-- `comments_delta_vs_prev_week`
-- `active_posts_in_week`
+- `likes_novos`
+- `comentarios_novos`
+- `posts_com_snapshot_na_semana`
+- `posts_sem_baseline_para_delta`
 
 Observacao:
 
 - este grafico deve sempre ser de um unico criador por vez
 - o Streamlit nao deve calcular a serie bruta a partir de `public.posts`
+- o Streamlit nao deve usar valores atuais de posts publicados na semana para preencher os cards semanais de `Views`, `Likes` e `Comentarios`
 - quando a ligacao SQL acontecer, o ideal e filtrar por `creator_id`
+- o filtro `long/short/todos` deve usar a coluna `video_type` ja consolidada na view
 - a unidade recomendada para comparacao e a semana fechada, nao o dia isolado
 - semanas abertas nao devem aparecer no grafico
 - o rotulo recomendado para exibicao e o intervalo completo da semana
@@ -293,14 +305,15 @@ Nova camada recomendada para serie temporal:
 
 | Campo | Origem | Uso na view |
 |---|---|---|
-| `week_start` | `v_dashboard_creator_weekly_timeseries` | eixo temporal semanal |
-| `week_end` | `v_dashboard_creator_weekly_timeseries` | fechamento da semana consolidada |
-| `week_label` | `v_dashboard_creator_weekly_timeseries` | rotulo amigavel no grafico |
-| `views_delta_vs_prev_week` | `v_dashboard_creator_weekly_timeseries` | crescimento ou encolhimento principal |
-| `views_growth_pct_vs_prev_week` | `v_dashboard_creator_weekly_timeseries` | intensidade relativa da variacao |
-| `likes_delta_vs_prev_week` | `v_dashboard_creator_weekly_timeseries` | confirmacao secundaria de tracao |
-| `comments_delta_vs_prev_week` | `v_dashboard_creator_weekly_timeseries` | confirmacao secundaria de tracao |
-| `active_posts_in_week` | `v_dashboard_creator_weekly_timeseries` | contexto de volume observado |
+| `week_start` | `v_dashboard_creator_weekly_activity` | eixo temporal semanal |
+| `week_end` | `v_dashboard_creator_weekly_activity` | fechamento da semana consolidada |
+| `week_label` | `v_dashboard_creator_weekly_activity` | rotulo amigavel no grafico |
+| `video_type` | `v_dashboard_creator_weekly_activity` | filtro `long`, `short` ou `todos` |
+| `videos_publicados` | `v_dashboard_creator_weekly_activity` | videos novos publicados na semana |
+| `views_novas` | `v_dashboard_creator_weekly_activity` | movimento de views na semana |
+| `views_growth_pct_vs_prev_week` | `v_dashboard_creator_weekly_activity` | intensidade relativa da variacao |
+| `likes_novos` | `v_dashboard_creator_weekly_activity` | movimento de likes na semana |
+| `comentarios_novos` | `v_dashboard_creator_weekly_activity` | movimento de comentarios na semana |
 
 Campos complementares documentados fora da view atual:
 
@@ -378,7 +391,7 @@ avg_views_per_post
 Nova view recomendada para o criador individual:
 
 ```text
-v_dashboard_creator_weekly_timeseries
+v_dashboard_creator_weekly_activity
 ```
 
 Papel dessa view:
@@ -434,6 +447,6 @@ Depois desta fase:
 
 1. revisar a UX do mockup no app
 2. decidir a nova versao de `v_dashboard_creator_summary`
-3. definir o contrato de `v_dashboard_creator_weekly_timeseries`
+3. definir o contrato de `v_dashboard_creator_weekly_activity`
 4. implementar a evolucao SQL em arquivo proprio
 5. ligar a pagina a dados reais somente depois da validacao do contrato
