@@ -1,6 +1,9 @@
 DROP TRIGGER IF EXISTS trg_sync_creator_latest_metrics
 ON public.creator_metrics_history;
 
+DROP POLICY IF EXISTS creator_metrics_history_insert_worker
+ON public.creator_metrics_history;
+
 DROP FUNCTION IF EXISTS public.sync_creator_latest_metrics();
 
 DROP INDEX IF EXISTS public.idx_creator_metrics_history_collected_at;

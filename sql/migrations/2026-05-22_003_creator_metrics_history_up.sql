@@ -26,6 +26,23 @@ ON public.creator_metrics_history (creator_id, collected_at DESC);
 CREATE INDEX IF NOT EXISTS idx_creator_metrics_history_collected_at
 ON public.creator_metrics_history (collected_at DESC);
 
+GRANT SELECT, INSERT ON public.creator_metrics_history
+TO anon, authenticated, service_role;
+
+GRANT USAGE, SELECT ON SEQUENCE public.creator_metrics_history_id_seq
+TO anon, authenticated, service_role;
+
+DROP POLICY IF EXISTS creator_metrics_history_insert_worker
+ON public.creator_metrics_history;
+
+CREATE POLICY creator_metrics_history_insert_worker
+ON public.creator_metrics_history
+FOR INSERT
+TO anon, authenticated, service_role
+WITH CHECK (
+  source = 'youtube_channels_api'
+);
+
 CREATE OR REPLACE FUNCTION public.sync_creator_latest_metrics()
 RETURNS trigger
 LANGUAGE plpgsql

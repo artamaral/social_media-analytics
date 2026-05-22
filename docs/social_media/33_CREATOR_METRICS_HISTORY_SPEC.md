@@ -106,6 +106,24 @@ Campos usados da resposta:
 O worker nao atualiza `creators` diretamente. Ele insere o snapshot em
 `creator_metrics_history` e deixa o trigger sincronizar o valor corrente.
 
+## Permissoes e RLS
+
+Como o worker escreve via Supabase REST/PostgREST, a tabela
+`creator_metrics_history` precisa ter permissao e policy de insert compativeis
+com a role usada pela chave configurada em `SUPABASE_KEY`.
+
+A migration cria:
+
+- `GRANT SELECT, INSERT` na tabela para `anon`, `authenticated` e
+  `service_role`;
+- `GRANT USAGE, SELECT` na sequence `creator_metrics_history_id_seq`;
+- policy `creator_metrics_history_insert_worker` permitindo insert quando
+  `source = 'youtube_channels_api'`.
+
+Se o worker retornar erro `new row violates row-level security policy`, aplicar
+novamente a migration `_up.sql` ou executar o bloco de grants/policy da
+documentacao de migration.
+
 ## Analises suportadas
 
 Com os snapshots sera possivel medir:
