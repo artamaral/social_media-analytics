@@ -123,6 +123,9 @@ Regras de desenho:
 - usar o snapshot mais recente de cada post dentro da semana para evitar dupla
   contagem interna
 - comparar cada semana com a semana imediatamente anterior do mesmo criador
+- na primeira versao, a comparacao usa a ultima semana completa observada do
+  criador
+- semanas sem observacao util nao geram linha propria nesta versao inicial
 
 ## Como o Supabase gera os dados semanais
 
@@ -165,6 +168,8 @@ Regra SQL:
 
 - a view deve excluir a semana corrente ainda aberta
 - apenas semanas com `week_end < data_atual` podem aparecer
+- a comparacao semanal e calculada apenas entre semanas completas que entraram
+  na view
 
 Leitura pratica:
 
@@ -353,6 +358,7 @@ Recomendacao:
 - depois agregar por criador
 - excluir da view qualquer semana ainda aberta
 - gerar `week_label` pronto no SQL
+- na primeira versao, nao criar semanas artificiais sem observacao
 
 ### Etapa 3. Criar a view SQL
 

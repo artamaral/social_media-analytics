@@ -769,9 +769,17 @@ def page_subtitle(text: str) -> None:
     st.markdown(f'<div class="page-subtitle">{escape(text)}</div>', unsafe_allow_html=True)
 
 
-def metric_card_html(title: str, value: str, caption: str, picto: str, accent_color: str | None = None) -> str:
+def metric_card_html(
+    title: str,
+    value: str,
+    caption: str,
+    picto: str,
+    accent_color: str | None = None,
+    caption_color: str | None = None,
+) -> str:
     picto_style = f' style="color: {accent_color};"' if accent_color else ""
-    caption_html = f'<div class="metric-caption">{escape(caption)}</div>' if caption else ""
+    caption_style = f' style="color: {caption_color};"' if caption and caption_color else ""
+    caption_html = f'<div class="metric-caption"{caption_style}>{escape(caption)}</div>' if caption else ""
     return (
         '<div class="metric-card">'
         f'<div class="metric-card-header">{escape(title)}</div>'
@@ -1040,6 +1048,29 @@ def load_view_rows(view_name: str) -> list[dict[str, Any]]:
     return response.data or []
 
 
+@st.cache_data(ttl=300, show_spinner=False)
+def load_filtered_rows(
+    source_name: str,
+    filters: tuple[tuple[str, Any], ...] = (),
+    order_by: str | None = None,
+    order_desc: bool = False,
+    limit: int | None = None,
+) -> list[dict[str, Any]]:
+    client = get_supabase_client()
+    if client is None:
+        return []
+
+    query = client.table(source_name).select("*")
+    for column_name, column_value in filters:
+        query = query.eq(column_name, column_value)
+    if order_by:
+        query = query.order(order_by, desc=order_desc)
+    if limit is not None:
+        query = query.limit(limit)
+    response = query.execute()
+    return response.data or []
+
+
 def get_single_row_view(view_name: str) -> tuple[dict[str, Any] | None, str | None]:
     if not is_supabase_configured():
         return None, "Supabase ainda nao configurado. Adicione SUPABASE_URL e SUPABASE_ANON_KEY nos secrets."
@@ -1058,6 +1089,22 @@ def get_view_rows(view_name: str) -> tuple[list[dict[str, Any]], str | None]:
         return load_view_rows(view_name), None
     except Exception as exc:
         return [], f"Falha ao consultar {view_name}: {exc}"
+
+
+def get_filtered_rows(
+    source_name: str,
+    filters: tuple[tuple[str, Any], ...] = (),
+    order_by: str | None = None,
+    order_desc: bool = False,
+    limit: int | None = None,
+) -> tuple[list[dict[str, Any]], str | None]:
+    if not is_supabase_configured():
+        return [], "Supabase ainda nao configurado. Adicione SUPABASE_URL e SUPABASE_ANON_KEY nos secrets."
+
+    try:
+        return load_filtered_rows(source_name, filters, order_by, order_desc, limit), None
+    except Exception as exc:
+        return [], f"Falha ao consultar {source_name}: {exc}"
 
 
 def render_connection_notice(error: str | None) -> None:
@@ -1661,6 +1708,55 @@ def get_creator_monthly_series(entity_name: str) -> pd.DataFrame:
     return pd.DataFrame(data, columns=["mes", "views_totais", "likes_totais"])
 
 
+def get_creator_weekly_mock_rows(entity_name: str) -> list[dict[str, Any]]:
+    weekly_map = {
+        "Auto Mercado Brasil": [
+            ("2026-04-13", "2026-04-19", "13/04/2026-19/04/2026", 1840000, 125000, 6.79, 52100, 3900, 8400, 610, 38),
+            ("2026-04-20", "2026-04-26", "20/04/2026-26/04/2026", 1915000, 75000, 4.08, 54800, 2700, 8920, 520, 41),
+            ("2026-04-27", "2026-05-03", "27/04/2026-03/05/2026", 2050000, 135000, 7.05, 58900, 4100, 9610, 690, 44),
+            ("2026-05-04", "2026-05-10", "04/05/2026-10/05/2026", 2135000, 85000, 4.15, 61100, 2200, 10040, 430, 40),
+            ("2026-05-11", "2026-05-17", "11/05/2026-17/05/2026", 2260000, 125000, 5.85, 64400, 3300, 10780, 740, 46),
+        ],
+        "Radar de Concessionarias": [
+            ("2026-04-13", "2026-04-19", "13/04/2026-19/04/2026", 1010000, 52000, 5.43, 30100, 1800, 5020, 310, 24),
+            ("2026-04-20", "2026-04-26", "20/04/2026-26/04/2026", 1085000, 75000, 7.43, 31900, 1800, 5360, 340, 28),
+            ("2026-04-27", "2026-05-03", "27/04/2026-03/05/2026", 1120000, 35000, 3.23, 33000, 1100, 5580, 220, 26),
+            ("2026-05-04", "2026-05-10", "04/05/2026-10/05/2026", 1200000, 80000, 7.14, 34700, 1700, 5910, 330, 31),
+            ("2026-05-11", "2026-05-17", "11/05/2026-17/05/2026", 1265000, 65000, 5.42, 36100, 1400, 6140, 230, 29),
+        ],
+        "Electric Garage Brasil": [
+            ("2026-04-13", "2026-04-19", "13/04/2026-19/04/2026", 705000, 41000, 6.18, 21400, 1400, 4380, 180, 18),
+            ("2026-04-20", "2026-04-26", "20/04/2026-26/04/2026", 744000, 39000, 5.53, 22600, 1200, 4570, 190, 20),
+            ("2026-04-27", "2026-05-03", "27/04/2026-03/05/2026", 802000, 58000, 7.80, 24400, 1800, 4860, 290, 23),
+            ("2026-05-04", "2026-05-10", "04/05/2026-10/05/2026", 854000, 52000, 6.48, 25900, 1500, 5110, 250, 24),
+            ("2026-05-11", "2026-05-17", "11/05/2026-17/05/2026", 903000, 49000, 5.74, 27300, 1400, 5320, 210, 22),
+        ],
+    }
+    data = weekly_map.get(entity_name, weekly_map["Auto Mercado Brasil"])
+    rows = []
+    previous_active_posts = None
+    for week_start, week_end, week_label, views_week_end, views_delta, views_growth_pct, likes_week_end, likes_delta, comments_week_end, comments_delta, active_posts_in_week in data:
+        active_posts_delta = None if previous_active_posts is None else active_posts_in_week - previous_active_posts
+        rows.append(
+            {
+                "week_start": week_start,
+                "week_end": week_end,
+                "week_label": week_label,
+                "views_week_end": views_week_end,
+                "views_delta_vs_prev_week": views_delta,
+                "views_growth_pct_vs_prev_week": views_growth_pct,
+                "likes_week_end": likes_week_end,
+                "likes_delta_vs_prev_week": likes_delta,
+                "comments_week_end": comments_week_end,
+                "comments_delta_vs_prev_week": comments_delta,
+                "active_posts_in_week": active_posts_in_week,
+                "active_posts_delta_vs_prev_week": active_posts_delta,
+            }
+        )
+        previous_active_posts = active_posts_in_week
+    return rows
+
+
 def get_creator_top_videos(entity_name: str) -> pd.DataFrame:
     top_video_map = {
         "Auto Mercado Brasil": [
@@ -1738,6 +1834,32 @@ def get_engagement_rank(rows: list[dict[str, Any]], entity_name: str) -> tuple[i
         if row["entity_name"] == entity_name:
             return index, total
     return total, total
+
+
+def get_delta_color(delta_value: float | int | None) -> str:
+    if delta_value is None:
+        return "#aeb4bf"
+    if delta_value > 0:
+        return "#98df96"
+    if delta_value < 0:
+        return "#ff6f61"
+    return "#f2c14e"
+
+
+def format_growth_caption(delta_value: float | int | None, pct_value: float | None, fallback: str = "Sem base semanal") -> tuple[str, str]:
+    if delta_value is None or pct_value is None:
+        return fallback, "#aeb4bf"
+    signed_pct = f"{pct_value:+.2f}%".replace(".", ",")
+    return f"{signed_pct} vs ultima semana", get_delta_color(delta_value)
+
+
+def calculate_delta_pct(current_value: int | None, delta_value: int | None) -> float | None:
+    if current_value is None or delta_value is None:
+        return None
+    previous_value = current_value - delta_value
+    if previous_value <= 0:
+        return None
+    return round((delta_value / previous_value) * 100, 2)
 
 
 def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> None:
@@ -1983,13 +2105,14 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
 
 
 def render_creator_detail_page() -> None:
-    rows = get_creator_mock_rows()
+    summary_rows, summary_error = get_view_rows("v_dashboard_creator_summary")
+    rows = summary_rows or get_creator_mock_rows()
     selected_name = st.session_state.get("creator_selected_name", rows[0]["entity_name"])
     selected_default = next((row for row in rows if row["entity_name"] == selected_name), rows[0])
 
     page_header("Criador individual")
 
-    filter_col1, filter_col2, filter_col3, filter_col4 = st.columns([1.35, 1, 1, 1.1])
+    filter_col1, filter_col2, filter_col3 = st.columns([1.5, 1.15, 1.0])
     with filter_col1:
         selected_creator_name = st.selectbox(
             "Criador em foco",
@@ -1997,37 +2120,103 @@ def render_creator_detail_page() -> None:
             index=[row["entity_name"] for row in rows].index(selected_default["entity_name"]),
         )
     with filter_col2:
-        selected_period = st.selectbox("Periodo", ["30 dias", "90 dias", "12 meses"], index=0)
-    with filter_col3:
         selected_platform = st.selectbox("Plataforma", ["todas", "youtube", "instagram", "tiktok"], index=1)
-    with filter_col4:
-        ranking_mode = st.selectbox("Ordenar por", ["Views totais", "Engajamento", "Posts monitorados"], index=0)
 
     st.session_state["creator_selected_name"] = selected_creator_name
     working_rows = rows
     if selected_platform != "todas":
         working_rows = [row for row in working_rows if row["platform"] == selected_platform]
-
-    if ranking_mode == "Engajamento":
-        working_rows = sorted(working_rows, key=lambda row: float(row["engagement_rate_pct"]), reverse=True)
-    elif ranking_mode == "Posts monitorados":
-        working_rows = sorted(working_rows, key=lambda row: int(row["post_count"]), reverse=True)
-    else:
-        working_rows = sorted(working_rows, key=lambda row: int(row["total_views"]), reverse=True)
+    working_rows = sorted(working_rows, key=lambda row: int(row["total_views"]), reverse=True)
 
     selected_row = next((row for row in working_rows if row["entity_name"] == selected_creator_name), working_rows[0] if working_rows else rows[0])
-    monthly_df = get_creator_monthly_series(selected_row["entity_name"])
-    top_videos_df = get_creator_top_videos(selected_row["entity_name"])
+
+    weekly_rows, weekly_error = get_filtered_rows(
+        "v_dashboard_creator_weekly_timeseries",
+        filters=(("creator_id", selected_row["creator_id"]),),
+        order_by="week_start",
+        order_desc=False,
+    )
+    if not weekly_rows:
+        weekly_rows = get_creator_weekly_mock_rows(selected_row["entity_name"])
+
+    period_options = [str(row["week_label"]) for row in reversed(weekly_rows)]
+    latest_period_label = period_options[0] if period_options else "Sem base semanal"
+    with filter_col3:
+        selected_period_label = st.selectbox("Periodo", period_options or [latest_period_label], index=0)
+
+    selected_week_row = next(
+        (row for row in weekly_rows if str(row["week_label"]) == selected_period_label),
+        weekly_rows[-1] if weekly_rows else {},
+    )
+    selected_week_index = next(
+        (index for index, row in enumerate(weekly_rows) if str(row["week_label"]) == selected_period_label),
+        len(weekly_rows) - 1,
+    )
+    previous_week_row = weekly_rows[selected_week_index - 1] if selected_week_index > 0 else None
+    if selected_week_row and "active_posts_delta_vs_prev_week" not in selected_week_row:
+        previous_active_posts = int(previous_week_row.get("active_posts_in_week") or 0) if previous_week_row else None
+        current_active_posts = int(selected_week_row.get("active_posts_in_week") or 0)
+        selected_week_row["active_posts_delta_vs_prev_week"] = (
+            None if previous_active_posts is None else current_active_posts - previous_active_posts
+        )
+
+    chart_rows = [row for row in weekly_rows if str(row["week_start"]) <= str(selected_week_row.get("week_start", ""))]
+    chart_rows = chart_rows[-8:]
+    weekly_df = pd.DataFrame(chart_rows)
+
+    top_videos_rows, top_videos_error = get_filtered_rows(
+        "posts",
+        filters=(("creator_id", selected_row["creator_id"]),),
+        order_by="views",
+        order_desc=True,
+        limit=10,
+    )
+    if not top_videos_rows:
+        top_videos_df = get_creator_top_videos(selected_row["entity_name"])
+    else:
+        top_videos_df = pd.DataFrame(top_videos_rows)
+
     engagement_rank, engagement_total = get_engagement_rank(working_rows or rows, selected_row["entity_name"])
+    likes_growth_pct = calculate_delta_pct(
+        int(selected_week_row.get("likes_week_end") or 0),
+        int(selected_week_row.get("likes_delta_vs_prev_week")) if selected_week_row.get("likes_delta_vs_prev_week") is not None else None,
+    )
+    comments_growth_pct = calculate_delta_pct(
+        int(selected_week_row.get("comments_week_end") or 0),
+        int(selected_week_row.get("comments_delta_vs_prev_week")) if selected_week_row.get("comments_delta_vs_prev_week") is not None else None,
+    )
+    active_posts_growth_pct = calculate_delta_pct(
+        int(selected_week_row.get("active_posts_in_week") or 0),
+        int(selected_week_row.get("active_posts_delta_vs_prev_week")) if selected_week_row.get("active_posts_delta_vs_prev_week") is not None else None,
+    )
+
+    followers_caption, followers_caption_color = "Sem base semanal", "#aeb4bf"
+    engagement_caption, engagement_caption_color = "Sem base semanal", "#aeb4bf"
+    videos_caption, videos_caption_color = format_growth_caption(
+        selected_week_row.get("active_posts_delta_vs_prev_week"),
+        active_posts_growth_pct,
+    )
+    views_caption, views_caption_color = format_growth_caption(
+        selected_week_row.get("views_delta_vs_prev_week"),
+        float(selected_week_row.get("views_growth_pct_vs_prev_week")) if selected_week_row.get("views_growth_pct_vs_prev_week") is not None else None,
+    )
+    likes_caption, likes_caption_color = format_growth_caption(
+        selected_week_row.get("likes_delta_vs_prev_week"),
+        likes_growth_pct,
+    )
+    comments_caption, comments_caption_color = format_growth_caption(
+        selected_week_row.get("comments_delta_vs_prev_week"),
+        comments_growth_pct,
+    )
 
     metric_card_grid(
         [
-            metric_card_html("Seguidores", format_int(selected_row["followers"]), "", "SG"),
-            metric_card_html("Rank de engajamento medio", f"{engagement_rank} de {engagement_total}", "", "RK"),
-            metric_card_html("Total de videos", format_int(selected_row["post_count"]), "", "VD"),
-            metric_card_html("Total de views", format_int(selected_row["total_views"]), "", "VW"),
-            metric_card_html("Total de likes", format_int(selected_row["total_likes"]), "", "LK"),
-            metric_card_html("Total de comentarios", format_int(selected_row["total_comments"]), "", "CM"),
+            metric_card_html("Seguidores", format_int(selected_row["followers"]), followers_caption, "SG", caption_color=followers_caption_color),
+            metric_card_html("Rank de engajamento medio", f"{engagement_rank} de {engagement_total}", engagement_caption, "RK", caption_color=engagement_caption_color),
+            metric_card_html("Total de videos", format_int(selected_row["post_count"]), videos_caption, "VD", caption_color=videos_caption_color),
+            metric_card_html("Total de views", format_int(selected_row["total_views"]), views_caption, "VW", caption_color=views_caption_color),
+            metric_card_html("Total de likes", format_int(selected_row["total_likes"]), likes_caption, "LK", caption_color=likes_caption_color),
+            metric_card_html("Total de comentarios", format_int(selected_row["total_comments"]), comments_caption, "CM", caption_color=comments_caption_color),
         ],
         class_name="creator-kpi-grid",
     )
@@ -2049,35 +2238,39 @@ def render_creator_detail_page() -> None:
     donut_fig.update_traces(textinfo="percent", hovertemplate="%{label}: %{value:,}<extra></extra>")
     apply_plotly_theme(donut_fig, legend_title="Metrica")
 
-    monthly_fig = px.area(
-        monthly_df,
-        x="mes",
-        y="views_totais",
-        markers=True,
+    weekly_fig = px.bar(
+        weekly_df,
+        x="week_label",
+        y="views_delta_vs_prev_week",
         color_discrete_sequence=["#ff8069"],
     )
-    monthly_fig.add_scatter(
-        x=monthly_df["mes"],
-        y=monthly_df["likes_totais"],
+    weekly_fig.add_scatter(
+        x=weekly_df["week_label"],
+        y=weekly_df["views_growth_pct_vs_prev_week"],
         mode="lines+markers",
-        name="Likes",
+        name="% views",
         line=dict(color="#f2c14e", width=2),
         yaxis="y2",
     )
-    monthly_fig.update_layout(
-        yaxis_title="Views",
-        yaxis2=dict(title="Likes", overlaying="y", side="right", showgrid=False),
+    weekly_fig.update_layout(
+        yaxis_title="Delta de views",
+        yaxis2=dict(title="% vs semana anterior", overlaying="y", side="right", showgrid=False),
     )
-    apply_plotly_theme(monthly_fig, legend_title="Serie")
+    apply_plotly_theme(weekly_fig, legend_title="Serie")
 
     top_videos_display = top_videos_df.copy()
-    top_videos_display["post_date"] = top_videos_display["post_date"].apply(format_timestamp_br)
-    top_videos_display["views"] = top_videos_display["views"].apply(format_int)
-    top_videos_display["likes"] = top_videos_display["likes"].apply(format_int)
-    top_videos_display["comments"] = top_videos_display["comments"].apply(format_int)
+    if "post_date" in top_videos_display.columns:
+        top_videos_display["post_date"] = top_videos_display["post_date"].apply(format_timestamp_br)
+    if "views" in top_videos_display.columns:
+        top_videos_display["views"] = top_videos_display["views"].apply(format_int)
+    if "likes" in top_videos_display.columns:
+        top_videos_display["likes"] = top_videos_display["likes"].apply(format_int)
+    if "comments" in top_videos_display.columns:
+        top_videos_display["comments"] = top_videos_display["comments"].apply(format_int)
     top_videos_display = top_videos_display.rename(
         columns={
             "titulo": "Titulo",
+            "title": "Titulo",
             "post_date": "Data do post",
             "views": "Views",
             "likes": "Likes",
@@ -2094,13 +2287,16 @@ def render_creator_detail_page() -> None:
             st.caption("Dados usados: total_likes e total_comments do criador em v_dashboard_creator_summary.")
             st.plotly_chart(donut_fig, use_container_width=True)
         with chart_right:
-            st.markdown("#### Views mensais do criador")
-            st.caption("Dados usados: agregacao mensal por post_date com soma de views e soma de likes em public.posts.")
-            st.plotly_chart(monthly_fig, use_container_width=True)
+            st.markdown("#### Crescimento semanal")
+            st.caption("Dados usados: v_dashboard_creator_weekly_timeseries, apenas semanas completas.")
+            st.plotly_chart(weekly_fig, use_container_width=True)
 
     engagement_display = f"{float(selected_row['engagement_rate_pct']):.2f}%"
 
     with right_col:
+        if summary_error or weekly_error or top_videos_error:
+            active_errors = [error for error in [summary_error, weekly_error, top_videos_error] if error]
+            st.warning(" | ".join(active_errors))
         st.markdown("#### Top videos por views")
         st.caption("Dados usados: title, post_date, views, likes, comments e video_type de public.posts.")
         st.dataframe(top_videos_display, use_container_width=True, hide_index=True)
@@ -2155,6 +2351,13 @@ def render_creator_detail_page() -> None:
                     {"campo": "latest_post_date", "origem": "v_dashboard_creator_summary", "uso": "detalhe"},
                     {"campo": "latest_collected_at", "origem": "v_dashboard_creator_summary", "uso": "detalhe operacional"},
                     {"campo": "is_active", "origem": "v_dashboard_creator_summary", "uso": "status"},
+                    {"campo": "week_label", "origem": "v_dashboard_creator_weekly_timeseries", "uso": "periodo semanal selecionado"},
+                    {"campo": "week_end", "origem": "v_dashboard_creator_weekly_timeseries", "uso": "ordem e semana completa"},
+                    {"campo": "views_delta_vs_prev_week", "origem": "v_dashboard_creator_weekly_timeseries", "uso": "serie principal e subtitulo do KPI"},
+                    {"campo": "views_growth_pct_vs_prev_week", "origem": "v_dashboard_creator_weekly_timeseries", "uso": "intensidade relativa semanal"},
+                    {"campo": "likes_delta_vs_prev_week", "origem": "v_dashboard_creator_weekly_timeseries", "uso": "subtitulo semanal"},
+                    {"campo": "comments_delta_vs_prev_week", "origem": "v_dashboard_creator_weekly_timeseries", "uso": "subtitulo semanal"},
+                    {"campo": "active_posts_in_week", "origem": "v_dashboard_creator_weekly_timeseries", "uso": "comparacao semanal de videos ativos"},
                     {"campo": "title", "origem": "public.posts", "uso": "tabela de top videos"},
                     {"campo": "post_date", "origem": "public.posts", "uso": "tabela e serie temporal"},
                     {"campo": "views", "origem": "public.posts", "uso": "tabela de top videos e serie temporal"},
