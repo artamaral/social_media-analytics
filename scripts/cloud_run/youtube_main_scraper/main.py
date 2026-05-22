@@ -311,6 +311,7 @@ def run_pipeline():
 
     processed = 0
     errors = 0
+    error_details = []
 
     # ==============================
     # 🔁 LOOP PRINCIPAL
@@ -384,6 +385,13 @@ def run_pipeline():
             print(f"👤 Creator: {creator.get('username')}")
             print(f"❌ Detalhe: {str(e)}")
 
+            error_details.append({
+                "creator_id": creator.get("id"),
+                "username": creator.get("username"),
+                "channel_id": creator.get("channel_id"),
+                "error": str(e),
+            })
+
             import traceback
             traceback.print_exc()
 
@@ -408,6 +416,7 @@ def run_pipeline():
     return {
         "processed": processed,
         "errors": errors,
+        "error_details": error_details[:10],
         "cursor": cursor,
         "next_cursor": next_cursor,
         "total_creators": total
