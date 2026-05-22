@@ -5,6 +5,7 @@
 - [ ] Melhorar controle de fim de lista no scraper
 - [ ] Validar duplicidade de coleta
 - [ ] Retry automatico para falhas API
+- [ ] Adicionar coleta historica de followers de creators do YouTube via `channels.list(part=statistics)`, gravando snapshots em `creator_metrics_history` e atualizando `creators.followers` como valor corrente. Avaliar implementacao no `youtube_main_scraper`, que ja percorre creators e chama `channels.list` para buscar a playlist de uploads.
 
 ## Dados / Qualidade
 
