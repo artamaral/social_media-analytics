@@ -2209,9 +2209,12 @@ def render_creator_detail_page() -> None:
     chart_rows = chart_rows[-8:]
     weekly_df = pd.DataFrame(chart_rows)
 
+    top_video_filters = [("creator_id", selected_row["creator_id"])]
+    if selected_video_type != "todos":
+        top_video_filters.append(("video_type", selected_video_type))
     top_videos_rows, top_videos_error = get_filtered_rows(
         "posts",
-        filters=(("creator_id", selected_row["creator_id"]),),
+        filters=tuple(top_video_filters),
         order_by="views",
         order_desc=True,
         limit=10,
