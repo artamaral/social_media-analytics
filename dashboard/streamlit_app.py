@@ -1424,6 +1424,13 @@ def format_int(value: Any) -> str:
         return "--"
 
 
+def format_pct(value: Any) -> str:
+    try:
+        return f"{float(value):.2f}%".replace(".", ",")
+    except (TypeError, ValueError):
+        return "--"
+
+
 def format_timestamp_br(value: Any) -> str:
     if value in (None, ""):
         return "--"
@@ -1995,6 +2002,28 @@ def calculate_delta_pct(current_value: int | None, delta_value: int | None) -> f
     return round((delta_value / previous_value) * 100, 2)
 
 
+def sum_numeric_column(df: pd.DataFrame, column_name: str) -> int:
+    if column_name not in df.columns or df.empty:
+        return 0
+    return int(pd.to_numeric(df[column_name], errors="coerce").fillna(0).sum())
+
+
+def engagement_rate_from_totals(views: int, likes: int, comments: int) -> float:
+    if views <= 0:
+        return 0.0
+    return round(((likes + comments) / views) * 100, 2)
+
+
+def growth_caption_from_values(current_value: int, previous_value: int | None) -> tuple[str, str]:
+    if previous_value is None:
+        return "Sem semana anterior", "#aeb4bf"
+    delta_value = current_value - previous_value
+    if previous_value <= 0:
+        return "Sem base anterior", get_delta_color(delta_value)
+    pct_value = round((delta_value / previous_value) * 100, 2)
+    return format_growth_caption(delta_value, pct_value)
+
+
 def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> None:
     state = get_external_intake_mock_state()
     mock_entities = get_mock_entity_bank()
@@ -2283,53 +2312,113 @@ def render_creator_detail_page() -> None:
         (row for row in weekly_rows if str(row["week_label"]) == selected_period_label),
         weekly_rows[-1] if weekly_rows else {},
     )
-    selected_week_index = next(
-        (index for index, row in enumerate(weekly_rows) if str(row["week_label"]) == selected_period_label),
-        len(weekly_rows) - 1,
-    )
-    previous_week_row = weekly_rows[selected_week_index - 1] if selected_week_index > 0 else None
-    if selected_week_row and "active_posts_delta_vs_prev_week" not in selected_week_row:
-        previous_active_posts = int(previous_week_row.get("active_posts_in_week") or 0) if previous_week_row else None
-        current_active_posts = int(selected_week_row.get("active_posts_in_week") or 0)
-        selected_week_row["active_posts_delta_vs_prev_week"] = (
-            None if previous_active_posts is None else current_active_posts - previous_active_posts
-        )
-
-    chart_rows = [row for row in weekly_rows if str(row["week_start"]) <= str(selected_week_row.get("week_start", ""))]
-    chart_rows = chart_rows[-8:]
-    weekly_df = pd.DataFrame(chart_rows)
-
-    top_video_filters = [("creator_id", selected_row["creator_id"])]
+    post_filters = [("creator_id", selected_row["creator_id"])]
     if selected_video_type != "todos":
-        top_video_filters.append(("video_type", selected_video_type))
-    top_videos_rows, top_videos_error = get_filtered_rows(
+        post_filters.append(("video_type", selected_video_type))
+    filtered_post_rows, top_videos_error = get_filtered_rows(
         "posts",
-        filters=tuple(top_video_filters),
+        filters=tuple(post_filters),
         order_by="views",
         order_desc=True,
-        limit=10,
     )
-    if not top_videos_rows:
-        top_videos_df = get_creator_top_videos(selected_row["entity_name"])
+    if top_videos_error:
+        filtered_posts_df = get_creator_top_videos(selected_row["entity_name"])
     else:
-        top_videos_df = pd.DataFrame(top_videos_rows)
-    if selected_video_type != "todos" and "video_type" in top_videos_df.columns:
-        top_videos_df = top_videos_df[
-            top_videos_df["video_type"].astype(str).str.lower() == selected_video_type
+        filtered_posts_df = pd.DataFrame(filtered_post_rows)
+    if selected_video_type != "todos" and "video_type" in filtered_posts_df.columns:
+        filtered_posts_df = filtered_posts_df[
+            filtered_posts_df["video_type"].astype(str).str.lower() == selected_video_type
         ]
+    top_videos_df = (
+        filtered_posts_df.sort_values(by="views", ascending=False, na_position="last").head(10)
+        if "views" in filtered_posts_df.columns
+        else filtered_posts_df.head(10)
+    )
 
-    engagement_rank, engagement_total = get_engagement_rank(working_rows or rows, selected_row["entity_name"])
-    likes_growth_pct = calculate_delta_pct(
-        int(selected_week_row.get("likes_week_end") or 0),
-        int(selected_week_row.get("likes_delta_vs_prev_week")) if selected_week_row.get("likes_delta_vs_prev_week") is not None else None,
+    total_videos_filtered = len(filtered_posts_df)
+    total_views_filtered = sum_numeric_column(filtered_posts_df, "views")
+    total_likes_filtered = sum_numeric_column(filtered_posts_df, "likes")
+    total_comments_filtered = sum_numeric_column(filtered_posts_df, "comments")
+    engagement_filtered_pct = engagement_rate_from_totals(
+        total_views_filtered,
+        total_likes_filtered,
+        total_comments_filtered,
     )
-    comments_growth_pct = calculate_delta_pct(
-        int(selected_week_row.get("comments_week_end") or 0),
-        int(selected_week_row.get("comments_delta_vs_prev_week")) if selected_week_row.get("comments_delta_vs_prev_week") is not None else None,
+
+    selected_week_start = pd.to_datetime(selected_week_row.get("week_start"), errors="coerce")
+    selected_week_end = pd.to_datetime(selected_week_row.get("week_end"), errors="coerce")
+    posts_with_dates_df = filtered_posts_df.copy()
+    if "post_date" in posts_with_dates_df.columns:
+        posts_with_dates_df["post_date"] = pd.to_datetime(posts_with_dates_df["post_date"], errors="coerce")
+    else:
+        posts_with_dates_df["post_date"] = pd.NaT
+    if pd.notna(selected_week_start) and pd.notna(selected_week_end):
+        selected_week_posts_df = posts_with_dates_df[
+            (posts_with_dates_df["post_date"] >= selected_week_start)
+            & (posts_with_dates_df["post_date"] <= selected_week_end)
+        ]
+        previous_week_start = selected_week_start - pd.Timedelta(days=7)
+        previous_week_end = selected_week_end - pd.Timedelta(days=7)
+        previous_week_posts_df = posts_with_dates_df[
+            (posts_with_dates_df["post_date"] >= previous_week_start)
+            & (posts_with_dates_df["post_date"] <= previous_week_end)
+        ]
+    else:
+        selected_week_posts_df = posts_with_dates_df.iloc[0:0]
+        previous_week_posts_df = posts_with_dates_df.iloc[0:0]
+
+    weekly_videos_value = len(selected_week_posts_df)
+    weekly_views_value = sum_numeric_column(selected_week_posts_df, "views")
+    weekly_likes_value = sum_numeric_column(selected_week_posts_df, "likes")
+    weekly_comments_value = sum_numeric_column(selected_week_posts_df, "comments")
+    previous_week_videos_value = len(previous_week_posts_df)
+    previous_week_views_value = sum_numeric_column(previous_week_posts_df, "views")
+    previous_week_likes_value = sum_numeric_column(previous_week_posts_df, "likes")
+    previous_week_comments_value = sum_numeric_column(previous_week_posts_df, "comments")
+
+    chart_rows = []
+    previous_chart_views: int | None = None
+    for row in [row for row in weekly_rows if str(row["week_start"]) <= str(selected_week_row.get("week_start", ""))][-8:]:
+        row_week_start = pd.to_datetime(row.get("week_start"), errors="coerce")
+        row_week_end = pd.to_datetime(row.get("week_end"), errors="coerce")
+        if pd.notna(row_week_start) and pd.notna(row_week_end):
+            row_week_posts_df = posts_with_dates_df[
+                (posts_with_dates_df["post_date"] >= row_week_start)
+                & (posts_with_dates_df["post_date"] <= row_week_end)
+            ]
+        else:
+            row_week_posts_df = posts_with_dates_df.iloc[0:0]
+        row_views = sum_numeric_column(row_week_posts_df, "views")
+        row_growth_pct = (
+            None
+            if previous_chart_views is None or previous_chart_views <= 0
+            else round(((row_views - previous_chart_views) / previous_chart_views) * 100, 2)
+        )
+        chart_rows.append(
+            {
+                "week_label": str(row.get("week_label") or ""),
+                "views_week": row_views,
+                "views_growth_pct": row_growth_pct,
+            }
+        )
+        previous_chart_views = row_views
+    weekly_df = pd.DataFrame(chart_rows, columns=["week_label", "views_week", "views_growth_pct"])
+
+    weekly_videos_caption, weekly_videos_caption_color = growth_caption_from_values(
+        weekly_videos_value,
+        previous_week_videos_value,
     )
-    active_posts_growth_pct = calculate_delta_pct(
-        int(selected_week_row.get("active_posts_in_week") or 0),
-        int(selected_week_row.get("active_posts_delta_vs_prev_week")) if selected_week_row.get("active_posts_delta_vs_prev_week") is not None else None,
+    weekly_views_caption, weekly_views_caption_color = growth_caption_from_values(
+        weekly_views_value,
+        previous_week_views_value,
+    )
+    weekly_likes_caption, weekly_likes_caption_color = growth_caption_from_values(
+        weekly_likes_value,
+        previous_week_likes_value,
+    )
+    weekly_comments_caption, weekly_comments_caption_color = growth_caption_from_values(
+        weekly_comments_value,
+        previous_week_comments_value,
     )
 
     st.markdown(
@@ -2339,11 +2428,11 @@ def render_creator_detail_page() -> None:
     metric_card_grid(
         [
             metric_card_html("Seguidores", format_int(selected_row["followers"]), "", "SG"),
-            metric_card_html("Engajamento", f"{engagement_rank} de {engagement_total}", "", "RK"),
-            metric_card_html("Videos", format_int(selected_row["post_count"]), "", "VD"),
-            metric_card_html("Views", format_int(selected_row["total_views"]), "", "VW"),
-            metric_card_html("Likes", format_int(selected_row["total_likes"]), "", "LK"),
-            metric_card_html("Comentarios", format_int(selected_row["total_comments"]), "", "CM"),
+            metric_card_html("Engajamento", format_pct(engagement_filtered_pct), "", "RK"),
+            metric_card_html("Videos", format_int(total_videos_filtered), "", "VD"),
+            metric_card_html("Views", format_int(total_views_filtered), "", "VW"),
+            metric_card_html("Likes", format_int(total_likes_filtered), "", "LK"),
+            metric_card_html("Comentarios", format_int(total_comments_filtered), "", "CM"),
         ],
         class_name="creator-kpi-grid",
     )
@@ -2351,7 +2440,7 @@ def render_creator_detail_page() -> None:
     donut_df = pd.DataFrame(
         {
             "metrica": ["Likes", "Comentarios"],
-            "valor": [int(selected_row["total_likes"]), int(selected_row["total_comments"])],
+            "valor": [total_likes_filtered, total_comments_filtered],
         }
     )
     donut_fig = px.pie(
@@ -2368,24 +2457,24 @@ def render_creator_detail_page() -> None:
     weekly_fig = px.bar(
         weekly_df,
         x="week_label",
-        y="views_delta_vs_prev_week",
+        y="views_week",
         color_discrete_sequence=["#ff8069"],
     )
     weekly_fig.add_scatter(
         x=weekly_df["week_label"],
-        y=weekly_df["views_growth_pct_vs_prev_week"],
+        y=weekly_df["views_growth_pct"],
         mode="lines+markers",
         name="% views",
         line=dict(color="#f2c14e", width=2),
         yaxis="y2",
     )
     weekly_fig.update_layout(
-        yaxis_title="Delta de views",
+        yaxis_title="Views da semana",
         yaxis2=dict(title="% vs semana anterior", overlaying="y", side="right", showgrid=False),
     )
     apply_plotly_theme(weekly_fig, legend_title="Serie")
 
-    engagement_display = f"{float(selected_row['engagement_rate_pct']):.2f}%"
+    engagement_display = format_pct(engagement_filtered_pct)
     selected_sub_niche = str(selected_row.get("sub_niche_display") or selected_row.get("niche") or "Sem classificacao fina")
     selected_creator_type = str(selected_row.get("creator_type") or "--")
     selected_latest_collected_at = format_timestamp_br(selected_row.get("latest_collected_at"))
@@ -2395,36 +2484,19 @@ def render_creator_detail_page() -> None:
     selected_week_label = str(selected_week_row.get("week_label") or "Sem base semanal")
     weekly_followers_caption, weekly_followers_caption_color = "Sem serie semanal", "#aeb4bf"
     weekly_engagement_caption, weekly_engagement_caption_color = "Sem serie semanal", "#aeb4bf"
-    weekly_videos_caption, weekly_videos_caption_color = format_growth_caption(
-        selected_week_row.get("active_posts_delta_vs_prev_week"),
-        active_posts_growth_pct,
-    )
-    weekly_views_caption, weekly_views_caption_color = format_growth_caption(
-        selected_week_row.get("views_delta_vs_prev_week"),
-        float(selected_week_row.get("views_growth_pct_vs_prev_week")) if selected_week_row.get("views_growth_pct_vs_prev_week") is not None else None,
-    )
-    weekly_likes_caption, weekly_likes_caption_color = format_growth_caption(
-        selected_week_row.get("likes_delta_vs_prev_week"),
-        likes_growth_pct,
-    )
-    weekly_comments_caption, weekly_comments_caption_color = format_growth_caption(
-        selected_week_row.get("comments_delta_vs_prev_week"),
-        comments_growth_pct,
-    )
-
     st.markdown(
         f'<div class="creator-kpi-section-title">Semana selecionada: {escape(selected_week_label)}</div>',
         unsafe_allow_html=True,
     )
-    st.caption("Esta faixa mostra os dados da semana selecionada. As colunas com serie temporal usam o delta semanal; seguidores e engajamento ainda nao possuem serie semanal propria.")
+    st.caption("Esta faixa mostra os posts publicados na semana selecionada, respeitando o filtro de tipo de video.")
     metric_card_grid(
         [
             metric_card_html("Seguidores", "--", weekly_followers_caption, "SG", caption_color=weekly_followers_caption_color),
             metric_card_html("Engajamento", "--", weekly_engagement_caption, "RK", caption_color=weekly_engagement_caption_color),
-            metric_card_html("Videos", format_int(selected_week_row.get("active_posts_in_week")), weekly_videos_caption, "VD", caption_color=weekly_videos_caption_color),
-            metric_card_html("Views", format_int(selected_week_row.get("views_delta_vs_prev_week")), weekly_views_caption, "VW", caption_color=weekly_views_caption_color),
-            metric_card_html("Likes", format_int(selected_week_row.get("likes_delta_vs_prev_week")), weekly_likes_caption, "LK", caption_color=weekly_likes_caption_color),
-            metric_card_html("Comentarios", format_int(selected_week_row.get("comments_delta_vs_prev_week")), weekly_comments_caption, "CM", caption_color=weekly_comments_caption_color),
+            metric_card_html("Videos", format_int(weekly_videos_value), weekly_videos_caption, "VD", caption_color=weekly_videos_caption_color),
+            metric_card_html("Views", format_int(weekly_views_value), weekly_views_caption, "VW", caption_color=weekly_views_caption_color),
+            metric_card_html("Likes", format_int(weekly_likes_value), weekly_likes_caption, "LK", caption_color=weekly_likes_caption_color),
+            metric_card_html("Comentarios", format_int(weekly_comments_value), weekly_comments_caption, "CM", caption_color=weekly_comments_caption_color),
         ],
         class_name="creator-kpi-grid weekly-grid",
     )
@@ -2436,11 +2508,11 @@ def render_creator_detail_page() -> None:
     chart_left, chart_right = st.columns(2)
     with chart_left:
         st.markdown("#### Distribuicao de engajamento")
-        st.caption("Dados usados: total_likes e total_comments do criador em v_dashboard_creator_summary.")
+        st.caption("Dados usados: public.posts filtrado por tipo de video.")
         st.plotly_chart(donut_fig, use_container_width=True)
     with chart_right:
         st.markdown("#### Crescimento semanal")
-        st.caption("Dados usados: v_dashboard_creator_weekly_timeseries, apenas semanas completas.")
+        st.caption("Dados usados: public.posts filtrado por tipo de video e semana selecionada.")
         st.plotly_chart(weekly_fig, use_container_width=True)
 
     video_scope_weekly = st.checkbox("Mostrar videos da semana selecionada", value=False)
@@ -2526,27 +2598,27 @@ def render_creator_detail_page() -> None:
                     {"campo": "username", "origem": "v_dashboard_creator_summary", "uso": "identificacao"},
                     {"campo": "channel_id", "origem": "v_dashboard_creator_summary", "uso": "identificacao tecnica"},
                     {"campo": "followers", "origem": "v_dashboard_creator_summary", "uso": "kpi e ranking"},
-                    {"campo": "post_count", "origem": "v_dashboard_creator_summary", "uso": "kpi e ranking"},
-                    {"campo": "total_views", "origem": "v_dashboard_creator_summary", "uso": "kpi e ranking"},
-                    {"campo": "total_likes", "origem": "v_dashboard_creator_summary", "uso": "painel lateral"},
-                    {"campo": "total_comments", "origem": "v_dashboard_creator_summary", "uso": "painel lateral"},
-                    {"campo": "engagement_rate_pct", "origem": "v_dashboard_creator_summary", "uso": "kpi e ranking"},
+                    {"campo": "post_count", "origem": "v_dashboard_creator_summary", "uso": "ranking e fallback"},
+                    {"campo": "total_views", "origem": "v_dashboard_creator_summary", "uso": "ranking e fallback"},
+                    {"campo": "total_likes", "origem": "v_dashboard_creator_summary", "uso": "ranking e fallback"},
+                    {"campo": "total_comments", "origem": "v_dashboard_creator_summary", "uso": "ranking e fallback"},
+                    {"campo": "engagement_rate_pct", "origem": "v_dashboard_creator_summary", "uso": "ranking e fallback"},
                     {"campo": "latest_post_date", "origem": "v_dashboard_creator_summary", "uso": "detalhe"},
                     {"campo": "latest_collected_at", "origem": "v_dashboard_creator_summary", "uso": "detalhe operacional"},
                     {"campo": "is_active", "origem": "v_dashboard_creator_summary", "uso": "status"},
                     {"campo": "week_label", "origem": "v_dashboard_creator_weekly_timeseries", "uso": "periodo semanal selecionado"},
                     {"campo": "week_end", "origem": "v_dashboard_creator_weekly_timeseries", "uso": "ordem e semana completa"},
-                    {"campo": "views_delta_vs_prev_week", "origem": "v_dashboard_creator_weekly_timeseries", "uso": "serie principal e subtitulo do KPI"},
-                    {"campo": "views_growth_pct_vs_prev_week", "origem": "v_dashboard_creator_weekly_timeseries", "uso": "intensidade relativa semanal"},
-                    {"campo": "likes_delta_vs_prev_week", "origem": "v_dashboard_creator_weekly_timeseries", "uso": "subtitulo semanal"},
-                    {"campo": "comments_delta_vs_prev_week", "origem": "v_dashboard_creator_weekly_timeseries", "uso": "subtitulo semanal"},
-                    {"campo": "active_posts_in_week", "origem": "v_dashboard_creator_weekly_timeseries", "uso": "comparacao semanal de videos ativos"},
+                    {"campo": "views_delta_vs_prev_week", "origem": "v_dashboard_creator_weekly_timeseries", "uso": "referencia tecnica; nao alimenta os cards filtrados"},
+                    {"campo": "views_growth_pct_vs_prev_week", "origem": "v_dashboard_creator_weekly_timeseries", "uso": "referencia tecnica; grafico recalcula pelo filtro de tipo"},
+                    {"campo": "likes_delta_vs_prev_week", "origem": "v_dashboard_creator_weekly_timeseries", "uso": "referencia tecnica; nao alimenta os cards filtrados"},
+                    {"campo": "comments_delta_vs_prev_week", "origem": "v_dashboard_creator_weekly_timeseries", "uso": "referencia tecnica; nao alimenta os cards filtrados"},
+                    {"campo": "active_posts_in_week", "origem": "v_dashboard_creator_weekly_timeseries", "uso": "referencia tecnica da semana completa"},
                     {"campo": "title", "origem": "public.posts", "uso": "tabela de top videos"},
                     {"campo": "post_date", "origem": "public.posts", "uso": "tabela e serie temporal"},
-                    {"campo": "views", "origem": "public.posts", "uso": "tabela de top videos e serie temporal"},
-                    {"campo": "likes", "origem": "public.posts", "uso": "distribuicao e serie temporal"},
-                    {"campo": "comments", "origem": "public.posts", "uso": "distribuicao e tabela"},
-                    {"campo": "video_type", "origem": "public.posts", "uso": "classificacao visual dos top videos"},
+                    {"campo": "views", "origem": "public.posts", "uso": "cards filtrados, tabela de top videos e serie temporal"},
+                    {"campo": "likes", "origem": "public.posts", "uso": "cards filtrados, distribuicao e serie temporal"},
+                    {"campo": "comments", "origem": "public.posts", "uso": "cards filtrados, distribuicao e tabela"},
+                    {"campo": "video_type", "origem": "public.posts", "uso": "filtro long/short/todos e classificacao visual dos top videos"},
                 ]
             ),
             use_container_width=True,
