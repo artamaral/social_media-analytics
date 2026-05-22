@@ -203,6 +203,8 @@ Dados esperados da view:
 - `entity_name`
 - `platform`
 - `week_start`
+- `week_end`
+- `week_label`
 - `views_week_end`
 - `views_delta_vs_prev_week`
 - `views_growth_pct_vs_prev_week`
@@ -218,6 +220,8 @@ Observacao:
 - o Streamlit nao deve calcular a serie bruta a partir de `public.posts`
 - quando a ligacao SQL acontecer, o ideal e filtrar por `creator_id`
 - a unidade recomendada para comparacao e a semana fechada, nao o dia isolado
+- semanas abertas nao devem aparecer no grafico
+- o rotulo recomendado para exibicao e o intervalo completo da semana
 - a implementacao detalhada do contrato fica em documento proprio
 
 ### Tabela editorial: top videos por views
@@ -290,6 +294,8 @@ Nova camada recomendada para serie temporal:
 | Campo | Origem | Uso na view |
 |---|---|---|
 | `week_start` | `v_dashboard_creator_weekly_timeseries` | eixo temporal semanal |
+| `week_end` | `v_dashboard_creator_weekly_timeseries` | fechamento da semana consolidada |
+| `week_label` | `v_dashboard_creator_weekly_timeseries` | rotulo amigavel no grafico |
 | `views_delta_vs_prev_week` | `v_dashboard_creator_weekly_timeseries` | crescimento ou encolhimento principal |
 | `views_growth_pct_vs_prev_week` | `v_dashboard_creator_weekly_timeseries` | intensidade relativa da variacao |
 | `likes_delta_vs_prev_week` | `v_dashboard_creator_weekly_timeseries` | confirmacao secundaria de tracao |

@@ -83,6 +83,8 @@ Colunas minimas:
 | `entity_name` | texto | nome exibido do criador |
 | `platform` | texto | plataforma do criador |
 | `week_start` | data | inicio da semana consolidada |
+| `week_end` | data | ultimo dia da semana consolidada |
+| `week_label` | texto | rotulo pronto para exibicao no app |
 | `views_week_end` | inteiro | estoque de views observado no fim da semana |
 | `views_delta_vs_prev_week` | inteiro | delta de views contra a semana anterior |
 | `views_growth_pct_vs_prev_week` | numerico | crescimento percentual de views contra a semana anterior |
@@ -121,6 +123,83 @@ Regras de desenho:
 - usar o snapshot mais recente de cada post dentro da semana para evitar dupla
   contagem interna
 - comparar cada semana com a semana imediatamente anterior do mesmo criador
+
+## Como o Supabase gera os dados semanais
+
+Modelo de geracao:
+
+- a serie semanal nao depende de job separado no fim da semana
+- a serie nasce de uma `view` SQL consultada sob demanda no Supabase
+- essa `view` le `public.post_metrics_history` no momento da consulta
+- conforme novos snapshots entram no banco, as semanas fechadas passam a refletir
+  automaticamente o estado mais recente consolidado
+
+Fluxo real de incorporacao:
+
+1. os workers continuam inserindo snapshots em `public.post_metrics_history`
+2. a view semanal agrupa esses snapshots por semana e por `creator_id`
+3. para cada post em cada semana, a view usa o ultimo snapshot util daquela
+   semana
+4. depois agrega os posts por criador
+5. por fim calcula delta e percentual contra a semana anterior do mesmo criador
+
+Implicacao importante:
+
+- nao existe rotina manual de "fechar a semana" no Streamlit
+- o fechamento da semana e logico, definido pela propria query
+- assim que a semana acaba, ela passa a ser elegivel para aparecer na view
+
+## Regra obrigatoria de semana completa
+
+Diretriz:
+
+- o dashboard deve mostrar e calcular apenas semanas completas
+
+Definicao adotada:
+
+- semana de segunda a domingo
+- `week_start` = segunda-feira `00:00:00`
+- `week_end` = domingo da mesma semana
+
+Regra SQL:
+
+- a view deve excluir a semana corrente ainda aberta
+- apenas semanas com `week_end < data_atual` podem aparecer
+
+Leitura pratica:
+
+- se hoje ainda estamos na semana de `19/05/2026` a `25/05/2026`, essa semana
+  nao entra no grafico
+- a ultima semana visivel sera a semana fechada imediatamente anterior
+
+Motivo:
+
+- evitar comparacao injusta entre semana parcial e semana completa
+- impedir falsos sinais de queda no meio da semana
+- manter consistencia visual e analitica
+
+## Como mostrar o intervalo semanal
+
+Recomendacao principal:
+
+- mostrar intervalo completo no eixo ou tooltip
+- formato recomendado: `18/05/2026-24/05/2026`
+
+Alternativa curta:
+
+- mostrar apenas `24/05/2026` como fim da semana
+
+Decisao recomendada para o app:
+
+- usar `week_label` como rotulo principal
+- usar `week_end` como campo de apoio para ordenacao e tooltip
+
+Motivo:
+
+- o intervalo completo evita ambiguidade
+- o usuario enxerga imediatamente o periodo consolidado
+- o numero da semana isolado, como `semana 21`, nao e suficiente para leitura
+  rapida
 
 ## Leitura no Streamlit
 
@@ -175,6 +254,8 @@ Fonte desejada:
 Campos necessarios no Streamlit:
 
 - `week_start`
+- `week_end`
+- `week_label`
 - `views_delta_vs_prev_week`
 - `views_growth_pct_vs_prev_week`
 - `likes_delta_vs_prev_week`
@@ -185,6 +266,7 @@ Situacao atual no Streamlit:
 
 - o mockup ainda usa uma serie mensal local simulada
 - a tela ainda nao consome uma view semanal real
+- a tela ainda nao diferencia explicitamente semana completa de semana aberta
 
 4. Top videos por views
 
@@ -222,6 +304,8 @@ Gap atual:
 | Bloco | Campo faltante | Fonte desejada |
 |---|---|---|
 | Serie temporal semanal | `week_start` | `v_dashboard_creator_weekly_timeseries` |
+| Serie temporal semanal | `week_end` | `v_dashboard_creator_weekly_timeseries` |
+| Serie temporal semanal | `week_label` | `v_dashboard_creator_weekly_timeseries` |
 | Serie temporal semanal | `views_delta_vs_prev_week` | `v_dashboard_creator_weekly_timeseries` |
 | Serie temporal semanal | `views_growth_pct_vs_prev_week` | `v_dashboard_creator_weekly_timeseries` |
 | Serie temporal semanal | `likes_delta_vs_prev_week` | `v_dashboard_creator_weekly_timeseries` |
@@ -259,11 +343,16 @@ Decisoes:
 - como consolidar um post com varios snapshots na mesma semana
 - como tratar semanas sem observacao
 - se `views_week_end` representa ultimo snapshot da semana ou soma agregada
+- como excluir a semana corrente ainda aberta
+- qual rotulo semanal o app deve exibir
 
 Recomendacao:
 
+- usar segunda a domingo como calendario semanal
 - usar ultimo snapshot util de cada post na semana
 - depois agregar por criador
+- excluir da view qualquer semana ainda aberta
+- gerar `week_label` pronto no SQL
 
 ### Etapa 3. Criar a view SQL
 
@@ -289,6 +378,8 @@ Checks:
 - semanas com queda mostram delta negativo
 - percentuais nao explodem com denominador zero
 - criadores sem historico suficiente nao quebram a consulta
+- a semana corrente nao aparece enquanto estiver incompleta
+- o intervalo exibido bate com `week_start` e `week_end`
 
 ### Etapa 5. Ligar no Streamlit
 
@@ -300,10 +391,12 @@ Mudancas no app:
 
 - trocar a funcao mockada da serie mensal
 - carregar a nova view filtrada por `creator_id`
-- usar `week_start` no eixo x
+- usar `week_label` no eixo x
+- usar `week_end` para ordenacao cronologica e tooltip
 - usar `views_delta_vs_prev_week` como serie principal
 - usar `views_growth_pct_vs_prev_week` ou `likes_delta_vs_prev_week` como
   segunda leitura
+- nunca montar semana localmente no app
 
 ### Etapa 6. Revisar texto e semantica visual
 
