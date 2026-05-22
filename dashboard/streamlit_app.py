@@ -198,6 +198,55 @@ def inject_theme() -> None:
             margin-bottom: 1.25rem;
         }
 
+        .creator-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.75rem;
+            margin-bottom: 1.1rem;
+        }
+
+        .creator-kpi-grid .metric-card {
+            min-height: 118px;
+        }
+
+        .creator-kpi-grid .metric-card-header {
+            padding: 0.55rem 0.7rem;
+            font-size: 0.72rem;
+        }
+
+        .creator-kpi-grid .metric-card-body {
+            padding: 0.8rem 0.85rem;
+        }
+
+        .creator-kpi-grid .metric-value {
+            font-size: 1.25rem;
+            gap: 0.6rem;
+        }
+
+        .creator-kpi-grid .metric-picto {
+            width: 38px;
+            height: 38px;
+            font-size: 0.9rem;
+        }
+
+        .creator-kpi-grid .metric-caption {
+            font-size: 0.67rem;
+            margin-top: 0.55rem;
+        }
+
+        @media (max-width: 1320px) {
+            .creator-kpi-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 900px) {
+            .creator-kpi-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
         .fenabrave-card-grid .metric-picto {
             font-size: 1.5rem;
         }
@@ -623,7 +672,7 @@ def inject_theme() -> None:
 
         .creator-detail-value {
             color: var(--text);
-            font-size: 0.96rem;
+            font-size: 0.9rem;
             font-weight: 800;
             margin-top: 0.25rem;
             overflow-wrap: anywhere;
@@ -1937,20 +1986,7 @@ def render_creator_detail_page() -> None:
     selected_name = st.session_state.get("creator_selected_name", rows[0]["entity_name"])
     selected_default = next((row for row in rows if row["entity_name"] == selected_name), rows[0])
 
-    page_header("Criador individual", "Leitura aprofundada de um criador por vez")
-    process_banner(
-        "Comparacao com a imagem de referencia",
-        "Para o criador individual, mantivemos tres elementos-chave da referencia: faixa superior de KPIs, miolo analitico com distribuicao e serie temporal, e tabela editorial com top videos. O bloco de cadencia foi removido porque ainda nao temos base confiavel para essa leitura.",
-    )
-    st.markdown(
-        (
-            '<div class="creator-reference-note">'
-            "<strong>O que mudou em relacao ao mockup anterior</strong>"
-            "Antes a pagina estava mais proxima de um ranking com painel lateral. Agora ela segue melhor a imagem: faixa superior de KPIs, distribuicao de engajamento, serie mensal, tabela de top videos e bloco de cadencia de publicacao."
-            "</div>"
-        ),
-        unsafe_allow_html=True,
-    )
+    page_header("Criador individual")
 
     filter_col1, filter_col2, filter_col3, filter_col4 = st.columns([1.35, 1, 1, 1.1])
     with filter_col1:
@@ -1992,7 +2028,7 @@ def render_creator_detail_page() -> None:
             metric_card_html("Total de likes", format_int(selected_row["total_likes"]), "Acumulado do criador", "LK"),
             metric_card_html("Total de comentarios", format_int(selected_row["total_comments"]), "Acumulado do criador", "CM"),
         ],
-        class_name="fenabrave-card-grid",
+        class_name="creator-kpi-grid",
     )
 
     donut_df = pd.DataFrame(
