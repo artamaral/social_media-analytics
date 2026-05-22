@@ -771,6 +771,7 @@ def page_subtitle(text: str) -> None:
 
 def metric_card_html(title: str, value: str, caption: str, picto: str, accent_color: str | None = None) -> str:
     picto_style = f' style="color: {accent_color};"' if accent_color else ""
+    caption_html = f'<div class="metric-caption">{escape(caption)}</div>' if caption else ""
     return (
         '<div class="metric-card">'
         f'<div class="metric-card-header">{escape(title)}</div>'
@@ -779,7 +780,7 @@ def metric_card_html(title: str, value: str, caption: str, picto: str, accent_co
         f"<span>{escape(value)}</span>"
         f'<span class="metric-picto"{picto_style}>{escape(picto)}</span>'
         "</div>"
-        f'<div class="metric-caption">{escape(caption)}</div>'
+        f"{caption_html}"
         "</div>"
         "</div>"
     )
@@ -2021,12 +2022,12 @@ def render_creator_detail_page() -> None:
 
     metric_card_grid(
         [
-            metric_card_html("Seguidores", format_int(selected_row["followers"]), "Campo followers da view resumida", "SG"),
-            metric_card_html("Rank de engajamento medio", f"{engagement_rank} de {engagement_total}", f"{float(selected_row['engagement_rate_pct']):.2f}% na base filtrada", "RK"),
-            metric_card_html("Total de videos", format_int(selected_row["post_count"]), "Quantidade monitorada para o criador", "VD"),
-            metric_card_html("Total de views", format_int(selected_row["total_views"]), "Acumulado do criador", "VW"),
-            metric_card_html("Total de likes", format_int(selected_row["total_likes"]), "Acumulado do criador", "LK"),
-            metric_card_html("Total de comentarios", format_int(selected_row["total_comments"]), "Acumulado do criador", "CM"),
+            metric_card_html("Seguidores", format_int(selected_row["followers"]), "", "SG"),
+            metric_card_html("Rank de engajamento medio", f"{engagement_rank} de {engagement_total}", "", "RK"),
+            metric_card_html("Total de videos", format_int(selected_row["post_count"]), "", "VD"),
+            metric_card_html("Total de views", format_int(selected_row["total_views"]), "", "VW"),
+            metric_card_html("Total de likes", format_int(selected_row["total_likes"]), "", "LK"),
+            metric_card_html("Total de comentarios", format_int(selected_row["total_comments"]), "", "CM"),
         ],
         class_name="creator-kpi-grid",
     )
