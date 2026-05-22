@@ -1328,6 +1328,18 @@ def get_mock_taxonomy_options() -> list[str]:
     ]
 
 
+def get_fenabrave_mock_state() -> dict[str, Any]:
+    defaults = {
+        "fenabrave_source_confirmed": False,
+        "fenabrave_metadata_registered": False,
+        "fenabrave_preview_ready": False,
+        "fenabrave_validated": False,
+    }
+    for key, value in defaults.items():
+        st.session_state.setdefault(key, value)
+    return {key: st.session_state[key] for key in defaults}
+
+
 def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> None:
     state = get_external_intake_mock_state()
     mock_entities = get_mock_entity_bank()
@@ -1571,8 +1583,255 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
 
 
 def render_fenabrave_page() -> None:
-    page_header("Fenabrave")
-    st.write("")
+    state = get_fenabrave_mock_state()
+    page_header("Cadastro Fenabrave", "Mockup da rotina mensal de inclusao de dados")
+    process_banner(
+        "Regra obrigatoria de governanca",
+        "A rotina mensal continua manual no ponto certo: confirmar a publicacao, preservar o PDF no bucket privado, registrar metadados, revisar preview, validar e so depois liberar consumo.",
+    )
+
+    step_cards = [
+        process_step_card(
+            "Etapa 1",
+            "Confirmar a fonte",
+            "A rotina so comeca depois do 5o dia util e sempre para o mes anterior, usando a URL oficial da Fenabrave.",
+            "ok-green" if state["fenabrave_source_confirmed"] else "alert-yellow",
+            "fonte confirmada" if state["fenabrave_source_confirmed"] else "pendente",
+        ),
+        process_step_card(
+            "Etapa 2",
+            "Carregar PDF",
+            "O PDF mensal pode ser carregado no Streamlit para apoio operacional, mas a versao oficial deve ser preservada no bucket privado market-source-files.",
+            "ok-green",
+            "pdf manual",
+        ),
+        process_step_card(
+            "Etapa 3",
+            "Registrar metadados",
+            "A UI prepara os dados de market_source_files com periodo, source_url, storage_path, extraction_status e metodo de extracao.",
+            "ok-green" if state["fenabrave_metadata_registered"] else "alert-yellow",
+            "metadados prontos" if state["fenabrave_metadata_registered"] else "pendente",
+        ),
+        process_step_card(
+            "Etapa 4",
+            "Preview e validacao",
+            "O fluxo so libera a view depois de preview humano, checks estruturais e aprovacao do periodo.",
+            "ok-green" if state["fenabrave_validated"] else "alert-yellow",
+            "validado" if state["fenabrave_validated"] else "aguardando checks",
+        ),
+    ]
+    process_step_grid(step_cards)
+
+    tab_monthly, tab_review, tab_rules = st.tabs(
+        ["Rotina mensal", "Simulacao de status", "Regras da governanca"]
+    )
+
+    with tab_monthly:
+        left, right = st.columns([1.35, 1])
+
+        with left:
+            st.markdown("### 1. Confirmar publicacao do mes anterior")
+            reference_period = st.date_input(
+                "Periodo de referencia",
+                value=pd.Timestamp("2026-04-01").date(),
+                format="DD/MM/YYYY",
+            )
+            source_url = st.text_input(
+                "URL oficial do PDF",
+                value="https://www.fenabrave.org.br/portal/files/2026_04_02.pdf",
+            )
+            source_page_url = st.text_input(
+                "Pagina oficial de origem",
+                value="https://www.fenabrave.org.br/portalv2/Conteudo/Emplacamentos%20",
+            )
+            if st.button("Confirmar fonte mensal", use_container_width=False):
+                st.session_state["fenabrave_source_confirmed"] = True
+                st.rerun()
+
+            st.markdown("### 2. Carregar PDF do mes")
+            uploaded_pdf = st.file_uploader(
+                "PDF Fenabrave",
+                type=["pdf"],
+                help="O upload no Streamlit e viavel para apoio operacional. A versao oficial ainda deve ser enviada ao bucket privado.",
+            )
+
+            st.markdown("### 3. Registrar metadados")
+            storage_bucket = st.text_input("Storage bucket", value="market-source-files")
+            storage_path = st.text_input("Storage path", value="fenabrave/2026/04/2026_04_02.pdf")
+            original_filename = st.text_input("Nome original do arquivo", value="2026_04_02.pdf")
+            extraction_status = st.selectbox(
+                "Status de extracao",
+                ["stored", "extracted", "normalized", "validated", "failed"],
+                index=0,
+            )
+            extraction_method = st.text_input("Metodo de extracao", value="pdf_table_extraction")
+            if st.button("Preparar metadados do arquivo", use_container_width=False):
+                st.session_state["fenabrave_metadata_registered"] = True
+                st.rerun()
+
+            st.markdown("### 4. Preview operacional")
+            preview_rows = [
+                {"segment_code": "autos", "segmento": "Autos", "mes_atual": 187313},
+                {"segment_code": "comerciais_leves", "segmento": "Comerciais Leves", "mes_atual": 49943},
+                {"segment_code": "autos_comerciais_leves", "segmento": "Autos + Comerciais Leves", "mes_atual": 237256},
+            ]
+            st.dataframe(pd.DataFrame(preview_rows), use_container_width=True, hide_index=True)
+            if st.button("Marcar preview como revisado", use_container_width=False):
+                st.session_state["fenabrave_preview_ready"] = True
+                st.rerun()
+
+        with right:
+            st.markdown("### Leitura da rotina")
+            uploaded_name = uploaded_pdf.name if uploaded_pdf is not None else None
+            uploaded_size = uploaded_pdf.size if uploaded_pdf is not None else None
+            can_validate = (
+                st.session_state["fenabrave_source_confirmed"]
+                and st.session_state["fenabrave_metadata_registered"]
+                and st.session_state["fenabrave_preview_ready"]
+            )
+            warnings = []
+            if not st.session_state["fenabrave_source_confirmed"]:
+                warnings.append("A fonte oficial do mes anterior ainda nao foi confirmada.")
+            if uploaded_pdf is None:
+                warnings.append("O PDF ainda nao foi carregado para apoio operacional na tela.")
+            if not st.session_state["fenabrave_metadata_registered"]:
+                warnings.append("Os metadados de market_source_files ainda nao foram preparados.")
+            if not st.session_state["fenabrave_preview_ready"]:
+                warnings.append("O preview operacional ainda precisa de revisao humana.")
+            if not can_validate:
+                warnings.append("A liberacao da view deve ficar bloqueada ate a rotina mensal ficar completa.")
+
+            chips = [
+                dq_chip("Fonte", "ok" if st.session_state["fenabrave_source_confirmed"] else "pendente", "ok-green" if st.session_state["fenabrave_source_confirmed"] else "alert-yellow"),
+                dq_chip("PDF", "carregado" if uploaded_pdf is not None else "ausente", "ok-green" if uploaded_pdf is not None else "alert-yellow"),
+                dq_chip("Preview", "revisado" if st.session_state["fenabrave_preview_ready"] else "pendente", "ok-green" if st.session_state["fenabrave_preview_ready"] else "alert-yellow"),
+                dq_chip("Liberacao", "pronta" if can_validate else "bloqueada", "ok-green" if can_validate else "neutral"),
+            ]
+            st.markdown(
+                dq_kpi_card(
+                    "Prontidao da carga mensal",
+                    "Pronta" if can_validate else "Em andamento",
+                    "A rotina continua manual nos pontos de controle, mesmo com apoio visual no Streamlit.",
+                    "#98df96" if can_validate else "#ff8069",
+                    chips,
+                ),
+                unsafe_allow_html=True,
+            )
+
+            st.markdown("### Metadados preparados")
+            st.json(
+                {
+                    "source_name": "Fenabrave",
+                    "reference_period": pd.Timestamp(reference_period).strftime("%d/%m/%Y"),
+                    "source_url": source_url,
+                    "source_page_url": source_page_url,
+                    "storage_bucket": storage_bucket,
+                    "storage_path": storage_path,
+                    "original_filename": original_filename,
+                    "extraction_status": extraction_status,
+                    "extraction_method": extraction_method,
+                }
+            )
+
+            st.markdown("### Avaliacao do PDF no Streamlit")
+            st.json(
+                {
+                    "pdf_upload_viavel": True,
+                    "nome_arquivo": uploaded_name,
+                    "tamanho_bytes": uploaded_size,
+                    "uso_recomendado": "apoio operacional e checagem de consistencia antes do envio oficial ao bucket privado",
+                    "restricao": "nao expor service role nem usar o Streamlit publico como destino final de armazenamento",
+                }
+            )
+
+            if warnings:
+                st.warning(" | ".join(warnings))
+            else:
+                st.success("A rotina mockada esta completa e pronta para seguir para validacao final.")
+
+    with tab_review:
+        st.markdown("### Simulacao da rotina operacional")
+        flow_col1, flow_col2, flow_col3, flow_col4 = st.columns(4)
+
+        with flow_col1:
+            if st.button("Confirmar fonte", use_container_width=True):
+                st.session_state["fenabrave_source_confirmed"] = True
+        with flow_col2:
+            if st.button("Registrar metadados", use_container_width=True):
+                st.session_state["fenabrave_metadata_registered"] = True
+        with flow_col3:
+            if st.button("Validar preview", use_container_width=True):
+                st.session_state["fenabrave_preview_ready"] = True
+        with flow_col4:
+            if st.button("Aprovar periodo", use_container_width=True):
+                st.session_state["fenabrave_validated"] = True
+
+        review_rows = [
+            {
+                "periodo": "01/04/2026",
+                "fonte": "Fenabrave",
+                "arquivo": "2026_04_02.pdf",
+                "storage_path": "fenabrave/2026/04/2026_04_02.pdf",
+                "status_arquivo": "validated" if st.session_state["fenabrave_validated"] else "stored",
+                "preview_operacional": "revisado" if st.session_state["fenabrave_preview_ready"] else "pendente",
+                "resultado_validacao": "OK" if st.session_state["fenabrave_validated"] else "AGUARDANDO",
+                "observacao": "Liberar view somente depois da aprovacao humana.",
+            }
+        ]
+        review_card_grid(
+            [
+                {
+                    "raw_name": row["arquivo"],
+                    "sub_niche_name": row["periodo"],
+                    "status": row["status_arquivo"],
+                    "review_result": row["resultado_validacao"],
+                    "existing_entity_id": row["fonte"],
+                    "existing_entity_name": row["storage_path"],
+                    "sub_niche_id": row["preview_operacional"],
+                    "matched_sub_niche_name": "Rotina mensal Fenabrave",
+                    "notes": row["observacao"],
+                }
+                for row in review_rows
+            ]
+        )
+
+        timeline = [
+            ("Fonte oficial confirmada", "ok" if st.session_state["fenabrave_source_confirmed"] else "atencao"),
+            ("PDF preservado e registrado", "ok" if st.session_state["fenabrave_metadata_registered"] else "atencao"),
+            ("Preview operacional revisado", "ok" if st.session_state["fenabrave_preview_ready"] else "atencao"),
+            ("Periodo validado", "ok" if st.session_state["fenabrave_validated"] else "neutral"),
+        ]
+        st.markdown("### Estado atual do processo")
+        st.markdown(
+            "".join(dq_chip(label, status.upper(), "ok-green" if status == "ok" else "alert-yellow" if status == "atencao" else "neutral") for label, status in timeline),
+            unsafe_allow_html=True,
+        )
+
+        if st.button("Reiniciar simulacao Fenabrave", use_container_width=False):
+            for key in [
+                "fenabrave_source_confirmed",
+                "fenabrave_metadata_registered",
+                "fenabrave_preview_ready",
+                "fenabrave_validated",
+            ]:
+                st.session_state[key] = False
+            st.rerun()
+
+    with tab_rules:
+        st.markdown("### O que a UI precisa respeitar")
+        st.info(
+            "O PDF pode ser carregado no Streamlit, mas o arquivo oficial precisa continuar no bucket privado market-source-files com registro em market_source_files."
+        )
+        st.markdown(
+            """
+- A rotina mensal so roda apos o 5o dia util e sempre para o mes anterior.
+- O upload do PDF pelo Streamlit e viavel como apoio operacional e pode simplificar a conferenca do arquivo.
+- O app nao deve usar o navegador como destino final do PDF nem expor credenciais privilegiadas.
+- A persistencia oficial continua em bucket privado, com storage_path, source_url, hash, tamanho e extraction_status.
+- O preview operacional vem antes da carga analitica.
+- A view so deve ser liberada depois dos checks e da aprovacao humana do periodo.
+"""
+        )
 
 
 inject_theme()
