@@ -74,12 +74,23 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 - [ ] Criar app Streamlit inicial consumindo as views do Supabase.
 - [ ] Aplicar tema visual do dashboard com fundo em escala de cinza, sidebar escura, cards contrastados e pictos.
 - [ ] Aplicar views de Data Quality do dashboard: guardrail legado e posts mortos/validados.
+- [x] Implementar mockup operacional de `Cadastro de Criadores` no Streamlit para validar processo sem ligacao SQL.
+- [x] Implementar mockup operacional de `Cadastro Fenabrave` no Streamlit, focado na rotina mensal de ingestao descrita no doc 23.
+- [ ] Ligar o `Cadastro de Criadores` ao SQL com busca real de entidade por nome exibido e nome normalizado.
+- [ ] Ligar o `Cadastro de Criadores` ao SQL com leitura real de opcoes de nicho/subnicho e associacao multipla.
+- [ ] Ligar o `Cadastro de Criadores` ao SQL com escrita controlada em `entity_intake` e etapa final de cadastro em `creators`.
+- [ ] Ligar a revisao de `Cadastro de Criadores` a `v_entity_intake_review` e ao fluxo manual de publish/validate.
+- [ ] Ligar o `Cadastro Fenabrave` ao SQL com registro real de metadados em `market_source_files`.
+- [ ] Definir e implementar a estrategia segura de upload do PDF Fenabrave a partir do app, sem expor credenciais privilegiadas.
+- [ ] Ligar o `Cadastro Fenabrave` ao preview operacional da extracao e aos status reais do periodo.
+- [ ] Ligar o `Cadastro Fenabrave` aos checks de validacao e ao status final de liberacao da view analitica.
 
 ### Direcao desta frente
 
 - [x] Confirmar que o dashboard e uma ferramenta interna de estudo de mercado, nao um produto SaaS publico.
 - [x] Definir Streamlit como solucao atual por simplicidade, custo zero e velocidade analitica.
 - [x] Definir direcao visual inicial: dashboard escuro em escala de cinza com acento coral e pictos.
+- [x] Definir que as views de cadastro no Streamlit sao camadas operacionais guiadas e devem respeitar integralmente os processos manuais ja documentados.
 
 ## Bloco transversal
 

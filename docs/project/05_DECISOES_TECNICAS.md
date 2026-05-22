@@ -499,6 +499,99 @@ Diretriz:
 
 ---
 
+## Views de cadastro no Streamlit como camada operacional guiada
+
+Data:
+
+- 2026-05-21
+
+Decisao:
+
+- implementar no Streamlit views de cadastro para processos operacionais do
+  projeto
+- iniciar com duas views:
+  - `Cadastro de Criadores`
+  - `Cadastro Fenabrave`
+- tratar essas views como camadas guiadas de operacao, e nao como substitutas
+  dos processos manuais e das regras de governanca ja documentadas
+
+Contexto:
+
+- o dashboard passou a ter mockups operacionais para validar metodo, texto,
+  ordem das etapas e pontos de controle antes de ligar o app ao SQL
+- no caso de criadores, o fluxo depende de `entity_intake`, revisao, publish e
+  validacao antes do cadastro final em `creators`
+- no caso de Fenabrave, a rotina depende de confirmacao da fonte, preservacao
+  do PDF, registro de `market_source_files`, preview, validacao e aprovacao do
+  periodo
+
+Motivo:
+
+- reduzir erro operacional
+- tornar a governanca visivel dentro do app
+- validar o processo com baixo custo antes de implementar RPCs, grants e
+  ligacoes SQL reais
+- evitar que o Streamlit vire uma porta de escrita direta em tabelas finais
+
+Diretriz:
+
+- a UI deve espelhar o processo manual existente, nao reinventar a rotina
+- qualquer escrita futura no banco deve ser controlada e rastreavel
+- a ligacao SQL dessas views deve ser implementada em etapas, com foco primeiro
+  na leitura e no bloqueio de erros operacionais
+
+Impacto esperado:
+
+- melhor validacao de UX e governanca antes da integracao real
+- backlog mais claro para ligacao SQL das views de cadastro
+- menor risco de misturar app operacional com bypass de processo
+
+---
+
+## PDF Fenabrave via Streamlit apenas como apoio operacional
+
+Data:
+
+- 2026-05-21
+
+Decisao:
+
+- considerar viavel o carregamento do PDF mensal da Fenabrave via Streamlit
+  apenas como apoio operacional
+- nao tratar o Streamlit como destino final de armazenamento do arquivo
+- manter o bucket privado `market-source-files` como armazenamento oficial
+
+Contexto:
+
+- a rotina mensal da Fenabrave continua manual nesta fase
+- o mockup da view `Cadastro Fenabrave` mostrou que o upload na UI pode ajudar
+  a conferencia do arquivo e o preenchimento inicial dos metadados
+- ao mesmo tempo, o processo documentado exige preservacao do PDF, rastreio por
+  `storage_path` e protecao contra exposicao de credenciais privilegiadas
+
+Motivo:
+
+- melhorar a ergonomia operacional sem quebrar a seguranca
+- permitir avaliacao futura de upload guiado no app
+- preservar o papel do Storage privado e dos metadados em
+  `market_source_files`
+
+Diretriz:
+
+- o upload pelo app, se implementado, deve usar fluxo seguro
+- o app nao deve expor `SUPABASE_SERVICE_ROLE_KEY`
+- a versao oficial do PDF precisa continuar no bucket privado
+- a liberacao do periodo segue dependente de preview, validacao e aprovacao
+  humana
+
+Impacto esperado:
+
+- caminho claro para evoluir a rotina mensal sem perder governanca
+- separacao objetiva entre apoio operacional na UI e persistencia oficial no
+  backend
+
+---
+
 ## Historico de followers de creators por snapshot
 
 Data:

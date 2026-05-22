@@ -219,6 +219,8 @@ Direcao atual:
 - ranking de creators
 - crescimento semanal
 - cruzamento entre conteudo, mercado e catalogo
+- cadastro operacional guiado de criadores
+- cadastro operacional guiado da rotina mensal Fenabrave
 - consumo seguro sem expor credenciais sensiveis
 
 ### Views principais
@@ -230,6 +232,14 @@ Direcao atual:
 ### Documento principal
 
 - `docs/dashboard/16_ONLINE_DASHBOARD_SUPABASE_SPEC.md`
+
+### Estado atual do app Streamlit
+
+- tema visual inicial aplicado com sidebar escura, cards contrastados e acento coral
+- pagina de Data Quality implementada com KPIs e monitoramento operacional
+- mockup operacional de `Cadastro de Criadores` implementado no app
+- mockup operacional de `Cadastro Fenabrave` implementado no app
+- integracao SQL dessas duas views ainda pendente
 
 ## Relacao Entre as Frentes
 
@@ -456,11 +466,16 @@ Documentos importantes por frente:
 
 - estrategia definida
 - views analiticas principais ja preparadas
-- app Streamlit inicial ainda pendente
+- app Streamlit inicial em construcao
+- mockup de `Cadastro de Criadores` pronto para validacao visual e de processo
+- mockup de `Cadastro Fenabrave` pronto para validacao visual e de processo
+- ligacao SQL das views de cadastro ainda pendente
 
 ## Proximos Passos Sugeridos
 
 - expandir a documentacao de multiplataforma para alem do YouTube
 - consolidar a frente de fontes externas em schema e ingestao versionados
-- implementar o app inicial do dashboard consumindo as views do Supabase
+- ligar o `Cadastro de Criadores` ao SQL com busca, review e publicacao controlada
+- ligar o `Cadastro Fenabrave` ao SQL com metadados, preview e validacao do periodo
+- implementar o restante do app inicial do dashboard consumindo as views do Supabase
 

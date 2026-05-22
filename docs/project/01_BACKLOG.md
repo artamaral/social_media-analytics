@@ -37,6 +37,14 @@
 - [ ] Ranking semanal de crescimento de videos
 - [ ] Filtros por plataforma, creator, nicho e subnicho
 - [ ] Exportacao CSV dos rankings principais
+- [ ] Ligar a view `Cadastro de Criadores` a busca SQL real de entidade por `raw_name` e `normalized_name`, bloqueando duplicidade antes do intake.
+- [ ] Ligar a view `Cadastro de Criadores` a leitura SQL de nichos e subnichos existentes, com selecao multipla e vinculo explicito da mesma entidade da etapa 1.
+- [ ] Criar a camada SQL controlada para `Cadastro de Criadores`, incluindo escrita em `entity_intake`, leitura de `v_entity_intake_review` e etapa final de cadastro em `creators`.
+- [ ] Definir o metodo controlado para solicitar novo nicho ou subnicho a partir da UI, sem SQL livre no Streamlit.
+- [ ] Ligar a view `Cadastro Fenabrave` ao registro real de `market_source_files`, com `reference_period`, `source_url`, `storage_bucket`, `storage_path`, `original_filename`, `extraction_status` e `extraction_method`.
+- [ ] Definir a estrategia segura para upload do PDF Fenabrave pelo app: upload direto ao bucket privado com backend seguro, signed URL curta ou manutencao do upload manual fora do Streamlit.
+- [ ] Ligar a view `Cadastro Fenabrave` ao preview operacional da extracao e aos checks reais antes da liberacao do periodo.
+- [ ] Ligar a view `Cadastro Fenabrave` ao status final do periodo validado, refletindo o processo descrito em `docs/external_data/23_FENABRAVE_PHASE1_INGESTION_SPEC.md`.
 
 ## IA / Classificacao
 
