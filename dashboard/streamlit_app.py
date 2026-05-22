@@ -1628,7 +1628,6 @@ with st.sidebar:
 
     if cadastro_open:
         st.markdown('<div class="sidebar-nav-spacer"></div>', unsafe_allow_html=True)
-        st.markdown('<div class="sidebar-nav-section">Cadastro</div>', unsafe_allow_html=True)
         child_indent = st.columns([0.12, 0.88])
         with child_indent[0]:
             st.write("")
