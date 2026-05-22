@@ -46,6 +46,54 @@ def inject_theme() -> None:
             color: var(--text);
         }
 
+        section[data-testid="stSidebar"] [data-testid="stButton"] button {
+            width: 100%;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            background: transparent;
+            color: var(--text);
+            text-align: left;
+            padding: 0.6rem 0.8rem;
+            font-size: 0.92rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        section[data-testid="stSidebar"] [data-testid="stButton"] button:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        section[data-testid="stSidebar"] [data-testid="stButton"] button[kind="primary"] {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #15171c;
+        }
+
+        section[data-testid="stSidebar"] [data-testid="stButton"] button[kind="primary"]:hover {
+            background: #ff907d;
+            border-color: #ff907d;
+        }
+
+        .sidebar-nav-block {
+            margin-top: 0.35rem;
+            margin-bottom: 0.35rem;
+        }
+
+        .sidebar-nav-section {
+            color: var(--muted);
+            font-size: 0.74rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0;
+            margin: 0.75rem 0 0.35rem;
+            padding: 0 0.2rem;
+        }
+
+        .sidebar-nav-spacer {
+            height: 0.25rem;
+        }
+
         .block-container {
             padding-top: 1.5rem;
             padding-bottom: 2rem;
@@ -1271,11 +1319,11 @@ def get_mock_taxonomy_options() -> list[str]:
     ]
 
 
-def render_external_intake_page() -> None:
+def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> None:
     state = get_external_intake_mock_state()
     mock_entities = get_mock_entity_bank()
     mock_taxonomy_options = get_mock_taxonomy_options()
-    page_header("Cadastro", "Prototipo de metodo sem ligacao com SQL")
+    page_header(page_title, "Prototipo de metodo sem ligacao com SQL")
     process_banner(
         "Regra obrigatoria de governanca",
         "A UI pode guiar o operador, mas nao pode pular o fluxo: entidade_intake, revisao, publicacao, validacao e so depois cadastro do criador.",
@@ -1514,8 +1562,8 @@ def render_external_intake_page() -> None:
 
 
 def render_fenabrave_page() -> None:
-    page_header("Fenabrave", "Espaco reservado para a futura view de cadastro.")
-    st.info("View reservada. O conteudo sera definido depois da fase de desenho.")
+    page_header("Fenabrave")
+    st.write("")
 
 
 inject_theme()
@@ -1523,27 +1571,41 @@ inject_theme()
 with st.sidebar:
     st.markdown("## SM Analytics")
     st.caption("Automotivo Americas")
-    page = st.radio(
-        "Navegacao",
-        [
-            "Overview",
-            "Creators",
-            "Videos em crescimento",
-            "Hot now",
-            "Data quality",
-            "Cadastro",
-            "Sanitizacao operacional",
-        ],
-    )
-    cadastro_subpage = None
-    if page == "Cadastro":
-        cadastro_subpage = st.radio(
-            "Cadastro",
-            [
-                "Criadores",
-                "Fenabrave",
-            ],
-        )
+    if "nav_page" not in st.session_state:
+        st.session_state["nav_page"] = "Overview"
+    if "cadastro_subpage" not in st.session_state:
+        st.session_state["cadastro_subpage"] = "Criadores"
+
+    def sidebar_nav_button(label: str, page_value: str, selected_value: str | None = None) -> None:
+        active = st.session_state["nav_page"] == page_value if selected_value is None else st.session_state["cadastro_subpage"] == selected_value
+        button_kwargs = {
+            "label": label,
+            "use_container_width": True,
+            "key": f"nav-{page_value}-{selected_value or 'main'}",
+            "type": "primary" if active else "secondary",
+        }
+        if st.button(**button_kwargs):
+            if selected_value is None:
+                st.session_state["nav_page"] = page_value
+            else:
+                st.session_state["nav_page"] = page_value
+                st.session_state["cadastro_subpage"] = selected_value
+            st.rerun()
+
+    sidebar_nav_button("Overview", "Overview")
+    sidebar_nav_button("Creators", "Creators")
+    sidebar_nav_button("Videos em crescimento", "Videos em crescimento")
+    sidebar_nav_button("Hot now", "Hot now")
+    sidebar_nav_button("Data quality", "Data quality")
+
+    st.markdown('<div class="sidebar-nav-section">Cadastro</div>', unsafe_allow_html=True)
+    sidebar_nav_button("Criadores", "Cadastro", "Criadores")
+    sidebar_nav_button("Fenabrave", "Cadastro", "Fenabrave")
+
+    sidebar_nav_button("Sanitizacao operacional", "Sanitizacao operacional")
+
+page = st.session_state["nav_page"]
+cadastro_subpage = st.session_state.get("cadastro_subpage", "Criadores")
 
 if page == "Overview":
     render_overview()
@@ -1557,7 +1619,7 @@ elif page == "Data quality":
     render_data_quality_page()
 elif page == "Cadastro":
     if cadastro_subpage == "Criadores":
-        render_external_intake_page()
+        render_external_intake_page("Cadastro de Criadores")
     else:
         render_fenabrave_page()
 else:
