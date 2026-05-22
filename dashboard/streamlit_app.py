@@ -208,7 +208,7 @@ def inject_theme() -> None:
 
         .creator-kpi-section-title {
             color: var(--text);
-            font-size: 1.12rem;
+            font-size: 1.16rem;
             font-weight: 900;
             line-height: 1.1;
             text-transform: uppercase;
@@ -226,15 +226,15 @@ def inject_theme() -> None:
         }
 
         .creator-kpi-grid .metric-card {
-            min-height: 126px;
+            min-height: 128px;
         }
 
         .creator-kpi-grid .metric-card-header {
             display: flex;
             align-items: center;
-            min-height: 2.15rem;
+            min-height: 2.25rem;
             padding: 0.55rem 0.7rem;
-            font-size: 0.92rem;
+            font-size: 1rem;
             line-height: 1.05;
             white-space: nowrap;
             overflow: hidden;
@@ -246,18 +246,18 @@ def inject_theme() -> None:
         }
 
         .creator-kpi-grid .metric-value {
-            font-size: 1.3rem;
+            font-size: 1.35rem;
             gap: 0.6rem;
         }
 
         .creator-kpi-grid .metric-picto {
-            width: 38px;
-            height: 38px;
-            font-size: 0.9rem;
+            width: 40px;
+            height: 40px;
+            font-size: 0.92rem;
         }
 
         .creator-kpi-grid .metric-caption {
-            font-size: 0.69rem;
+            font-size: 0.71rem;
             margin-top: 0.55rem;
         }
 
@@ -2294,8 +2294,8 @@ def render_creator_detail_page() -> None:
     selected_status = "ativo" if bool(selected_row.get("is_active")) else "inativo"
 
     selected_week_label = str(selected_week_row.get("week_label") or "Sem base semanal")
-    weekly_followers_caption, weekly_followers_caption_color = "Acumulado ate a semana selecionada", "#aeb4bf"
-    weekly_engagement_caption, weekly_engagement_caption_color = "Acumulado ate a semana selecionada", "#aeb4bf"
+    weekly_followers_caption, weekly_followers_caption_color = "Sem serie semanal", "#aeb4bf"
+    weekly_engagement_caption, weekly_engagement_caption_color = "Sem serie semanal", "#aeb4bf"
     weekly_videos_caption, weekly_videos_caption_color = format_growth_caption(
         selected_week_row.get("active_posts_delta_vs_prev_week"),
         active_posts_growth_pct,
@@ -2317,35 +2317,32 @@ def render_creator_detail_page() -> None:
         f'<div class="creator-kpi-section-title">Semana selecionada: {escape(selected_week_label)}</div>',
         unsafe_allow_html=True,
     )
-    st.caption("Os valores desta faixa representam o acumulado ate o fim da semana selecionada; a linha de baixo mostra a variacao vs a semana anterior completa.")
+    st.caption("Esta faixa mostra os dados da semana selecionada. As colunas com serie temporal usam o delta semanal; seguidores e engajamento ainda nao possuem serie semanal propria.")
     metric_card_grid(
         [
-            metric_card_html("Seguidores", format_int(selected_row["followers"]), weekly_followers_caption, "SG", caption_color=weekly_followers_caption_color),
-            metric_card_html("Engajamento", f"{engagement_rank} de {engagement_total}", weekly_engagement_caption, "RK", caption_color=weekly_engagement_caption_color),
+            metric_card_html("Seguidores", "--", weekly_followers_caption, "SG", caption_color=weekly_followers_caption_color),
+            metric_card_html("Engajamento", "--", weekly_engagement_caption, "RK", caption_color=weekly_engagement_caption_color),
             metric_card_html("Videos", format_int(selected_week_row.get("active_posts_in_week")), weekly_videos_caption, "VD", caption_color=weekly_videos_caption_color),
-            metric_card_html("Views", format_int(selected_week_row.get("views_week_end")), weekly_views_caption, "VW", caption_color=weekly_views_caption_color),
-            metric_card_html("Likes", format_int(selected_week_row.get("likes_week_end")), weekly_likes_caption, "LK", caption_color=weekly_likes_caption_color),
-            metric_card_html("Comentarios", format_int(selected_week_row.get("comments_week_end")), weekly_comments_caption, "CM", caption_color=weekly_comments_caption_color),
+            metric_card_html("Views", format_int(selected_week_row.get("views_delta_vs_prev_week")), weekly_views_caption, "VW", caption_color=weekly_views_caption_color),
+            metric_card_html("Likes", format_int(selected_week_row.get("likes_delta_vs_prev_week")), weekly_likes_caption, "LK", caption_color=weekly_likes_caption_color),
+            metric_card_html("Comentarios", format_int(selected_week_row.get("comments_delta_vs_prev_week")), weekly_comments_caption, "CM", caption_color=weekly_comments_caption_color),
         ],
         class_name="creator-kpi-grid weekly-grid",
     )
 
-    left_col, right_col = st.columns([1.35, 1])
-    with left_col:
-        chart_left, chart_right = st.columns([0.95, 1.05])
-        with chart_left:
-            st.markdown("#### Distribuicao de engajamento")
-            st.caption("Dados usados: total_likes e total_comments do criador em v_dashboard_creator_summary.")
-            st.plotly_chart(donut_fig, use_container_width=True)
-        with chart_right:
-            st.markdown("#### Crescimento semanal")
-            st.caption("Dados usados: v_dashboard_creator_weekly_timeseries, apenas semanas completas.")
-            st.plotly_chart(weekly_fig, use_container_width=True)
+    if summary_error or weekly_error or top_videos_error:
+        active_errors = [error for error in [summary_error, weekly_error, top_videos_error] if error]
+        st.warning(" | ".join(active_errors))
 
-    with right_col:
-        if summary_error or weekly_error or top_videos_error:
-            active_errors = [error for error in [summary_error, weekly_error, top_videos_error] if error]
-            st.warning(" | ".join(active_errors))
+    chart_left, chart_right = st.columns(2)
+    with chart_left:
+        st.markdown("#### Distribuicao de engajamento")
+        st.caption("Dados usados: total_likes e total_comments do criador em v_dashboard_creator_summary.")
+        st.plotly_chart(donut_fig, use_container_width=True)
+    with chart_right:
+        st.markdown("#### Crescimento semanal")
+        st.caption("Dados usados: v_dashboard_creator_weekly_timeseries, apenas semanas completas.")
+        st.plotly_chart(weekly_fig, use_container_width=True)
 
     video_scope_weekly = st.checkbox("Mostrar videos da semana selecionada", value=False)
     videos_source_df = top_videos_df.copy()
