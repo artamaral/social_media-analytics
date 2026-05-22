@@ -499,6 +499,63 @@ Diretriz:
 
 ---
 
+## Historico de followers de creators por snapshot
+
+Data:
+
+- 2026-05-21
+
+Decisao:
+
+- tratar `creators.followers` como valor corrente, nao como historico analitico
+- criar uma camada de snapshots para metricas dinamicas de creator, iniciando por followers do YouTube
+- usar a YouTube Data API `channels.list` com `part=statistics` para coletar `statistics.subscriberCount`
+- gravar cada coleta em uma futura tabela `creator_metrics_history`
+- manter `creators.followers` sincronizado com o snapshot mais recente para consumo rapido no dashboard
+
+Contexto:
+
+- followers de creator sao metricas dinamicas, assim como views, likes e comments dos posts
+- a tabela `creators` ja possui o campo `followers`, mas ele representa apenas o estado atual
+- sem snapshots, nao sera possivel medir crescimento de canal, aceleracao ou tendencia de audiencia
+- a API oficial do YouTube expoe `statistics.subscriberCount`, `statistics.hiddenSubscriberCount`, `statistics.viewCount` e `statistics.videoCount` no recurso de canal
+- o `subscriberCount` retornado pela API pode ser arredondado para tres algarismos significativos
+
+Motivo:
+
+- preservar historico de crescimento de canais
+- evitar analises baseadas apenas no volume atual de seguidores
+- permitir ranking de creators emergentes por crescimento relativo
+- alinhar metricas de creators ao mesmo principio ja usado em `post_metrics_history`
+- manter o dashboard rapido sem perder rastreabilidade historica
+
+Diretriz de implementacao:
+
+- avaliar implementacao inicial no `youtube_main_scraper`, pois ele ja percorre creators e chama `channels.list` para buscar a playlist de uploads
+- aproveitar a chamada de canal adicionando `statistics` ao `part` quando fizer sentido operacional
+- inserir snapshot em `creator_metrics_history` a cada coleta bem-sucedida
+- atualizar `creators.followers` com o `subscriberCount` mais recente
+- salvar tambem sinais auxiliares como `hidden_subscriber_count`, `channel_views` e `video_count`
+- nao acoplar essa coleta ao `postMetrics` neste momento, pois esse worker opera por video e deve continuar focado em metricas de posts
+
+Campos sugeridos para snapshot:
+
+- `creator_id`
+- `followers`
+- `channel_views`
+- `video_count`
+- `hidden_subscriber_count`
+- `collected_at`
+
+Impacto esperado:
+
+- base para crescimento temporal de canais
+- melhor leitura de creators emergentes no setor automotivo
+- possibilidade futura de comparar crescimento de audiencia com performance de videos
+- menor risco de misturar metricas correntes com metricas historicas
+
+---
+
 ## Score hibrido v2 em espera e foco em analise temporal
 
 Data:
