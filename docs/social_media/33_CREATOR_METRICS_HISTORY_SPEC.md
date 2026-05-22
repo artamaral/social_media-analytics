@@ -76,6 +76,36 @@ Fluxo:
 4. Dashboard usa `creators` para estado atual e `creator_metrics_history` para
    crescimento temporal.
 
+## Implementacao no worker
+
+A primeira implementacao fica no worker
+`scripts/cloud_run/youtube_main_scraper/main.py`.
+
+Esse worker busca todos os creators do YouTube no Supabase, mas processa apenas
+um lote por execucao, controlado por `BATCH_SIZE` e pelo cursor salvo em
+`pipeline_state`.
+
+Portanto, a coleta de followers segue a mesma cobertura do discovery:
+
+- em uma execucao, coleta apenas os creators do lote atual;
+- ao longo das execucoes, percorre todos os creators;
+- quando chega ao fim da lista, o cursor volta para `0`.
+
+Na chamada `channels.list`, o worker usa `part=contentDetails,statistics`.
+Assim, a mesma chamada que retorna a playlist de uploads tambem retorna as
+metricas do canal.
+
+Campos usados da resposta:
+
+- `contentDetails.relatedPlaylists.uploads`
+- `statistics.subscriberCount`
+- `statistics.hiddenSubscriberCount`
+- `statistics.viewCount`
+- `statistics.videoCount`
+
+O worker nao atualiza `creators` diretamente. Ele insere o snapshot em
+`creator_metrics_history` e deixa o trigger sincronizar o valor corrente.
+
 ## Analises suportadas
 
 Com os snapshots sera possivel medir:

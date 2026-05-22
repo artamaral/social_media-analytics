@@ -104,23 +104,53 @@ def parse_duration(duration):
         return 0
 
 
-def get_upload_playlist(channel_id):
+def parse_int(value):
+    if value is None:
+        return None
+
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def get_channel_details(channel_id):
     url = "https://www.googleapis.com/youtube/v3/channels"
 
     params = {
-        "part": "contentDetails",
+        "part": "contentDetails,statistics",
         "id": channel_id,
         "key": YOUTUBE_API_KEY
     }
 
-    res = requests.get(url, params=params).json()
+    response = requests.get(url, params=params)
+    print("📡 Channel details status:", response.status_code)
+
+    if response.status_code != 200:
+        print("❌ Erro channel details:", response.text)
+        return None
+
+    res = response.json()
 
     items = res.get("items", [])
 
     if not items:
         return None
 
-    return items[0]["contentDetails"]["relatedPlaylists"]["uploads"]
+    item = items[0]
+    statistics = item.get("statistics", {})
+
+    return {
+        "upload_playlist_id": (
+            item.get("contentDetails", {})
+            .get("relatedPlaylists", {})
+            .get("uploads")
+        ),
+        "followers": parse_int(statistics.get("subscriberCount")),
+        "channel_view_count": parse_int(statistics.get("viewCount")),
+        "channel_video_count": parse_int(statistics.get("videoCount")),
+        "hidden_subscriber_count": statistics.get("hiddenSubscriberCount"),
+    }
 
 
 def get_videos_from_playlist(playlist_id):
@@ -211,6 +241,29 @@ def upsert_posts(posts, creator_id):
         print("❌ Response:", res.text)
 
 
+def insert_creator_metrics_snapshot(creator_id, channel_details):
+    if not channel_details:
+        return
+
+    payload = {
+        "creator_id": creator_id,
+        "followers": channel_details.get("followers"),
+        "channel_view_count": channel_details.get("channel_view_count"),
+        "channel_video_count": channel_details.get("channel_video_count"),
+        "hidden_subscriber_count": channel_details.get("hidden_subscriber_count"),
+        "source": "youtube_channels_api"
+    }
+
+    url = f"{SUPABASE_URL}/rest/v1/creator_metrics_history"
+
+    res = requests.post(url, headers=HEADERS, json=payload)
+
+    print("📡 Creator metrics snapshot:", res.status_code)
+
+    if res.status_code >= 300:
+        print("❌ Response:", res.text)
+
+
 # ==============================
 # 🚀 PIPELINE
 # ==============================
@@ -273,9 +326,17 @@ def run_pipeline():
                 continue
 
             # ==============================
-            # 📺 PLAYLIST
+            # 📺 CANAL
             # ==============================
-            playlist_id = get_upload_playlist(channel_id)
+            channel_details = get_channel_details(channel_id)
+
+            if not channel_details:
+                print("⚠️ Dados do canal não encontrados, pulando...")
+                continue
+
+            insert_creator_metrics_snapshot(creator["id"], channel_details)
+
+            playlist_id = channel_details.get("upload_playlist_id")
             print(f"📺 Playlist ID: {playlist_id}")
 
             if not playlist_id:
