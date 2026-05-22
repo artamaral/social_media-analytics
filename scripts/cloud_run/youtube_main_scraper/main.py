@@ -262,6 +262,10 @@ def insert_creator_metrics_snapshot(creator_id, channel_details):
 
     if res.status_code >= 300:
         print("❌ Response:", res.text)
+        raise RuntimeError(
+            "Falha ao inserir snapshot em creator_metrics_history: "
+            f"{res.status_code} - {res.text}"
+        )
 
 
 # ==============================
