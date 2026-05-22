@@ -147,7 +147,7 @@ Objetivo:
 
 4. Linha analitica principal
    - distribuicao de engajamento
-   - views mensais do criador
+   - serie temporal semanal do criador
    - top videos por views
 
 5. Painel de detalhe do criador
@@ -192,24 +192,33 @@ Objetivo:
 - manter uma leitura simples e confiavel
 - evitar excesso de ruido diario e ao mesmo tempo nao alongar demais a leitura
 
-Dados usados:
+Contrato recomendado:
 
-- `public.posts.post_date`
-- `public.posts.views`
-- `public.posts.likes`
+- `public.v_dashboard_creator_weekly_timeseries`
 
-Agregacao proposta:
+Dados esperados da view:
 
-- agrupar por semana calendario com base em `post_date`
-- serie principal = `sum(views)` por semana
-- serie secundaria = `sum(likes)` por semana
-- opcionalmente mostrar `comments` semanais como terceira leitura se nao poluir o grafico
+- `creator_id`
+- `entity_id`
+- `entity_name`
+- `platform`
+- `week_start`
+- `views_week_end`
+- `views_delta_vs_prev_week`
+- `views_growth_pct_vs_prev_week`
+- `likes_week_end`
+- `likes_delta_vs_prev_week`
+- `comments_week_end`
+- `comments_delta_vs_prev_week`
+- `active_posts_in_week`
 
 Observacao:
 
 - este grafico deve sempre ser de um unico criador por vez
+- o Streamlit nao deve calcular a serie bruta a partir de `public.posts`
 - quando a ligacao SQL acontecer, o ideal e filtrar por `creator_id`
 - a unidade recomendada para comparacao e a semana fechada, nao o dia isolado
+- a implementacao detalhada do contrato fica em documento proprio
 
 ### Tabela editorial: top videos por views
 
@@ -276,6 +285,17 @@ Campos da tabela de posts que ajudam a aproximar a imagem:
 | `video_type` | `public.posts` | etiqueta editorial |
 | `post_id` | `public.posts` | base potencial para URL futura |
 
+Nova camada recomendada para serie temporal:
+
+| Campo | Origem | Uso na view |
+|---|---|---|
+| `week_start` | `v_dashboard_creator_weekly_timeseries` | eixo temporal semanal |
+| `views_delta_vs_prev_week` | `v_dashboard_creator_weekly_timeseries` | crescimento ou encolhimento principal |
+| `views_growth_pct_vs_prev_week` | `v_dashboard_creator_weekly_timeseries` | intensidade relativa da variacao |
+| `likes_delta_vs_prev_week` | `v_dashboard_creator_weekly_timeseries` | confirmacao secundaria de tracao |
+| `comments_delta_vs_prev_week` | `v_dashboard_creator_weekly_timeseries` | confirmacao secundaria de tracao |
+| `active_posts_in_week` | `v_dashboard_creator_weekly_timeseries` | contexto de volume observado |
+
 Campos complementares documentados fora da view atual:
 
 | Campo | Origem documentada | Situacao |
@@ -312,6 +332,7 @@ No mockup inicial do Streamlit:
 - `top videos` usa apenas os campos ja documentados em `public.posts`
 - `rank de engajamento medio` e derivado localmente para leitura visual
 - a serie temporal precisa priorizar janela semanal
+- a serie temporal atual do mockup ainda nao reflete o contrato ideal
 - a cadencia de publicacao foi removida ate existir uma base confiavel
 
 Regra importante:
@@ -347,6 +368,18 @@ followers_delta_30d
 followers_latest_collected_at
 avg_views_per_post
 ```
+
+Nova view recomendada para o criador individual:
+
+```text
+v_dashboard_creator_weekly_timeseries
+```
+
+Papel dessa view:
+
+- sustentar a serie temporal semanal do criador individual
+- separar leitura de crescimento por criador da leitura de crescimento por post
+- evitar que o Streamlit agregue historico bruto localmente
 
 Prioridade dos campos novos:
 
@@ -395,5 +428,6 @@ Depois desta fase:
 
 1. revisar a UX do mockup no app
 2. decidir a nova versao de `v_dashboard_creator_summary`
-3. implementar a evolucao SQL em arquivo proprio
-4. ligar a pagina a dados reais somente depois da validacao do contrato
+3. definir o contrato de `v_dashboard_creator_weekly_timeseries`
+4. implementar a evolucao SQL em arquivo proprio
+5. ligar a pagina a dados reais somente depois da validacao do contrato
