@@ -158,6 +158,13 @@ Regra pratica:
 - extracao de PDF comeca semiautomatica porque o layout pode mudar entre meses
 - a rotina mensal so deve liberar dados quando as validacoes passarem
 
+Nova possibilidade planejada:
+
+- existira uma UI de apoio no Streamlit para operacionalizar essa rotina mensal
+- essa UI nao substitui a governanca nem cria um fluxo paralelo
+- ela deve seguir exatamente o mesmo processo manual ja descrito neste documento
+- o objetivo da UI e organizar a execucao, reduzir erro operacional e tornar visiveis os pontos de controle da rotina
+
 ## Entregavel 1 - Tabela de controle de fonte
 
 ### O que e
@@ -304,6 +311,13 @@ fenabrave/{ano}/{mes}/{nome_original_do_arquivo}
 ```
 
 5. Inserir ou atualizar o registro correspondente em `market_source_files`.
+
+Observacao sobre a UI do Streamlit:
+
+- o processo acima pode futuramente ser apoiado por uma tela operacional no Streamlit
+- essa tela deve apenas guiar a rotina mensal e consolidar os campos operacionais
+- o uso da UI nao muda a natureza manual desta fase
+- as mesmas etapas continuam obrigatorias: confirmar a fonte, preservar o PDF, registrar metadados, revisar preview, validar e aprovar o periodo
 
 Exemplo:
 
@@ -1119,6 +1133,13 @@ Guardar PDF no Git apenas se:
 - o arquivo nao causar peso no repositorio
 
 Mesmo nesse caso, o dado de producao deve apontar para o storage e para a URL original.
+
+Observacao sobre upload via Streamlit:
+
+- carregar o PDF na UI do Streamlit e viavel como apoio operacional
+- esse upload pode simplificar a conferencia do arquivo e o preenchimento inicial dos metadados
+- mesmo com essa possibilidade, o arquivo oficial deve continuar sendo preservado no bucket privado
+- a UI nao deve usar o navegador como destino final do PDF nem expor credenciais privilegiadas
 
 ## Estados de extracao
 
