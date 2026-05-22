@@ -1137,8 +1137,8 @@ Para economizar tokens nas proximas sessoes:
 
 def get_external_intake_mock_state() -> dict[str, Any]:
     defaults = {
-        "entity_status": "nova_entity",
-        "taxonomy_status": "existente",
+        "entity_status": "nao_checada",
+        "entity_check_result": None,
         "review_ready": False,
         "published": False,
         "validated": False,
@@ -1149,8 +1149,30 @@ def get_external_intake_mock_state() -> dict[str, Any]:
     return {key: st.session_state[key] for key in defaults}
 
 
+def get_mock_entity_bank() -> list[dict[str, str]]:
+    return [
+        {"display_name": "Auto Mercado Brasil", "normalized_name": "auto mercado brasil", "entity_id": "128"},
+        {"display_name": "Canal do Carro Eletrico", "normalized_name": "canal do carro eletrico", "entity_id": "214"},
+        {"display_name": "Radar Automotivo", "normalized_name": "radar automotivo", "entity_id": "377"},
+    ]
+
+
+def get_mock_taxonomy_options() -> list[str]:
+    return [
+        "Mercado automotivo > Analise de mercado",
+        "Mercado automotivo > Emplacamentos",
+        "Mercado automotivo > Redes de concessionarias",
+        "Eletricos > Infraestrutura de recarga",
+        "Eletricos > Lancamentos",
+        "Performance > Preparacao leve",
+        "Manutencao > Revisao preventiva",
+    ]
+
+
 def render_external_intake_page() -> None:
     state = get_external_intake_mock_state()
+    mock_entities = get_mock_entity_bank()
+    mock_taxonomy_options = get_mock_taxonomy_options()
     page_header("Inclusao de dados externos", "Prototipo de metodo sem ligacao com SQL")
     process_banner(
         "Regra obrigatoria de governanca",
@@ -1161,30 +1183,30 @@ def render_external_intake_page() -> None:
         process_step_card(
             "Etapa 1",
             "Entity",
-            "Procurar entity existente. Se nao existir, abrir intake em vez de gravar direto em public.entities.",
+            "Checar se a entity ja existe por nome exibido e nome normalizado. Se nao existir, cadastrar via intake em vez de gravar direto em public.entities.",
             "ok-green" if state["entity_status"] == "existente" else "alert-yellow",
-            "entity existente" if state["entity_status"] == "existente" else "solicitar via intake",
+            "entity existente" if state["entity_status"] == "existente" else "cadastrar via intake",
         ),
         process_step_card(
             "Etapa 2",
-            "Nicho e subnicho",
-            "Usar classificacao existente quando possivel. Novo nicho ou subnicho entra como solicitacao controlada e nunca como escrita direta.",
-            "ok-green" if state["taxonomy_status"] == "existente" else "alert-yellow",
-            "classificacao pronta" if state["taxonomy_status"] == "existente" else "solicitacao pendente",
+            "Creator",
+            "Cadastrar o creator somente depois da checagem da entity. O cadastro final continua bloqueado ate review, publicacao e validacao.",
+            "ok-green" if state["creator_ready"] else "neutral",
+            "liberado" if state["creator_ready"] else "bloqueado",
         ),
         process_step_card(
             "Etapa 3",
+            "Associacao de nichos",
+            "Subir as opcoes existentes, permitir multiplas associacoes e garantir que o vinculo sera feito para a mesma entity cadastrada na etapa 1.",
+            "neutral",
+            "multipla selecao",
+        ),
+        process_step_card(
+            "Etapa 4",
             "Revisao e publicacao",
             "A entity precisa passar por review, depois publish_entity_intake e por fim validacao de vinculos antes do creator.",
             "ok-green" if state["validated"] else "alert-yellow",
             "validado" if state["validated"] else "aguardando fluxo manual",
-        ),
-        process_step_card(
-            "Etapa 4",
-            "Creator",
-            "So liberar platform, channel_id e followers para cadastro final quando entity_id e classificacao estiverem resolvidos.",
-            "ok-green" if state["creator_ready"] else "neutral",
-            "liberado" if state["creator_ready"] else "bloqueado",
         ),
     ]
     process_step_grid(step_cards)
@@ -1197,67 +1219,76 @@ def render_external_intake_page() -> None:
         col_left, col_right = st.columns([1.35, 1])
 
         with col_left:
-            st.markdown("### 1. Procurar ou criar entity")
-            raw_name = st.text_input("Nome exibido", value="Auto Mercado Brasil")
-            normalized_name = st.text_input("Nome normalizado sugerido", value="auto mercado brasil")
+            st.markdown("### 1. Cadastrar entity")
+            raw_name = st.text_input("Nome da Entidade", value="Auto Mercado Brasil")
+            normalized_name = raw_name.strip().lower()
             creator_type = st.selectbox("Tipo de creator", ["mid-tier", "editorial", "independente"])
-            entity_status = st.radio(
-                "Resultado da busca de entity",
-                [
-                    ("existente", "Entity ja existe"),
-                    ("nova_entity", "Entity nao existe, criar intake"),
-                    ("duplicada", "Possivel duplicidade, exigir revisao"),
-                ],
-                format_func=lambda item: item[1],
-                index=["existente", "nova_entity", "duplicada"].index(state["entity_status"]),
-            )[0]
-            st.session_state["entity_status"] = entity_status
 
-            st.markdown("### 2. Resolver nicho e subnicho")
-            niche = st.selectbox("Nicho", ["Mercado automotivo", "Eletricos", "Performance", "Manutencao"])
-            sub_niche_name = st.text_input("Subnicho", value="Analise de mercado")
-            taxonomy_status = st.radio(
-                "Situacao da classificacao",
-                [
-                    ("existente", "Nicho e subnicho ja existem"),
-                    ("novo_subnicho", "Novo subnicho"),
-                    ("novo_nicho", "Novo nicho e novo subnicho"),
-                ],
-                format_func=lambda item: item[1],
-                index=["existente", "novo_subnicho", "novo_nicho"].index(state["taxonomy_status"]),
-            )[0]
-            st.session_state["taxonomy_status"] = taxonomy_status
+            if st.button("Checar entity no banco", use_container_width=False):
+                display_match = next(
+                    (row for row in mock_entities if row["display_name"].strip().lower() == raw_name.strip().lower()),
+                    None,
+                )
+                normalized_match = next(
+                    (row for row in mock_entities if row["normalized_name"] == normalized_name),
+                    None,
+                )
+                if display_match or normalized_match:
+                    st.session_state["entity_status"] = "existente"
+                    st.session_state["entity_check_result"] = {
+                        "display_match": display_match,
+                        "normalized_match": normalized_match,
+                    }
+                else:
+                    st.session_state["entity_status"] = "nova_entity"
+                    st.session_state["entity_check_result"] = {
+                        "display_match": None,
+                        "normalized_match": None,
+                    }
 
-            st.markdown("### 3. Rascunho do creator")
+            entity_status = st.session_state["entity_status"]
+            entity_check_result = st.session_state.get("entity_check_result")
+
+            st.markdown("### 2. Cadastrar creator")
             platform = st.selectbox("Plataforma", ["youtube", "instagram", "tiktok"])
             username = st.text_input("Username", value="@automercadobrasil")
             channel_id = st.text_input("Channel ID", value="UC1234567890ABCDE")
             followers = st.number_input("Followers", min_value=0, value=185000, step=1000)
-            notes = st.text_area(
-                "Notas operacionais",
-                value="Creator focado em emplacamento, tendencias de vendas e leitura setorial.",
-                height=110,
+
+            st.markdown("### 3. Associar nichos")
+            linked_entity_name = raw_name if entity_status == "nova_entity" else (entity_check_result or {}).get("display_match", {}).get("display_name", raw_name)
+            st.text_input("Entity que recebera a associacao", value=linked_entity_name, disabled=True)
+            taxonomy_selection = st.multiselect(
+                "Nichos e subnichos existentes",
+                mock_taxonomy_options,
+                default=["Mercado automotivo > Analise de mercado"],
             )
+            taxonomy_request = st.text_input("Solicitar novo nicho ou subnicho", value="")
 
         with col_right:
             st.markdown("### Leitura da UI")
-            creator_blocked = entity_status != "existente" or taxonomy_status != "existente" or not state["validated"]
+            creator_blocked = entity_status != "nova_entity" or not state["validated"]
             local_warnings = []
-            if entity_status == "nova_entity":
-                local_warnings.append("A entity ainda precisa entrar em public.entity_intake.")
-            if entity_status == "duplicada":
-                local_warnings.append("A busca encontrou risco de duplicidade. O fluxo deve parar para revisao.")
-            if taxonomy_status != "existente":
-                local_warnings.append("A taxonomia nao pode ser criada diretamente na UI sem intake controlado.")
+            entity_found = entity_status == "existente"
+            if entity_status == "nao_checada":
+                local_warnings.append("Use o botao para checar o banco antes de cadastrar a entity.")
+            if entity_found:
+                local_warnings.append("A entity ja existe no banco. O cadastro de nova entity deve ficar bloqueado.")
+            if not taxonomy_selection and not taxonomy_request.strip():
+                local_warnings.append("A entity precisa sair desta tela com pelo menos uma associacao de nicho ou uma solicitacao aberta.")
+            if taxonomy_request.strip():
+                local_warnings.append("Novo nicho ou subnicho deve entrar como solicitacao controlada, nao como cadastro direto.")
             if not channel_id.strip():
                 local_warnings.append("Channel ID e obrigatorio para o cadastro final do creator.")
-            if creator_blocked:
+            if entity_status != "nova_entity":
+                local_warnings.append("O cadastro final em public.creators depende de uma nova entity validada nesta jornada.")
+            elif creator_blocked:
                 local_warnings.append("O cadastro final em public.creators deve continuar bloqueado nesta etapa.")
 
             chips = [
-                dq_chip("Entity", "resolvida" if entity_status == "existente" else "pendente", "ok-green" if entity_status == "existente" else "alert-yellow"),
-                dq_chip("Taxonomia", "pronta" if taxonomy_status == "existente" else "revisar", "ok-green" if taxonomy_status == "existente" else "alert-yellow"),
+                dq_chip("Entity", "existente" if entity_found else "nova", "alert-yellow" if entity_found else "ok-green"),
                 dq_chip("Creator", "bloqueado" if creator_blocked else "liberado", "neutral" if creator_blocked else "ok-green"),
+                dq_chip("Nichos", str(len(taxonomy_selection)), "ok-green" if taxonomy_selection else "alert-yellow"),
             ]
             st.markdown(
                 dq_kpi_card(
@@ -1275,10 +1306,7 @@ def render_external_intake_page() -> None:
                 {
                     "raw_name": raw_name,
                     "normalized_name": normalized_name,
-                    "sub_niche_name": sub_niche_name,
-                    "niche": niche,
                     "creator_type": creator_type,
-                    "notes": notes,
                     "status": "pending",
                 }
             )
@@ -1292,6 +1320,19 @@ def render_external_intake_page() -> None:
                     "followers": followers,
                 }
             )
+
+            st.markdown("### Associacao planejada")
+            st.json(
+                {
+                    "entity_name": linked_entity_name,
+                    "existing_links": taxonomy_selection,
+                    "taxonomy_request": taxonomy_request.strip() or None,
+                }
+            )
+
+            if entity_check_result:
+                st.markdown("### Resultado da checagem")
+                st.json(entity_check_result)
 
             if local_warnings:
                 st.warning(" | ".join(local_warnings))
@@ -1323,8 +1364,8 @@ def render_external_intake_page() -> None:
                 "review_result": "READY_TO_INSERT" if st.session_state["review_ready"] else "CHECK_DUPLICATE",
                 "existing_entity_id": 128 if st.session_state["entity_status"] == "existente" else None,
                 "existing_entity_name": "Auto Mercado Brasil" if st.session_state["entity_status"] == "existente" else None,
-                "sub_niche_id": 42 if st.session_state["taxonomy_status"] == "existente" else None,
-                "matched_sub_niche_name": "Analise de mercado" if st.session_state["taxonomy_status"] == "existente" else None,
+                "sub_niche_id": 42,
+                "matched_sub_niche_name": "Analise de mercado",
                 "notes": "Mock de avaliacao sem SQL.",
             }
         ]
@@ -1356,8 +1397,10 @@ def render_external_intake_page() -> None:
         st.markdown(
             """
 - A busca de entity vem antes de qualquer tentativa de criar creator.
-- Se a entity nao existir, a UI deve abrir intake e nao gravar na tabela final.
-- Nicho e subnicho precisam existir ou entrar como solicitacao controlada.
+- O botao de checagem precisa bloquear quando encontrar correspondencia por nome exibido ou nome normalizado.
+- Se a entity nao existir, a UI deve cadastrar via intake e nao gravar na tabela final.
+- O creator vem antes da associacao final de nichos nesta jornada.
+- Nicho e subnicho precisam subir como opcoes existentes, com selecao multipla, ou entrar como solicitacao controlada.
 - Review vem antes de publish, e publish vem antes de validate.
 - `platform`, `channel_id` e `followers` podem existir no rascunho da tela, mas nao podem virar creator final antes do fim do fluxo.
 - O Streamlit deve funcionar como camada de operacao guiada, nao como editor SQL.
