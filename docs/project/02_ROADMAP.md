@@ -25,6 +25,7 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 - [ ] Validar atualizacao de `collected_at`.
 - [ ] Implementar monitoramento operacional do worker horario com KPIs de fluxo: `itens_atrasados`, `at_risk_bootstrap` e `recovery_low`.
 - [ ] Prioridade alta: revisar a regra de calculo de `next_check` com base nos sinais operacionais do worker horario e nos intervalos observados no dashboard.
+- [ ] Implementar historico de followers de creators por snapshot com `creator_metrics_history` e sincronizacao do valor corrente em `creators`.
 
 ### Prioridade estrategica - modelo de priorizacao
 

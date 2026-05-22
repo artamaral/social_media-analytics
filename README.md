@@ -394,6 +394,7 @@ Aplicar, nesta ordem:
 7. `sql/ddl/tables/007_create_pipeline_state.sql`
 8. `sql/ddl/tables/008_create_post_update_queue.sql`
 9. `sql/ddl/tables/009_create_entity_intake.sql`
+10. `sql/ddl/tables/014_create_creator_metrics_history.sql`
 
 ### 2. Criar views
 
@@ -410,6 +411,7 @@ Aplicar:
 2. `sql/ddl/triggers/002_add_to_queue.sql`
 3. `sql/ddl/functions/002_queue_scheduling_functions.sql`
 4. `sql/ddl/triggers/003_refresh_post_queue_on_metrics.sql`
+5. `sql/ddl/functions/006_sync_creator_latest_metrics.sql`
 
 ### 4. Criar indices e auxiliares
 

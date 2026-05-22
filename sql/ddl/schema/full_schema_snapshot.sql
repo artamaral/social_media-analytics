@@ -7,11 +7,28 @@ CREATE TABLE public.creators (
   platform text NOT NULL CHECK (platform = ANY (ARRAY['youtube'::text, 'instagram'::text, 'tiktok'::text])),
   username text,
   channel_id text NOT NULL UNIQUE,
-  followers integer,
+  followers bigint,
+  followers_collected_at timestamp with time zone,
+  followers_source text,
+  hidden_subscriber_count boolean,
+  channel_view_count bigint,
+  channel_video_count bigint,
   created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
   is_active boolean DEFAULT true,
   CONSTRAINT creators_pkey PRIMARY KEY (id),
   CONSTRAINT creators_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id)
+);
+CREATE TABLE public.creator_metrics_history (
+  id bigint NOT NULL DEFAULT nextval('creator_metrics_history_id_seq'::regclass),
+  creator_id integer NOT NULL,
+  followers bigint,
+  channel_view_count bigint,
+  channel_video_count bigint,
+  hidden_subscriber_count boolean,
+  collected_at timestamp with time zone NOT NULL DEFAULT now(),
+  source text NOT NULL DEFAULT 'youtube_channels_api'::text,
+  CONSTRAINT creator_metrics_history_pkey PRIMARY KEY (id),
+  CONSTRAINT creator_metrics_history_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES public.creators(id)
 );
 CREATE TABLE public.entities (
   id integer NOT NULL DEFAULT nextval('entities_id_seq'::regclass),

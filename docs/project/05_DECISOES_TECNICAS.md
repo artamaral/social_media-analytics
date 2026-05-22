@@ -603,7 +603,7 @@ Decisao:
 - tratar `creators.followers` como valor corrente, nao como historico analitico
 - criar uma camada de snapshots para metricas dinamicas de creator, iniciando por followers do YouTube
 - usar a YouTube Data API `channels.list` com `part=statistics` para coletar `statistics.subscriberCount`
-- gravar cada coleta em uma futura tabela `creator_metrics_history`
+- gravar cada coleta na tabela `creator_metrics_history`
 - manter `creators.followers` sincronizado com o snapshot mais recente para consumo rapido no dashboard
 
 Contexto:
