@@ -517,6 +517,175 @@ def inject_theme() -> None:
         .review-card .dq-chip-row {
             margin-top: 0.9rem;
         }
+
+        .creator-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.95fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .creator-panel {
+            background: var(--card-dark);
+            color: var(--text);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 1rem 1.05rem;
+        }
+
+        .creator-panel-title {
+            color: var(--text);
+            font-size: 1.08rem;
+            font-weight: 900;
+            line-height: 1.15;
+        }
+
+        .creator-panel-subtitle {
+            color: var(--muted);
+            font-size: 0.88rem;
+            line-height: 1.35;
+            margin-top: 0.35rem;
+        }
+
+        .creator-ranking-list {
+            display: grid;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .creator-ranking-item {
+            display: grid;
+            grid-template-columns: minmax(0, 2fr) minmax(120px, 0.9fr) minmax(120px, 0.9fr) minmax(110px, 0.75fr);
+            gap: 0.85rem;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            padding: 0.85rem 0.9rem;
+        }
+
+        .creator-ranking-main {
+            min-width: 0;
+        }
+
+        .creator-ranking-title {
+            color: var(--text);
+            font-size: 1rem;
+            font-weight: 900;
+            line-height: 1.15;
+            overflow-wrap: anywhere;
+        }
+
+        .creator-ranking-meta {
+            color: var(--muted);
+            font-size: 0.82rem;
+            margin-top: 0.25rem;
+            line-height: 1.3;
+            overflow-wrap: anywhere;
+        }
+
+        .creator-stat-label {
+            color: var(--muted);
+            font-size: 0.72rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .creator-stat-value {
+            color: var(--text);
+            font-size: 1rem;
+            font-weight: 900;
+            margin-top: 0.18rem;
+            line-height: 1.1;
+        }
+
+        .creator-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .creator-detail-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            padding: 0.75rem 0.8rem;
+            min-height: 78px;
+        }
+
+        .creator-detail-label {
+            color: var(--muted);
+            font-size: 0.72rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .creator-detail-value {
+            color: var(--text);
+            font-size: 0.96rem;
+            font-weight: 800;
+            margin-top: 0.25rem;
+            overflow-wrap: anywhere;
+        }
+
+        .creator-gap-list {
+            display: grid;
+            gap: 0.55rem;
+            margin-top: 1rem;
+        }
+
+        .creator-gap-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            padding: 0.75rem 0.8rem;
+        }
+
+        .creator-gap-item strong {
+            color: var(--text);
+            display: block;
+            font-size: 0.88rem;
+            line-height: 1.2;
+        }
+
+        .creator-gap-item span {
+            color: var(--muted);
+            display: block;
+            font-size: 0.82rem;
+            line-height: 1.35;
+            margin-top: 0.25rem;
+        }
+
+        .creator-reference-note {
+            background: rgba(255, 128, 105, 0.08);
+            border: 1px solid rgba(255, 128, 105, 0.24);
+            border-radius: 8px;
+            color: var(--text);
+            padding: 0.85rem 0.95rem;
+            margin-top: 0.85rem;
+            margin-bottom: 1rem;
+        }
+
+        .creator-reference-note strong {
+            display: block;
+            font-size: 0.9rem;
+            margin-bottom: 0.2rem;
+        }
+
+        .creator-section-title {
+            color: var(--text);
+            font-size: 1.05rem;
+            font-weight: 900;
+            margin: 0 0 0.2rem;
+        }
+
+        .creator-section-subtitle {
+            color: var(--muted);
+            font-size: 0.84rem;
+            line-height: 1.35;
+            margin-bottom: 0.7rem;
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -1340,6 +1509,178 @@ def get_fenabrave_mock_state() -> dict[str, Any]:
     return {key: st.session_state[key] for key in defaults}
 
 
+def get_creator_mock_rows() -> list[dict[str, Any]]:
+    return [
+        {
+            "entity_id": 128,
+            "entity_name": "Auto Mercado Brasil",
+            "niche": "Mercado automotivo",
+            "creator_type": "editorial",
+            "creator_id": 12,
+            "platform": "youtube",
+            "username": "@automercadobrasil",
+            "channel_id": "UC1234567890ABCDE",
+            "followers": 185000,
+            "post_count": 142,
+            "total_views": 12850000,
+            "total_likes": 418000,
+            "total_comments": 29600,
+            "engagement_rate_pct": 3.48,
+            "latest_post_date": "2026-05-19",
+            "latest_collected_at": "2026-05-22 08:00",
+            "is_active": True,
+            "sub_niche_display": "Analise de mercado",
+            "followers_delta_30d": None,
+            "avg_views_per_post": 90493,
+        },
+        {
+            "entity_id": 214,
+            "entity_name": "Radar de Concessionarias",
+            "niche": "Mercado automotivo",
+            "creator_type": "editorial",
+            "creator_id": 24,
+            "platform": "youtube",
+            "username": "@radardeconcessionarias",
+            "channel_id": "UCZYX987654321",
+            "followers": 94200,
+            "post_count": 88,
+            "total_views": 6840000,
+            "total_likes": 214500,
+            "total_comments": 18400,
+            "engagement_rate_pct": 3.40,
+            "latest_post_date": "2026-05-18",
+            "latest_collected_at": "2026-05-22 08:00",
+            "is_active": True,
+            "sub_niche_display": "Rede e varejo automotivo",
+            "followers_delta_30d": None,
+            "avg_views_per_post": 77727,
+        },
+        {
+            "entity_id": 377,
+            "entity_name": "Electric Garage Brasil",
+            "niche": "Eletricos",
+            "creator_type": "personal",
+            "creator_id": 31,
+            "platform": "youtube",
+            "username": "@electricgaragebr",
+            "channel_id": "UCFLEET1234567",
+            "followers": 65300,
+            "post_count": 64,
+            "total_views": 4920000,
+            "total_likes": 189000,
+            "total_comments": 12100,
+            "engagement_rate_pct": 4.09,
+            "latest_post_date": "2026-05-21",
+            "latest_collected_at": "2026-05-22 08:00",
+            "is_active": True,
+            "sub_niche_display": "Infraestrutura de recarga",
+            "followers_delta_30d": None,
+            "avg_views_per_post": 76875,
+        },
+    ]
+
+
+def get_creator_monthly_series(entity_name: str) -> pd.DataFrame:
+    monthly_map = {
+        "Auto Mercado Brasil": [
+            ("jan/2026", 1820000, 52100),
+            ("fev/2026", 1940000, 54800),
+            ("mar/2026", 2085000, 59300),
+            ("abr/2026", 2170000, 61400),
+            ("mai/2026", 2035000, 57600),
+            ("jun/2026", 2280000, 64800),
+        ],
+        "Radar de Concessionarias": [
+            ("jan/2026", 960000, 28400),
+            ("fev/2026", 1025000, 30100),
+            ("mar/2026", 1145000, 32900),
+            ("abr/2026", 1100000, 31700),
+            ("mai/2026", 1215000, 33800),
+            ("jun/2026", 1295000, 35100),
+        ],
+        "Electric Garage Brasil": [
+            ("jan/2026", 640000, 20100),
+            ("fev/2026", 685000, 21400),
+            ("mar/2026", 742000, 22900),
+            ("abr/2026", 801000, 24700),
+            ("mai/2026", 862000, 26100),
+            ("jun/2026", 918000, 27600),
+        ],
+    }
+    data = monthly_map.get(entity_name, monthly_map["Auto Mercado Brasil"])
+    return pd.DataFrame(data, columns=["mes", "views_totais", "likes_totais"])
+
+
+def get_creator_top_videos(entity_name: str) -> pd.DataFrame:
+    top_video_map = {
+        "Auto Mercado Brasil": [
+            ("Novo reajuste das montadoras no 2o trimestre", "2026-05-19", 268000, 8400, 760, "long"),
+            ("SUVs compactos: preco real nas concessionarias", "2026-05-16", 241000, 7900, 640, "long"),
+            ("Financiamento em 2026: o que mudou", "2026-05-12", 218000, 6850, 590, "long"),
+            ("Sedas medios que mais perderam valor", "2026-05-08", 191000, 6210, 552, "long"),
+            ("Ranking de estoque parado por modelo", "2026-05-03", 177000, 5980, 488, "long"),
+            ("Mercado direto para locadoras em abril", "2026-04-28", 166000, 5440, 451, "short"),
+        ],
+        "Radar de Concessionarias": [
+            ("Mapa das concessionarias com maior giro", "2026-05-18", 151000, 5210, 404, "long"),
+            ("Margem real no varejo de usados", "2026-05-15", 144000, 4980, 382, "long"),
+            ("Aberturas e fechamentos de lojas no mes", "2026-05-10", 133000, 4560, 340, "long"),
+            ("Como esta a aprovacao de credito", "2026-05-05", 126000, 4310, 301, "short"),
+            ("Ranking por capital", "2026-04-29", 119000, 4080, 276, "short"),
+            ("Comerciais leves: pressao de estoque", "2026-04-24", 111000, 3890, 250, "long"),
+        ],
+        "Electric Garage Brasil": [
+            ("Custo real para carregar em viagem", "2026-05-21", 122000, 6120, 318, "long"),
+            ("Recarga rapida: quando faz sentido", "2026-05-17", 118000, 5940, 294, "long"),
+            ("Sedas eletricos mais vendidos", "2026-05-12", 109000, 5510, 272, "long"),
+            ("Wallbox em condominio: o que verificar", "2026-05-08", 101000, 5230, 241, "short"),
+            ("Autonomia no uso urbano real", "2026-05-02", 94000, 4870, 219, "short"),
+            ("Infraestrutura publica em 2026", "2026-04-26", 89000, 4590, 204, "long"),
+        ],
+    }
+    data = top_video_map.get(entity_name, top_video_map["Auto Mercado Brasil"])
+    df = pd.DataFrame(
+        data,
+        columns=["titulo", "post_date", "views", "likes", "comments", "video_type"],
+    )
+    df["post_date"] = pd.to_datetime(df["post_date"])
+    return df
+
+
+def get_creator_cadence_matrix(entity_name: str) -> pd.DataFrame:
+    cadence_map = {
+        "Auto Mercado Brasil": [
+            ("Seg", 3, 2, 1, 0, 0, 0),
+            ("Ter", 2, 4, 2, 1, 0, 0),
+            ("Qua", 1, 3, 4, 2, 0, 0),
+            ("Qui", 0, 2, 5, 3, 1, 0),
+            ("Sex", 0, 1, 3, 4, 2, 1),
+            ("Sab", 0, 0, 1, 2, 1, 0),
+            ("Dom", 0, 0, 0, 1, 0, 0),
+        ],
+        "Radar de Concessionarias": [
+            ("Seg", 2, 2, 1, 0, 0, 0),
+            ("Ter", 1, 3, 2, 1, 0, 0),
+            ("Qua", 1, 2, 3, 2, 1, 0),
+            ("Qui", 0, 2, 4, 2, 1, 0),
+            ("Sex", 0, 1, 3, 3, 1, 1),
+            ("Sab", 0, 0, 1, 1, 1, 0),
+            ("Dom", 0, 0, 0, 0, 0, 0),
+        ],
+        "Electric Garage Brasil": [
+            ("Seg", 1, 1, 1, 0, 0, 0),
+            ("Ter", 1, 2, 2, 1, 0, 0),
+            ("Qua", 0, 2, 3, 2, 1, 0),
+            ("Qui", 0, 1, 4, 2, 1, 0),
+            ("Sex", 0, 1, 2, 3, 2, 0),
+            ("Sab", 0, 0, 1, 2, 1, 1),
+            ("Dom", 0, 0, 0, 1, 1, 0),
+        ],
+    }
+    columns = ["dia_semana", "sem_1", "sem_2", "sem_3", "sem_4", "sem_5", "extra"]
+    return pd.DataFrame(cadence_map.get(entity_name, cadence_map["Auto Mercado Brasil"]), columns=columns)
+
+
 def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> None:
     state = get_external_intake_mock_state()
     mock_entities = get_mock_entity_bank()
@@ -1579,6 +1920,258 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
 - `platform`, `channel_id` e `followers` podem existir no rascunho da tela, mas nao podem virar criador final antes do fim do fluxo.
 - O Streamlit deve funcionar como camada de operacao guiada, nao como editor SQL.
 """
+        )
+
+
+def render_creator_page() -> None:
+    rows = get_creator_mock_rows()
+    selected_name = st.session_state.get("creator_selected_name", rows[0]["entity_name"])
+    selected_default = next((row for row in rows if row["entity_name"] == selected_name), rows[0])
+
+    page_header("Criadores", "Mockup guiado pela imagem de referencia e pelos campos atuais documentados")
+    process_banner(
+        "Comparacao com a imagem de referencia",
+        "A referencia tem quatro camadas muito claras: filtros no topo, faixa de KPIs, miolo analitico com graficos e uma area larga para conteudo editorial. O mockup anterior cobria so parte disso. Esta versao replica essa estrutura em linguagem dark e deixa explicitos os campos que ainda faltam.",
+    )
+    st.markdown(
+        (
+            '<div class="creator-reference-note">'
+            "<strong>O que mudou em relacao ao mockup anterior</strong>"
+            "Antes a pagina estava mais proxima de um ranking com painel lateral. Agora ela segue melhor a imagem: faixa superior de KPIs, distribuicao de engajamento, serie mensal, tabela de top videos e bloco de cadencia de publicacao."
+            "</div>"
+        ),
+        unsafe_allow_html=True,
+    )
+
+    filter_col1, filter_col2, filter_col3, filter_col4 = st.columns([1.35, 1, 1, 1.1])
+    with filter_col1:
+        selected_creator_name = st.selectbox(
+            "Criador em foco",
+            [row["entity_name"] for row in rows],
+            index=[row["entity_name"] for row in rows].index(selected_default["entity_name"]),
+        )
+    with filter_col2:
+        selected_period = st.selectbox("Periodo", ["30 dias", "90 dias", "12 meses"], index=0)
+    with filter_col3:
+        selected_platform = st.selectbox("Plataforma", ["todas", "youtube", "instagram", "tiktok"], index=1)
+    with filter_col4:
+        ranking_mode = st.selectbox("Ordenar por", ["Views totais", "Engajamento", "Posts monitorados"], index=0)
+
+    st.session_state["creator_selected_name"] = selected_creator_name
+    working_rows = rows
+    if selected_platform != "todas":
+        working_rows = [row for row in working_rows if row["platform"] == selected_platform]
+
+    if ranking_mode == "Engajamento":
+        working_rows = sorted(working_rows, key=lambda row: float(row["engagement_rate_pct"]), reverse=True)
+    elif ranking_mode == "Posts monitorados":
+        working_rows = sorted(working_rows, key=lambda row: int(row["post_count"]), reverse=True)
+    else:
+        working_rows = sorted(working_rows, key=lambda row: int(row["total_views"]), reverse=True)
+
+    selected_row = next((row for row in working_rows if row["entity_name"] == selected_creator_name), working_rows[0] if working_rows else rows[0])
+    monthly_df = get_creator_monthly_series(selected_row["entity_name"])
+    top_videos_df = get_creator_top_videos(selected_row["entity_name"])
+    cadence_df = get_creator_cadence_matrix(selected_row["entity_name"])
+
+    total_followers = sum(int(row["followers"]) for row in working_rows)
+    total_posts = sum(int(row["post_count"]) for row in working_rows)
+    avg_engagement = round(sum(float(row["engagement_rate_pct"]) for row in working_rows) / max(len(working_rows), 1), 2)
+    total_views = sum(int(row["total_views"]) for row in working_rows)
+    avg_views_per_post = round(total_views / max(total_posts, 1))
+
+    metric_card_grid(
+        [
+            metric_card_html("Criadores ativos", format_int(len(working_rows)), f"Filtro atual: {selected_period}", "CR"),
+            metric_card_html("Seguidores monitorados", format_int(total_followers), "Campo atual da view resumida", "SG"),
+            metric_card_html("Views totais", format_int(total_views), "Soma dos criadores filtrados", "VW"),
+            metric_card_html("Media views por post", format_int(avg_views_per_post), "Derivada local da base atual", "MP"),
+            metric_card_html("Engajamento medio", f"{avg_engagement:.2f}%", "Media simples por criador", "ER"),
+        ],
+        class_name="fenabrave-card-grid",
+    )
+
+    donut_df = pd.DataFrame(
+        {
+            "metrica": ["Likes", "Comentarios"],
+            "valor": [int(selected_row["total_likes"]), int(selected_row["total_comments"])],
+        }
+    )
+    donut_fig = px.pie(
+        donut_df,
+        names="metrica",
+        values="valor",
+        hole=0.62,
+        color="metrica",
+        color_discrete_map={"Likes": "#ff8069", "Comentarios": "#f2c14e"},
+    )
+    donut_fig.update_traces(textinfo="percent", hovertemplate="%{label}: %{value:,}<extra></extra>")
+    apply_plotly_theme(donut_fig, legend_title="Metrica")
+
+    monthly_fig = px.area(
+        monthly_df,
+        x="mes",
+        y="views_totais",
+        markers=True,
+        color_discrete_sequence=["#ff8069"],
+    )
+    monthly_fig.add_scatter(
+        x=monthly_df["mes"],
+        y=monthly_df["likes_totais"],
+        mode="lines+markers",
+        name="Likes",
+        line=dict(color="#f2c14e", width=2),
+        yaxis="y2",
+    )
+    monthly_fig.update_layout(
+        yaxis_title="Views",
+        yaxis2=dict(title="Likes", overlaying="y", side="right", showgrid=False),
+    )
+    apply_plotly_theme(monthly_fig, legend_title="Serie")
+
+    cadence_matrix = cadence_df.set_index("dia_semana")[["sem_1", "sem_2", "sem_3", "sem_4", "sem_5"]]
+    cadence_fig = px.imshow(
+        cadence_matrix,
+        color_continuous_scale=["#24272f", "#6a3e38", "#ff8069"],
+        aspect="auto",
+        labels=dict(x="Semana do mes", y="Dia da semana", color="Posts"),
+    )
+    cadence_fig.update_xaxes(side="top")
+    apply_plotly_theme(cadence_fig, legend_title="Posts")
+
+    top_videos_display = top_videos_df.copy()
+    top_videos_display["post_date"] = top_videos_display["post_date"].apply(format_timestamp_br)
+    top_videos_display["views"] = top_videos_display["views"].apply(format_int)
+    top_videos_display["likes"] = top_videos_display["likes"].apply(format_int)
+    top_videos_display["comments"] = top_videos_display["comments"].apply(format_int)
+    top_videos_display = top_videos_display.rename(
+        columns={
+            "titulo": "Titulo",
+            "post_date": "Data do post",
+            "views": "Views",
+            "likes": "Likes",
+            "comments": "Comentarios",
+            "video_type": "Tipo",
+        }
+    )
+
+    left_col, right_col = st.columns([1.35, 1])
+    with left_col:
+        chart_left, chart_right = st.columns([0.95, 1.05])
+        with chart_left:
+            st.markdown("#### Distribuicao de engajamento")
+            st.caption("Reflete a logica circular da imagem, mas limitada aos campos atuais de likes e comentarios.")
+            st.plotly_chart(donut_fig, use_container_width=True)
+        with chart_right:
+            st.markdown("#### Views mensais do criador")
+            st.caption("Replica o painel temporal da referencia. Likes entram como segunda serie para enriquecer a leitura.")
+            st.plotly_chart(monthly_fig, use_container_width=True)
+
+        st.markdown("#### Quando esse criador publica")
+        st.caption("Adaptacao do bloco inferior da imagem. Aqui mostramos intensidade de publicacao por semana do mes e dia da semana.")
+        st.plotly_chart(cadence_fig, use_container_width=True)
+
+    with right_col:
+        st.markdown("#### Top videos por views")
+        st.caption("Equivalente ao painel editorial da imagem. Usa campos ja documentados da tabela public.posts.")
+        st.dataframe(top_videos_display, use_container_width=True, hide_index=True)
+
+        st.markdown("#### Leitura do criador em foco")
+        st.markdown(
+            (
+                '<div class="creator-panel">'
+                f'<div class="creator-panel-title">{escape(str(selected_row["entity_name"]))}</div>'
+                f'<div class="creator-panel-subtitle">{escape(str(selected_row["sub_niche_display"]))} | {escape(str(selected_row["creator_type"]))} | ultima coleta {escape(format_timestamp_br(selected_row["latest_collected_at"]))}</div>'
+                '<div class="creator-detail-grid">'
+                f'<div class="creator-detail-card"><div class="creator-detail-label">Plataforma</div><div class="creator-detail-value">{escape(str(selected_row["platform"]))}</div></div>'
+                f'<div class="creator-detail-card"><div class="creator-detail-label">Canal</div><div class="creator-detail-value">{escape(str(selected_row["channel_id"]))}</div></div>'
+                f'<div class="creator-detail-card"><div class="creator-detail-label">Posts monitorados</div><div class="creator-detail-value">{escape(format_int(selected_row["post_count"]))}</div></div>'
+                f'<div class="creator-detail-card"><div class="creator-detail-label">Media views/post</div><div class="creator-detail-value">{escape(format_int(selected_row["avg_views_per_post"]))}</div></div>'
+                f'<div class="creator-detail-card"><div class="creator-detail-label">Likes totais</div><div class="creator-detail-value">{escape(format_int(selected_row["total_likes"]))}</div></div>'
+                f'<div class="creator-detail-card"><div class="creator-detail-label">Comentarios totais</div><div class="creator-detail-value">{escape(format_int(selected_row["total_comments"]))}</div></div>'
+                f'<div class="creator-detail-card"><div class="creator-detail-label">Ultimo post</div><div class="creator-detail-value">{escape(format_timestamp_br(selected_row["latest_post_date"]))}</div></div>'
+                f'<div class="creator-detail-card"><div class="creator-detail-label">Status</div><div class="creator-detail-value">{escape("ativo" if selected_row["is_active"] else "inativo")}</div></div>'
+                "</div>"
+                '<div class="dq-chip-row">'
+                f'{dq_chip("Subnicho", str(selected_row["sub_niche_display"]), "ok-green")}'
+                f'{dq_chip("Curva followers", "pendente", "alert-yellow")}'
+                f'{dq_chip("URL do post", "pendente", "alert-yellow")}'
+                "</div>"
+                '<div class="creator-gap-list">'
+                '<div class="creator-gap-item"><strong>Campo faltante: subnichos reais</strong><span>A view atual ainda nao sobe a associacao real de entity_sub_niches. O mockup mostra a necessidade, mas nao finge que o dado ja existe.</span></div>'
+                '<div class="creator-gap-item"><strong>Campo faltante: delta de audiencia</strong><span>A imagem sugere comparacoes temporais mais fortes. Para isso, precisamos de followers_delta_7d ou followers_delta_30d, alem da data da ultima coleta de audiencia.</span></div>'
+                '<div class="creator-gap-item"><strong>Campo faltante: URL e resumo editorial</strong><span>Conseguimos montar a tabela de top videos com titulo, data, views, likes e comentarios. Ainda faltam URL publica e agregados editoriais mais ricos.</span></div>'
+                "</div>"
+                "</div>"
+            ),
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("#### Ranking comparativo")
+    st.caption("Esse bloco continua importante, mas agora entra como apoio lateral a leitura principal da imagem, nao como o centro absoluto da tela.")
+    ranking_items = []
+    for row in working_rows:
+        engagement_label = f"{float(row['engagement_rate_pct']):.2f}%"
+        ranking_items.append(
+            (
+                '<div class="creator-ranking-item">'
+                '<div class="creator-ranking-main">'
+                f'<div class="creator-ranking-title">{escape(str(row["entity_name"]))}</div>'
+                f'<div class="creator-ranking-meta">{escape(str(row["niche"]))} | {escape(str(row["platform"]))} | @{escape(str(row["username"]).lstrip("@"))}</div>'
+                '</div>'
+                '<div>'
+                '<div class="creator-stat-label">Seguidores</div>'
+                f'<div class="creator-stat-value">{escape(format_int(row["followers"]))}</div>'
+                '</div>'
+                '<div>'
+                '<div class="creator-stat-label">Views totais</div>'
+                f'<div class="creator-stat-value">{escape(format_int(row["total_views"]))}</div>'
+                '</div>'
+                '<div>'
+                '<div class="creator-stat-label">Engajamento</div>'
+                f'<div class="creator-stat-value">{escape(engagement_label)}</div>'
+                '</div>'
+                '</div>'
+            )
+        )
+    st.markdown(
+        '<div class="creator-panel">'
+        '<div class="creator-panel-title">Comparativo dos criadores filtrados</div>'
+        '<div class="creator-panel-subtitle">Mantivemos o ranking porque ele ajuda na priorizacao operacional, mas ele agora conversa com o restante da estrutura analitica em vez de substituir os paines da imagem.</div>'
+        f'<div class="creator-ranking-list">{"".join(ranking_items)}</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+    with st.expander("Campos usados no mockup", expanded=False):
+        st.dataframe(
+            pd.DataFrame(
+                [
+                    {"campo": "entity_name", "origem": "v_dashboard_creator_summary", "uso": "titulo e ranking"},
+                    {"campo": "niche", "origem": "v_dashboard_creator_summary", "uso": "filtro"},
+                    {"campo": "creator_type", "origem": "v_dashboard_creator_summary", "uso": "painel lateral"},
+                    {"campo": "platform", "origem": "v_dashboard_creator_summary", "uso": "filtro e detalhe"},
+                    {"campo": "username", "origem": "v_dashboard_creator_summary", "uso": "identificacao"},
+                    {"campo": "channel_id", "origem": "v_dashboard_creator_summary", "uso": "identificacao tecnica"},
+                    {"campo": "followers", "origem": "v_dashboard_creator_summary", "uso": "kpi e ranking"},
+                    {"campo": "post_count", "origem": "v_dashboard_creator_summary", "uso": "kpi e ranking"},
+                    {"campo": "total_views", "origem": "v_dashboard_creator_summary", "uso": "kpi e ranking"},
+                    {"campo": "total_likes", "origem": "v_dashboard_creator_summary", "uso": "painel lateral"},
+                    {"campo": "total_comments", "origem": "v_dashboard_creator_summary", "uso": "painel lateral"},
+                    {"campo": "engagement_rate_pct", "origem": "v_dashboard_creator_summary", "uso": "kpi e ranking"},
+                    {"campo": "latest_post_date", "origem": "v_dashboard_creator_summary", "uso": "detalhe"},
+                    {"campo": "latest_collected_at", "origem": "v_dashboard_creator_summary", "uso": "detalhe operacional"},
+                    {"campo": "is_active", "origem": "v_dashboard_creator_summary", "uso": "status"},
+                    {"campo": "title", "origem": "public.posts", "uso": "tabela de top videos"},
+                    {"campo": "post_date", "origem": "public.posts", "uso": "tabela e bloco de cadencia"},
+                    {"campo": "views", "origem": "public.posts", "uso": "tabela de top videos e serie temporal"},
+                    {"campo": "likes", "origem": "public.posts", "uso": "distribuicao e serie temporal"},
+                    {"campo": "comments", "origem": "public.posts", "uso": "distribuicao e tabela"},
+                    {"campo": "video_type", "origem": "public.posts", "uso": "classificacao visual dos top videos"},
+                ]
+            ),
+            use_container_width=True,
+            hide_index=True,
         )
 
 
@@ -1906,7 +2499,7 @@ cadastro_subpage = st.session_state.get("cadastro_subpage", "Criadores")
 if page == "Overview":
     render_overview()
 elif page == "Creators":
-    render_placeholder_page("Creators", "Ranking por views, engajamento e frequencia sera conectado na proxima etapa.")
+    render_creator_page()
 elif page == "Videos em crescimento":
     render_placeholder_page("Videos em crescimento", "Ranking semanal de crescimento usando v_dashboard_post_growth_7d.")
 elif page == "Hot now":
