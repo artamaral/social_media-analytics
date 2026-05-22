@@ -2292,6 +2292,11 @@ def render_creator_detail_page() -> None:
             st.plotly_chart(weekly_fig, use_container_width=True)
 
     engagement_display = f"{float(selected_row['engagement_rate_pct']):.2f}%"
+    selected_sub_niche = str(selected_row.get("sub_niche_display") or selected_row.get("niche") or "Sem classificacao fina")
+    selected_creator_type = str(selected_row.get("creator_type") or "--")
+    selected_latest_collected_at = format_timestamp_br(selected_row.get("latest_collected_at"))
+    selected_latest_post_date = format_timestamp_br(selected_row.get("latest_post_date"))
+    selected_status = "ativo" if bool(selected_row.get("is_active")) else "inativo"
 
     with right_col:
         if summary_error or weekly_error or top_videos_error:
@@ -2306,7 +2311,7 @@ def render_creator_detail_page() -> None:
             (
                 '<div class="creator-panel">'
                 f'<div class="creator-panel-title">{escape(str(selected_row["entity_name"]))}</div>'
-                f'<div class="creator-panel-subtitle">{escape(str(selected_row["sub_niche_display"]))} | {escape(str(selected_row["creator_type"]))} | ultima coleta {escape(format_timestamp_br(selected_row["latest_collected_at"]))}</div>'
+                f'<div class="creator-panel-subtitle">{escape(selected_sub_niche)} | {escape(selected_creator_type)} | ultima coleta {escape(selected_latest_collected_at)}</div>'
                 '<div class="creator-detail-grid">'
                 f'<div class="creator-detail-card"><div class="creator-detail-label">Plataforma</div><div class="creator-detail-value">{escape(str(selected_row["platform"]))}</div></div>'
                 f'<div class="creator-detail-card"><div class="creator-detail-label">Canal</div><div class="creator-detail-value">{escape(str(selected_row["channel_id"]))}</div></div>'
@@ -2314,11 +2319,11 @@ def render_creator_detail_page() -> None:
                 f'<div class="creator-detail-card"><div class="creator-detail-label">Engajamento medio</div><div class="creator-detail-value">{escape(engagement_display)}</div></div>'
                 f'<div class="creator-detail-card"><div class="creator-detail-label">Likes totais</div><div class="creator-detail-value">{escape(format_int(selected_row["total_likes"]))}</div></div>'
                 f'<div class="creator-detail-card"><div class="creator-detail-label">Comentarios totais</div><div class="creator-detail-value">{escape(format_int(selected_row["total_comments"]))}</div></div>'
-                f'<div class="creator-detail-card"><div class="creator-detail-label">Ultimo post</div><div class="creator-detail-value">{escape(format_timestamp_br(selected_row["latest_post_date"]))}</div></div>'
-                f'<div class="creator-detail-card"><div class="creator-detail-label">Status</div><div class="creator-detail-value">{escape("ativo" if selected_row["is_active"] else "inativo")}</div></div>'
+                f'<div class="creator-detail-card"><div class="creator-detail-label">Ultimo post</div><div class="creator-detail-value">{escape(selected_latest_post_date)}</div></div>'
+                f'<div class="creator-detail-card"><div class="creator-detail-label">Status</div><div class="creator-detail-value">{escape(selected_status)}</div></div>'
                 "</div>"
                 '<div class="dq-chip-row">'
-                f'{dq_chip("Subnicho", str(selected_row["sub_niche_display"]), "ok-green")}'
+                f'{dq_chip("Subnicho", selected_sub_niche, "ok-green")}'
                 f'{dq_chip("Curva followers", "pendente", "alert-yellow")}'
                 f'{dq_chip("URL do post", "pendente", "alert-yellow")}'
                 "</div>"
