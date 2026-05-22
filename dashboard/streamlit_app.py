@@ -398,6 +398,68 @@ def inject_theme() -> None:
         .process-step-card .dq-chip-row {
             margin-top: 0.8rem;
         }
+
+        .review-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .review-card {
+            background: var(--card-dark);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            padding: 1rem 1.05rem;
+        }
+
+        .review-card-title {
+            color: var(--text);
+            font-size: 1.1rem;
+            font-weight: 900;
+            line-height: 1.15;
+        }
+
+        .review-card-subtitle {
+            color: var(--muted);
+            font-size: 0.88rem;
+            margin-top: 0.35rem;
+            line-height: 1.35;
+        }
+
+        .review-card-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.9rem;
+        }
+
+        .review-field {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            padding: 0.7rem 0.75rem;
+            min-height: 68px;
+        }
+
+        .review-field-label {
+            color: var(--muted);
+            font-size: 0.72rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .review-field-value {
+            color: var(--text);
+            font-size: 0.92rem;
+            font-weight: 700;
+            margin-top: 0.25rem;
+            overflow-wrap: anywhere;
+        }
+
+        .review-card .dq-chip-row {
+            margin-top: 0.9rem;
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -595,6 +657,46 @@ def process_step_card(step: str, title: str, body: str, tone: str, chip_text: st
 def process_step_grid(cards: list[str]) -> None:
     st.markdown(
         '<div class="process-step-grid">' + "".join(cards) + "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def review_field_html(label: str, value: Any) -> str:
+    display_value = "--" if value in (None, "") else str(value)
+    return (
+        '<div class="review-field">'
+        f'<div class="review-field-label">{escape(label)}</div>'
+        f'<div class="review-field-value">{escape(display_value)}</div>'
+        "</div>"
+    )
+
+
+def review_card_html(row: dict[str, Any]) -> str:
+    review_tone = "ok-green" if row.get("review_result") == "READY_TO_INSERT" else "alert-yellow"
+    status_tone = "ok-green" if row.get("status") == "published" else "alert-yellow"
+    entity_name = row.get("existing_entity_name") or "Entidade nova"
+    entity_id = row.get("existing_entity_id") or "Pendente"
+    return (
+        '<div class="review-card">'
+        f'<div class="review-card-title">{escape(str(row.get("raw_name") or "--"))}</div>'
+        f'<div class="review-card-subtitle">{escape(str(row.get("sub_niche_name") or "--"))}</div>'
+        '<div class="review-card-grid">'
+        f'{review_field_html("Status", row.get("status"))}'
+        f'{review_field_html("Resultado da revisao", row.get("review_result"))}'
+        f'{review_field_html("Entidade existente", entity_name)}'
+        f'{review_field_html("Id da entidade", entity_id)}'
+        f'{review_field_html("Subnicho correspondente", row.get("matched_sub_niche_name"))}'
+        f'{review_field_html("Id do subnicho", row.get("sub_niche_id"))}'
+        '</div>'
+        f'<div class="dq-chip-row">{dq_chip("Review", str(row.get("review_result") or "--"), review_tone)}{dq_chip("Fluxo", str(row.get("status") or "--"), status_tone)}</div>'
+        f'<div class="review-card-subtitle" style="margin-top:0.85rem;">{escape(str(row.get("notes") or "--"))}</div>'
+        "</div>"
+    )
+
+
+def review_card_grid(rows: list[dict[str, Any]]) -> None:
+    st.markdown(
+        '<div class="review-grid">' + "".join(review_card_html(row) for row in rows) + "</div>",
         unsafe_allow_html=True,
     )
 
@@ -836,7 +938,7 @@ def render_overview() -> None:
     with left:
         placeholder_card(
             "Proximo passo",
-            "Validar grants/RLS das views e depois liberar ranking de creators e crescimento semanal.",
+            "Validar grants/RLS das views e depois liberar ranking de criadores e crescimento semanal.",
         )
     with right:
         placeholder_card(
@@ -1173,38 +1275,38 @@ def render_external_intake_page() -> None:
     state = get_external_intake_mock_state()
     mock_entities = get_mock_entity_bank()
     mock_taxonomy_options = get_mock_taxonomy_options()
-    page_header("Inclusao de dados externos", "Prototipo de metodo sem ligacao com SQL")
+    page_header("Cadastro", "Prototipo de metodo sem ligacao com SQL")
     process_banner(
         "Regra obrigatoria de governanca",
-        "A UI pode guiar o operador, mas nao pode pular o fluxo: entity_intake, revisao, publicacao, validacao e so depois cadastro do creator.",
+        "A UI pode guiar o operador, mas nao pode pular o fluxo: entidade_intake, revisao, publicacao, validacao e so depois cadastro do criador.",
     )
 
     step_cards = [
         process_step_card(
             "Etapa 1",
-            "Entity",
-            "Checar se a entity ja existe por nome exibido e nome normalizado. Se nao existir, cadastrar via intake em vez de gravar direto em public.entities.",
+            "Entidade",
+            "Checar se a entidade ja existe por nome exibido e nome normalizado. Se nao existir, cadastrar via intake em vez de gravar direto em public.entities.",
             "ok-green" if state["entity_status"] == "existente" else "alert-yellow",
-            "entity existente" if state["entity_status"] == "existente" else "cadastrar via intake",
+            "entidade existente" if state["entity_status"] == "existente" else "cadastrar via intake",
         ),
         process_step_card(
             "Etapa 2",
-            "Creator",
-            "Cadastrar o creator somente depois da checagem da entity. O cadastro final continua bloqueado ate review, publicacao e validacao.",
+            "Criador",
+            "Cadastrar o criador somente depois da checagem da entidade. O cadastro final continua bloqueado ate review, publicacao e validacao.",
             "ok-green" if state["creator_ready"] else "neutral",
             "liberado" if state["creator_ready"] else "bloqueado",
         ),
         process_step_card(
             "Etapa 3",
             "Associacao de nichos",
-            "Subir as opcoes existentes, permitir multiplas associacoes e garantir que o vinculo sera feito para a mesma entity cadastrada na etapa 1.",
+            "Subir as opcoes existentes, permitir multiplas associacoes e garantir que o vinculo sera feito para a mesma entidade cadastrada na etapa 1.",
             "neutral",
             "multipla selecao",
         ),
         process_step_card(
             "Etapa 4",
             "Revisao e publicacao",
-            "A entity precisa passar por review, depois publish_entity_intake e por fim validacao de vinculos antes do creator.",
+            "A entidade precisa passar por review, depois publish_entity_intake e por fim validacao de vinculos antes do criador.",
             "ok-green" if state["validated"] else "alert-yellow",
             "validado" if state["validated"] else "aguardando fluxo manual",
         ),
@@ -1219,12 +1321,12 @@ def render_external_intake_page() -> None:
         col_left, col_right = st.columns([1.35, 1])
 
         with col_left:
-            st.markdown("### 1. Cadastrar entity")
+            st.markdown("### 1. Cadastrar entidade")
             raw_name = st.text_input("Nome da Entidade", value="Auto Mercado Brasil")
             normalized_name = raw_name.strip().lower()
-            creator_type = st.selectbox("Tipo de creator", ["mid-tier", "editorial", "independente"])
+            creator_type = st.selectbox("Tipo de criador", ["mid-tier", "editorial", "independente"])
 
-            if st.button("Checar entity no banco", use_container_width=False):
+            if st.button("Checar entidade no banco", use_container_width=False):
                 display_match = next(
                     (row for row in mock_entities if row["display_name"].strip().lower() == raw_name.strip().lower()),
                     None,
@@ -1249,7 +1351,7 @@ def render_external_intake_page() -> None:
             entity_status = st.session_state["entity_status"]
             entity_check_result = st.session_state.get("entity_check_result")
 
-            st.markdown("### 2. Cadastrar creator")
+            st.markdown("### 2. Cadastrar criador")
             platform = st.selectbox("Plataforma", ["youtube", "instagram", "tiktok"])
             username = st.text_input("Username", value="@automercadobrasil")
             channel_id = st.text_input("Channel ID", value="UC1234567890ABCDE")
@@ -1257,7 +1359,7 @@ def render_external_intake_page() -> None:
 
             st.markdown("### 3. Associar nichos")
             linked_entity_name = raw_name if entity_status == "nova_entity" else (entity_check_result or {}).get("display_match", {}).get("display_name", raw_name)
-            st.text_input("Entity que recebera a associacao", value=linked_entity_name, disabled=True)
+            st.text_input("Entidade que recebera a associacao", value=linked_entity_name, disabled=True)
             taxonomy_selection = st.multiselect(
                 "Nichos e subnichos existentes",
                 mock_taxonomy_options,
@@ -1271,42 +1373,42 @@ def render_external_intake_page() -> None:
             local_warnings = []
             entity_found = entity_status == "existente"
             if entity_status == "nao_checada":
-                local_warnings.append("Use o botao para checar o banco antes de cadastrar a entity.")
+                local_warnings.append("Use o botao para checar o banco antes de cadastrar a entidade.")
             if entity_found:
-                local_warnings.append("A entity ja existe no banco. O cadastro de nova entity deve ficar bloqueado.")
+                local_warnings.append("A entidade ja existe no banco. O cadastro de nova entidade deve ficar bloqueado.")
             if not taxonomy_selection and not taxonomy_request.strip():
-                local_warnings.append("A entity precisa sair desta tela com pelo menos uma associacao de nicho ou uma solicitacao aberta.")
+                local_warnings.append("A entidade precisa sair desta tela com pelo menos uma associacao de nicho ou uma solicitacao aberta.")
             if taxonomy_request.strip():
                 local_warnings.append("Novo nicho ou subnicho deve entrar como solicitacao controlada, nao como cadastro direto.")
             if not channel_id.strip():
-                local_warnings.append("Channel ID e obrigatorio para o cadastro final do creator.")
+                local_warnings.append("Channel ID e obrigatorio para o cadastro final do criador.")
             if entity_status != "nova_entity":
-                local_warnings.append("O cadastro final em public.creators depende de uma nova entity validada nesta jornada.")
+                local_warnings.append("O cadastro final em public.creators depende de uma nova entidade validada nesta jornada.")
             elif creator_blocked:
                 local_warnings.append("O cadastro final em public.creators deve continuar bloqueado nesta etapa.")
 
             chips = [
-                dq_chip("Entity", "existente" if entity_found else "nova", "alert-yellow" if entity_found else "ok-green"),
-                dq_chip("Creator", "bloqueado" if creator_blocked else "liberado", "neutral" if creator_blocked else "ok-green"),
+                dq_chip("Entidade", "existente" if entity_found else "nova", "alert-yellow" if entity_found else "ok-green"),
+                dq_chip("Criador", "bloqueado" if creator_blocked else "liberado", "neutral" if creator_blocked else "ok-green"),
                 dq_chip("Nichos", str(len(taxonomy_selection)), "ok-green" if taxonomy_selection else "alert-yellow"),
             ]
             st.markdown(
                 dq_kpi_card(
                     "Prontidao do cadastro",
                     "Bloqueado" if creator_blocked else "Liberado",
-                    "A UI so libera o creator depois do fluxo manual obrigatorio.",
+                    "A UI so libera o criador depois do fluxo manual obrigatorio.",
                     "#ff8069" if creator_blocked else "#98df96",
                     chips,
                 ),
                 unsafe_allow_html=True,
             )
 
-            st.markdown("### Payload que iria para entity_intake")
+            st.markdown("### Payload que iria para entidade_intake")
             st.json(
                 {
                     "raw_name": raw_name,
                     "normalized_name": normalized_name,
-                    "creator_type": creator_type,
+                    "tipo_criador": creator_type,
                     "status": "pending",
                 }
             )
@@ -1324,9 +1426,9 @@ def render_external_intake_page() -> None:
             st.markdown("### Associacao planejada")
             st.json(
                 {
-                    "entity_name": linked_entity_name,
-                    "existing_links": taxonomy_selection,
-                    "taxonomy_request": taxonomy_request.strip() or None,
+                    "nome_entidade": linked_entity_name,
+                    "associacoes_existentes": taxonomy_selection,
+                    "solicitacao_taxonomia": taxonomy_request.strip() or None,
                 }
             )
 
@@ -1353,7 +1455,7 @@ def render_external_intake_page() -> None:
             if st.button("Simular validacao", use_container_width=True):
                 st.session_state["validated"] = True
         with flow_col4:
-            if st.button("Liberar creator", use_container_width=True):
+            if st.button("Liberar criador", use_container_width=True):
                 st.session_state["creator_ready"] = True
 
         review_rows = [
@@ -1369,7 +1471,10 @@ def render_external_intake_page() -> None:
                 "notes": "Mock de avaliacao sem SQL.",
             }
         ]
-        st.dataframe(pd.DataFrame(review_rows), use_container_width=True, hide_index=True)
+        review_card_grid(review_rows)
+
+        with st.expander("Detalhe tecnico da revisao", expanded=False):
+            st.dataframe(pd.DataFrame(review_rows), use_container_width=True, hide_index=True)
 
         timeline = [
             ("Cadastro em entity_intake", "ok"),
@@ -1396,16 +1501,21 @@ def render_external_intake_page() -> None:
         )
         st.markdown(
             """
-- A busca de entity vem antes de qualquer tentativa de criar creator.
+- A busca de entidade vem antes de qualquer tentativa de criar criador.
 - O botao de checagem precisa bloquear quando encontrar correspondencia por nome exibido ou nome normalizado.
-- Se a entity nao existir, a UI deve cadastrar via intake e nao gravar na tabela final.
-- O creator vem antes da associacao final de nichos nesta jornada.
+- Se a entidade nao existir, a UI deve cadastrar via intake e nao gravar na tabela final.
+- O criador vem antes da associacao final de nichos nesta jornada.
 - Nicho e subnicho precisam subir como opcoes existentes, com selecao multipla, ou entrar como solicitacao controlada.
 - Review vem antes de publish, e publish vem antes de validate.
-- `platform`, `channel_id` e `followers` podem existir no rascunho da tela, mas nao podem virar creator final antes do fim do fluxo.
+- `platform`, `channel_id` e `followers` podem existir no rascunho da tela, mas nao podem virar criador final antes do fim do fluxo.
 - O Streamlit deve funcionar como camada de operacao guiada, nao como editor SQL.
 """
         )
+
+
+def render_fenabrave_page() -> None:
+    page_header("Fenabrave", "Espaco reservado para a futura view de cadastro.")
+    st.info("View reservada. O conteudo sera definido depois da fase de desenho.")
 
 
 inject_theme()
@@ -1421,11 +1531,19 @@ with st.sidebar:
             "Videos em crescimento",
             "Hot now",
             "Data quality",
-            "Fenabrave",
-            "Inclusao de dados externos",
+            "Cadastro",
             "Sanitizacao operacional",
         ],
     )
+    cadastro_subpage = None
+    if page == "Cadastro":
+        cadastro_subpage = st.radio(
+            "Cadastro",
+            [
+                "Criadores",
+                "Fenabrave",
+            ],
+        )
 
 if page == "Overview":
     render_overview()
@@ -1437,10 +1555,11 @@ elif page == "Hot now":
     render_placeholder_page("Hot now", "View futura para velocidade recente, velocidade anterior e aceleracao.")
 elif page == "Data quality":
     render_data_quality_page()
-elif page == "Fenabrave":
-    render_fenabrave_page()
-elif page == "Inclusao de dados externos":
-    render_external_intake_page()
+elif page == "Cadastro":
+    if cadastro_subpage == "Criadores":
+        render_external_intake_page()
+    else:
+        render_fenabrave_page()
 else:
     render_placeholder_page(
         "Sanitizacao operacional",
