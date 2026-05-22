@@ -36,3 +36,6 @@ SELECT
 FROM public.creators c
 JOIN public.entities e ON e.id = c.entity_id
 LEFT JOIN post_rollup pr ON pr.creator_id = c.id;
+
+GRANT SELECT ON public.v_dashboard_creator_summary TO anon;
+GRANT SELECT ON public.v_dashboard_creator_summary TO authenticated;
