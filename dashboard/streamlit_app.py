@@ -171,15 +171,37 @@ def inject_theme() -> None:
         .metric-picto {
             width: 48px;
             height: 48px;
-            border-radius: 50%;
+            border-radius: 6px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            background: #252733;
-            color: var(--accent);
-            font-size: 1rem;
+            background: var(--accent);
+            color: #ffffff;
+            font-size: 0;
             font-weight: 900;
             flex: 0 0 auto;
+            box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+        }
+
+        .metric-picto svg {
+            width: 68%;
+            height: 68%;
+            display: block;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.4;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .metric-picto .icon-fill {
+            fill: currentColor;
+            stroke: none;
+        }
+
+        .metric-picto-text {
+            font-size: 1.25rem;
+            line-height: 1;
         }
 
         .metric-caption {
@@ -812,6 +834,73 @@ def page_subtitle(text: str) -> None:
     st.markdown(f'<div class="page-subtitle">{escape(text)}</div>', unsafe_allow_html=True)
 
 
+def metric_picto_html(picto: str) -> str:
+    icons = {
+        "CR": (
+            '<svg viewBox="0 0 24 24" aria-hidden="true">'
+            '<circle class="icon-fill" cx="9" cy="8" r="4"/>'
+            '<path class="icon-fill" d="M2.8 20c.7-4.2 3.1-6.3 6.2-6.3s5.5 2.1 6.2 6.3z"/>'
+            '<circle class="icon-fill" cx="17" cy="10" r="3"/>'
+            '<path class="icon-fill" d="M14.6 20c.3-2.4 1.5-4.1 3.6-4.1 1.7 0 3 1.3 3.5 4.1z"/>'
+            "</svg>"
+        ),
+        "SG": (
+            '<svg viewBox="0 0 24 24" aria-hidden="true">'
+            '<circle class="icon-fill" cx="9" cy="8" r="4"/>'
+            '<path class="icon-fill" d="M2.8 20c.7-4.2 3.1-6.3 6.2-6.3s5.5 2.1 6.2 6.3z"/>'
+            '<circle class="icon-fill" cx="17" cy="10" r="3"/>'
+            '<path class="icon-fill" d="M14.6 20c.3-2.4 1.5-4.1 3.6-4.1 1.7 0 3 1.3 3.5 4.1z"/>'
+            "</svg>"
+        ),
+        "RK": (
+            '<svg viewBox="0 0 24 24" aria-hidden="true">'
+            '<path d="M3 13h4l2.2-5 4 9 2.2-4H21"/>'
+            '<circle class="icon-fill" cx="7" cy="13" r="1.8"/>'
+            '<circle class="icon-fill" cx="13.2" cy="17" r="1.8"/>'
+            '<circle class="icon-fill" cx="17.2" cy="13" r="1.8"/>'
+            "</svg>"
+        ),
+        "VD": (
+            '<svg viewBox="0 0 24 24" aria-hidden="true">'
+            '<rect x="3" y="6" width="18" height="12" rx="2.2"/>'
+            '<path class="icon-fill" d="M10 9.1v5.8l5-2.9z"/>'
+            "</svg>"
+        ),
+        "VW": (
+            '<svg viewBox="0 0 24 24" aria-hidden="true">'
+            '<rect x="4" y="3" width="16" height="18" rx="2"/>'
+            '<path d="M8 3v18M16 3v18M4 8h16M4 16h16"/>'
+            "</svg>"
+        ),
+        "LK": (
+            '<svg viewBox="0 0 24 24" aria-hidden="true">'
+            '<path class="icon-fill" d="M8.2 20H5a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2h3.2z"/>'
+            '<path class="icon-fill" d="M9.6 20h7.6c1 0 1.8-.7 2-1.6l1.5-6.1c.3-1.2-.6-2.3-1.9-2.3h-4.4l.7-3.4c.2-1.2-.7-2.3-1.9-2.3h-.5L8.2 10v9c.3.6.8 1 1.4 1z"/>'
+            "</svg>"
+        ),
+        "CM": (
+            '<svg viewBox="0 0 24 24" aria-hidden="true">'
+            '<path class="icon-fill" d="M4 5h13a3 3 0 0 1 3 3v5a3 3 0 0 1-3 3h-5l-5 4v-4H4a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3z"/>'
+            '<path class="icon-fill" d="M8 3h10a3 3 0 0 1 3 3v6.2c-.6-1-1.7-1.7-3-1.7H8z" opacity=".72"/>'
+            "</svg>"
+        ),
+        "SH": (
+            '<svg viewBox="0 0 24 24" aria-hidden="true">'
+            '<circle class="icon-fill" cx="6" cy="12" r="3"/>'
+            '<circle class="icon-fill" cx="18" cy="6" r="3"/>'
+            '<circle class="icon-fill" cx="18" cy="18" r="3"/>'
+            '<path d="M8.8 10.8l6.4-3.6M8.8 13.2l6.4 3.6"/>'
+            "</svg>"
+        ),
+        "AV": (
+            '<svg viewBox="0 0 24 24" aria-hidden="true">'
+            '<path class="icon-fill" d="M4 20h3V9H4zM10.5 20h3V4h-3zM17 20h3v-8h-3z"/>'
+            "</svg>"
+        ),
+    }
+    return icons.get(picto, f'<span class="metric-picto-text">{escape(picto)}</span>')
+
+
 def metric_card_html(
     title: str,
     value: str,
@@ -823,13 +912,14 @@ def metric_card_html(
     picto_style = f' style="color: {accent_color};"' if accent_color else ""
     caption_style = f' style="color: {caption_color};"' if caption and caption_color else ""
     caption_html = f'<div class="metric-caption"{caption_style}>{escape(caption)}</div>' if caption else ""
+    picto_html = metric_picto_html(picto)
     return (
         '<div class="metric-card">'
         f'<div class="metric-card-header">{escape(title)}</div>'
         '<div class="metric-card-body">'
         '<div class="metric-value">'
         f"<span>{escape(value)}</span>"
-        f'<span class="metric-picto"{picto_style}>{escape(picto)}</span>'
+        f'<span class="metric-picto"{picto_style}>{picto_html}</span>'
         "</div>"
         f"{caption_html}"
         "</div>"
