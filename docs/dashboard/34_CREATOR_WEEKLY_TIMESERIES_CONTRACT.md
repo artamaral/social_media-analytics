@@ -148,6 +148,8 @@ Regras de desenho:
   monitorado do criador
 - nao substituir esses deltas por valores atuais dos posts publicados na semana
 - aplicar piso zero em deltas negativos de `views`, `likes` e `comments`
+- o app nao deve abrir uma lista longa de semanas sem antes aplicar uma data de
+  corte confiavel para semanas com cobertura historica suficiente
 - na primeira versao, a comparacao usa a ultima semana completa observada do
   criador
 - semanas sem observacao util nao geram linha propria nesta versao inicial

@@ -2306,8 +2306,9 @@ def render_creator_detail_page() -> None:
 
     period_options = [str(row["week_label"]) for row in reversed(weekly_rows)]
     latest_period_label = period_options[0] if period_options else "Sem base semanal"
+    selected_period_label = latest_period_label
     with filter_col4:
-        selected_period_label = st.selectbox("Periodo", period_options or [latest_period_label], index=0)
+        st.text_input("Semana fechada", value=selected_period_label, disabled=True)
 
     selected_week_row = next(
         (row for row in weekly_rows if str(row["week_label"]) == selected_period_label),
@@ -2369,10 +2370,11 @@ def render_creator_detail_page() -> None:
             {
                 "week_label": str(row.get("week_label") or ""),
                 "views_novas": int(row.get("views_novas") or 0),
+                "comentarios_novos": int(row.get("comentarios_novos") or 0),
                 "views_growth_pct_vs_prev_week": row.get("views_growth_pct_vs_prev_week"),
             }
         )
-    weekly_df = pd.DataFrame(chart_rows, columns=["week_label", "views_novas", "views_growth_pct_vs_prev_week"])
+    weekly_df = pd.DataFrame(chart_rows, columns=["week_label", "views_novas", "comentarios_novos", "views_growth_pct_vs_prev_week"])
 
     weekly_videos_caption, weekly_videos_caption_color = growth_caption_from_values(
         weekly_videos_value,
@@ -2407,21 +2409,21 @@ def render_creator_detail_page() -> None:
         class_name="creator-kpi-grid",
     )
 
-    donut_df = pd.DataFrame(
+    engagement_distribution_df = pd.DataFrame(
         {
-            "metrica": ["Likes", "Comentarios"],
-            "valor": [total_likes_filtered, total_comments_filtered],
+            "metrica": ["Views", "Likes", "Comentarios"],
+            "valor": [total_views_filtered, total_likes_filtered, total_comments_filtered],
         }
     )
     donut_fig = px.pie(
-        donut_df,
+        engagement_distribution_df,
         names="metrica",
         values="valor",
         hole=0.62,
         color="metrica",
-        color_discrete_map={"Likes": "#ff8069", "Comentarios": "#f2c14e"},
+        color_discrete_map={"Views": "#ff8069", "Likes": "#f2c14e", "Comentarios": "#7fd1ae"},
     )
-    donut_fig.update_traces(textinfo="percent", hovertemplate="%{label}: %{value:,}<extra></extra>")
+    donut_fig.update_traces(textinfo="label+percent", hovertemplate="%{label}: %{percent}<extra></extra>")
     apply_plotly_theme(donut_fig, legend_title="Metrica")
 
     weekly_fig = px.bar(
@@ -2432,15 +2434,15 @@ def render_creator_detail_page() -> None:
     )
     weekly_fig.add_scatter(
         x=weekly_df["week_label"],
-        y=weekly_df["views_growth_pct_vs_prev_week"],
+        y=weekly_df["comentarios_novos"],
         mode="lines+markers",
-        name="% views",
+        name="Comentarios novos",
         line=dict(color="#f2c14e", width=2),
         yaxis="y2",
     )
     weekly_fig.update_layout(
         yaxis_title="Views novas",
-        yaxis2=dict(title="% vs semana anterior", overlaying="y", side="right", showgrid=False),
+        yaxis2=dict(title="Comentarios novos", overlaying="y", side="right", showgrid=False),
     )
     apply_plotly_theme(weekly_fig, legend_title="Serie")
 
@@ -2478,12 +2480,12 @@ def render_creator_detail_page() -> None:
     chart_left, chart_right = st.columns(2)
     with chart_left:
         st.markdown("#### Distribuicao de engajamento")
-        st.caption("Dados usados: public.posts filtrado por tipo de video.")
-        st.plotly_chart(donut_fig, use_container_width=True)
+        st.caption("Participacao normalizada de views, likes e comentarios no total filtrado.")
+        st.plotly_chart(donut_fig, use_container_width=True, config={"staticPlot": True, "displayModeBar": False})
     with chart_right:
         st.markdown("#### Crescimento semanal")
         st.caption("Dados usados: v_dashboard_creator_weekly_activity.")
-        st.plotly_chart(weekly_fig, use_container_width=True)
+        st.plotly_chart(weekly_fig, use_container_width=True, config={"staticPlot": True, "displayModeBar": False})
 
     video_scope_weekly = st.checkbox("Mostrar videos da semana selecionada", value=False)
     videos_source_df = filtered_posts_df.copy() if video_scope_weekly else top_videos_df.copy()

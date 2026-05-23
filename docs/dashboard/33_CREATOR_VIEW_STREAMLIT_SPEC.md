@@ -176,8 +176,17 @@ Dados usados:
 
 Formula:
 
-- fatia 1 = `total_likes`
-- fatia 2 = `total_comments`
+- fatia 1 = participacao de `total_views`
+- fatia 2 = participacao de `total_likes`
+- fatia 3 = participacao de `total_comments`
+
+Regra visual:
+
+- o grafico deve ser estatico, sem interacao de zoom/pan
+- a leitura e normalizada para mostrar a proporcao de cada metrica no total
+  filtrado
+- a diferenca de escala entre views e interacoes deve ficar visivel, sem
+  transformar a distribuicao em ranking separado
 
 Limite atual:
 
@@ -234,6 +243,11 @@ Observacao:
 - a unidade recomendada para comparacao e a semana fechada, nao o dia isolado
 - semanas abertas nao devem aparecer no grafico
 - o rotulo recomendado para exibicao e o intervalo completo da semana
+- o grafico deve ser estatico, sem interacao de zoom/pan
+- a serie deve mostrar `views_novas` e `comentarios_novos`
+- o seletor nao deve abrir todas as semanas indiscriminadamente; enquanto a
+  data de corte nao estiver definida, o app deve priorizar a ultima semana
+  fechada disponivel
 - a implementacao detalhada do contrato fica em documento proprio
 
 ### Tabela editorial: top videos por views
