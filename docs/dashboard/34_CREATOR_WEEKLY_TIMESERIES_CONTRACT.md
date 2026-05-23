@@ -108,6 +108,9 @@ Semantica dos cards semanais:
 - `videos_publicados` deve ser calculado por `public.posts.post_date`
 - `views_novas`, `likes_novos` e `comentarios_novos` devem ser calculados a
   partir do mesmo historico temporal de snapshots
+- deltas negativos de contadores absolutos devem ser limitados a zero nos cards,
+  porque os cards medem movimento novo da semana; reducoes observadas por ajuste
+  da plataforma devem virar sinal de auditoria separado
 - a tabela editorial de videos e as futuras views de detalhe por post ficam
   responsaveis por leituras de posts isolados
 
@@ -144,6 +147,7 @@ Regras de desenho:
   `views`, `likes` e `comments` contem o que mudou na semana no conjunto
   monitorado do criador
 - nao substituir esses deltas por valores atuais dos posts publicados na semana
+- aplicar piso zero em deltas negativos de `views`, `likes` e `comments`
 - na primeira versao, a comparacao usa a ultima semana completa observada do
   criador
 - semanas sem observacao util nao geram linha propria nesta versao inicial

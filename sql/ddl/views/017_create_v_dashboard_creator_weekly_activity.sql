@@ -71,18 +71,18 @@ post_week_delta AS (
     wpl.week_start,
     wpl.week_end,
     CASE
-      WHEN baseline.post_id IS NOT NULL THEN wpl.views - baseline.views
-      WHEN wpl.post_date BETWEEN wpl.week_start AND wpl.week_end THEN wpl.views
+      WHEN baseline.post_id IS NOT NULL THEN GREATEST(wpl.views - baseline.views, 0)
+      WHEN wpl.post_date BETWEEN wpl.week_start AND wpl.week_end THEN GREATEST(wpl.views, 0)
       ELSE NULL
     END AS views_novas,
     CASE
-      WHEN baseline.post_id IS NOT NULL THEN wpl.likes - baseline.likes
-      WHEN wpl.post_date BETWEEN wpl.week_start AND wpl.week_end THEN wpl.likes
+      WHEN baseline.post_id IS NOT NULL THEN GREATEST(wpl.likes - baseline.likes, 0)
+      WHEN wpl.post_date BETWEEN wpl.week_start AND wpl.week_end THEN GREATEST(wpl.likes, 0)
       ELSE NULL
     END AS likes_novos,
     CASE
-      WHEN baseline.post_id IS NOT NULL THEN wpl.comments - baseline.comments
-      WHEN wpl.post_date BETWEEN wpl.week_start AND wpl.week_end THEN wpl.comments
+      WHEN baseline.post_id IS NOT NULL THEN GREATEST(wpl.comments - baseline.comments, 0)
+      WHEN wpl.post_date BETWEEN wpl.week_start AND wpl.week_end THEN GREATEST(wpl.comments, 0)
       ELSE NULL
     END AS comentarios_novos,
     CASE

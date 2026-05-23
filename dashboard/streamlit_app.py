@@ -2345,6 +2345,8 @@ def render_creator_detail_page() -> None:
         total_likes_filtered,
         total_comments_filtered,
     )
+    engagement_rank, engagement_total = get_engagement_rank(working_rows or rows, selected_row["entity_name"])
+    engagement_rank_display = f"{engagement_rank} de {engagement_total}"
 
     selected_week_index = next(
         (index for index, row in enumerate(weekly_rows) if str(row.get("week_label")) == selected_period_label),
@@ -2396,7 +2398,7 @@ def render_creator_detail_page() -> None:
     metric_card_grid(
         [
             metric_card_html("Seguidores", format_int(selected_row["followers"]), "", "SG"),
-            metric_card_html("Engajamento", format_pct(engagement_filtered_pct), "", "RK"),
+            metric_card_html("Engajamento", engagement_rank_display, "", "RK"),
             metric_card_html("Videos", format_int(total_videos_filtered), "", "VD"),
             metric_card_html("Views", format_int(total_views_filtered), "", "VW"),
             metric_card_html("Likes", format_int(total_likes_filtered), "", "LK"),
@@ -2442,7 +2444,7 @@ def render_creator_detail_page() -> None:
     )
     apply_plotly_theme(weekly_fig, legend_title="Serie")
 
-    engagement_display = format_pct(engagement_filtered_pct)
+    engagement_display = engagement_rank_display
     selected_sub_niche = str(selected_row.get("sub_niche_display") or selected_row.get("niche") or "Sem classificacao fina")
     selected_creator_type = str(selected_row.get("creator_type") or "--")
     selected_latest_collected_at = format_timestamp_br(selected_row.get("latest_collected_at"))
