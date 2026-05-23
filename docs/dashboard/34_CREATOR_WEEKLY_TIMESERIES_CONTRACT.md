@@ -148,8 +148,12 @@ Regras de desenho:
   monitorado do criador
 - nao substituir esses deltas por valores atuais dos posts publicados na semana
 - aplicar piso zero em deltas negativos de `views`, `likes` e `comments`
-- o app nao deve abrir uma lista longa de semanas sem antes aplicar uma data de
-  corte confiavel para semanas com cobertura historica suficiente
+- data de corte inicial do dashboard: `2026-05-04`
+- o app nao deve exibir semanas anteriores a essa data nos cards e graficos
+  semanais de criador
+- essa data foi escolhida por combinar cobertura historica suficiente e volume
+  relevante de snapshots; semanas anteriores podem permanecer disponiveis para
+  auditoria SQL, mas nao para leitura executiva no dashboard
 - na primeira versao, a comparacao usa a ultima semana completa observada do
   criador
 - semanas sem observacao util nao geram linha propria nesta versao inicial
@@ -338,7 +342,7 @@ Gap atual:
 |---|---|---|
 | KPIs totais do criador | `v_dashboard_creator_summary` | `followers`, `post_count`, `total_views`, `total_likes`, `total_comments`, `engagement_rate_pct` |
 | Identificacao do criador | `v_dashboard_creator_summary` | `entity_name`, `platform`, `username`, `channel_id`, `is_active`, `latest_post_date`, `latest_collected_at` |
-| Distribuicao de engajamento | `v_dashboard_creator_summary` | `total_likes`, `total_comments` |
+| Distribuicao de engajamento | `v_dashboard_creator_summary` | `total_views * 1`, `total_likes * 10`, `total_comments * 20` |
 | Top videos | `posts` | `title`, `post_date`, `views`, `likes`, `comments`, `video_type`, `post_id` |
 
 ### Faltantes para a nova documentacao

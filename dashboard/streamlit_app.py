@@ -6,6 +6,9 @@ import plotly.express as px
 import streamlit as st
 
 
+CREATOR_WEEKLY_ACTIVITY_CUTOFF = pd.Timestamp("2026-05-04")
+
+
 st.set_page_config(
     page_title="Social Media Analytics",
     page_icon="SM",
@@ -2014,6 +2017,19 @@ def engagement_rate_from_totals(views: int, likes: int, comments: int) -> float:
     return round(((likes + comments) / views) * 100, 2)
 
 
+def engagement_weighted_components(views: int, likes: int, comments: int) -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "metrica": ["Views x1", "Likes x10", "Comentarios x20"],
+            "valor": [
+                max(views, 0) * 1,
+                max(likes, 0) * 10,
+                max(comments, 0) * 20,
+            ],
+        }
+    )
+
+
 def growth_caption_from_values(current_value: int, previous_value: int | None) -> tuple[str, str]:
     if previous_value is None:
         return "Sem semana anterior", "#aeb4bf"
@@ -2303,6 +2319,11 @@ def render_creator_detail_page() -> None:
     )
     if not weekly_rows:
         weekly_rows = []
+    weekly_rows = [
+        row
+        for row in weekly_rows
+        if pd.to_datetime(row.get("week_start"), errors="coerce") >= CREATOR_WEEKLY_ACTIVITY_CUTOFF
+    ]
 
     period_options = [str(row["week_label"]) for row in reversed(weekly_rows)]
     latest_period_label = period_options[0] if period_options else "Sem base semanal"
@@ -2341,11 +2362,6 @@ def render_creator_detail_page() -> None:
     total_views_filtered = sum_numeric_column(filtered_posts_df, "views")
     total_likes_filtered = sum_numeric_column(filtered_posts_df, "likes")
     total_comments_filtered = sum_numeric_column(filtered_posts_df, "comments")
-    engagement_filtered_pct = engagement_rate_from_totals(
-        total_views_filtered,
-        total_likes_filtered,
-        total_comments_filtered,
-    )
     engagement_rank, engagement_total = get_engagement_rank(working_rows or rows, selected_row["entity_name"])
     engagement_rank_display = f"{engagement_rank} de {engagement_total}"
 
@@ -2409,11 +2425,10 @@ def render_creator_detail_page() -> None:
         class_name="creator-kpi-grid",
     )
 
-    engagement_distribution_df = pd.DataFrame(
-        {
-            "metrica": ["Views", "Likes", "Comentarios"],
-            "valor": [total_views_filtered, total_likes_filtered, total_comments_filtered],
-        }
+    engagement_distribution_df = engagement_weighted_components(
+        total_views_filtered,
+        total_likes_filtered,
+        total_comments_filtered,
     )
     donut_fig = px.pie(
         engagement_distribution_df,
@@ -2421,7 +2436,7 @@ def render_creator_detail_page() -> None:
         values="valor",
         hole=0.62,
         color="metrica",
-        color_discrete_map={"Views": "#ff8069", "Likes": "#f2c14e", "Comentarios": "#7fd1ae"},
+        color_discrete_map={"Views x1": "#ff8069", "Likes x10": "#f2c14e", "Comentarios x20": "#7fd1ae"},
     )
     donut_fig.update_traces(textinfo="label+percent", hovertemplate="%{label}: %{percent}<extra></extra>")
     apply_plotly_theme(donut_fig, legend_title="Metrica")
@@ -2480,7 +2495,7 @@ def render_creator_detail_page() -> None:
     chart_left, chart_right = st.columns(2)
     with chart_left:
         st.markdown("#### Distribuicao de engajamento")
-        st.caption("Participacao normalizada de views, likes e comentarios no total filtrado.")
+        st.caption("Participacao normalizada pelo score: views x1, likes x10 e comentarios x20.")
         st.plotly_chart(donut_fig, use_container_width=True, config={"staticPlot": True, "displayModeBar": False})
     with chart_right:
         st.markdown("#### Crescimento semanal")

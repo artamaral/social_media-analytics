@@ -176,17 +176,18 @@ Dados usados:
 
 Formula:
 
-- fatia 1 = participacao de `total_views`
-- fatia 2 = participacao de `total_likes`
-- fatia 3 = participacao de `total_comments`
+- fatia 1 = participacao ponderada de `total_views * 1`
+- fatia 2 = participacao ponderada de `total_likes * 10`
+- fatia 3 = participacao ponderada de `total_comments * 20`
 
 Regra visual:
 
 - o grafico deve ser estatico, sem interacao de zoom/pan
-- a leitura e normalizada para mostrar a proporcao de cada metrica no total
-  filtrado
-- a diferenca de escala entre views e interacoes deve ficar visivel, sem
-  transformar a distribuicao em ranking separado
+- a leitura e normalizada para mostrar a proporcao de cada componente no score
+  ponderado ja usado pelo projeto
+- a formula de referencia e `views * 1 + likes * 10 + comments * 20`
+- a diferenca entre views e interacoes deve respeitar os pesos do algoritmo de
+  prioridade/engajamento, sem usar valores brutos isolados
 
 Limite atual:
 
@@ -245,9 +246,11 @@ Observacao:
 - o rotulo recomendado para exibicao e o intervalo completo da semana
 - o grafico deve ser estatico, sem interacao de zoom/pan
 - a serie deve mostrar `views_novas` e `comentarios_novos`
-- o seletor nao deve abrir todas as semanas indiscriminadamente; enquanto a
-  data de corte nao estiver definida, o app deve priorizar a ultima semana
-  fechada disponivel
+- o seletor nao deve abrir todas as semanas indiscriminadamente
+- data de corte inicial: `2026-05-04`, definida apos conferencia de cobertura
+  historica e volume de snapshots
+- o app deve priorizar a ultima semana fechada disponivel dentro da janela de
+  corte
 - a implementacao detalhada do contrato fica em documento proprio
 
 ### Tabela editorial: top videos por views
