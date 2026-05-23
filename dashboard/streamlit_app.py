@@ -2342,7 +2342,7 @@ def render_creator_detail_page() -> None:
 
     selected_row = next((row for row in working_rows if row["entity_name"] == selected_creator_name), working_rows[0] if working_rows else rows[0])
 
-    weekly_filters = [("creator_id", selected_row["creator_id"]), ("video_type", selected_video_type)]
+    weekly_filters = [("creator_id", selected_row["creator_id"]), ("video_type", "todos")]
     weekly_rows, weekly_error = get_filtered_rows(
         "v_dashboard_creator_weekly_activity",
         filters=tuple(weekly_filters),
@@ -2526,7 +2526,7 @@ def render_creator_detail_page() -> None:
         f'<div class="creator-kpi-section-title">Semana selecionada: {escape(selected_week_label)}</div>',
         unsafe_allow_html=True,
     )
-    st.caption("Movimento geral do criador na semana fechada selecionada, respeitando o filtro de tipo de video.")
+    st.caption("Movimento geral do portfolio do criador na semana fechada selecionada, considerando todos os posts monitorados.")
     metric_card_grid(
         [
             metric_card_html("Seguidores", "--", weekly_followers_caption, "SG", caption_color=weekly_followers_caption_color),
@@ -2646,7 +2646,7 @@ def render_creator_detail_page() -> None:
                     {"campo": "is_active", "origem": "v_dashboard_creator_summary", "uso": "status"},
                     {"campo": "week_label", "origem": "v_dashboard_creator_weekly_activity", "uso": "periodo semanal selecionado"},
                     {"campo": "week_end", "origem": "v_dashboard_creator_weekly_activity", "uso": "ordem e semana completa"},
-                    {"campo": "video_type", "origem": "v_dashboard_creator_weekly_activity", "uso": "filtro long/short/todos dos cards semanais"},
+                    {"campo": "video_type", "origem": "v_dashboard_creator_weekly_activity", "uso": "cards semanais usam sempre a linha agregada todos"},
                     {"campo": "videos_publicados", "origem": "v_dashboard_creator_weekly_activity", "uso": "card semanal de videos"},
                     {"campo": "views_novas", "origem": "v_dashboard_creator_weekly_activity", "uso": "card e grafico semanal de views"},
                     {"campo": "likes_novos", "origem": "v_dashboard_creator_weekly_activity", "uso": "card semanal de likes"},

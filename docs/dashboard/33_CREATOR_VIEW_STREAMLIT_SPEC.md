@@ -219,6 +219,9 @@ Objetivo:
 Definicao obrigatoria dos cards semanais:
 
 - o bloco semanal representa o movimento geral do criador na semana fechada
+- o bloco semanal deve responder: `como meu portfolio performou nesta semana?`
+- os cards semanais sempre usam a linha agregada `video_type = 'todos'`, mesmo
+  quando o filtro editorial da pagina estiver em `long` ou `short`
 - `Videos` mede videos novos publicados na semana, a partir de `public.posts.post_date`
 - `Views` mede views novas na semana, considerando todos os posts monitorados do criador
 - `Likes` mede likes novos na semana, considerando todos os posts monitorados do criador
@@ -254,7 +257,9 @@ Observacao:
 - o Streamlit nao deve calcular a serie bruta a partir de `public.posts`
 - o Streamlit nao deve usar valores atuais de posts publicados na semana para preencher os cards semanais de `Views`, `Likes` e `Comentarios`
 - quando a ligacao SQL acontecer, o ideal e filtrar por `creator_id`
-- o filtro `long/short/todos` deve usar a coluna `video_type` ja consolidada na view
+- a linha `video_type = 'todos'` da view deve alimentar os cards e graficos semanais
+- o filtro `long/short/todos` da pagina deve continuar limitado a leituras
+  editoriais, como top videos e cards totais filtrados
 - a unidade recomendada para comparacao e a semana fechada, nao o dia isolado
 - semanas abertas nao devem aparecer no grafico
 - o rotulo recomendado para exibicao e o intervalo completo da semana
@@ -345,7 +350,7 @@ Nova camada recomendada para serie temporal:
 | `week_start` | `v_dashboard_creator_weekly_activity` | eixo temporal semanal |
 | `week_end` | `v_dashboard_creator_weekly_activity` | fechamento da semana consolidada |
 | `week_label` | `v_dashboard_creator_weekly_activity` | rotulo amigavel no grafico |
-| `video_type` | `v_dashboard_creator_weekly_activity` | filtro `long`, `short` ou `todos` |
+| `video_type` | `v_dashboard_creator_weekly_activity` | cards semanais usam sempre `todos` |
 | `videos_publicados` | `v_dashboard_creator_weekly_activity` | videos novos publicados na semana |
 | `views_novas` | `v_dashboard_creator_weekly_activity` | movimento de views na semana |
 | `views_growth_pct_vs_prev_week` | `v_dashboard_creator_weekly_activity` | intensidade relativa da variacao |

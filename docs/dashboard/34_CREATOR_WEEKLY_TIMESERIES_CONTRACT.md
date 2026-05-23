@@ -104,7 +104,8 @@ Colunas minimas:
 Semantica dos cards semanais:
 
 - o card semanal nao mede a performance atual dos videos publicados naquela semana
-- o card semanal mede o movimento geral do criador na semana fechada
+- o card semanal mede o movimento geral do portfolio do criador na semana fechada
+- os cards semanais sempre devem consumir a linha agregada `video_type = 'todos'`
 - `videos_publicados` deve ser calculado por `public.posts.post_date`
 - `views_novas`, `likes_novos` e `comentarios_novos` devem ser calculados a
   partir do mesmo historico temporal de snapshots
@@ -354,7 +355,7 @@ Gap atual:
 | Atividade semanal | `week_start` | `v_dashboard_creator_weekly_activity` |
 | Atividade semanal | `week_end` | `v_dashboard_creator_weekly_activity` |
 | Atividade semanal | `week_label` | `v_dashboard_creator_weekly_activity` |
-| Atividade semanal | `video_type` | `v_dashboard_creator_weekly_activity` |
+| Atividade semanal | `video_type` | `v_dashboard_creator_weekly_activity`, sempre `todos` nos cards semanais |
 | Atividade semanal | `videos_publicados` | `v_dashboard_creator_weekly_activity` |
 | Atividade semanal | `views_novas` | `v_dashboard_creator_weekly_activity` |
 | Atividade semanal | `views_growth_pct_vs_prev_week` | `v_dashboard_creator_weekly_activity` |
@@ -443,6 +444,7 @@ Mudancas no app:
 
 - trocar a funcao mockada da serie mensal
 - carregar a nova view filtrada por `creator_id`
+- filtrar cards e graficos semanais por `video_type = 'todos'`
 - usar `week_label` no eixo x
 - usar `week_end` para ordenacao cronologica e tooltip
 - usar `views_novas` como barras principais
