@@ -2294,14 +2294,15 @@ def render_creator_detail_page() -> None:
 
     selected_row = next((row for row in working_rows if row["entity_name"] == selected_creator_name), working_rows[0] if working_rows else rows[0])
 
+    weekly_filters = [("creator_id", selected_row["creator_id"]), ("video_type", selected_video_type)]
     weekly_rows, weekly_error = get_filtered_rows(
-        "v_dashboard_creator_weekly_timeseries",
-        filters=(("creator_id", selected_row["creator_id"]),),
+        "v_dashboard_creator_weekly_activity",
+        filters=tuple(weekly_filters),
         order_by="week_start",
         order_desc=False,
     )
     if not weekly_rows:
-        weekly_rows = get_creator_weekly_mock_rows(selected_row["entity_name"])
+        weekly_rows = []
 
     period_options = [str(row["week_label"]) for row in reversed(weekly_rows)]
     latest_period_label = period_options[0] if period_options else "Sem base semanal"
@@ -2345,64 +2346,31 @@ def render_creator_detail_page() -> None:
         total_comments_filtered,
     )
 
-    selected_week_start = pd.to_datetime(selected_week_row.get("week_start"), errors="coerce")
-    selected_week_end = pd.to_datetime(selected_week_row.get("week_end"), errors="coerce")
-    posts_with_dates_df = filtered_posts_df.copy()
-    if "post_date" in posts_with_dates_df.columns:
-        posts_with_dates_df["post_date"] = pd.to_datetime(posts_with_dates_df["post_date"], errors="coerce")
-    else:
-        posts_with_dates_df["post_date"] = pd.NaT
-    if pd.notna(selected_week_start) and pd.notna(selected_week_end):
-        selected_week_posts_df = posts_with_dates_df[
-            (posts_with_dates_df["post_date"] >= selected_week_start)
-            & (posts_with_dates_df["post_date"] <= selected_week_end)
-        ]
-        previous_week_start = selected_week_start - pd.Timedelta(days=7)
-        previous_week_end = selected_week_end - pd.Timedelta(days=7)
-        previous_week_posts_df = posts_with_dates_df[
-            (posts_with_dates_df["post_date"] >= previous_week_start)
-            & (posts_with_dates_df["post_date"] <= previous_week_end)
-        ]
-    else:
-        selected_week_posts_df = posts_with_dates_df.iloc[0:0]
-        previous_week_posts_df = posts_with_dates_df.iloc[0:0]
+    selected_week_index = next(
+        (index for index, row in enumerate(weekly_rows) if str(row.get("week_label")) == selected_period_label),
+        len(weekly_rows) - 1,
+    )
+    previous_week_row = weekly_rows[selected_week_index - 1] if selected_week_index > 0 else None
 
-    weekly_videos_value = len(selected_week_posts_df)
-    weekly_views_value = sum_numeric_column(selected_week_posts_df, "views")
-    weekly_likes_value = sum_numeric_column(selected_week_posts_df, "likes")
-    weekly_comments_value = sum_numeric_column(selected_week_posts_df, "comments")
-    previous_week_videos_value = len(previous_week_posts_df)
-    previous_week_views_value = sum_numeric_column(previous_week_posts_df, "views")
-    previous_week_likes_value = sum_numeric_column(previous_week_posts_df, "likes")
-    previous_week_comments_value = sum_numeric_column(previous_week_posts_df, "comments")
+    weekly_videos_value = int(selected_week_row.get("videos_publicados") or 0)
+    weekly_views_value = int(selected_week_row.get("views_novas") or 0)
+    weekly_likes_value = int(selected_week_row.get("likes_novos") or 0)
+    weekly_comments_value = int(selected_week_row.get("comentarios_novos") or 0)
+    previous_week_videos_value = int(previous_week_row.get("videos_publicados") or 0) if previous_week_row else None
+    previous_week_views_value = int(previous_week_row.get("views_novas") or 0) if previous_week_row else None
+    previous_week_likes_value = int(previous_week_row.get("likes_novos") or 0) if previous_week_row else None
+    previous_week_comments_value = int(previous_week_row.get("comentarios_novos") or 0) if previous_week_row else None
 
     chart_rows = []
-    previous_chart_views: int | None = None
     for row in [row for row in weekly_rows if str(row["week_start"]) <= str(selected_week_row.get("week_start", ""))][-8:]:
-        row_week_start = pd.to_datetime(row.get("week_start"), errors="coerce")
-        row_week_end = pd.to_datetime(row.get("week_end"), errors="coerce")
-        if pd.notna(row_week_start) and pd.notna(row_week_end):
-            row_week_posts_df = posts_with_dates_df[
-                (posts_with_dates_df["post_date"] >= row_week_start)
-                & (posts_with_dates_df["post_date"] <= row_week_end)
-            ]
-        else:
-            row_week_posts_df = posts_with_dates_df.iloc[0:0]
-        row_views = sum_numeric_column(row_week_posts_df, "views")
-        row_growth_pct = (
-            None
-            if previous_chart_views is None or previous_chart_views <= 0
-            else round(((row_views - previous_chart_views) / previous_chart_views) * 100, 2)
-        )
         chart_rows.append(
             {
                 "week_label": str(row.get("week_label") or ""),
-                "views_week": row_views,
-                "views_growth_pct": row_growth_pct,
+                "views_novas": int(row.get("views_novas") or 0),
+                "views_growth_pct_vs_prev_week": row.get("views_growth_pct_vs_prev_week"),
             }
         )
-        previous_chart_views = row_views
-    weekly_df = pd.DataFrame(chart_rows, columns=["week_label", "views_week", "views_growth_pct"])
+    weekly_df = pd.DataFrame(chart_rows, columns=["week_label", "views_novas", "views_growth_pct_vs_prev_week"])
 
     weekly_videos_caption, weekly_videos_caption_color = growth_caption_from_values(
         weekly_videos_value,
@@ -2457,19 +2425,19 @@ def render_creator_detail_page() -> None:
     weekly_fig = px.bar(
         weekly_df,
         x="week_label",
-        y="views_week",
+        y="views_novas",
         color_discrete_sequence=["#ff8069"],
     )
     weekly_fig.add_scatter(
         x=weekly_df["week_label"],
-        y=weekly_df["views_growth_pct"],
+        y=weekly_df["views_growth_pct_vs_prev_week"],
         mode="lines+markers",
         name="% views",
         line=dict(color="#f2c14e", width=2),
         yaxis="y2",
     )
     weekly_fig.update_layout(
-        yaxis_title="Views da semana",
+        yaxis_title="Views novas",
         yaxis2=dict(title="% vs semana anterior", overlaying="y", side="right", showgrid=False),
     )
     apply_plotly_theme(weekly_fig, legend_title="Serie")
@@ -2488,7 +2456,7 @@ def render_creator_detail_page() -> None:
         f'<div class="creator-kpi-section-title">Semana selecionada: {escape(selected_week_label)}</div>',
         unsafe_allow_html=True,
     )
-    st.caption("Esta faixa mostra os posts publicados na semana selecionada, respeitando o filtro de tipo de video.")
+    st.caption("Movimento geral do criador na semana fechada selecionada, respeitando o filtro de tipo de video.")
     metric_card_grid(
         [
             metric_card_html("Seguidores", "--", weekly_followers_caption, "SG", caption_color=weekly_followers_caption_color),
@@ -2512,11 +2480,11 @@ def render_creator_detail_page() -> None:
         st.plotly_chart(donut_fig, use_container_width=True)
     with chart_right:
         st.markdown("#### Crescimento semanal")
-        st.caption("Dados usados: public.posts filtrado por tipo de video e semana selecionada.")
+        st.caption("Dados usados: v_dashboard_creator_weekly_activity.")
         st.plotly_chart(weekly_fig, use_container_width=True)
 
     video_scope_weekly = st.checkbox("Mostrar videos da semana selecionada", value=False)
-    videos_source_df = top_videos_df.copy()
+    videos_source_df = filtered_posts_df.copy() if video_scope_weekly else top_videos_df.copy()
     if video_scope_weekly and "post_date" in videos_source_df.columns:
         videos_source_df["post_date"] = pd.to_datetime(videos_source_df["post_date"], errors="coerce")
         week_start = pd.to_datetime(selected_week_row.get("week_start"), errors="coerce")
@@ -2606,17 +2574,18 @@ def render_creator_detail_page() -> None:
                     {"campo": "latest_post_date", "origem": "v_dashboard_creator_summary", "uso": "detalhe"},
                     {"campo": "latest_collected_at", "origem": "v_dashboard_creator_summary", "uso": "detalhe operacional"},
                     {"campo": "is_active", "origem": "v_dashboard_creator_summary", "uso": "status"},
-                    {"campo": "week_label", "origem": "v_dashboard_creator_weekly_timeseries", "uso": "periodo semanal selecionado"},
-                    {"campo": "week_end", "origem": "v_dashboard_creator_weekly_timeseries", "uso": "ordem e semana completa"},
-                    {"campo": "views_delta_vs_prev_week", "origem": "v_dashboard_creator_weekly_timeseries", "uso": "referencia tecnica; nao alimenta os cards filtrados"},
-                    {"campo": "views_growth_pct_vs_prev_week", "origem": "v_dashboard_creator_weekly_timeseries", "uso": "referencia tecnica; grafico recalcula pelo filtro de tipo"},
-                    {"campo": "likes_delta_vs_prev_week", "origem": "v_dashboard_creator_weekly_timeseries", "uso": "referencia tecnica; nao alimenta os cards filtrados"},
-                    {"campo": "comments_delta_vs_prev_week", "origem": "v_dashboard_creator_weekly_timeseries", "uso": "referencia tecnica; nao alimenta os cards filtrados"},
-                    {"campo": "active_posts_in_week", "origem": "v_dashboard_creator_weekly_timeseries", "uso": "referencia tecnica da semana completa"},
+                    {"campo": "week_label", "origem": "v_dashboard_creator_weekly_activity", "uso": "periodo semanal selecionado"},
+                    {"campo": "week_end", "origem": "v_dashboard_creator_weekly_activity", "uso": "ordem e semana completa"},
+                    {"campo": "video_type", "origem": "v_dashboard_creator_weekly_activity", "uso": "filtro long/short/todos dos cards semanais"},
+                    {"campo": "videos_publicados", "origem": "v_dashboard_creator_weekly_activity", "uso": "card semanal de videos"},
+                    {"campo": "views_novas", "origem": "v_dashboard_creator_weekly_activity", "uso": "card e grafico semanal de views"},
+                    {"campo": "likes_novos", "origem": "v_dashboard_creator_weekly_activity", "uso": "card semanal de likes"},
+                    {"campo": "comentarios_novos", "origem": "v_dashboard_creator_weekly_activity", "uso": "card semanal de comentarios"},
+                    {"campo": "views_growth_pct_vs_prev_week", "origem": "v_dashboard_creator_weekly_activity", "uso": "comparativo semanal de views"},
                     {"campo": "title", "origem": "public.posts", "uso": "tabela de top videos"},
-                    {"campo": "post_date", "origem": "public.posts", "uso": "tabela e serie temporal"},
-                    {"campo": "views", "origem": "public.posts", "uso": "cards filtrados, tabela de top videos e serie temporal"},
-                    {"campo": "likes", "origem": "public.posts", "uso": "cards filtrados, distribuicao e serie temporal"},
+                    {"campo": "post_date", "origem": "public.posts", "uso": "tabela editorial e filtro de videos da semana"},
+                    {"campo": "views", "origem": "public.posts", "uso": "cards totais filtrados e tabela de top videos"},
+                    {"campo": "likes", "origem": "public.posts", "uso": "cards totais filtrados e distribuicao"},
                     {"campo": "comments", "origem": "public.posts", "uso": "cards filtrados, distribuicao e tabela"},
                     {"campo": "video_type", "origem": "public.posts", "uso": "filtro long/short/todos e classificacao visual dos top videos"},
                 ]
