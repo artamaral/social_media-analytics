@@ -2327,9 +2327,8 @@ def render_creator_detail_page() -> None:
 
     period_options = [str(row["week_label"]) for row in reversed(weekly_rows)]
     latest_period_label = period_options[0] if period_options else "Sem base semanal"
-    selected_period_label = latest_period_label
     with filter_col4:
-        st.text_input("Semana fechada", value=selected_period_label, disabled=True)
+        selected_period_label = st.selectbox("Semana fechada", period_options or [latest_period_label], index=0)
 
     selected_week_row = next(
         (row for row in weekly_rows if str(row["week_label"]) == selected_period_label),
@@ -2386,11 +2385,12 @@ def render_creator_detail_page() -> None:
             {
                 "week_label": str(row.get("week_label") or ""),
                 "views_novas": int(row.get("views_novas") or 0),
+                "likes_novos": int(row.get("likes_novos") or 0),
                 "comentarios_novos": int(row.get("comentarios_novos") or 0),
                 "views_growth_pct_vs_prev_week": row.get("views_growth_pct_vs_prev_week"),
             }
         )
-    weekly_df = pd.DataFrame(chart_rows, columns=["week_label", "views_novas", "comentarios_novos", "views_growth_pct_vs_prev_week"])
+    weekly_df = pd.DataFrame(chart_rows, columns=["week_label", "views_novas", "likes_novos", "comentarios_novos", "views_growth_pct_vs_prev_week"])
 
     weekly_videos_caption, weekly_videos_caption_color = growth_caption_from_values(
         weekly_videos_value,
@@ -2438,7 +2438,13 @@ def render_creator_detail_page() -> None:
         color="metrica",
         color_discrete_map={"Views x1": "#ff8069", "Likes x10": "#f2c14e", "Comentarios x20": "#7fd1ae"},
     )
-    donut_fig.update_traces(textinfo="label+percent", hovertemplate="%{label}: %{percent}<extra></extra>")
+    donut_fig.update_traces(
+        textinfo="percent",
+        textposition="inside",
+        insidetextorientation="radial",
+        hovertemplate="%{label}: %{percent}<extra></extra>",
+    )
+    donut_fig.update_layout(uniformtext_minsize=10, uniformtext_mode="hide")
     apply_plotly_theme(donut_fig, legend_title="Metrica")
 
     weekly_fig = px.bar(
@@ -2449,15 +2455,23 @@ def render_creator_detail_page() -> None:
     )
     weekly_fig.add_scatter(
         x=weekly_df["week_label"],
+        y=weekly_df["likes_novos"],
+        mode="lines+markers",
+        name="Likes novos",
+        line=dict(color="#f2c14e", width=2),
+        yaxis="y2",
+    )
+    weekly_fig.add_scatter(
+        x=weekly_df["week_label"],
         y=weekly_df["comentarios_novos"],
         mode="lines+markers",
         name="Comentarios novos",
-        line=dict(color="#f2c14e", width=2),
+        line=dict(color="#7fd1ae", width=2),
         yaxis="y2",
     )
     weekly_fig.update_layout(
         yaxis_title="Views novas",
-        yaxis2=dict(title="Comentarios novos", overlaying="y", side="right", showgrid=False),
+        yaxis2=dict(title="Interacoes novas", overlaying="y", side="right", showgrid=False),
     )
     apply_plotly_theme(weekly_fig, legend_title="Serie")
 
@@ -2499,7 +2513,7 @@ def render_creator_detail_page() -> None:
         st.plotly_chart(donut_fig, use_container_width=True, config={"staticPlot": True, "displayModeBar": False})
     with chart_right:
         st.markdown("#### Crescimento semanal")
-        st.caption("Dados usados: v_dashboard_creator_weekly_activity.")
+        st.caption("Views em barras; likes e comentarios em linhas. Semanas a partir de 04/05/2026.")
         st.plotly_chart(weekly_fig, use_container_width=True, config={"staticPlot": True, "displayModeBar": False})
 
     video_scope_weekly = st.checkbox("Mostrar videos da semana selecionada", value=False)

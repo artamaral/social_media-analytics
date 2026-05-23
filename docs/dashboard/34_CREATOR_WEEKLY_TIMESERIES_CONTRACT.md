@@ -151,6 +151,8 @@ Regras de desenho:
 - data de corte inicial do dashboard: `2026-05-04`
 - o app nao deve exibir semanas anteriores a essa data nos cards e graficos
   semanais de criador
+- o seletor de semana pode listar as semanas fechadas disponiveis a partir da
+  data de corte
 - essa data foi escolhida por combinar cobertura historica suficiente e volume
   relevante de snapshots; semanas anteriores podem permanecer disponiveis para
   auditoria SQL, mas nao para leitura executiva no dashboard
@@ -443,9 +445,8 @@ Mudancas no app:
 - carregar a nova view filtrada por `creator_id`
 - usar `week_label` no eixo x
 - usar `week_end` para ordenacao cronologica e tooltip
-- usar `views_novas` como serie principal
-- usar `views_growth_pct_vs_prev_week` ou `likes_novos` como
-  segunda leitura
+- usar `views_novas` como barras principais
+- usar `likes_novos` e `comentarios_novos` como linhas de apoio
 - nunca montar semana localmente no app
 
 ### Etapa 6. Revisar texto e semantica visual

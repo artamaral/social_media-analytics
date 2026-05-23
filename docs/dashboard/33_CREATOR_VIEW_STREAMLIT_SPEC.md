@@ -188,6 +188,10 @@ Regra visual:
 - a formula de referencia e `views * 1 + likes * 10 + comments * 20`
 - a diferenca entre views e interacoes deve respeitar os pesos do algoritmo de
   prioridade/engajamento, sem usar valores brutos isolados
+- os nomes das fatias devem ficar apenas na legenda
+- dentro do donut deve aparecer apenas o percentual
+- labels devem ficar dentro do grafico; se nao couberem, devem ser ocultados em
+  vez de sair cortados para fora da caixa
 
 Limite atual:
 
@@ -245,11 +249,11 @@ Observacao:
 - semanas abertas nao devem aparecer no grafico
 - o rotulo recomendado para exibicao e o intervalo completo da semana
 - o grafico deve ser estatico, sem interacao de zoom/pan
-- a serie deve mostrar `views_novas` e `comentarios_novos`
+- a serie deve mostrar `views_novas`, `likes_novos` e `comentarios_novos`
 - o seletor nao deve abrir todas as semanas indiscriminadamente
 - data de corte inicial: `2026-05-04`, definida apos conferencia de cobertura
   historica e volume de snapshots
-- o app deve priorizar a ultima semana fechada disponivel dentro da janela de
+- o app deve permitir selecionar apenas semanas fechadas dentro da janela de
   corte
 - a implementacao detalhada do contrato fica em documento proprio
 
