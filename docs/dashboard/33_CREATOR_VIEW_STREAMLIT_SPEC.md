@@ -188,7 +188,9 @@ Formula:
 
 Regra visual:
 
-- o grafico deve ser estatico, sem interacao de zoom/pan
+- o grafico deve manter hover/tooltip ativo
+- a janela temporal exibida deve ser controlada pelo app, sem mudar por selecao
+  de semana fora da regra de corte
 - a leitura e normalizada para mostrar a proporcao de cada componente no score
   ponderado ja usado pelo projeto
 - a formula de referencia e `views * 1 + likes * 10 + comments * 20`
@@ -256,7 +258,9 @@ Observacao:
 - a unidade recomendada para comparacao e a semana fechada, nao o dia isolado
 - semanas abertas nao devem aparecer no grafico
 - o rotulo recomendado para exibicao e o intervalo completo da semana
-- o grafico deve ser estatico, sem interacao de zoom/pan
+- o grafico deve manter hover/tooltip ativo
+- a janela temporal exibida deve ser controlada pelo app, sem mudar por selecao
+  de semana fora da regra de corte
 - a serie deve mostrar `views_novas`, `likes_novos` e `comentarios_novos`
 - os textos visuais do grafico devem usar `Views`, `Likes` e `Comentarios`, sem
   a palavra `nova` ou `novas` em eixos e legendas
