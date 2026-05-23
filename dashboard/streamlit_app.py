@@ -31,7 +31,7 @@ def inject_theme() -> None:
             --muted: #aeb4bf;
             --text-dark: #252733;
             --accent: #ff8069;
-            --positive: #98df96;
+            --positive: #2f9e62;
             --warning: #f2c14e;
             --danger: #ff6f61;
         }
@@ -2007,11 +2007,15 @@ def get_engagement_rank(rows: list[dict[str, Any]], entity_name: str) -> tuple[i
     return total, total
 
 
+def format_ordinal_rank(position: int) -> str:
+    return f"{position}º"
+
+
 def get_delta_color(delta_value: float | int | None) -> str:
     if delta_value is None:
         return "#aeb4bf"
     if delta_value > 0:
-        return "#98df96"
+        return "#2f9e62"
     if delta_value < 0:
         return "#ff6f61"
     return "#f2c14e"
@@ -2390,7 +2394,7 @@ def render_creator_detail_page() -> None:
     total_likes_filtered = sum_numeric_column(filtered_posts_df, "likes")
     total_comments_filtered = sum_numeric_column(filtered_posts_df, "comments")
     engagement_rank, engagement_total = get_engagement_rank(working_rows or rows, selected_row["entity_name"])
-    engagement_rank_display = f"{engagement_rank} de {engagement_total}"
+    engagement_rank_display = format_ordinal_rank(engagement_rank)
 
     selected_week_index = next(
         (index for index, row in enumerate(weekly_rows) if str(row.get("week_label")) == selected_period_label),
@@ -2464,7 +2468,7 @@ def render_creator_detail_page() -> None:
         values="valor",
         hole=0.62,
         color="metrica",
-        color_discrete_map={"Views x1": "#ff8069", "Likes x10": "#f2c14e", "Comentarios x20": "#7fd1ae"},
+        color_discrete_map={"Views x1": "#ff8069", "Likes x10": "#ff9b87", "Comentarios x20": "#ffc0b4"},
     )
     donut_fig.update_traces(
         textinfo="percent",
@@ -2485,23 +2489,28 @@ def render_creator_detail_page() -> None:
         x=weekly_df["week_label"],
         y=weekly_df["likes_novos"],
         mode="lines+markers",
-        name="Likes novos",
-        line=dict(color="#f2c14e", width=2),
+        name="Likes",
+        line=dict(color="#ff9b87", width=2),
         yaxis="y2",
     )
     weekly_fig.add_scatter(
         x=weekly_df["week_label"],
         y=weekly_df["comentarios_novos"],
         mode="lines+markers",
-        name="Comentarios novos",
-        line=dict(color="#7fd1ae", width=2),
+        name="Comentarios",
+        line=dict(color="#ffc0b4", width=2),
         yaxis="y2",
     )
     weekly_fig.update_layout(
-        yaxis_title="Views novas",
-        yaxis2=dict(title="Interacoes novas", overlaying="y", side="right", showgrid=False),
+        yaxis_title="Views",
+        yaxis2=dict(title="Interacoes", overlaying="y", side="right", showgrid=False),
     )
     apply_plotly_theme(weekly_fig, legend_title="Serie")
+    weekly_fig.update_layout(
+        xaxis_title=None,
+        legend=dict(x=1.08, y=0.88, xanchor="left", yanchor="top"),
+        margin=dict(l=16, r=112, t=28, b=16),
+    )
 
     engagement_display = engagement_rank_display
     selected_sub_niche = str(selected_row.get("sub_niche_display") or selected_row.get("niche") or "Sem classificacao fina")

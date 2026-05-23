@@ -447,6 +447,11 @@ Mudancas no app:
 - usar `week_end` para ordenacao cronologica e tooltip
 - usar `views_novas` como barras principais
 - usar `likes_novos` e `comentarios_novos` como linhas de apoio
+- priorizar a escala coral do highlight do menu lateral para cores de graficos
+- no grafico, rotulos visuais devem aparecer como `Views`, `Likes` e
+  `Comentarios`, sem expor o sufixo tecnico `novas`
+- o eixo x deve usar `week_label` como valor, mas nao deve exibir esse nome como
+  titulo visual
 - nunca montar semana localmente no app
 
 ### Etapa 6. Revisar texto e semantica visual

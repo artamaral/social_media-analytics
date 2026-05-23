@@ -148,6 +148,8 @@ Objetivo:
      `99.9K`, `235.7K` e `18.3M`
    - a fonte dos valores deve ser a maior possivel dentro do card, sem quebra de
      linha e sem extrapolar o limite visual do bloco
+   - o card de engajamento deve mostrar posicao ordinal no ranking, por exemplo
+     `1º`, e nao o texto `1 de 30`
 
 4. Linha analitica principal
    - distribuicao de engajamento
@@ -190,6 +192,8 @@ Regra visual:
 - a leitura e normalizada para mostrar a proporcao de cada componente no score
   ponderado ja usado pelo projeto
 - a formula de referencia e `views * 1 + likes * 10 + comments * 20`
+- sempre que possivel, cores de graficos devem derivar da escala coral usada no
+  highlight do menu lateral
 - a diferenca entre views e interacoes deve respeitar os pesos do algoritmo de
   prioridade/engajamento, sem usar valores brutos isolados
 - os nomes das fatias devem ficar apenas na legenda
@@ -254,6 +258,10 @@ Observacao:
 - o rotulo recomendado para exibicao e o intervalo completo da semana
 - o grafico deve ser estatico, sem interacao de zoom/pan
 - a serie deve mostrar `views_novas`, `likes_novos` e `comentarios_novos`
+- os textos visuais do grafico devem usar `Views`, `Likes` e `Comentarios`, sem
+  a palavra `nova` ou `novas` em eixos e legendas
+- a legenda deve ter margem suficiente para nao cortar o primeiro item
+- o eixo x nao deve exibir o titulo tecnico `week_label`
 - o seletor nao deve abrir todas as semanas indiscriminadamente
 - data de corte inicial: `2026-05-04`, definida apos conferencia de cobertura
   historica e volume de snapshots
