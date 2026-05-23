@@ -144,6 +144,10 @@ Objetivo:
    - total de views
    - total de likes
    - total de comentarios
+   - numeros devem usar notacao compacta para leitura executiva, por exemplo
+     `99.9K`, `235.7K` e `18.3M`
+   - a fonte dos valores deve ser a maior possivel dentro do card, sem quebra de
+     linha e sem extrapolar o limite visual do bloco
 
 4. Linha analitica principal
    - distribuicao de engajamento

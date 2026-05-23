@@ -251,7 +251,7 @@ def inject_theme() -> None:
         }
 
         .creator-kpi-grid .metric-card {
-            min-height: 128px;
+            min-height: 136px;
         }
 
         .creator-kpi-grid .metric-card-header {
@@ -267,17 +267,24 @@ def inject_theme() -> None:
         }
 
         .creator-kpi-grid .metric-card-body {
-            padding: 0.8rem 0.85rem;
+            padding: 0.9rem 0.9rem;
         }
 
         .creator-kpi-grid .metric-value {
-            font-size: 1.35rem;
+            font-size: clamp(2rem, 2.05vw, 2.9rem);
             gap: 0.6rem;
+            min-width: 0;
+        }
+
+        .creator-kpi-grid .metric-value span:first-child {
+            min-width: 0;
+            overflow-wrap: anywhere;
+            white-space: nowrap;
         }
 
         .creator-kpi-grid .metric-picto {
-            width: 40px;
-            height: 40px;
+            width: 46px;
+            height: 46px;
             font-size: 0.92rem;
         }
 
@@ -1427,6 +1434,27 @@ def format_int(value: Any) -> str:
         return "--"
 
 
+def format_compact_number(value: Any) -> str:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return "--"
+    abs_number = abs(number)
+    if abs_number >= 1_000_000_000:
+        compact_value = number / 1_000_000_000
+        suffix = "B"
+    elif abs_number >= 1_000_000:
+        compact_value = number / 1_000_000
+        suffix = "M"
+    elif abs_number >= 1_000:
+        compact_value = number / 1_000
+        suffix = "K"
+    else:
+        return str(int(number)) if number.is_integer() else f"{number:.1f}".rstrip("0").rstrip(".")
+    formatted = f"{compact_value:.1f}".rstrip("0").rstrip(".")
+    return f"{formatted}{suffix}"
+
+
 def format_pct(value: Any) -> str:
     try:
         return f"{float(value):.2f}%".replace(".", ",")
@@ -2415,12 +2443,12 @@ def render_creator_detail_page() -> None:
     )
     metric_card_grid(
         [
-            metric_card_html("Seguidores", format_int(selected_row["followers"]), "", "SG"),
+            metric_card_html("Seguidores", format_compact_number(selected_row["followers"]), "", "SG"),
             metric_card_html("Engajamento", engagement_rank_display, "", "RK"),
-            metric_card_html("Videos", format_int(total_videos_filtered), "", "VD"),
-            metric_card_html("Views", format_int(total_views_filtered), "", "VW"),
-            metric_card_html("Likes", format_int(total_likes_filtered), "", "LK"),
-            metric_card_html("Comentarios", format_int(total_comments_filtered), "", "CM"),
+            metric_card_html("Videos", format_compact_number(total_videos_filtered), "", "VD"),
+            metric_card_html("Views", format_compact_number(total_views_filtered), "", "VW"),
+            metric_card_html("Likes", format_compact_number(total_likes_filtered), "", "LK"),
+            metric_card_html("Comentarios", format_compact_number(total_comments_filtered), "", "CM"),
         ],
         class_name="creator-kpi-grid",
     )
@@ -2494,10 +2522,10 @@ def render_creator_detail_page() -> None:
         [
             metric_card_html("Seguidores", "--", weekly_followers_caption, "SG", caption_color=weekly_followers_caption_color),
             metric_card_html("Engajamento", "--", weekly_engagement_caption, "RK", caption_color=weekly_engagement_caption_color),
-            metric_card_html("Videos", format_int(weekly_videos_value), weekly_videos_caption, "VD", caption_color=weekly_videos_caption_color),
-            metric_card_html("Views", format_int(weekly_views_value), weekly_views_caption, "VW", caption_color=weekly_views_caption_color),
-            metric_card_html("Likes", format_int(weekly_likes_value), weekly_likes_caption, "LK", caption_color=weekly_likes_caption_color),
-            metric_card_html("Comentarios", format_int(weekly_comments_value), weekly_comments_caption, "CM", caption_color=weekly_comments_caption_color),
+            metric_card_html("Videos", format_compact_number(weekly_videos_value), weekly_videos_caption, "VD", caption_color=weekly_videos_caption_color),
+            metric_card_html("Views", format_compact_number(weekly_views_value), weekly_views_caption, "VW", caption_color=weekly_views_caption_color),
+            metric_card_html("Likes", format_compact_number(weekly_likes_value), weekly_likes_caption, "LK", caption_color=weekly_likes_caption_color),
+            metric_card_html("Comentarios", format_compact_number(weekly_comments_value), weekly_comments_caption, "CM", caption_color=weekly_comments_caption_color),
         ],
         class_name="creator-kpi-grid weekly-grid",
     )
