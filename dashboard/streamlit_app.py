@@ -1493,7 +1493,7 @@ def format_month_label(period: pd.Timestamp) -> str:
     return f"{month_names[int(period.month)]}/{int(period.year)}"
 
 
-def render_fenabrave_page() -> None:
+def render_fenabrave_dashboard_page() -> None:
     rows, error = get_view_rows("v_dashboard_fenabrave_monthly_segments")
     page_header("Fenabrave")
     page_subtitle("Emplacamento Automóveis (vendas diretas e venda varejo)")
@@ -2526,7 +2526,7 @@ def render_creator_detail_page() -> None:
         f'<div class="creator-kpi-section-title">Semana selecionada: {escape(selected_week_label)}</div>',
         unsafe_allow_html=True,
     )
-    st.caption("Movimento geral do portfolio do criador na semana fechada selecionada, considerando todos os posts monitorados.")
+    st.caption("Performance atual dos videos publicados na semana fechada selecionada, considerando todo o portfolio publicado pelo criador no periodo.")
     metric_card_grid(
         [
             metric_card_html("Seguidores", "--", weekly_followers_caption, "SG", caption_color=weekly_followers_caption_color),
@@ -2733,7 +2733,7 @@ def render_creator_overview_page() -> None:
     )
 
 
-def render_fenabrave_page() -> None:
+def render_fenabrave_intake_page() -> None:
     state = get_fenabrave_mock_state()
     page_header("Cadastro Fenabrave", "Mockup da rotina mensal de inclusao de dados")
     process_banner(
@@ -3035,6 +3035,7 @@ with st.sidebar:
     sidebar_nav_button("Videos em crescimento", "Videos em crescimento")
     sidebar_nav_button("Hot now", "Hot now")
     sidebar_nav_button("Data quality", "Data quality")
+    sidebar_nav_button("Fenabrave", "Fenabrave")
 
     creators_active = st.session_state["nav_page"] == "Creators"
     creators_open = st.session_state["creators_menu_open"] or creators_active
@@ -3109,11 +3110,13 @@ elif page == "Hot now":
     render_placeholder_page("Hot now", "View futura para velocidade recente, velocidade anterior e aceleracao.")
 elif page == "Data quality":
     render_data_quality_page()
+elif page == "Fenabrave":
+    render_fenabrave_dashboard_page()
 elif page == "Cadastro":
     if cadastro_subpage == "Criadores":
         render_external_intake_page("Cadastro de Criadores")
     else:
-        render_fenabrave_page()
+        render_fenabrave_intake_page()
 else:
     render_placeholder_page(
         "Sanitizacao operacional",

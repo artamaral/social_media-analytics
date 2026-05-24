@@ -218,15 +218,17 @@ Objetivo:
 
 Definicao obrigatoria dos cards semanais:
 
-- o bloco semanal representa o movimento geral do criador na semana fechada
-- o bloco semanal deve responder: `como meu portfolio performou nesta semana?`
+- o bloco semanal representa a performance atual dos videos publicados na semana fechada
+- o bloco semanal deve responder: `como meu portfolio publicado nesta semana performa hoje?`
 - os cards semanais sempre usam a linha agregada `video_type = 'todos'`, mesmo
   quando o filtro editorial da pagina estiver em `long` ou `short`
 - `Videos` mede videos novos publicados na semana, a partir de `public.posts.post_date`
-- `Views` mede views novas na semana, considerando todos os posts monitorados do criador
-- `Likes` mede likes novos na semana, considerando todos os posts monitorados do criador
-- `Comentarios` mede comentarios novos na semana, considerando todos os posts monitorados do criador
-- `Views`, `Likes` e `Comentarios` devem vir do mesmo historico temporal de snapshots, nao dos valores atuais dos videos publicados naquela semana
+- `Views` mede as views atuais de todos os videos publicados naquela semana
+- `Likes` mede os likes atuais de todos os videos publicados naquela semana
+- `Comentarios` mede os comentarios atuais de todos os videos publicados naquela semana
+- `Views`, `Likes` e `Comentarios` usam a mesma base de `post_date` do card
+  `Videos`, para que os totais da semana batam com a lista editorial de videos
+  daquela semana
 - analise de posts isolados permanece na tabela editorial de videos e em views especificas de detalhe por post
 
 Contrato recomendado:
@@ -254,8 +256,10 @@ Dados esperados da view:
 Observacao:
 
 - este grafico deve sempre ser de um unico criador por vez
-- o Streamlit nao deve calcular a serie bruta a partir de `public.posts`
-- o Streamlit nao deve usar valores atuais de posts publicados na semana para preencher os cards semanais de `Views`, `Likes` e `Comentarios`
+- o Streamlit nao deve calcular a serie bruta localmente; deve consumir a view
+  semanal ja consolidada
+- a view semanal deve somar os valores atuais de `public.posts` para os videos
+  publicados na semana
 - quando a ligacao SQL acontecer, o ideal e filtrar por `creator_id`
 - a linha `video_type = 'todos'` da view deve alimentar os cards e graficos semanais
 - o filtro `long/short/todos` da pagina deve continuar limitado a leituras
@@ -273,7 +277,7 @@ Observacao:
 - o eixo x nao deve exibir o titulo tecnico `week_label`
 - o seletor nao deve abrir todas as semanas indiscriminadamente
 - data de corte inicial: `2026-05-04`, definida apos conferencia de cobertura
-  historica e volume de snapshots
+  historica e volume de publicacoes com metricas atuais
 - o app deve permitir selecionar apenas semanas fechadas dentro da janela de
   corte
 - a implementacao detalhada do contrato fica em documento proprio
@@ -352,10 +356,10 @@ Nova camada recomendada para serie temporal:
 | `week_label` | `v_dashboard_creator_weekly_activity` | rotulo amigavel no grafico |
 | `video_type` | `v_dashboard_creator_weekly_activity` | cards semanais usam sempre `todos` |
 | `videos_publicados` | `v_dashboard_creator_weekly_activity` | videos novos publicados na semana |
-| `views_novas` | `v_dashboard_creator_weekly_activity` | movimento de views na semana |
+| `views_novas` | `v_dashboard_creator_weekly_activity` | views atuais dos videos publicados na semana |
 | `views_growth_pct_vs_prev_week` | `v_dashboard_creator_weekly_activity` | intensidade relativa da variacao |
-| `likes_novos` | `v_dashboard_creator_weekly_activity` | movimento de likes na semana |
-| `comentarios_novos` | `v_dashboard_creator_weekly_activity` | movimento de comentarios na semana |
+| `likes_novos` | `v_dashboard_creator_weekly_activity` | likes atuais dos videos publicados na semana |
+| `comentarios_novos` | `v_dashboard_creator_weekly_activity` | comentarios atuais dos videos publicados na semana |
 
 Campos complementares documentados fora da view atual:
 
