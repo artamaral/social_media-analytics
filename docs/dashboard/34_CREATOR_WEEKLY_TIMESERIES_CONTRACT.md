@@ -93,13 +93,13 @@ Colunas minimas:
 | `week_end` | data | ultimo dia da semana consolidada |
 | `week_label` | texto | rotulo pronto para exibicao no app |
 | `video_type` | texto | `long`, `short` ou `todos` |
-| `videos_publicados` | inteiro | videos novos publicados na semana |
-| `views_novas` | inteiro | nome legado; views atuais dos videos publicados na semana |
+| `videos_publicados` | numerico | videos novos publicados na semana |
+| `views_novas` | numerico | nome legado; views atuais dos videos publicados na semana |
 | `views_growth_pct_vs_prev_week` | numerico | crescimento percentual de views contra a semana anterior |
-| `likes_novos` | inteiro | nome legado; likes atuais dos videos publicados na semana |
-| `comentarios_novos` | inteiro | nome legado; comentarios atuais dos videos publicados na semana |
-| `posts_com_snapshot_na_semana` | inteiro | quantidade de posts publicados na semana com `collected_at` preenchido |
-| `posts_sem_baseline_para_delta` | inteiro | campo legado mantido por compatibilidade; usar `0` nesta view |
+| `likes_novos` | numerico | nome legado; likes atuais dos videos publicados na semana |
+| `comentarios_novos` | numerico | nome legado; comentarios atuais dos videos publicados na semana |
+| `posts_com_snapshot_na_semana` | numerico | quantidade de posts publicados na semana com `collected_at` preenchido |
+| `posts_sem_baseline_para_delta` | numerico | campo legado mantido por compatibilidade; usar `0` nesta view |
 
 Semantica dos cards semanais:
 
