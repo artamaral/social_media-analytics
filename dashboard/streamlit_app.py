@@ -1434,17 +1434,6 @@ def format_int(value: Any) -> str:
         return "--"
 
 
-def format_video_type_label(value: Any) -> str:
-    video_type = str(value or "").strip().lower()
-    labels = {
-        "todos": "Todos",
-        "long": "Long",
-        "short": "Short",
-        "sem_tipo": "Sem tipo",
-    }
-    return labels.get(video_type, video_type.title() if video_type else "Sem tipo")
-
-
 def format_compact_number(value: Any) -> str:
     try:
         number = float(value)
@@ -2383,17 +2372,18 @@ def render_creator_detail_page() -> None:
         weekly_total_rows[-1] if weekly_total_rows else {},
     )
     selected_week_start = str(selected_week_row.get("week_start") or "")
-    selected_week_type_rows = sorted(
+    weekly_selected_type_rows = (
         [
             row
             for row in weekly_rows
-            if str(row.get("week_start") or "") == selected_week_start
-            and str(row.get("video_type") or "").strip().lower() != "todos"
-        ],
-        key=lambda row: {"long": 0, "short": 1, "sem_tipo": 2}.get(
-            str(row.get("video_type") or "").strip().lower(),
-            9,
-        ),
+            if str(row.get("video_type") or "").strip().lower() == selected_video_type
+        ]
+        if selected_video_type != "todos"
+        else weekly_total_rows
+    )
+    selected_week_metric_row = next(
+        (row for row in weekly_selected_type_rows if str(row.get("week_label")) == selected_period_label),
+        selected_week_row if selected_video_type == "todos" else {},
     )
     post_filters = [("creator_id", selected_row["creator_id"])]
     if selected_video_type != "todos":
@@ -2426,22 +2416,22 @@ def render_creator_detail_page() -> None:
     engagement_rank_display = format_ordinal_rank(engagement_rank)
 
     selected_week_index = next(
-        (index for index, row in enumerate(weekly_total_rows) if str(row.get("week_label")) == selected_period_label),
-        len(weekly_total_rows) - 1,
+        (index for index, row in enumerate(weekly_selected_type_rows) if str(row.get("week_label")) == selected_period_label),
+        None,
     )
-    previous_week_row = weekly_total_rows[selected_week_index - 1] if selected_week_index > 0 else None
+    previous_week_row = weekly_selected_type_rows[selected_week_index - 1] if selected_week_index is not None and selected_week_index > 0 else None
 
-    weekly_videos_value = int(selected_week_row.get("videos_publicados") or 0)
-    weekly_views_value = int(selected_week_row.get("views_novas") or 0)
-    weekly_likes_value = int(selected_week_row.get("likes_novos") or 0)
-    weekly_comments_value = int(selected_week_row.get("comentarios_novos") or 0)
+    weekly_videos_value = int(selected_week_metric_row.get("videos_publicados") or 0)
+    weekly_views_value = int(selected_week_metric_row.get("views_novas") or 0)
+    weekly_likes_value = int(selected_week_metric_row.get("likes_novos") or 0)
+    weekly_comments_value = int(selected_week_metric_row.get("comentarios_novos") or 0)
     previous_week_videos_value = int(previous_week_row.get("videos_publicados") or 0) if previous_week_row else None
     previous_week_views_value = int(previous_week_row.get("views_novas") or 0) if previous_week_row else None
     previous_week_likes_value = int(previous_week_row.get("likes_novos") or 0) if previous_week_row else None
     previous_week_comments_value = int(previous_week_row.get("comentarios_novos") or 0) if previous_week_row else None
 
     chart_rows = []
-    for row in [row for row in weekly_total_rows if str(row["week_start"]) <= str(selected_week_row.get("week_start", ""))][-8:]:
+    for row in [row for row in weekly_selected_type_rows if str(row["week_start"]) <= str(selected_week_row.get("week_start", ""))][-8:]:
         chart_rows.append(
             {
                 "week_label": str(row.get("week_label") or ""),
@@ -2549,13 +2539,14 @@ def render_creator_detail_page() -> None:
     selected_status = "ativo" if bool(selected_row.get("is_active")) else "inativo"
 
     selected_week_label = str(selected_week_row.get("week_label") or "Sem base semanal")
+    selected_video_type_label = selected_video_type.title() if selected_video_type != "todos" else "Todos"
     weekly_followers_caption, weekly_followers_caption_color = "Sem serie semanal", "#aeb4bf"
     weekly_engagement_caption, weekly_engagement_caption_color = "Sem serie semanal", "#aeb4bf"
     st.markdown(
-        f'<div class="creator-kpi-section-title">Semana selecionada: {escape(selected_week_label)}</div>',
+        f'<div class="creator-kpi-section-title">Semana selecionada: {escape(selected_week_label)} | {escape(selected_video_type_label)}</div>',
         unsafe_allow_html=True,
     )
-    st.caption("Performance atual dos videos publicados na semana fechada selecionada, considerando todo o portfolio publicado pelo criador no periodo.")
+    st.caption("Performance atual dos videos publicados na semana fechada selecionada, respeitando o tipo de video escolhido.")
     metric_card_grid(
         [
             metric_card_html("Seguidores", "--", weekly_followers_caption, "SG", caption_color=weekly_followers_caption_color),
@@ -2567,26 +2558,6 @@ def render_creator_detail_page() -> None:
         ],
         class_name="creator-kpi-grid weekly-grid",
     )
-
-    if selected_week_type_rows:
-        weekly_type_display = pd.DataFrame(
-            [
-                {
-                    "Tipo": format_video_type_label(row.get("video_type")),
-                    "Videos": format_int(row.get("videos_publicados")),
-                    "Views": format_int(row.get("views_novas")),
-                    "Likes": format_int(row.get("likes_novos")),
-                    "Comentarios": format_int(row.get("comentarios_novos")),
-                }
-                for row in selected_week_type_rows
-            ]
-        )
-        st.markdown(
-            '<div class="creator-kpi-section-title">Semana por tipo de video</div>',
-            unsafe_allow_html=True,
-        )
-        st.caption("Detalhamento da mesma semana selecionada; os cards acima continuam usando a linha agregada Todos.")
-        st.dataframe(weekly_type_display, use_container_width=True, hide_index=True)
 
     if summary_error or weekly_error or top_videos_error:
         active_errors = [error for error in [summary_error, weekly_error, top_videos_error] if error]
@@ -2695,7 +2666,7 @@ def render_creator_detail_page() -> None:
                     {"campo": "is_active", "origem": "v_dashboard_creator_summary", "uso": "status"},
                     {"campo": "week_label", "origem": "v_dashboard_creator_weekly_activity", "uso": "periodo semanal selecionado"},
                     {"campo": "week_end", "origem": "v_dashboard_creator_weekly_activity", "uso": "ordem e semana completa"},
-                    {"campo": "video_type", "origem": "v_dashboard_creator_weekly_activity", "uso": "cards semanais usam sempre a linha agregada todos"},
+                    {"campo": "video_type", "origem": "v_dashboard_creator_weekly_activity", "uso": "cards e graficos semanais conforme tipo selecionado"},
                     {"campo": "videos_publicados", "origem": "v_dashboard_creator_weekly_activity", "uso": "card semanal de videos"},
                     {"campo": "views_novas", "origem": "v_dashboard_creator_weekly_activity", "uso": "card e grafico semanal de views"},
                     {"campo": "likes_novos", "origem": "v_dashboard_creator_weekly_activity", "uso": "card semanal de likes"},

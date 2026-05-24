@@ -220,10 +220,10 @@ Definicao obrigatoria dos cards semanais:
 
 - o bloco semanal representa a performance atual dos videos publicados na semana fechada
 - o bloco semanal deve responder: `como meu portfolio publicado nesta semana performa hoje?`
-- os cards semanais sempre usam a linha agregada `video_type = 'todos'`, mesmo
-  quando o filtro editorial da pagina estiver em `long` ou `short`
-- abaixo dos cards, a tela deve mostrar o detalhamento da mesma semana por
-  `video_type`, usando as linhas `long`, `short` e demais tipos existentes
+- os cards semanais devem respeitar o filtro `Tipo de video`, alternando entre
+  as linhas `video_type = 'todos'`, `long` e `short`
+- a tela nao deve duplicar essa leitura em tabela; o proprio bloco de cards e o
+  grafico semanal devem refletir o tipo selecionado
 - `Videos` mede videos novos publicados na semana, a partir de `public.posts.post_date`
 - `Views` mede as views atuais de todos os videos publicados naquela semana
 - `Likes` mede os likes atuais de todos os videos publicados naquela semana
@@ -263,11 +263,13 @@ Observacao:
 - a view semanal deve somar os valores atuais de `public.posts` para os videos
   publicados na semana
 - quando a ligacao SQL acontecer, o ideal e filtrar por `creator_id`
-- a linha `video_type = 'todos'` da view deve alimentar os cards e graficos semanais
-- as linhas por `video_type` devem alimentar a leitura complementar da semana
-  selecionada
-- o filtro `long/short/todos` da pagina deve continuar limitado a leituras
-  editoriais, como top videos e cards totais filtrados
+- a linha `video_type = 'todos'` deve alimentar os cards e graficos semanais
+  quando o filtro estiver em `todos`
+- as linhas `long` e `short` devem alimentar os mesmos cards e graficos quando
+  esses tipos estiverem selecionados
+- o filtro `long/short/todos` da pagina deve controlar os cards semanais, os
+  graficos semanais e as leituras editoriais, como top videos e cards totais
+  filtrados
 - a unidade recomendada para comparacao e a semana fechada, nao o dia isolado
 - semanas abertas nao devem aparecer no grafico
 - o rotulo recomendado para exibicao e o intervalo completo da semana
@@ -358,7 +360,7 @@ Nova camada recomendada para serie temporal:
 | `week_start` | `v_dashboard_creator_weekly_activity` | eixo temporal semanal |
 | `week_end` | `v_dashboard_creator_weekly_activity` | fechamento da semana consolidada |
 | `week_label` | `v_dashboard_creator_weekly_activity` | rotulo amigavel no grafico |
-| `video_type` | `v_dashboard_creator_weekly_activity` | cards semanais usam sempre `todos` |
+| `video_type` | `v_dashboard_creator_weekly_activity` | cards e graficos semanais respeitam o tipo selecionado |
 | `videos_publicados` | `v_dashboard_creator_weekly_activity` | videos novos publicados na semana |
 | `views_novas` | `v_dashboard_creator_weekly_activity` | views atuais dos videos publicados na semana |
 | `views_growth_pct_vs_prev_week` | `v_dashboard_creator_weekly_activity` | intensidade relativa da variacao |

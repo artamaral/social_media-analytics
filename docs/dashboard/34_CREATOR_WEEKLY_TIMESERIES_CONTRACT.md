@@ -105,7 +105,8 @@ Semantica dos cards semanais:
 
 - o card semanal mede a performance atual dos videos publicados naquela semana
 - o card semanal responde: `como meu portfolio publicado nesta semana performa hoje?`
-- os cards semanais sempre devem consumir a linha agregada `video_type = 'todos'`
+- os cards semanais devem consumir a linha do `video_type` selecionado no app:
+  `todos`, `long` ou `short`
 - `videos_publicados` deve ser calculado por `public.posts.post_date`
 - `views_novas`, `likes_novos` e `comentarios_novos` devem somar os valores
   atuais de `public.posts` para todos os videos publicados na semana
@@ -114,9 +115,10 @@ Semantica dos cards semanais:
 - por usar estado atual de `public.posts`, os contadores dos cards nao devem
   ficar negativos
 - alem da linha `video_type = 'todos'`, a view deve expor linhas por tipo de
-  video para detalhar a mesma semana em `long`, `short` e demais tipos
-- o Streamlit deve usar `todos` nos cards principais e as demais linhas em uma
-  leitura complementar por tipo
+  video para que o mesmo bloco semanal possa alternar entre `todos`, `long` e
+  `short`
+- o Streamlit nao deve criar uma tabela adicional para esse detalhamento; o
+  bloco de cards e o grafico semanal devem mudar conforme o tipo selecionado
 - a tabela editorial de videos e as futuras views de detalhe por post ficam
   responsaveis por leituras de posts isolados
 
@@ -355,7 +357,7 @@ Gap atual:
 | Atividade semanal | `week_start` | `v_dashboard_creator_weekly_activity` |
 | Atividade semanal | `week_end` | `v_dashboard_creator_weekly_activity` |
 | Atividade semanal | `week_label` | `v_dashboard_creator_weekly_activity` |
-| Atividade semanal | `video_type` | `v_dashboard_creator_weekly_activity`, sempre `todos` nos cards semanais |
+| Atividade semanal | `video_type` | `v_dashboard_creator_weekly_activity`, conforme filtro `todos`, `long` ou `short` |
 | Atividade semanal | `videos_publicados` | `v_dashboard_creator_weekly_activity` |
 | Atividade semanal | `views_novas` | `v_dashboard_creator_weekly_activity` |
 | Atividade semanal | `views_growth_pct_vs_prev_week` | `v_dashboard_creator_weekly_activity` |
@@ -404,7 +406,8 @@ Recomendacao:
 - usar segunda a domingo como calendario semanal
 - somar os valores atuais de todos os posts publicados na semana
 - depois agregar por criador e `video_type`
-- manter a linha `video_type = 'todos'` para cards executivos
+- manter a linha `video_type = 'todos'` como leitura agregada dos cards
+  executivos quando o filtro estiver em `todos`
 - excluir da view qualquer semana ainda aberta
 - gerar `week_label` pronto no SQL
 - na primeira versao, nao criar semanas artificiais sem publicacao
@@ -450,7 +453,7 @@ Objetivo:
 Mudancas no app:
 
 - carregar a nova view filtrada por `creator_id`
-- filtrar cards e graficos semanais por `video_type = 'todos'`
+- filtrar cards e graficos semanais pelo `video_type` selecionado no app
 - usar `week_label` no eixo x
 - usar `week_end` para ordenacao cronologica e tooltip
 - usar `views_novas` como barras principais
