@@ -113,6 +113,10 @@ Semantica dos cards semanais:
   snapshot; eles representam o estado atual do portfolio publicado naquela semana
 - por usar estado atual de `public.posts`, os contadores dos cards nao devem
   ficar negativos
+- alem da linha `video_type = 'todos'`, a view deve expor linhas por tipo de
+  video para detalhar a mesma semana em `long`, `short` e demais tipos
+- o Streamlit deve usar `todos` nos cards principais e as demais linhas em uma
+  leitura complementar por tipo
 - a tabela editorial de videos e as futuras views de detalhe por post ficam
   responsaveis por leituras de posts isolados
 

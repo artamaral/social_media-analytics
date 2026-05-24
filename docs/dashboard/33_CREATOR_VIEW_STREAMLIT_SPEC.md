@@ -222,6 +222,8 @@ Definicao obrigatoria dos cards semanais:
 - o bloco semanal deve responder: `como meu portfolio publicado nesta semana performa hoje?`
 - os cards semanais sempre usam a linha agregada `video_type = 'todos'`, mesmo
   quando o filtro editorial da pagina estiver em `long` ou `short`
+- abaixo dos cards, a tela deve mostrar o detalhamento da mesma semana por
+  `video_type`, usando as linhas `long`, `short` e demais tipos existentes
 - `Videos` mede videos novos publicados na semana, a partir de `public.posts.post_date`
 - `Views` mede as views atuais de todos os videos publicados naquela semana
 - `Likes` mede os likes atuais de todos os videos publicados naquela semana
@@ -262,6 +264,8 @@ Observacao:
   publicados na semana
 - quando a ligacao SQL acontecer, o ideal e filtrar por `creator_id`
 - a linha `video_type = 'todos'` da view deve alimentar os cards e graficos semanais
+- as linhas por `video_type` devem alimentar a leitura complementar da semana
+  selecionada
 - o filtro `long/short/todos` da pagina deve continuar limitado a leituras
   editoriais, como top videos e cards totais filtrados
 - a unidade recomendada para comparacao e a semana fechada, nao o dia isolado

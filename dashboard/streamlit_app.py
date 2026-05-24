@@ -1434,6 +1434,17 @@ def format_int(value: Any) -> str:
         return "--"
 
 
+def format_video_type_label(value: Any) -> str:
+    video_type = str(value or "").strip().lower()
+    labels = {
+        "todos": "Todos",
+        "long": "Long",
+        "short": "Short",
+        "sem_tipo": "Sem tipo",
+    }
+    return labels.get(video_type, video_type.title() if video_type else "Sem tipo")
+
+
 def format_compact_number(value: Any) -> str:
     try:
         number = float(value)
@@ -2342,7 +2353,7 @@ def render_creator_detail_page() -> None:
 
     selected_row = next((row for row in working_rows if row["entity_name"] == selected_creator_name), working_rows[0] if working_rows else rows[0])
 
-    weekly_filters = [("creator_id", selected_row["creator_id"]), ("video_type", "todos")]
+    weekly_filters = [("creator_id", selected_row["creator_id"])]
     weekly_rows, weekly_error = get_filtered_rows(
         "v_dashboard_creator_weekly_activity",
         filters=tuple(weekly_filters),
@@ -2356,15 +2367,33 @@ def render_creator_detail_page() -> None:
         for row in weekly_rows
         if pd.to_datetime(row.get("week_start"), errors="coerce") >= CREATOR_WEEKLY_ACTIVITY_CUTOFF
     ]
+    weekly_total_rows = [
+        row
+        for row in weekly_rows
+        if str(row.get("video_type") or "").strip().lower() == "todos"
+    ]
 
-    period_options = [str(row["week_label"]) for row in reversed(weekly_rows)]
+    period_options = [str(row["week_label"]) for row in reversed(weekly_total_rows)]
     latest_period_label = period_options[0] if period_options else "Sem base semanal"
     with filter_col4:
         selected_period_label = st.selectbox("Semana fechada", period_options or [latest_period_label], index=0)
 
     selected_week_row = next(
-        (row for row in weekly_rows if str(row["week_label"]) == selected_period_label),
-        weekly_rows[-1] if weekly_rows else {},
+        (row for row in weekly_total_rows if str(row["week_label"]) == selected_period_label),
+        weekly_total_rows[-1] if weekly_total_rows else {},
+    )
+    selected_week_start = str(selected_week_row.get("week_start") or "")
+    selected_week_type_rows = sorted(
+        [
+            row
+            for row in weekly_rows
+            if str(row.get("week_start") or "") == selected_week_start
+            and str(row.get("video_type") or "").strip().lower() != "todos"
+        ],
+        key=lambda row: {"long": 0, "short": 1, "sem_tipo": 2}.get(
+            str(row.get("video_type") or "").strip().lower(),
+            9,
+        ),
     )
     post_filters = [("creator_id", selected_row["creator_id"])]
     if selected_video_type != "todos":
@@ -2397,10 +2426,10 @@ def render_creator_detail_page() -> None:
     engagement_rank_display = format_ordinal_rank(engagement_rank)
 
     selected_week_index = next(
-        (index for index, row in enumerate(weekly_rows) if str(row.get("week_label")) == selected_period_label),
-        len(weekly_rows) - 1,
+        (index for index, row in enumerate(weekly_total_rows) if str(row.get("week_label")) == selected_period_label),
+        len(weekly_total_rows) - 1,
     )
-    previous_week_row = weekly_rows[selected_week_index - 1] if selected_week_index > 0 else None
+    previous_week_row = weekly_total_rows[selected_week_index - 1] if selected_week_index > 0 else None
 
     weekly_videos_value = int(selected_week_row.get("videos_publicados") or 0)
     weekly_views_value = int(selected_week_row.get("views_novas") or 0)
@@ -2412,7 +2441,7 @@ def render_creator_detail_page() -> None:
     previous_week_comments_value = int(previous_week_row.get("comentarios_novos") or 0) if previous_week_row else None
 
     chart_rows = []
-    for row in [row for row in weekly_rows if str(row["week_start"]) <= str(selected_week_row.get("week_start", ""))][-8:]:
+    for row in [row for row in weekly_total_rows if str(row["week_start"]) <= str(selected_week_row.get("week_start", ""))][-8:]:
         chart_rows.append(
             {
                 "week_label": str(row.get("week_label") or ""),
@@ -2538,6 +2567,26 @@ def render_creator_detail_page() -> None:
         ],
         class_name="creator-kpi-grid weekly-grid",
     )
+
+    if selected_week_type_rows:
+        weekly_type_display = pd.DataFrame(
+            [
+                {
+                    "Tipo": format_video_type_label(row.get("video_type")),
+                    "Videos": format_int(row.get("videos_publicados")),
+                    "Views": format_int(row.get("views_novas")),
+                    "Likes": format_int(row.get("likes_novos")),
+                    "Comentarios": format_int(row.get("comentarios_novos")),
+                }
+                for row in selected_week_type_rows
+            ]
+        )
+        st.markdown(
+            '<div class="creator-kpi-section-title">Semana por tipo de video</div>',
+            unsafe_allow_html=True,
+        )
+        st.caption("Detalhamento da mesma semana selecionada; os cards acima continuam usando a linha agregada Todos.")
+        st.dataframe(weekly_type_display, use_container_width=True, hide_index=True)
 
     if summary_error or weekly_error or top_videos_error:
         active_errors = [error for error in [summary_error, weekly_error, top_videos_error] if error]
