@@ -2565,12 +2565,12 @@ def render_creator_detail_page() -> None:
 
     chart_left, chart_right = st.columns(2)
     with chart_left:
-        st.markdown("#### Distribuicao de engajamento")
-        st.caption("Participacao normalizada pelo score: views x1, likes x10 e comentarios x20.")
+        st.markdown(f"#### Distribuicao de engajamento | {selected_video_type_label}")
+        st.caption("Participacao normalizada pelo score: views x1, likes x10 e comentarios x20, respeitando o tipo de video escolhido.")
         st.plotly_chart(donut_fig, use_container_width=True, config={"displayModeBar": False})
     with chart_right:
-        st.markdown("#### Crescimento semanal")
-        st.caption("Views em barras; likes e comentarios em linhas. Semanas a partir de 04/05/2026.")
+        st.markdown(f"#### Crescimento semanal | {selected_video_type_label}")
+        st.caption("Views em barras; likes e comentarios em linhas para o tipo de video escolhido. Semanas a partir de 04/05/2026.")
         st.plotly_chart(weekly_fig, use_container_width=True, config={"displayModeBar": False})
 
     video_scope_weekly = st.checkbox("Mostrar videos da semana selecionada", value=False)

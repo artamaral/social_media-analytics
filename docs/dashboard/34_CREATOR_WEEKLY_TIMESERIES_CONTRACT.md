@@ -119,6 +119,8 @@ Semantica dos cards semanais:
   `short`
 - o Streamlit nao deve criar uma tabela adicional para esse detalhamento; o
   bloco de cards e o grafico semanal devem mudar conforme o tipo selecionado
+- o grafico de distribuicao de engajamento tambem deve respeitar o tipo de
+  video selecionado, usando os totais filtrados de `public.posts`
 - a tabela editorial de videos e as futuras views de detalhe por post ficam
   responsaveis por leituras de posts isolados
 

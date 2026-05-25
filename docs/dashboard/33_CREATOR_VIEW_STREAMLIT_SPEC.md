@@ -267,9 +267,9 @@ Observacao:
   quando o filtro estiver em `todos`
 - as linhas `long` e `short` devem alimentar os mesmos cards e graficos quando
   esses tipos estiverem selecionados
-- o filtro `long/short/todos` da pagina deve controlar os cards semanais, os
-  graficos semanais e as leituras editoriais, como top videos e cards totais
-  filtrados
+- o filtro `long/short/todos` da pagina deve controlar os cards semanais, o
+  grafico de crescimento semanal, o grafico de distribuicao de engajamento e as
+  leituras editoriais, como top videos e cards totais filtrados
 - a unidade recomendada para comparacao e a semana fechada, nao o dia isolado
 - semanas abertas nao devem aparecer no grafico
 - o rotulo recomendado para exibicao e o intervalo completo da semana
