@@ -12,6 +12,14 @@ Este plano tambem define uma fronteira importante:
 - contexto para textos e interpretacao: estudos e dados atuais de outras fontes setoriais ou macroeconomicas
 - fora do plano atual: fontes pagas ou restritas, como SERPRO/SENATRAN
 
+## Status consolidado da frente
+
+- Fenabrave: ja possui modelagem inicial e processo local controlado
+- SENATRAN/RENAVAM: continua em estudo de granularidade, dataset e schema final
+- Carros na Web: tem papel analitico claro como catalogo tecnico, mas esta
+  bloqueado por captcha e nao deve ser tratado como pipeline estruturado nem
+  como modelagem final neste momento
+
 ## Principio central
 
 Para analise de venda e market share no Brasil, a verdade principal deve ser emplacamento.
@@ -69,6 +77,13 @@ Uso esperado no Supabase:
 - `market_model_rankings`
 - `analytics_keywords` para marcas/modelos
 
+Estado atual:
+
+- ja existe modelagem inicial no repositorio para controle de fonte, arquivo
+  capturado, serie mensal por segmento e view analitica inicial
+- a frente ainda nao fechou se a modelagem final permanecera por segmento por
+  mais tempo ou se ja deve expandir para `marca` e `modelo`
+
 Pontos de atencao:
 
 - releases publicos parecem ser PDF-first
@@ -101,12 +116,43 @@ Pontos de atencao:
 - frota registrada tambem nao e necessariamente frota circulante
 - qualquer uso precisa rotular claramente a metrica como frota/registro, nao venda
 
+Estado atual:
+
+- a fonte ja esta enquadrada como estruturada no escopo do projeto
+- o dataset real, a granularidade util e a tabela normalizada final ainda nao
+  foram fechados
+
+### 2.1 O que significa modelagem final nesta frente
+
+Para este plano, `modelagem final` significa definir:
+
+- qual dataset publico entra de fato no projeto
+- qual granularidade vira tabela persistida
+- qual chave de rastreabilidade liga o dado ao arquivo ou publicacao original
+- quais campos sao obrigatorios
+- como a metrica sera rotulada para nao confundir frota com venda
+- como a camada normalizada se conecta a marcas, modelos e regioes
+
 Referencias:
 
 - https://www.gov.br/transportes/pt-br/assuntos/transito/senatran/estatisticas-senatran
 - https://dados.transportes.gov.br/dataset/registro-nacional-de-veiculos-automotores-renavam
 
 ## Fontes fora do pipeline atual
+
+### Carros na Web
+
+Status:
+
+- fonte desejada para catalogo tecnico
+- bloqueada por captcha no momento
+
+Uso permitido agora:
+
+- manter apenas como plano e referencia de produto
+- nao assumir captura repetivel
+- nao criar schema definitivo no Supabase antes de validar viabilidade etica e
+  operacional da coleta
 
 ### 3. SERPRO / SENATRAN
 

@@ -45,15 +45,22 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 
 ### Prioridade alta - novos blocos estruturados
 
-- [ ] Planejar e iniciar a base Carros na Web para catalogo, modelos e ficha tecnica. Usar `27_CARROSNAWEB_VEHICLE_SPECS_INGESTION_PLAN.md` como referencia obrigatoria; manter discovery por links reais do catalogo, sem enumeracao sequencial de IDs, e com CSV/HTML bruto como MVP antes de criar schema definitivo no Supabase.
+- [ ] Reclassificar Carros na Web como frente bloqueada por captcha e validar primeiro a viabilidade etica e repetivel de captura antes de qualquer schema definitivo no Supabase.
+- [ ] Se a captura do Carros na Web voltar a ser viavel, retomar o plano de catalogo, modelos e ficha tecnica usando `27_CARROSNAWEB_VEHICLE_SPECS_INGESTION_PLAN.md` como referencia obrigatoria e mantendo discovery por links reais do catalogo, sem enumeracao sequencial de IDs.
 
 ### Prioridade media - definicao de escopo
 
-- [ ] Definir plano de dados externos automotivos com ingestao estruturada apenas de Fenabrave e SENATRAN/RENAVAM. Usar `22_EXTERNAL_MARKET_DATA_STUDY_PLAN.md` como referencia antes de criar tabelas definitivas no Supabase; demais fontes ficam apenas como contexto para textos e interpretacao.
+- [x] Delimitar Fenabrave e SENATRAN/RENAVAM como fontes estruturadas prioritarias no Supabase, deixando as demais fontes apenas como contexto textual.
+- [ ] Consolidar a modelagem final de Fenabrave, decidindo se a fase inicial por segmento permanece temporariamente suficiente ou se a frente deve expandir para marca, modelo, runs de ingestao e validacoes persistidas.
+- [ ] Definir a modelagem final de SENATRAN/RENAVAM, incluindo dataset real, granularidade util, rotulagem correta de frota e tabela normalizada final.
 
 ### Prioridade operacional - rotina de fonte
 
 - [ ] Open point: avaliar como gerar lembrete futuro e/ou incluir em uma agenda a rotina mensal da Fenabrave descrita em `00_OFFLINE_OPERATIONS_CALENDAR.md`.
+
+### Itens concluidos nesta frente
+
+- [x] Implementar a modelagem inicial de Fenabrave com cadastro de fontes, arquivos rastreaveis, tabela normalizada por segmento e view analitica inicial para dashboard.
 
 ## Frente 3. Dashboard
 

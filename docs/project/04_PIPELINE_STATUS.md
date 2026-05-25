@@ -301,10 +301,26 @@ Proxima avaliacao:
 - a frente ja possui script, setup local e runbook de execucao mensal
 - o processo ainda e local e controlado, nao um pipeline automatico completo
 - a estrutura minima de ingestao e validacao ja esta desenhada
+- a modelagem inicial ja existe no repositorio com:
+  - `market_data_sources`
+  - `market_source_files`
+  - `market_vehicle_registrations_segment`
+  - `v_dashboard_fenabrave_monthly_segments`
+
+#### O que ainda falta nesta frente
+
+- decidir se a modelagem atual por segmento permanece como fase suficiente por
+  mais tempo ou se deve expandir para `marca` e `modelo`
+- decidir se a camada `raw` sera persistida formalmente no banco ou se
+  continuara apenas como etapa transitiva de extracao
+- decidir se a frente passa a ter tabela formal de `ingestion_runs` e de
+  validacoes persistidas
+- consolidar a rotina mensal como processo repetivel, e nao apenas execucao
+  local controlada
 
 ### 2.2 Carros na Web
 
-- Status: em fase de planejamento de ingestao
+- Status: bloqueado por captcha; ainda em avaliacao de viabilidade de ingestao
 - Documento principal: `docs/external_data/27_CARROSNAWEB_VEHICLE_SPECS_INGESTION_PLAN.md`
 - Papel na arquitetura: base estruturada de catalogo automotivo, versoes e
   ficha tecnica
@@ -312,9 +328,19 @@ Proxima avaliacao:
 #### Estado atual
 
 - existe plano detalhado para discovery por links reais do catalogo
-- a fase 1 prevista usa CSV e HTML bruto locais antes de schema definitivo no
-  Supabase
+- a captura real esta encontrando captcha e os dados nao estao sendo obtidos
+  com confiabilidade suficiente
+- por isso, a frente ainda nao deve ser tratada como schema definitivo nem como
+  pipeline estruturado
 - ainda nao ha implementacao principal versionada em `scripts/carrosnaweb_ingestion/`
+
+#### O que ainda falta nesta frente
+
+- validar se existe caminho etico e repetivel para captura sem bypass de
+  protecao
+- confirmar se a cobertura obtida justificaria manter a frente como fonte
+  estruturada
+- somente depois disso decidir se faz sentido criar schema proprio no Supabase
 
 ### 2.3 SENATRAN / RENAVAM
 
@@ -330,10 +356,18 @@ Proxima avaliacao:
 - a preocupacao principal segue sendo distinguir corretamente frota registrada
   de venda e emplacamento
 
+#### O que ainda falta nesta frente
+
+- definir qual dataset aberto sera usado de fato
+- definir a granularidade util para o produto
+- definir a tabela normalizada final
+- validar a rotulagem de frota para nao confundir o uso analitico com venda
+
 ### 2.4 Proximos checkpoints desta frente
 
 - consolidar Fenabrave como rotina mensal repetivel
-- iniciar a base Carros na Web em formato local controlado
+- tratar Carros na Web primeiro como problema de viabilidade de captura antes de
+  retomar schema e pipeline
 - fechar a avaliacao de granularidade util para SENATRAN / RENAVAM
 - harmonizar futuramente marcas e modelos entre social media, Fenabrave,
   catalogo tecnico e frota registrada
@@ -400,7 +434,7 @@ Proxima avaliacao:
 - score hibrido `v2`
 - guarda de cobertura minima
 - consolidacao da rotina Fenabrave
-- inicio da ingestao Carros na Web
+- avaliacao de viabilidade do Carros na Web sob captcha
 - estudo de granularidade para SENATRAN / RENAVAM
 - implementacao do app Streamlit
 
@@ -419,7 +453,8 @@ Proxima avaliacao:
 - Resultado:
   - frente social media segue como base operacional principal
   - frente Fenabrave ja saiu de estudo e entrou em implementacao local
-  - frente Carros na Web segue em planejamento
+  - frente Carros na Web esta bloqueada por captcha e ainda nao deve ser
+    tratada como pipeline estruturado
   - frente SENATRAN / RENAVAM segue em estudo
   - frente dashboard esta com estrategia pronta e aguarda implementacao do app
 

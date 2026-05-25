@@ -7,6 +7,15 @@ Data: 2026-05-19
 Planejar a inclusao dos dados do Carros na Web no projeto como base estruturada
 de catalogo automotivo, modelos e ficha tecnica.
 
+## Status atual consolidado
+
+- a fonte continua relevante como catalogo tecnico
+- a captura real esta encontrando captcha
+- os dados nao estao sendo obtidos com confiabilidade suficiente
+- por isso, o plano abaixo continua valido como referencia, mas a frente deve
+  ser tratada primeiro como problema de viabilidade de captura, nao como schema
+  definitivo no Supabase
+
 Esta fonte e importante porque complementa as bases de mercado com detalhes de
 produto:
 
@@ -68,6 +77,8 @@ Motivo:
 - headers simples podem causar erro 500
 - tentativa de alterar manualmente o codigo acionou fluxo de captcha
 - enumeracao massiva de IDs aumenta risco de bloqueio e gera chamadas inuteis
+- no estado atual, o captcha esta bloqueando a captura consistente e impede
+  tratar esta fonte como pipeline repetivel
 
 Regra:
 
@@ -125,6 +136,13 @@ Motivo para comecar em CSV:
 - facilita inspecao manual dos resultados
 - preserva os passos intermediarios do discovery
 - permite validar qualidade antes de levar para Supabase
+
+Pre-condicao real para executar esta fase:
+
+- confirmar que a captura consegue ocorrer de forma etica, repetivel e sem
+  bypass de protecao
+- se essa pre-condicao nao for atendida, a frente deve permanecer em espera
+  antes de qualquer decisao de schema
 
 Fora do escopo da fase 1:
 
@@ -783,6 +801,15 @@ A fase 1 estara pronta quando:
 - campos com imagens estiverem preservando `image_urls`
 - nenhuma coleta tiver dependido de enumeracao sequencial de IDs
 - captcha, bloqueio ou erro 500 estiverem registrados como status operacional
+
+## Regra de decisao antes de schema definitivo
+
+Antes de criar qualquer modelagem final no Supabase para esta fonte, o projeto
+deve concluir:
+
+- se a captura e viavel sem bypass de protecao
+- se a cobertura obtida justifica a frente como base estruturada
+- se a coleta consegue ser repetivel com risco operacional aceitavel
 
 ## Commit sugerido
 
