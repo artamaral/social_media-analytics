@@ -12,11 +12,14 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 
 ### Prioridade alta - funcionamento e confiabilidade
 
-- [ ] Avaliar e garantir que os posts estao sendo atualizados.
+- [x] Implementar monitoramento executivo no Streamlit para acompanhar integridade da coleta, evidencia de processamento e sinais operacionais dos 2 workers.
+- [ ] Consolidar a analise de confiabilidade operacional dos posts atualizados com base no monitoramento do Streamlit e nas evidencias do banco.
 - [x] Confirmar que posts nao estavam sendo atualizados e que o novo codigo esta rodando.
-- [ ] Auditar residual do cleanup temporario do guardrail antes de retomar o scheduler; restam `9` posts, sendo `4` ja listados como possiveis dead posts.
-- [ ] Padronizar exclusao de posts confirmados como dead/unavailable nas views e metricas antes de considerar o guardrail limpo.
+- [x] Implementar e operar a view `Posts mortos e validacao humana` no Streamlit, tratando os `13` posts detectados e zerando as pendencias humanas.
+- [ ] Confirmar se toda a camada analitica ja exclui corretamente posts `unavailable` fora dos contextos de auditoria.
 - [ ] Monitorar conclusao do cleanup temporario do guardrail: `warm_8_30d` e `old_30d_plus` ate `3` checagens; `new_0_3d` e `recent_4_7d` ate `2` checagens.
+- [ ] Analisar a regra de `next_check` como principal open point operacional. O monitoramento atual mostra atraso e risco, mas ainda nao diz se a regra e suficiente ou nao para a base em crescimento.
+- [ ] Verificar se a prioridade embutida em `next_check` esta coerente com banda, idade do post, cobertura minima esperada e urgencia operacional. A avaliacao nao deve olhar apenas tempo e contagem bruta, porque esses numeros tendem a crescer junto com a base.
 - [ ] Executar teste pendente descrito em `08_QUEUE_CAPACITY_TEST.md` e `09_QUEUE_SLICING_AND_RESCHEDULING.md`.
 - [ ] Garantir que scraper percorre todos creators.
 - [ ] Validar integridade de `post_metrics_history`.
@@ -34,6 +37,7 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 - [x] Validar impacto FinOps e custos apos aumento do lote do worker para 40 posts por execucao. Resultado observado apos alguns dias em producao: nao houve aumento relevante de custos no Cloud Run.
 - [x] Open point: reavaliar se o refill global da `v_post_update_queue_batch` deve continuar assim ou migrar para cascata por banda. Hoje, cotas nao usadas por uma banda vao para um pool global ordenado por antiguidade, e nao automaticamente para a proxima banda mais alta.
 - [x] Tratar videos indisponiveis na YouTube API para evitar posts presos na fila. Implementado com tabela de falhas, RPC, view de dashboard e exclusao de `unavailable` da fila ativa.
+- [x] Implementar no Streamlit os blocos executivos de `Integridade da coleta`, `Evidencia de processamento`, `Sinais operacionais`, `Monitoramento de posts sem checagem` e `Posts mortos e validacao humana`.
 - [x] Implementar limpeza temporaria do backlog de guardrail. Rotina em execucao controlada via Windows Scheduler; proximo passo e monitorar conclusao.
 - [x] Pausar promocao do score hibrido `v2` para a fila ativa. O `v2` fica em segundo plano e a prioridade analitica passa a ser `hot now` temporal.
 

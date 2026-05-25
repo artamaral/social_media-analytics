@@ -47,6 +47,40 @@ O objetivo e manter uma leitura simples de:
 - `next_check` controlado no SQL
 - FIFO dentro da banda
 - refill global entre bandas quando ha sobra de cota
+- monitoramento executivo do worker ja implementado no Streamlit com 5 blocos:
+  - `Monitoramento de posts sem checagem`
+  - `Posts mortos e validacao humana`
+  - `Integridade da coleta`
+  - `Evidencia de processamento`
+  - `Sinais operacionais`
+
+#### Leitura atual do monitoramento
+
+- `Integridade da coleta`: status `ok`
+- `Evidencia de processamento`: status `ok`
+- `Posts mortos e validacao humana`: `13/13` confirmados ou monitorados, `0` pendencias humanas e `0` candidatos em aberto
+- `Monitoramento de posts sem checagem`: ainda existem posts abaixo da cobertura minima, mas sem risco imediato na faixa critica observada
+- `Sinais operacionais`: continuam sendo o principal ponto de atencao por atraso agregado do worker horario
+
+#### Open point principal - regra de `next_check`
+
+- status: aberto e prioritario
+- leitura atual:
+  - o monitoramento implementado ja mostra atraso e cobertura, mas ainda nao
+    responde se a regra de `next_check` e suficiente ou nao
+  - contagens brutas por faixa de atraso tendem a crescer conforme a base de
+    posts cresce, portanto nao devem ser lidas isoladamente
+  - a analise precisa considerar a prioridade esperada de cada post no
+    agendamento, e nao apenas `tempo desde o atraso` e `volume acumulado`
+- checagens que ainda faltam:
+  - verificar se a prioridade embutida em `next_check` esta coerente com banda
+  - verificar se esta coerente com idade do post
+  - verificar se esta coerente com cobertura minima esperada
+  - verificar se esta coerente com urgencia operacional e risco real de atraso
+- criterio de saida deste open point:
+  - concluir se a regra atual e suficiente ou nao
+  - se nao for suficiente, definir ajuste de prioridade antes de mudar apenas
+    thresholds ou tempos absolutos
 
 ### 1.3 Backfill offline de `legacy_low` - fase 1
 
@@ -168,17 +202,14 @@ Resultado parcial apos pausa:
 Leitura atual:
 
 - restam `9` posts no alvo do cleanup temporario
-- `4` dos `9` posts ja constam como possiveis dead posts, ainda com baixa
-  cobertura
-- posts confirmados manualmente como dead/unavailable continuam aparecendo em
-  outras metricas, portanto a exclusao por status ainda nao esta padronizada
-  em toda a camada analitica
+- a frente de `Posts mortos e validacao humana` no Streamlit ja tratou os `13`
+  posts detectados, sem pendencias humanas em aberto
+- o ponto remanescente agora e confirmar que toda a camada analitica exclui
+  corretamente `unavailable` fora dos contextos de auditoria
 
 Proxima avaliacao:
 
 - auditar os `9` posts residuais antes de retomar o scheduler
-- confirmar manualmente candidatos dead e marcar `status = 'unavailable'`
-  quando aplicavel
 - revisar views e metricas operacionais para excluir confirmados como
   `unavailable` quando a analise nao for uma auditoria de indisponibilidade
 
@@ -194,6 +225,9 @@ Proxima avaliacao:
     diagnosticos de monitoramento
   - acompanhar se a fatia de `4` slots e suficiente para manter o guardrail
     sob controle
+  - cruzar os sinais do Streamlit com a regra de `next_check` para entender se
+    o agendamento esta priorizando corretamente a base conforme o crescimento
+    do numero de posts
 
 #### Backfill legado fase 1
 
@@ -334,7 +368,14 @@ Proxima avaliacao:
   confirmado
 - o app Streamlit inicial ja existe na branch `codex/dashboard-streamlit-mvp`
 - a conexao com Supabase via secrets ja foi validada no app
-- Data Quality esta sendo ajustado para usar dois KPIs operacionais
+- Data Quality ja exibe:
+  - `Monitoramento de posts sem checagem`
+  - `Posts mortos e validacao humana`
+  - `Integridade da coleta`
+  - `Evidencia de processamento`
+  - `Sinais operacionais`
+- o principal uso atual do Data Quality e orientar a analise da regra de
+  `next_check` e da cobertura operacional do worker
 
 ### 3.4 Proximos checkpoints desta frente
 
@@ -365,8 +406,9 @@ Proxima avaliacao:
 
 ### 4.3 O que bloqueia a proxima etapa
 
-- evolucao do social media depende de consolidar cobertura minima e validacoes
-  de historico
+- evolucao do social media depende principalmente de analisar se a regra de
+  `next_check` esta priorizando corretamente a base conforme ela cresce, alem
+  de consolidar cobertura minima e validacoes de historico
 - evolucao das fontes externas depende de transformar planos em ingestao
   repetivel
 - evolucao do dashboard depende de app inicial e integracao segura com as views
