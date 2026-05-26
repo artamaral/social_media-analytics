@@ -35,6 +35,19 @@ Novo creator cadastrado?
 
 ## Escopo do worker
 
+Implementacao:
+
+- `scripts/cloud_run/youtube_creator_onboarding/main.py`
+- `scripts/cloud_run/youtube_creator_onboarding/requirements.txt`
+
+Variaveis de ambiente esperadas:
+
+- `SUPABASE_URL`
+- `SUPABASE_KEY`
+- `YOUTUBE_API_KEY`
+- `ONBOARDING_WORKER_TOKEN`
+- `MAX_UPLOADS` opcional, com limite efetivo de `1` a `50`
+
 O worker deve:
 
 - receber apenas `creator_id` como parametro operacional;
@@ -223,4 +236,3 @@ Antes de considerar o worker saudavel:
 - mudanca em `v_post_update_queue_batch`;
 - nova prioridade especial para creator recem-cadastrado;
 - mudanca no scheduler do scraper principal.
-
