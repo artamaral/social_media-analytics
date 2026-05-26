@@ -329,7 +329,7 @@ BEGIN
     v_entity_id,
     v_sub_niche_id
   )
-  ON CONFLICT (entity_id, sub_niche_id) DO NOTHING;
+  ON CONFLICT ON CONSTRAINT entity_sub_niches_pkey DO NOTHING;
 
   UPDATE public.entity_intake ei
   SET
