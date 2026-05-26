@@ -10,11 +10,18 @@ de catalogo automotivo, modelos e ficha tecnica.
 ## Status atual consolidado
 
 - a fonte continua relevante como catalogo tecnico
-- a captura real esta encontrando captcha
-- os dados nao estao sendo obtidos com confiabilidade suficiente
-- por isso, o plano abaixo continua valido como referencia, mas a frente deve
-  ser tratada primeiro como problema de viabilidade de captura, nao como schema
-  definitivo no Supabase
+- a descoberta inicial de fabricantes funcionou e encontrou aproximadamente
+  `127` fabricantes
+- a descoberta de modelos funcionou melhor quando passou a considerar links
+  `catalogomodelo.asp?` e `catalogo.asp?`
+- a nova camada descoberta no fluxo e `anos_modelo.csv`: modelos levam para
+  anos, e anos podem levar para fichas
+- algumas URLs de ano nao contem links de ficha e podem retornar pagina de erro
+- a captura direta de fichas continua sujeita a erro 500, pagina de erro,
+  validacao/captcha e ambiente Python incorreto
+- por isso, a frente deve validar primeiro `anos_modelo.csv` e gerar
+  `anos_modelo_validos.csv` antes de qualquer parser final ou schema definitivo
+  no Supabase
 
 Esta fonte e importante porque complementa as bases de mercado com detalhes de
 produto:
@@ -67,7 +74,7 @@ O scraper deve usar somente URLs reais descobertas por paginas publicas do
 catalogo:
 
 ```text
-fabricantes -> modelos -> fichas validas -> HTML bruto -> parser -> CSV/tabelas
+fabricantes -> modelos -> anos do modelo -> fichas validas -> HTML bruto -> parser -> CSV/tabelas
 ```
 
 Motivo:
@@ -107,6 +114,7 @@ Aplicado ao Carros na Web:
 ```text
 Discovery de catalogo
   -> CSVs de controle local
+  -> validacao das paginas de ano
   -> HTML bruto das fichas
   -> parser de tabelas HTML
   -> dados tecnicos em formato longo
@@ -118,7 +126,8 @@ Discovery de catalogo
 
 Objetivo da fase 1:
 
-- provar discovery de fabricantes, modelos e fichas
+- provar discovery de fabricantes, modelos, anos e fichas
+- validar URLs de ano antes de procurar fichas
 - baixar HTML apenas de fichas validas descobertas no catalogo
 - parsear tabelas de ficha tecnica
 - salvar dados em CSV para reuso e auditoria
@@ -146,7 +155,7 @@ Pre-condicao real para executar esta fase:
 
 Fora do escopo da fase 1:
 
-- Selenium ou Playwright
+- Playwright como caminho principal de coleta
 - OCR obrigatorio
 - captcha solving
 - proxy rotation
@@ -167,8 +176,12 @@ scripts/carrosnaweb_ingestion/
     discovery/
       fabricantes.csv
       modelos.csv
+      anos_modelo.csv
+      anos_modelo_validos.csv
       fichas.csv
+      test_fichas_15.csv
       fichas_scrape_status.csv
+    debug_html/
     raw_html/
       fichas/
     processed/
@@ -180,9 +193,14 @@ scripts/carrosnaweb_ingestion/
     utils.py
   01_discover_fabricantes.py
   02_discover_modelos.py
-  03_discover_fichas.py
-  04_scrape_fichas.py
-  05_parse_fichas.py
+  03_discover_anos.py
+  04_validate_anos.py
+  05_discover_fichas.py
+  06_scrape_fichas.py
+  07_parse_fichas.py
+  diagnostics/
+    debug_url.py
+    test_playwright.py
   README.md
   requirements.txt
 ```
@@ -233,6 +251,8 @@ Regras:
 - usar headers completos
 - aplicar delay aleatorio entre chamadas
 - nao usar o cliente para burlar captcha
+- visitar paginas publicas iniciais antes de requisitar paginas profundas
+- registrar `status_code`, `final_url` e tamanho do HTML em toda chamada
 
 Base tecnica preservada do estudo:
 
@@ -241,6 +261,69 @@ BASE_URL = "https://www.carrosnaweb.com.br"
 create_session()
 warm_up_session(session)
 safe_get(session, url, timeout=30, delay_min=1.5, delay_max=4.0)
+```
+
+## Classificacao obrigatoria de respostas
+
+Antes de qualquer parser, o scraper deve classificar a resposta HTTP/HTML.
+
+Status obrigatorios:
+
+```text
+success
+http_error
+site_error
+validation_required
+unexpected_page
+parse_empty
+exception
+```
+
+Regras de classificacao:
+
+- `status_code != 200` deve virar `http_error`
+- redirecionamento para `fichadetalheValida.asp` deve virar
+  `validation_required`
+- presenca de termos como `captcha`, `validacao` ou `preencha o campo com os
+  caracteres` deve virar `validation_required`
+- presenca de `Ocorreu um erro`, `internal server error` ou
+  `500 - internal server error` deve virar `site_error`
+- ausencia de texto esperado de ficha tecnica deve virar `unexpected_page`
+- parser sem campos em uma pagina que nao e ficha deve virar erro de origem,
+  nao erro de parser
+
+Exemplo conceitual:
+
+```python
+def classify_response(response, html, page_text):
+    final_url = response.url.lower()
+    html_lower = html.lower()
+    text_lower = page_text.lower()
+
+    if response.status_code != 200:
+        return "http_error", f"http_status_{response.status_code}"
+
+    if "fichadetalhevalida.asp" in final_url:
+        return "validation_required", "redirected_to_fichadetalhevalida"
+
+    if any(term in html_lower or term in text_lower for term in [
+        "preencha o campo com os caracteres",
+        "captcha",
+        "validacao",
+    ]):
+        return "validation_required", "captcha_or_validation_detected"
+
+    if any(term in html_lower or term in text_lower for term in [
+        "ocorreu um erro",
+        "internal server error",
+        "500 - internal server error",
+    ]):
+        return "site_error", "site_error_page"
+
+    if "ficha tecnica" not in text_lower:
+        return "unexpected_page", "missing_ficha_tecnica_text"
+
+    return "success", None
 ```
 
 ## Step by step obrigatorio
@@ -323,8 +406,9 @@ Logica:
 
 - ler fabricantes
 - acessar cada URL de fabricante
-- encontrar links contendo `catalogo.asp?`
-- extrair o nome do modelo via query string `varnome`
+- encontrar links contendo `catalogomodelo.asp?` ou `catalogo.asp?`
+- extrair o nome do modelo via query string `modelo`, `varnome` ou texto do
+  link
 - remover duplicados por URL
 
 Saida:
@@ -338,7 +422,10 @@ Colunas esperadas:
 ```text
 fabricante
 modelo
-url
+url_modelo
+href_original
+texto_link
+params
 ```
 
 ### 4. Salvar modelos.csv
@@ -358,12 +445,12 @@ O script deve imprimir:
 - total de modelos unicos
 - preview do CSV
 
-### 5. Discovery de fichas por modelo
+### 5. Discovery de anos por modelo
 
 Script:
 
 ```text
-scripts/carrosnaweb_ingestion/03_discover_fichas.py
+scripts/carrosnaweb_ingestion/03_discover_anos.py
 ```
 
 Entrada:
@@ -375,16 +462,128 @@ scripts/carrosnaweb_ingestion/data/discovery/modelos.csv
 Logica:
 
 - ler modelos
-- acessar cada pagina de modelo
+- acessar cada `url_modelo`
+- encontrar links de catalogo ou ficha que indiquem ano
+- extrair ano de parametros como `ano`, `anomod`, `anoini`, `anofim`, do texto
+  do link ou da URL
+- remover duplicados por URL
+
+Exemplo de URL esperada:
+
+```text
+https://www.carrosnaweb.com.br/catalogo.asp?fabricante=Audi&varnome=A3 Sedan&anoini=2023&anofim=2023
+```
+
+Saida:
+
+```text
+scripts/carrosnaweb_ingestion/data/discovery/anos_modelo.csv
+```
+
+Colunas esperadas:
+
+```text
+fabricante
+modelo
+ano
+url_ano
+url_modelo_origem
+href_original
+texto_link
+params
+```
+
+### 6. Validar URLs de ano
+
+Script:
+
+```text
+scripts/carrosnaweb_ingestion/04_validate_anos.py
+```
+
+Entrada:
+
+```text
+scripts/carrosnaweb_ingestion/data/discovery/anos_modelo.csv
+```
+
+Tarefa imediata:
+
+- abrir cada `url_ano`
+- registrar status HTTP
+- registrar URL final
+- registrar tamanho do HTML
+- verificar se contem `fichadetalhe.asp`
+- verificar se contem `Ocorreu um erro`
+- salvar apenas paginas validas em `anos_modelo_validos.csv`
+
+Saida:
+
+```text
+scripts/carrosnaweb_ingestion/data/discovery/anos_modelo_validos.csv
+```
+
+Colunas esperadas:
+
+```text
+fabricante
+modelo
+ano
+url_ano
+http_status
+final_url
+html_size
+has_ficha_links
+has_error_text
+status
+reason
+checked_at
+```
+
+Status sugeridos:
+
+```text
+valid_year_page
+no_ficha_links
+site_error
+http_error
+unexpected_page
+```
+
+Regra:
+
+```text
+Somente `valid_year_page` pode alimentar a descoberta de fichas.
+```
+
+### 7. Discovery de fichas por ano valido
+
+Script:
+
+```text
+scripts/carrosnaweb_ingestion/05_discover_fichas.py
+```
+
+Entrada:
+
+```text
+scripts/carrosnaweb_ingestion/data/discovery/anos_modelo_validos.csv
+```
+
+Logica:
+
+- ler apenas paginas de ano validadas
+- acessar cada `url_ano`
 - encontrar links contendo `fichadetalhe.asp?codigo=`
-- extrair `codigo` via query string
+- extrair `codigo_ficha` via query string
+- usar o texto do link como `versao`, quando disponivel
 - remover duplicados por URL
 
 Regra critica:
 
 ```text
 O script nao pode enumerar IDs.
-Ele deve capturar somente links publicados nas paginas de catalogo.
+Ele deve capturar somente links publicados nas paginas validas de catalogo/ano.
 ```
 
 Saida:
@@ -398,11 +597,21 @@ Colunas esperadas:
 ```text
 fabricante
 modelo
-codigo
-url
+ano
+versao
+codigo_ficha
+url_ficha
+url_ano_origem
+href_original
 ```
 
-### 6. Salvar fichas.csv
+Saida opcional para teste limitado:
+
+```text
+scripts/carrosnaweb_ingestion/data/discovery/test_fichas_15.csv
+```
+
+### 8. Salvar fichas.csv
 
 O CSV deve ser salvo com:
 
@@ -419,12 +628,12 @@ O script deve imprimir:
 - total de fichas unicas
 - preview do CSV
 
-### 7. Scraper de fichas apenas com URLs validas
+### 9. Scraper de fichas apenas com URLs validas
 
 Script:
 
 ```text
-scripts/carrosnaweb_ingestion/04_scrape_fichas.py
+scripts/carrosnaweb_ingestion/06_scrape_fichas.py
 ```
 
 Entrada:
@@ -451,11 +660,11 @@ Classificacao logica das respostas:
 
 ```text
 success
-captcha_validation
-server_error
-blocked
-invalid_or_error_page
-unknown_error
+http_error
+site_error
+validation_required
+unexpected_page
+parse_empty
 exception
 ```
 
@@ -473,7 +682,7 @@ scripts/carrosnaweb_ingestion/data/raw_html/fichas/<codigo>.html
 scripts/carrosnaweb_ingestion/data/discovery/fichas_scrape_status.csv
 ```
 
-### 8. Parser de tabela HTML
+### 10. Parser de tabela HTML
 
 Arquivo:
 
@@ -493,13 +702,19 @@ Responsabilidades:
 Formato esperado por registro:
 
 ```text
-codigo
-page_url
+fabricante
+modelo
+ano
+versao
+codigo_ficha
+url_ficha
 page_title
 group
 field
 value
 image_urls
+collection_status
+raw_html_path
 ```
 
 Campos esperados nas fichas:
@@ -525,7 +740,7 @@ Campos esperados nas fichas:
 - Consumo
 - Autonomia
 
-### 9. Salvar raw HTML
+### 11. Salvar raw HTML
 
 O HTML bruto deve ser preservado em:
 
@@ -546,12 +761,12 @@ Motivo:
 - reduz risco de bloqueio
 - cria evidencia local para auditoria de parsing
 
-### 10. Salvar dados estruturados
+### 12. Salvar dados estruturados
 
 Script:
 
 ```text
-scripts/carrosnaweb_ingestion/05_parse_fichas.py
+scripts/carrosnaweb_ingestion/07_parse_fichas.py
 ```
 
 Entrada:
@@ -568,7 +783,7 @@ scripts/carrosnaweb_ingestion/data/processed/ficha_tecnica.csv
 
 O CSV deve consolidar todos os registros extraidos dos HTMLs brutos.
 
-### 11. Rodar validacoes de qualidade
+### 13. Rodar validacoes de qualidade
 
 Validacoes iniciais:
 
@@ -583,14 +798,28 @@ print(df["fabricante"].nunique())
 df = pd.read_csv("data/discovery/modelos.csv")
 print(df.shape)
 print(df.head())
-print(df["url"].duplicated().sum())
+print(df["url_modelo"].duplicated().sum())
+```
+
+```python
+df = pd.read_csv("data/discovery/anos_modelo.csv")
+print(df.shape)
+print(df.head())
+print(df["url_ano"].duplicated().sum())
+```
+
+```python
+df = pd.read_csv("data/discovery/anos_modelo_validos.csv")
+print(df.shape)
+print(df["status"].value_counts(dropna=False))
+print(df["has_ficha_links"].value_counts(dropna=False))
 ```
 
 ```python
 df = pd.read_csv("data/discovery/fichas.csv")
 print(df.shape)
 print(df.head())
-print(df["codigo"].duplicated().sum())
+print(df["codigo_ficha"].duplicated().sum())
 ```
 
 ```python
@@ -650,6 +879,8 @@ print(f"[DEBUG] Grupo detectado: {current_group}")
 print(f"[DEBUG] Campo extraido: {field} = {value}")
 print(f"[DEBUG] Imagens encontradas no campo: {image_urls}")
 print(f"[ERROR] Erro ao processar codigo {codigo}: {exc}")
+print(sys.executable)
+print(sys.version)
 ```
 
 Depois que a fase 1 estiver validada, avaliar troca de `print` por `logging`.
@@ -672,10 +903,94 @@ Implementar:
 delay aleatorio
 sessao persistente
 discovery por links reais
+validacao de paginas de ano
 limite de itens por execucao
 status logging
 parada ao detectar captcha
 ```
+
+## Licoes aprendidas adicionais
+
+### Ambiente de execucao
+
+O scraper deve rodar em Python local real, terminal, PyCharm configurado
+corretamente ou ambiente cloud real. Nao validar scraping HTTP em ambiente web
+que transforme `requests` em `XMLHttpRequest`, porque isso pode produzir erro
+de CORS/ambiente e confundir o diagnostico.
+
+Sempre imprimir no topo dos scripts de diagnostico:
+
+```python
+import sys
+print(sys.executable)
+print(sys.version)
+```
+
+### Playwright
+
+Playwright fica permitido apenas como diagnostico ou alternativa futura. Ele nao
+deve ser a primeira solucao de coleta.
+
+Aprendizados:
+
+- Python 3.7 32-bit pode falhar com Playwright
+- Python 3.12 64-bit foi validado para importar Playwright
+- acessar ficha diretamente com Playwright tambem pode retornar erro 500
+- Playwright nao substitui a necessidade de navegar pelo fluxo publico correto
+
+Comando de diagnostico:
+
+```powershell
+python -c "from playwright.sync_api import sync_playwright; print('playwright ok')"
+```
+
+## Requirements sugerido
+
+Dependencias iniciais:
+
+```text
+requests
+beautifulsoup4
+pandas
+```
+
+Dependencia opcional apenas para diagnostico:
+
+```text
+playwright
+```
+
+Instalacao opcional do navegador para diagnostico com Playwright:
+
+```powershell
+pip install playwright
+playwright install chromium
+```
+
+Regra:
+
+- `requests`, `BeautifulSoup` e `pandas` sao o caminho principal do MVP
+- `playwright` nao deve virar dependencia obrigatoria enquanto a coleta por
+  sessao HTTP e discovery publico ainda estiver sendo validada
+
+## Proximo passo recomendado
+
+Antes de continuar para parser final de ficha tecnica, corrigir e validar a
+etapa `anos_modelo.csv`.
+
+Tarefa imediata:
+
+```text
+Criar validacao de url_ano:
+- abrir cada url_ano
+- registrar status HTTP
+- registrar final_url
+- verificar se contem fichadetalhe.asp
+- verificar se contem Ocorreu um erro
+- salvar apenas URLs validas em anos_modelo_validos.csv
+```
+
+Essa tarefa agora tambem esta refletida no roadmap do projeto.
 
 ## Roadmap de implementacao
 
@@ -686,8 +1001,10 @@ Criar estrutura:
 ```text
 scripts/carrosnaweb_ingestion/src/
 scripts/carrosnaweb_ingestion/data/discovery/
+scripts/carrosnaweb_ingestion/data/debug_html/
 scripts/carrosnaweb_ingestion/data/raw_html/fichas/
 scripts/carrosnaweb_ingestion/data/processed/
+scripts/carrosnaweb_ingestion/diagnostics/
 ```
 
 Criar arquivos base:
@@ -725,29 +1042,33 @@ Implementar:
 
 ```text
 scripts/carrosnaweb_ingestion/02_discover_modelos.py
-scripts/carrosnaweb_ingestion/03_discover_fichas.py
+scripts/carrosnaweb_ingestion/03_discover_anos.py
+scripts/carrosnaweb_ingestion/04_validate_anos.py
 ```
 
 Resultado esperado:
 
 ```text
 scripts/carrosnaweb_ingestion/data/discovery/modelos.csv
-scripts/carrosnaweb_ingestion/data/discovery/fichas.csv
+scripts/carrosnaweb_ingestion/data/discovery/anos_modelo.csv
+scripts/carrosnaweb_ingestion/data/discovery/anos_modelo_validos.csv
 ```
 
-### Prioridade 4 - HTML bruto e parser
+### Prioridade 4 - fichas, HTML bruto e parser
 
 Implementar:
 
 ```text
-scripts/carrosnaweb_ingestion/04_scrape_fichas.py
+scripts/carrosnaweb_ingestion/05_discover_fichas.py
+scripts/carrosnaweb_ingestion/06_scrape_fichas.py
 scripts/carrosnaweb_ingestion/src/parser.py
-scripts/carrosnaweb_ingestion/05_parse_fichas.py
+scripts/carrosnaweb_ingestion/07_parse_fichas.py
 ```
 
 Resultado esperado:
 
 ```text
+scripts/carrosnaweb_ingestion/data/discovery/fichas.csv
 scripts/carrosnaweb_ingestion/data/raw_html/fichas/<codigo>.html
 scripts/carrosnaweb_ingestion/data/processed/ficha_tecnica.csv
 ```
@@ -793,7 +1114,10 @@ Performance social -> YouTube
 A fase 1 estara pronta quando:
 
 - `fabricantes.csv` existir e tiver fabricantes unicos
-- `modelos.csv` existir e nao tiver URLs duplicadas relevantes
+- `modelos.csv` existir e nao tiver `url_modelo` duplicadas relevantes
+- `anos_modelo.csv` existir e tiver anos extraidos por fabricante/modelo
+- `anos_modelo_validos.csv` existir e separar `valid_year_page`,
+  `no_ficha_links`, `site_error`, `http_error` e `unexpected_page`
 - `fichas.csv` existir e tiver codigos unicos descobertos por catalogo
 - `fichas_scrape_status.csv` registrar status de coleta
 - HTML bruto de uma amostra limitada estiver salvo localmente
@@ -814,5 +1138,5 @@ deve concluir:
 ## Commit sugerido
 
 ```text
-docs(roadmap): adiciona plano de ingestao carrosnaweb
+docs(scraper): documenta aprendizado do pipeline carrosweb
 ```
