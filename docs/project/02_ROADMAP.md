@@ -80,11 +80,9 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 - [ ] Implementar MVP online com overview, creators e crescimento semanal.
 - [ ] Exibir status de qualidade dos dados antes dos rankings.
 - [x] Garantir que o app use Supabase sob demanda sem expor service role key.
-- [x] Criar app Streamlit inicial consumindo as views do Supabase.
-- [x] Aplicar tema visual do dashboard com fundo em escala de cinza, sidebar escura, cards contrastados e pictos.
-- [x] Aplicar views de Data Quality do dashboard: guardrail legado e posts mortos/validados.
-- [x] Validar cadastro de nova entity e novo criador via Streamlit com RPC controlada. Caso validado: `Autoesporte`, `creator_id=55`, `entity_id=52`.
-- [ ] Acompanhar nos proximos dias se o worker incorpora o novo criador validado ao ciclo normal de discovery/coleta.
+- [ ] Criar app Streamlit inicial consumindo as views do Supabase.
+- [ ] Aplicar tema visual do dashboard com fundo em escala de cinza, sidebar escura, cards contrastados e pictos.
+- [ ] Aplicar views de Data Quality do dashboard: guardrail legado e posts mortos/validados.
 
 ### Direcao desta frente
 

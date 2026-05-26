@@ -66,13 +66,6 @@ considerada incompleta.
 - [entity_intake_process.md](/C:/social_media-analytics/docs/data_model/entity_intake_process.md)
 - [table_organization_v2.md](/C:/social_media-analytics/docs/data_model/table_organization_v2.md)
 
-Status recente:
-
-- cadastro de criadores via Streamlit validado em 2026-05-26
-- caso validado: `Autoesporte`, `creator_id=55`, `entity_id=52`
-- pendente: acompanhar se os workers passam a incorporar o novo criador ao
-  ciclo normal de discovery/coleta
-
 ## 2. Dados de fontes externas
 
 ### Escopo e plano geral
@@ -95,9 +88,6 @@ Status recente:
 - [16_ONLINE_DASHBOARD_SUPABASE_SPEC.md](/C:/social_media-analytics/docs/dashboard/16_ONLINE_DASHBOARD_SUPABASE_SPEC.md)
 - [29_STREAMLIT_DASHBOARD_EXECUTION_PLAN.md](/C:/social_media-analytics/docs/dashboard/29_STREAMLIT_DASHBOARD_EXECUTION_PLAN.md)
 - [31_DEAD_POST_REVIEW_STREAMLIT_SPEC.md](/C:/social_media-analytics/docs/dashboard/31_DEAD_POST_REVIEW_STREAMLIT_SPEC.md)
-- [32_EXTERNAL_DATA_INTAKE_STREAMLIT_SPEC.md](/C:/social_media-analytics/docs/dashboard/32_EXTERNAL_DATA_INTAKE_STREAMLIT_SPEC.md)
-- [33_CREATOR_VIEW_STREAMLIT_SPEC.md](/C:/social_media-analytics/docs/dashboard/33_CREATOR_VIEW_STREAMLIT_SPEC.md)
-- [34_CREATOR_WEEKLY_TIMESERIES_CONTRACT.md](/C:/social_media-analytics/docs/dashboard/34_CREATOR_WEEKLY_TIMESERIES_CONTRACT.md)
 
 ## 4. Documentacao transversal
 

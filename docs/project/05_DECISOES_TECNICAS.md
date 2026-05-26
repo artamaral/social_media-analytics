@@ -271,48 +271,6 @@ Diretriz de implementacao:
 
 ---
 
-## Cadastro de criadores via Streamlit com RPC controlada
-
-Data:
-
-- 2026-05-26
-
-Decisao:
-
-- usar a tela `Cadastro > Criadores` como caminho preferencial para cadastrar
-  nova entity e novo creator
-- manter o fluxo de governanca baseado em `public.entity_intake`
-- publicar uma linha de intake por vez por RPC controlada, usando
-  `public.publish_entity_intake_entry(p_intake_id)`
-- cadastrar o creator por RPC separada, usando
-  `public.create_creator_from_resolved_entity(...)`
-- nao usar SQL livre, `service role key` ou escrita direta em
-  `public.entities` / `public.entity_sub_niches` na UI
-
-Validacao:
-
-- caso validado: `Autoesporte`
-- `creator_id`: `55`
-- `entity_id`: `52`
-- `channel_id`: `UCc6jv88ebCrDVxJQUjZfGT`
-- subnichos vinculados: `compra`, `noticia`, `review`, `teste`
-- resultado: cadastro validado com subnicho e visivel na view de criadores do
-  Streamlit
-
-Pendente:
-
-- verificar nos proximos dias se o worker passou a incorporar o novo criador no
-  ciclo normal de discovery/coleta.
-
-Motivo:
-
-- reduzir erro manual de cadastro
-- manter auditabilidade do intake
-- evitar que a operacao dependa do Supabase SQL Editor para o fluxo comum
-- preservar a separacao entre entity, subnicho e creator
-
----
-
 ## Data Quality do dashboard com dois KPIs operacionais
 
 Data:
