@@ -361,6 +361,40 @@ Documento de referencia:
 
 ---
 
+## Migracao do worker creator analytics para us-central1
+
+Data:
+
+- 2026-05-26
+
+Decisao:
+
+- migrar o worker creator analytics para a regiao `us-central1` em execucao
+  controlada
+- usar a migracao como experimento operacional de reducao de preco/custo
+- nao considerar a regiao definitiva antes de validar execucao correta e
+  economia real
+
+Motivo:
+
+- avaliar se `us-central1` reduz o custo operacional do worker sem degradar
+  confiabilidade
+- manter o worker em ambiente mais barato caso a execucao, quota e escritas no
+  Supabase permaneçam saudaveis
+
+Validacao obrigatoria:
+
+- confirmar startup do worker na nova regiao
+- confirmar que `YOUTUBE_API_KEY` e demais variaveis estao presentes no runtime
+- confirmar chamadas `200` para a YouTube Data API
+- confirmar efeitos esperados no Supabase
+- comparar custo diario, duracao media, taxa de erro e consumo de quota com a
+  operacao anterior
+- registrar resultado em `docs/project/04_PIPELINE_STATUS.md` antes de fechar a
+  validacao
+
+---
+
 ## Data Quality do dashboard com dois KPIs operacionais
 
 Data:

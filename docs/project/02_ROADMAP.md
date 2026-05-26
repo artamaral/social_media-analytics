@@ -26,6 +26,7 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 - [ ] Implementar monitoramento operacional do worker horario com KPIs de fluxo: `itens_atrasados`, `at_risk_bootstrap` e `recovery_low`.
 - [ ] Prioridade alta: revisar a regra de calculo de `next_check` com base nos sinais operacionais do worker horario e nos intervalos observados no dashboard.
 - [ ] Implementar worker separado de discovery inicial para novos creators, seguindo `docs/social_media/34_CREATOR_ONBOARDING_DISCOVERY_WORKER_SPEC.md`.
+- [ ] Acompanhar e validar a migracao do worker creator analytics para `us-central1`: confirmar execucao correta, variaveis de ambiente, chamadas YouTube, efeitos no Supabase e reducao real de custo antes de tornar a regiao definitiva.
 
 ### Prioridade estrategica - modelo de priorizacao
 

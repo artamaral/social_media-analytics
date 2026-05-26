@@ -41,6 +41,16 @@ Implementacao:
 
 - `scripts/cloud_run/youtube_creator_onboarding/main.py`
 - `scripts/cloud_run/youtube_creator_onboarding/requirements.txt`
+- `scripts/cloud_run/youtube_creator_onboarding/Procfile`
+
+Comando de start esperado no Cloud Run:
+
+```text
+functions-framework --target=run --host=0.0.0.0 --port=${PORT}
+```
+
+Esse comando e necessario para que o container escute a porta definida pela
+variavel `PORT` do Cloud Run, normalmente `8080`.
 
 Variaveis de ambiente esperadas:
 

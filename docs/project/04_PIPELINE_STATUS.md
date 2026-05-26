@@ -27,6 +27,24 @@ O objetivo e manter uma leitura simples de:
 - Objetivo: descoberta e ingestao principal de posts
 - Observacao: continua sendo a origem normal de novos posts e alimenta a fila
 
+#### Worker creator analytics
+
+- Status: migrado em execucao controlada
+- Regiao atual: `us-central1`
+- Motivo da migracao: avaliar reducao de preco/custo operacional em relacao a
+  regiao anterior
+- Escopo: worker de analytics/coleta de creators
+- Validacao pendente:
+  - confirmar que o worker inicia corretamente na nova regiao
+  - confirmar que `YOUTUBE_API_KEY` esta disponivel no runtime
+  - confirmar chamadas bem-sucedidas para YouTube Data API
+  - confirmar inserts/atualizacoes esperados no Supabase
+  - comparar custo, duracao media, erros e quota consumida contra a operacao
+    anterior
+- Leitura operacional:
+  - a migracao para `us-central1` ainda nao deve ser considerada definitiva ate
+    haver evidencia de execucao correta e reducao real de custo
+
 ### 1.2 Worker de metricas de posts
 
 - Status: operacional
