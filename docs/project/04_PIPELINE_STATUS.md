@@ -381,9 +381,16 @@ Proxima avaliacao:
 #### Estado atual
 
 - existe plano detalhado para discovery por links reais do catalogo
-- a fase 1 prevista usa CSV e HTML bruto locais antes de schema definitivo no
-  Supabase
-- ainda nao ha implementacao principal versionada em `scripts/carrosnaweb_ingestion/`
+- ja existe codigo versionado para diagnostico de acesso, parser exploratorio
+  de tabela e discovery de modelos em `scripts/carrosnaweb_ingestion/`
+- o diagnostico recente conseguiu retornar `success` para fichas reais como
+  `44763`, `22547` e `4801`
+- a captura real ainda encontra captcha em alguns padroes e por isso os dados
+  ainda nao estao sendo obtidos com confiabilidade suficiente
+- por isso, a frente ainda nao deve ser tratada como schema definitivo nem como
+  pipeline estruturado
+- ja existe parser de `table/tr/td` funcionando sobre HTML bruto, mas o fluxo
+  completo ainda nao foi consolidado como rotina repetivel
 
 ### 2.3 SENATRAN / RENAVAM
 

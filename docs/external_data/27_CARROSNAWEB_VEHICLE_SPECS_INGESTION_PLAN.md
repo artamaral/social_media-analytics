@@ -7,6 +7,26 @@ Data: 2026-05-19
 Planejar a inclusao dos dados do Carros na Web no projeto como base estruturada
 de catalogo automotivo, modelos e ficha tecnica.
 
+## Status atual consolidado
+
+- a fonte continua relevante como catalogo tecnico
+- a descoberta inicial de fabricantes funcionou e encontrou aproximadamente
+  `127` fabricantes
+- a descoberta de modelos funcionou melhor quando passou a considerar links
+  `catalogomodelo.asp?` e `catalogo.asp?`, com sessao aquecida e CSV
+  persistido
+- a nova camada descoberta no fluxo e `anos_modelo.csv`: modelos levam para
+  anos, e anos podem levar para fichas
+- algumas URLs de ano nao contem links de ficha e podem retornar pagina de erro
+- a captura direta de fichas continua sujeita a erro 500, pagina de erro,
+  validacao/captcha e ambiente Python incorreto
+- o diagnostico de acesso ja conseguiu retornar `success` para fichas reais
+  como `44763`, `22547` e `4801`
+- o parser de tabela dentro do HTML ja conseguiu extrair linhas tecnicas a
+  partir de tags `table` / `tr` / `td`
+- por isso, a frente deve validar primeiro `anos_modelo.csv` e gerar
+  `anos_modelo_validos.csv` antes de qualquer parser final ou schema definitivo
+  no Supabase
 Esta fonte e importante porque complementa as bases de mercado com detalhes de
 produto:
 
@@ -103,6 +123,18 @@ Discovery de catalogo
   -> consumo por Streamlit e ChatGPT
 ```
 
+Resumo operacional consolidado para a frente:
+
+```text
+fabricantes -> modelos -> fichas -> parser -> atualizacao incremental
+```
+
+Observacao importante:
+
+- esse fluxo resume a direcao do produto
+- quando o catalogo do site exigir uma etapa intermediaria por ano, ela continua
+  valida como subetapa tecnica entre `modelos` e `fichas`
+
 ## Escopo da fase 1
 
 Objetivo da fase 1:
@@ -192,6 +224,20 @@ Principios a reaproveitar:
 - manter artefatos intermediarios rastreaveis
 - validar antes de considerar dado pronto para analise
 - nao escrever em camada final sem revisao da qualidade
+
+Estado atual de codigo versionado no repo:
+
+- `scripts/carrosnaweb_ingestion/diagnostics/check_ficha_access.py` para
+  diagnostico de acesso, classificacao de resposta, salvamento de HTML bruto e
+  extracao exploratoria de tabela
+- `scripts/carrosnaweb_ingestion/src/carrosnaweb_client.py` como cliente HTTP
+  compartilhado com sessao aquecida
+- `scripts/carrosnaweb_ingestion/02_discover_modelos.py` para a camada
+  `fabricantes -> modelos`
+- `scripts/carrosnaweb_ingestion/src/parser.py` para extrair a ficha tecnica a
+  partir de `table/tr/td`
+- `scripts/carrosnaweb_ingestion/07_parse_fichas.py` para converter HTML bruto
+  em CSV estruturado
 
 ## Cliente HTTP
 
@@ -305,8 +351,10 @@ Logica:
 
 - ler fabricantes
 - acessar cada URL de fabricante
-- encontrar links contendo `catalogo.asp?`
-- extrair o nome do modelo via query string `varnome`
+- encontrar links contendo `catalogomodelo.asp?` ou `catalogo.asp?`
+- extrair o nome do modelo via query string `modelo`, `varnome` ou texto do
+  link
+- capturar `codigo_modelo` quando existir na query string
 - remover duplicados por URL
 
 Saida:
@@ -320,7 +368,11 @@ Colunas esperadas:
 ```text
 fabricante
 modelo
-url
+codigo_modelo
+url_modelo
+href_original
+texto_link
+params
 ```
 
 ### 4. Salvar modelos.csv
@@ -659,6 +711,107 @@ status logging
 parada ao detectar captcha
 ```
 
+## Licoes aprendidas adicionais
+
+### Ambiente de execucao
+
+O scraper deve rodar em Python local real, terminal, PyCharm configurado
+corretamente ou ambiente cloud real. Nao validar scraping HTTP em ambiente web
+que transforme `requests` em `XMLHttpRequest`, porque isso pode produzir erro
+de CORS/ambiente e confundir o diagnostico.
+
+Sempre imprimir no topo dos scripts de diagnostico:
+
+```python
+import sys
+print(sys.executable)
+print(sys.version)
+```
+
+### Playwright
+
+Playwright fica permitido apenas como diagnostico ou alternativa futura. Ele nao
+deve ser a primeira solucao de coleta.
+
+Aprendizados:
+
+- Python 3.7 32-bit pode falhar com Playwright
+- Python 3.12 64-bit foi validado para importar Playwright
+- acessar ficha diretamente com Playwright tambem pode retornar erro 500
+- Playwright nao substitui a necessidade de navegar pelo fluxo publico correto
+
+Comando de diagnostico:
+
+```powershell
+python -c "from playwright.sync_api import sync_playwright; print('playwright ok')"
+```
+
+## Requirements sugerido
+
+Dependencias iniciais:
+
+```text
+requests
+beautifulsoup4
+pandas
+```
+
+Dependencia opcional apenas para diagnostico:
+
+```text
+playwright
+```
+
+Instalacao opcional do navegador para diagnostico com Playwright:
+
+```powershell
+pip install playwright
+playwright install chromium
+```
+
+Regra:
+
+- `requests`, `BeautifulSoup` e `pandas` sao o caminho principal do MVP
+- `playwright` nao deve virar dependencia obrigatoria enquanto a coleta por
+  sessao HTTP e discovery publico ainda estiver sendo validada
+
+## Proximo passo recomendado
+
+Antes de continuar para parser final de ficha tecnica, corrigir e validar a
+etapa `anos_modelo.csv`.
+
+Tarefa imediata:
+
+```text
+Criar validacao de url_ano:
+- abrir cada url_ano
+- registrar status HTTP
+- registrar final_url
+- verificar se contem fichadetalhe.asp
+- verificar se contem Ocorreu um erro
+- salvar apenas URLs validas em anos_modelo_validos.csv
+```
+
+Essa tarefa agora tambem esta refletida no roadmap do projeto.
+
+## Parser validado no HTML
+
+O comportamento validado na ficha atual e:
+
+- os dados tecnicos estao dentro de estruturas `table` no HTML
+- a extracao precisa percorrer `tr` e `td`
+- uma mesma linha pode conter 2 colunas utilitarias ou 4 celulas no padrao
+  `campo -> valor -> campo -> valor`
+- grupos como `MOTOR`, `TRANSMISSAO` e semelhantes podem ser inferidos por
+  linhas com texto unico em caixa alta
+
+Direcao atual do parser:
+
+- salvar HTML bruto localmente
+- extrair pares `field` e `value`
+- manter `group`
+- preservar `image_urls` quando houver imagem embutida no valor
+- produzir formato longo para futura normalizacao
 ## Roadmap de implementacao
 
 ### Prioridade 1 - estrutura
