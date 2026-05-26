@@ -1,3 +1,4 @@
+import argparse
 import os
 import re
 from urllib.parse import parse_qs, urljoin, urlparse
@@ -20,6 +21,47 @@ def safe_filename(text):
     return re.sub(r"[^a-zA-Z0-9_-]+", "_", str(text)).strip("_")
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Extrai modelos do Carros na Web a partir de fabricantes.csv."
+    )
+    parser.add_argument(
+        "--fabricantes-csv",
+        default=FABRICANTES_CSV,
+        help="Caminho do CSV de fabricantes.",
+    )
+    parser.add_argument(
+        "--output-csv",
+        default=OUTPUT_CSV,
+        help="Caminho do CSV final de modelos.",
+    )
+    return parser.parse_args()
+
+
+def resolve_fabricantes_csv(csv_path):
+    if os.path.exists(csv_path):
+        return csv_path
+
+    search_roots = [
+        DATA_DIR,
+        os.path.join(SCRIPT_DIR, "data"),
+        SCRIPT_DIR,
+    ]
+    for root in search_roots:
+        for current_root, _, files in os.walk(root):
+            if "fabricantes.csv" in files:
+                candidate = os.path.join(current_root, "fabricantes.csv")
+                print(f"[LOAD] fabricantes.csv encontrado automaticamente em: {candidate}")
+                return candidate
+
+    raise FileNotFoundError(
+        "Nao foi encontrado fabricantes.csv. "
+        f"Caminho esperado: {csv_path}. "
+        "Gere primeiro a camada de fabricantes ou informe "
+        "--fabricantes-csv com o caminho correto."
+    )
+
+
 def save_debug_html(html, fabricante):
     os.makedirs(DEBUG_DIR, exist_ok=True)
     path = os.path.join(DEBUG_DIR, f"{safe_filename(fabricante)}.html")
@@ -31,6 +73,7 @@ def save_debug_html(html, fabricante):
 
 
 def load_fabricantes_csv(csv_path):
+    csv_path = resolve_fabricantes_csv(csv_path)
     df = pd.read_csv(csv_path)
 
     print(f"[LOAD] Fabricantes carregados: {len(df)}")
@@ -223,11 +266,12 @@ def save_csv(df, output_path):
 
 
 def main():
+    args = parse_args()
     session = create_session()
-    fabricantes_df = load_fabricantes_csv(FABRICANTES_CSV)
+    fabricantes_df = load_fabricantes_csv(args.fabricantes_csv)
     modelos_df = scrape_modelos(fabricantes_df, session)
     modelos_df = clean_modelos(modelos_df)
-    save_csv(modelos_df, OUTPUT_CSV)
+    save_csv(modelos_df, args.output_csv)
 
     print("\nFINALIZADO")
     print("Total modelos:", len(modelos_df))

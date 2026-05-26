@@ -227,6 +227,8 @@ Principios a reaproveitar:
 
 Estado atual de codigo versionado no repo:
 
+- `scripts/carrosnaweb_ingestion/01_discover_fabricantes.py` para gerar a
+  primeira camada de discovery em CSV
 - `scripts/carrosnaweb_ingestion/diagnostics/check_ficha_access.py` para
   diagnostico de acesso, classificacao de resposta, salvamento de HTML bruto e
   extracao exploratoria de tabela
@@ -304,6 +306,22 @@ Saida:
 scripts/carrosnaweb_ingestion/data/discovery/fabricantes.csv
 ```
 
+Localizacao canonicamente esperada no repo:
+
+```text
+C:\social_media-analytics\scripts\carrosnaweb_ingestion\data\discovery\fabricantes.csv
+```
+
+Necessidade operacional:
+
+- esse arquivo precisa existir antes de rodar
+  `scripts/carrosnaweb_ingestion/02_discover_modelos.py`
+- o script de modelos procura primeiro esse caminho
+- se ele nao existir, o script de modelos tenta localizar `fabricantes.csv`
+  automaticamente em subpastas proximas
+- mesmo com esse fallback, o caminho acima deve ser tratado como fonte de
+  verdade para evitar ambiguidade
+
 Colunas esperadas:
 
 ```text
@@ -345,6 +363,18 @@ Entrada:
 
 ```text
 scripts/carrosnaweb_ingestion/data/discovery/fabricantes.csv
+```
+
+Localizacao canonicamente esperada no repo:
+
+```text
+C:\social_media-analytics\scripts\carrosnaweb_ingestion\data\discovery\fabricantes.csv
+```
+
+Saida canonicamente esperada:
+
+```text
+C:\social_media-analytics\scripts\carrosnaweb_ingestion\data\discovery\modelos.csv
 ```
 
 Logica:
@@ -793,6 +823,26 @@ Criar validacao de url_ano:
 ```
 
 Essa tarefa agora tambem esta refletida no roadmap do projeto.
+
+## Dependencia entre CSVs
+
+Contrato atual entre as duas primeiras etapas:
+
+```text
+01_discover_fabricantes.py
+  output -> scripts/carrosnaweb_ingestion/data/discovery/fabricantes.csv
+
+02_discover_modelos.py
+  input  -> scripts/carrosnaweb_ingestion/data/discovery/fabricantes.csv
+  output -> scripts/carrosnaweb_ingestion/data/discovery/modelos.csv
+```
+
+Implicacao pratica:
+
+- se `fabricantes.csv` ainda nao foi gerado, `02_discover_modelos.py` nao deve
+  ser executado
+- o fluxo correto no repo passa a ser rodar primeiro o script de fabricantes e
+  so depois o script de modelos
 
 ## Parser validado no HTML
 

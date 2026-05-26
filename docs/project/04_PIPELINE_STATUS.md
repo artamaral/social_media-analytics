@@ -383,6 +383,9 @@ Proxima avaliacao:
 - existe plano detalhado para discovery por links reais do catalogo
 - ja existe codigo versionado para diagnostico de acesso, parser exploratorio
   de tabela e discovery de modelos em `scripts/carrosnaweb_ingestion/`
+- ja existe script versionado para discovery de fabricantes, que deve gerar
+  `scripts/carrosnaweb_ingestion/data/discovery/fabricantes.csv` antes da etapa
+  de modelos
 - o diagnostico recente conseguiu retornar `success` para fichas reais como
   `44763`, `22547` e `4801`
 - a captura real ainda encontra captcha em alguns padroes e por isso os dados
