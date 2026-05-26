@@ -268,7 +268,7 @@ def inject_theme() -> None:
         }
 
         .creator-kpi-grid .metric-card-body {
-            padding: 0.9rem 0.9rem;
+            padding: 0.9rem 0.6rem;
         }
 
         .creator-kpi-grid .metric-value {
