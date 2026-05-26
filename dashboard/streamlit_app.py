@@ -1291,7 +1291,7 @@ def ensure_creator_intake_form_defaults(sub_niche_names: list[str]) -> None:
         st.session_state["creator_intake_selected_sub_niches"] = [sub_niche_names[0]]
 
 
-def reset_creator_intake_form(sub_niche_names: list[str]) -> None:
+def apply_creator_intake_form_reset(sub_niche_names: list[str]) -> None:
     st.session_state["creator_intake_raw_name"] = ""
     st.session_state["creator_intake_creator_type"] = "mid-tier"
     st.session_state["creator_intake_platform"] = "youtube"
@@ -1313,6 +1313,12 @@ def reset_creator_intake_form(sub_niche_names: list[str]) -> None:
         "creator_intake_last_rows",
     ]:
         st.session_state[key] = [] if key.endswith("_matches") or key.endswith("_rows") else None
+
+    st.session_state["creator_intake_reset_pending"] = False
+
+
+def schedule_creator_intake_form_reset() -> None:
+    st.session_state["creator_intake_reset_pending"] = True
 
 
 def build_creator_created_summary(
@@ -2322,6 +2328,8 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
     with tab_form:
         sub_niche_rows, sub_niche_error = get_sub_niches_for_intake()
         sub_niche_names = [str(row["sub_niche_name"]) for row in sub_niche_rows if row.get("sub_niche_name")]
+        if st.session_state.get("creator_intake_reset_pending"):
+            apply_creator_intake_form_reset(sub_niche_names)
         ensure_creator_intake_form_defaults(sub_niche_names)
 
         if sub_niche_error:
@@ -2555,7 +2563,7 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
                         f"Followers {format_int(creator_summary['followers'])} | "
                         f"Subnichos {creator_summary['sub_niches']}."
                     )
-                    reset_creator_intake_form(sub_niche_names)
+                    schedule_creator_intake_form_reset()
                     st.rerun()
 
         with col_right:
