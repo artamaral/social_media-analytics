@@ -25,8 +25,8 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 - [ ] Validar atualizacao de `collected_at`.
 - [ ] Implementar monitoramento operacional do worker horario com KPIs de fluxo: `itens_atrasados`, `at_risk_bootstrap` e `recovery_low`.
 - [ ] Prioridade alta: revisar a regra de calculo de `next_check` com base nos sinais operacionais do worker horario e nos intervalos observados no dashboard.
-- [ ] Implementar worker separado de discovery inicial para novos creators, seguindo `docs/social_media/34_CREATOR_ONBOARDING_DISCOVERY_WORKER_SPEC.md`.
 - [ ] Acompanhar e validar a migracao do worker creator analytics para `us-central1`: confirmar execucao correta, variaveis de ambiente, chamadas YouTube, efeitos no Supabase e reducao real de custo antes de tornar a regiao definitiva.
+- [ ] Acompanhar queda do KPI `Monitoramento de posts sem checagem` apos onboarding de novos creators; baseline observado apos cargas recentes: `239` posts com menos de `3` checagens.
 
 ### Prioridade estrategica - modelo de priorizacao
 
@@ -41,6 +41,7 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 - [x] Implementar limpeza temporaria do backlog de guardrail. Rotina em execucao controlada via Windows Scheduler; proximo passo e monitorar conclusao.
 - [x] Pausar promocao do score hibrido `v2` para a fila ativa. O `v2` fica em segundo plano e a prioridade analitica passa a ser `hot now` temporal.
 - [x] Implementar historico de followers de creators por snapshot. Validado em 2026-05-22 com inserts reais em `creator_metrics_history` e sincronizacao dos campos correntes em `creators`.
+- [x] Implementar worker separado de discovery inicial para novos creators. Validado em 2026-05-26 com chamada manual (`Autoesporte`, `creator_id=55`) e fluxo automatico pelo Streamlit (`Carros com Tiago`, `creator_id=57`, `50` posts processados).
 
 ## Frente 2. Dados de fontes externas
 
@@ -84,7 +85,7 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 - [x] Ligar o `Cadastro de Criadores` ao SQL com escrita controlada em `entity_intake` e etapa final de cadastro em `creators`.
 - [x] Ligar a revisao de `Cadastro de Criadores` a `v_entity_intake_review` e publicacao por RPC controlada.
 - [x] Validar cadastro de nova entity e novo criador via Streamlit com RPC controlada. Caso validado: `Autoesporte`, `creator_id=55`, `entity_id=52`.
-- [ ] Acionar worker de discovery inicial apos cadastro de novo creator, sem criar arquivo separado de integracao Streamlit enquanto o contrato estiver centralizado no spec social media.
+- [x] Acionar worker de discovery inicial apos cadastro de novo creator, sem criar arquivo separado de integracao Streamlit enquanto o contrato estiver centralizado no spec social media. Validado com `Carros com Tiago`, `creator_id=57`, `50` posts processados e `post_count=50` na view do dashboard.
 - [ ] Ligar o `Cadastro Fenabrave` ao SQL com registro real de metadados em `market_source_files`.
 - [ ] Definir e implementar a estrategia segura de upload do PDF Fenabrave a partir do app, sem expor credenciais privilegiadas.
 - [ ] Ligar o `Cadastro Fenabrave` ao preview operacional da extracao e aos status reais do periodo.

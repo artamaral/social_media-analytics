@@ -359,6 +359,24 @@ Documento de referencia:
 
 - `docs/social_media/34_CREATOR_ONBOARDING_DISCOVERY_WORKER_SPEC.md`
 
+Validacao:
+
+- chamada manual validada com `Autoesporte`, `creator_id = 55`, retornando
+  `processed_posts = 50`
+- fallback manual documentado para casos em que o Streamlit cria o creator, mas
+  o discovery automatico nao popula posts
+- fluxo automatico via Streamlit validado com `Carros com Tiago`,
+  `creator_id = 57`, `channel_id = UC_dEiS87i1OEiUc5iPfXRKA`
+- resultado na UI: `Discovery inicial concluido: 50 posts processados.`
+- resultado em `v_dashboard_creator_summary`: `post_count = 50`,
+  `total_views = 9941797`, `latest_post_date = 2026-05-25 22:59:39`,
+  `latest_collected_at = null`
+- `latest_collected_at = null` e esperado nessa etapa, pois o onboarding nao
+  grava snapshots; o preenchimento depende do worker `postMetrics`
+- apos a inclusao de novos creators e cargas recentes, o KPI
+  `Monitoramento de posts sem checagem` subiu para `239`, comportamento
+  esperado ate a fila normal coletar os snapshots
+
 ---
 
 ## Migracao do worker creator analytics para us-central1

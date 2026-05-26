@@ -101,7 +101,53 @@ O objetivo e manter uma leitura simples de:
   - analisar distribuicao por banda, idade do post e cobertura minima antes de
     alterar `calculate_next_check(...)`
 
-### 1.3 Backfill offline de `legacy_low` - fase 1
+### 1.3 Worker de discovery inicial de novos creators
+
+- Status: implementado e validado
+- Implementacao principal:
+  - `scripts/cloud_run/youtube_creator_onboarding/main.py`
+- Runtime:
+  - Cloud Run
+  - Regiao: `us-central1`
+  - URL: `https://youtube-creator-onboarding-750306104774.us-central1.run.app`
+- Acionamento preferencial:
+  - automatico pelo Streamlit apos a acao `Cadastrar criador no Supabase`
+  - o app envia apenas `creator_id`
+  - o worker busca `channel_id` em `public.creators`
+- Fallback operacional:
+  - chamada manual via PowerShell quando o automatico falhar ou nao popular
+    posts
+  - procedimento documentado em
+    `docs/social_media/34_CREATOR_ONBOARDING_DISCOVERY_WORKER_SPEC.md`
+- Validacao manual inicial:
+  - `creator_id`: `55`
+  - creator: `Autoesporte`
+  - resultado: `processed_posts = 50`
+  - validacao no Supabase: `posts_total = 50` e `queue_total = 50`
+- Validacao automatica pelo Streamlit:
+  - `creator_id`: `57`
+  - creator: `Carros com Tiago`
+  - `channel_id`: `UC_dEiS87i1OEiUc5iPfXRKA`
+  - mensagem na UI: `Discovery inicial concluido: 50 posts processados.`
+  - view `v_dashboard_creator_summary`:
+    - `post_count = 50`
+    - `total_views = 9941797`
+    - `latest_post_date = 2026-05-25 22:59:39`
+    - `latest_collected_at = null`
+- Leitura operacional:
+  - `latest_collected_at = null` e esperado logo apos o onboarding, porque esse
+    worker faz discovery de posts e nao grava snapshots em
+    `post_metrics_history`
+  - apos a inclusao de novos creators e carga manual/automatica de posts, o KPI
+    `Monitoramento de posts sem checagem` subiu para `239`
+  - esse aumento e esperado ate o `postMetrics` inserir snapshots e reduzir os
+    posts com menos de `3` checagens
+- Proximo acompanhamento:
+  - monitorar queda do total de posts com menos de `3` checagens
+  - confirmar que os posts novos entram em `post_metrics_history` pelo worker
+    normal
+
+### 1.4 Backfill offline de `legacy_low` - fase 1
 
 - Status: concluida
 - Implementacao: `scripts/offline_backfill/legacy_low_backfill_phase1.py`
@@ -184,7 +230,7 @@ O objetivo e manter uma leitura simples de:
 - execucoes validadas ate agora: `1`
 - execucoes ainda pendentes estimadas: aproximadamente `10`
 
-### 1.4 Proximos checkpoints desta frente
+### 1.5 Proximos checkpoints desta frente
 
 #### Cleanup temporario do guardrail
 
@@ -276,12 +322,14 @@ Proxima avaliacao:
   - acceleration aparece praticamente nula no baseline
   - formula ainda precisa de recalibracao antes de promocao
 
-### 1.5 Problemas conhecidos desta frente
+### 1.6 Problemas conhecidos desta frente
 
 - posts seedados pela fase 1 nao saem imediatamente de `low`
 - o `bootstrap_low` continua sendo a principal fonte de `low`
 - sem guarda de cobertura minima, posts com menos de `3` checagens podem ficar
   para tras e recriar `legacy_low`
+- cargas de novos creators via onboarding aumentam temporariamente o total de
+  posts com menos de `3` checagens ate o `postMetrics` processar os snapshots
 - a fase 2 ainda nao foi iniciada
 - houve um incidente operacional no scheduler do Windows:
   - a tarefa ficou com a acao malformada
@@ -405,12 +453,13 @@ Proxima avaliacao:
   - `channel_id`: `UCc6jv88ebCrDVxJQUjZfGT`
   - subnichos: `compra`, `noticia`, `review`, `teste`
   - resultado: criador cadastrado com subnicho e visivel na view de criadores
-  - pendente: confirmar nos proximos dias se o worker incorporou o criador ao
-    ciclo normal de discovery/coleta
+  - onboarding automatico validado em 2026-05-26 com `Carros com Tiago`
+    (`creator_id = 57`) e `50` posts processados
 
 ### 3.4 Proximos checkpoints desta frente
 
-- acompanhar se o novo criador validado entra no ciclo normal dos workers
+- acompanhar se os posts novos criados pelo onboarding entram em
+  `post_metrics_history`
 - consolidar overview, creators e crescimento semanal
 - expor indicadores de qualidade dos dados antes dos rankings
 - manter consumo sob demanda do Supabase sem expor `service role key`

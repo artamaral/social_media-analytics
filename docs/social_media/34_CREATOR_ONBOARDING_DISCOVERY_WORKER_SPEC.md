@@ -271,6 +271,33 @@ Resultado esperado:
 - `validation_status = 'ok'`;
 - a segunda chamada para o mesmo `creator_id` deve retornar `skipped`.
 
+## Validacao em producao
+
+Validacoes registradas em 2026-05-26:
+
+1. Chamada manual do worker:
+   - creator: `Autoesporte`
+   - `creator_id`: `55`
+   - resultado do worker: `processed_posts = 50`
+   - resultado no Supabase: `posts_total = 50` e `queue_total = 50`
+2. Fluxo automatico pelo Streamlit:
+   - creator: `Carros com Tiago`
+   - `creator_id`: `57`
+   - `channel_id`: `UC_dEiS87i1OEiUc5iPfXRKA`
+   - mensagem na UI: `Discovery inicial concluido: 50 posts processados.`
+   - view `v_dashboard_creator_summary`: `post_count = 50`,
+     `total_views = 9941797`, `latest_post_date = 2026-05-25 22:59:39`,
+     `latest_collected_at = null`
+
+Observacao:
+
+- `latest_collected_at = null` e esperado imediatamente apos o onboarding,
+  porque o worker faz discovery de posts e nao snapshots em
+  `post_metrics_history`.
+- Depois da entrada de novos posts, o KPI `Monitoramento de posts sem checagem`
+  pode subir temporariamente. Baseline observado apos as cargas recentes:
+  `239` posts com menos de `3` checagens.
+
 ## Validacoes obrigatorias
 
 Antes de considerar o worker saudavel:
