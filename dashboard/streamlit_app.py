@@ -4,6 +4,7 @@ import unicodedata
 
 import pandas as pd
 import plotly.express as px
+import requests
 import streamlit as st
 
 
@@ -1153,6 +1154,10 @@ def is_supabase_configured() -> bool:
     return bool(get_secret("SUPABASE_URL") and get_secret("SUPABASE_ANON_KEY"))
 
 
+def is_creator_onboarding_configured() -> bool:
+    return bool(get_secret("CREATOR_ONBOARDING_WORKER_URL") and get_secret("ONBOARDING_WORKER_TOKEN"))
+
+
 @st.cache_resource(show_spinner=False)
 def get_supabase_client():
     from supabase import create_client
@@ -1277,6 +1282,43 @@ def call_supabase_rpc(function_name: str, params: dict[str, Any] | None = None) 
         return response.data or [], None
     except Exception as exc:
         return [], f"Falha ao executar {function_name}: {exc}"
+
+
+def trigger_creator_onboarding(creator_id: int) -> tuple[dict[str, Any] | None, str | None]:
+    worker_url = get_secret("CREATOR_ONBOARDING_WORKER_URL")
+    worker_token = get_secret("ONBOARDING_WORKER_TOKEN")
+
+    if not worker_url or not worker_token:
+        return None, (
+            "Worker de discovery inicial nao configurado. "
+            "Adicione CREATOR_ONBOARDING_WORKER_URL e ONBOARDING_WORKER_TOKEN nos secrets."
+        )
+
+    try:
+        response = requests.post(
+            worker_url,
+            headers={"x-worker-token": worker_token},
+            json={"creator_id": creator_id},
+            timeout=90,
+        )
+    except requests.RequestException as exc:
+        return None, f"Falha ao chamar worker de discovery inicial: {exc}"
+
+    try:
+        payload = response.json()
+    except ValueError:
+        payload = {
+            "status": "error",
+            "error": response.text,
+        }
+
+    if response.status_code >= 400:
+        return payload, (
+            "Worker de discovery inicial retornou erro "
+            f"{response.status_code}: {payload}"
+        )
+
+    return payload, None
 
 
 @st.cache_data(ttl=300, show_spinner=False)
@@ -2211,6 +2253,8 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
                 st.session_state["creator_intake_entity_checked_name"] = raw_name
                 st.session_state["creator_intake_last_rows"] = []
                 st.session_state["creator_intake_creator_row"] = None
+                st.session_state["creator_intake_onboarding_result"] = None
+                st.session_state["creator_intake_onboarding_error"] = None
                 if error:
                     st.warning(error)
                 else:
@@ -2254,6 +2298,8 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
                 st.session_state["creator_intake_channel_matches"] = matches
                 st.session_state["creator_intake_channel_error"] = error
                 st.session_state["creator_intake_channel_checked_value"] = f"{platform}:{channel_id}"
+                st.session_state["creator_intake_onboarding_result"] = None
+                st.session_state["creator_intake_onboarding_error"] = None
                 if error:
                     st.warning(error)
                 elif matches:
@@ -2307,6 +2353,8 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
                 if created_rows:
                     clear_supabase_data_cache()
                     st.session_state["creator_intake_last_rows"] = created_rows
+                    st.session_state["creator_intake_onboarding_result"] = None
+                    st.session_state["creator_intake_onboarding_error"] = None
                     last_intake_rows = created_rows
                     st.success(f"{len(created_rows)} registro(s) enviado(s) para entity_intake.")
                 if errors:
@@ -2387,7 +2435,39 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
                     clear_supabase_data_cache()
                     st.session_state["creator_intake_creator_row"] = rows[0]
                     creator_created = rows[0]
-                    st.success(f"Criador cadastrado com id {rows[0]['creator_id']}.")
+                    creator_id = int(rows[0]["creator_id"])
+                    st.success(f"Criador cadastrado com id {creator_id}.")
+
+                    if platform == "youtube":
+                        with st.spinner("Executando discovery inicial do novo creator..."):
+                            onboarding_result, onboarding_error = trigger_creator_onboarding(creator_id)
+                    else:
+                        onboarding_result = {
+                            "status": "skipped",
+                            "reason": "platform_not_youtube",
+                            "creator_id": creator_id,
+                        }
+                        onboarding_error = None
+
+                    st.session_state["creator_intake_onboarding_result"] = onboarding_result
+                    st.session_state["creator_intake_onboarding_error"] = onboarding_error
+
+                    if onboarding_error:
+                        st.warning(onboarding_error)
+                    elif onboarding_result and onboarding_result.get("status") == "processed":
+                        st.success(
+                            "Discovery inicial concluido: "
+                            f"{int(onboarding_result.get('processed_posts') or 0)} posts processados."
+                        )
+                        clear_supabase_data_cache()
+                    elif onboarding_result and onboarding_result.get("status") == "skipped":
+                        reason = onboarding_result.get("reason")
+                        if reason == "platform_not_youtube":
+                            st.info("Discovery inicial ignorado: worker de onboarding e exclusivo para YouTube.")
+                        else:
+                            st.info("Discovery inicial ignorado: creator ja possui posts.")
+                    elif onboarding_result:
+                        st.info(f"Discovery inicial retornou status: {onboarding_result.get('status')}.")
 
         with col_right:
             st.markdown("### Leitura da UI")
@@ -2464,6 +2544,18 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
                 st.markdown("### Criador cadastrado")
                 st.json(creator_created)
 
+            onboarding_result = st.session_state.get("creator_intake_onboarding_result")
+            onboarding_error = st.session_state.get("creator_intake_onboarding_error")
+            if onboarding_result or onboarding_error:
+                st.markdown("### Discovery inicial")
+                if onboarding_error:
+                    st.warning(onboarding_error)
+                if onboarding_result:
+                    st.json(onboarding_result)
+            elif not is_creator_onboarding_configured():
+                st.markdown("### Discovery inicial")
+                st.info("Configure CREATOR_ONBOARDING_WORKER_URL e ONBOARDING_WORKER_TOKEN para acionar o worker apos o cadastro.")
+
             if local_warnings:
                 st.warning(" | ".join(local_warnings))
             else:
@@ -2488,11 +2580,21 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
         else:
             st.info("Nenhum registro encontrado em v_entity_intake_review.")
 
+        onboarding_result = st.session_state.get("creator_intake_onboarding_result")
+        onboarding_error = st.session_state.get("creator_intake_onboarding_error")
+        if onboarding_error:
+            onboarding_status = "atencao"
+        elif onboarding_result and onboarding_result.get("status") in {"processed", "skipped"}:
+            onboarding_status = "ok"
+        else:
+            onboarding_status = "neutral"
+
         timeline = [
             ("Cadastro em entity_intake", "ok" if last_intake_rows else "atencao"),
             ("Review via v_entity_intake_review", "ok" if review_rows and not review_error else "atencao"),
             ("Publish via public.publish_entity_intake_entry()", "ok" if any(row.get("status") == "published" for row in last_intake_rows) else "atencao"),
             ("Cadastro final em public.creators", "ok" if creator_created else "neutral"),
+            ("Discovery inicial via Cloud Run", onboarding_status),
         ]
         st.markdown("### Estado atual do processo")
         st.markdown(
