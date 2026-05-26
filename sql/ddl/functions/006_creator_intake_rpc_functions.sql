@@ -9,6 +9,10 @@
 -- 2) sql/ddl/views/001_create_v_entity_intake_review.sql
 -- 3) sql/ddl/functions/001_create_publish_entity_intake_function.sql
 
+DROP FUNCTION IF EXISTS public.search_creators_for_intake(text, text);
+DROP FUNCTION IF EXISTS public.create_creator_from_resolved_entity(integer, text, text, text, integer);
+DROP FUNCTION IF EXISTS public.create_creator_from_resolved_entity(integer, text, text, text, bigint);
+
 CREATE OR REPLACE FUNCTION public.search_entities_for_intake(
   p_raw_name text
 )
@@ -75,7 +79,7 @@ RETURNS TABLE (
   platform text,
   username text,
   channel_id text,
-  followers integer,
+  followers bigint,
   is_active boolean
 )
 LANGUAGE plpgsql
@@ -229,7 +233,7 @@ CREATE OR REPLACE FUNCTION public.create_creator_from_resolved_entity(
   p_platform text,
   p_username text,
   p_channel_id text,
-  p_followers integer DEFAULT NULL
+  p_followers bigint DEFAULT NULL
 )
 RETURNS TABLE (
   creator_id integer,
@@ -237,7 +241,7 @@ RETURNS TABLE (
   platform text,
   username text,
   channel_id text,
-  followers integer,
+  followers bigint,
   is_active boolean,
   created_at timestamp without time zone
 )
@@ -249,7 +253,7 @@ DECLARE
   v_platform text;
   v_username text;
   v_channel_id text;
-  v_followers integer;
+  v_followers bigint;
   v_creator_id integer;
 BEGIN
   v_platform := LOWER(NULLIF(BTRIM(p_platform), ''));
@@ -328,10 +332,10 @@ REVOKE ALL ON FUNCTION public.search_entities_for_intake(text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.search_creators_for_intake(text, text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.list_sub_niches_for_intake() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.create_entity_intake_entry(text, text, text, text, text) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.create_creator_from_resolved_entity(integer, text, text, text, integer) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.create_creator_from_resolved_entity(integer, text, text, text, bigint) FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION public.search_entities_for_intake(text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.search_creators_for_intake(text, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.list_sub_niches_for_intake() TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.create_entity_intake_entry(text, text, text, text, text) TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.create_creator_from_resolved_entity(integer, text, text, text, integer) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.create_creator_from_resolved_entity(integer, text, text, text, bigint) TO anon, authenticated;

@@ -405,7 +405,7 @@ public.create_creator_from_resolved_entity(
   p_platform text,
   p_username text,
   p_channel_id text,
-  p_followers integer
+  p_followers bigint
 )
 ```
 
