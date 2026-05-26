@@ -348,8 +348,11 @@ Campos minimos esperados:
 - `ultima_evidencia_de_execucao`
 - `posts_atualizados_24h`
 - `idade_da_ultima_evidencia_minutos`
+- `ultima_execucao_discovery`
+- `creators_avaliados_24h`
 - `ultima_descoberta_de_post`
 - `novos_posts_24h`
+- `idade_da_ultima_execucao_minutos`
 - `idade_da_ultima_descoberta_minutos`
 - `status_code`
 - `status_label`
@@ -358,7 +361,14 @@ Leitura correta da fase atual:
 
 - a view atual cobre apenas o worker de `Atualizacao de posts`
 - o worker de `Descoberta de novos posts` deve aparecer no Streamlit com rotulo proprio
-- a view dedicada do segundo worker deve usar `posts.created_at` como evidencia de descoberta
+- a view dedicada do segundo worker deve usar:
+  - `creator_metrics_history.collected_at` como evidencia de execucao do worker
+  - `posts.created_at` como evidencia de resultado de descoberta
+
+Regra operacional:
+
+- um ciclo do worker pode ser saudavel mesmo quando `novos_posts_24h` e baixo
+- `posts.created_at` nao deve ser usado sozinho para dizer que o worker esta atrasado
 
 Escopo revisado para `Sinais operacionais` do worker horario:
 

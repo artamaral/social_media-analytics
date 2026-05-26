@@ -1664,16 +1664,29 @@ def render_collection_integrity_section() -> None:
         discovery_status_code = str(discovery_status.get("status_code") or "atencao").lower()
         discovery_status_label = str(discovery_status.get("status_label") or "Sem classificacao")
         discovery_status_reason = str(discovery_status.get("status_reason") or "Sem detalhe adicional.")
+        discovery_execution_timestamp = discovery_status.get("ultima_execucao_discovery")
+        discovery_post_timestamp = discovery_status.get("ultima_descoberta_de_post")
         discovery_snapshot_value = str(
-            discovery_status.get("ultima_descoberta_de_post_br")
-            or format_timestamp_br(discovery_status.get("ultima_descoberta_de_post"))
+            discovery_status.get("ultima_execucao_discovery_br")
+            or (format_timestamp_br(discovery_execution_timestamp) if discovery_execution_timestamp else None)
+            or discovery_status.get("ultima_descoberta_de_post_br")
+            or (format_timestamp_br(discovery_post_timestamp) if discovery_post_timestamp else None)
+            or "--"
         )
+        discovery_latest_post = str(
+            discovery_status.get("ultima_descoberta_de_post_br")
+            or (format_timestamp_br(discovery_post_timestamp) if discovery_post_timestamp else None)
+            or "--"
+        )
+        discovery_checked_creators = format_int(discovery_status.get("creators_avaliados_24h"))
         discovery_new_posts = format_int(discovery_status.get("novos_posts_24h"))
     else:
         discovery_status_code = "neutral"
         discovery_status_label = "Aguardando view"
         discovery_status_reason = "Worker de descoberta roda a cada 6 horas e ainda precisa de uma view propria."
         discovery_snapshot_value = "--"
+        discovery_latest_post = "--"
+        discovery_checked_creators = "--"
         discovery_new_posts = "--"
 
     if operational_signals:
@@ -1718,7 +1731,11 @@ def render_collection_integrity_section() -> None:
                 worker_stat_html(
                     "Descoberta de novos posts",
                     discovery_snapshot_value,
-                    f"Novos posts 24h: {discovery_new_posts} | {discovery_status_reason}",
+                    (
+                        f"Creators avaliados 24h: {discovery_checked_creators} | "
+                        f"Novos posts 24h: {discovery_new_posts} | "
+                        f"Ultima descoberta: {discovery_latest_post}"
+                    ),
                     discovery_status_code,
                 ),
             ],

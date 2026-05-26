@@ -319,7 +319,13 @@ Regra importante:
   `Atualizacao de posts`
 - a view `v_dashboard_new_post_discovery_status` cobre o worker de
   `Descoberta de novos posts`
-- o segundo worker deve usar `posts.created_at` como evidencia de descoberta
+- o segundo worker deve separar 2 sinais:
+  - `creator_metrics_history.collected_at` como evidencia de execucao do worker
+  - `posts.created_at` como evidencia de resultado, ou seja, novos posts
+    realmente descobertos
+
+Essa separacao evita falso alerta quando o worker roda dentro da janela de 6
+horas, mas os creators processados nao possuem posts novos para inserir.
 
 Para o worker de `Atualizacao de posts`, o subtipo `Sinais operacionais` deve
 priorizar KPIs de fluxo e risco de cobertura, nao volume bruto de lote:
