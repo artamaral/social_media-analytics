@@ -91,6 +91,13 @@ Portanto, a coleta de followers segue a mesma cobertura do discovery:
 - ao longo das execucoes, percorre todos os creators;
 - quando chega ao fim da lista, o cursor volta para `0`.
 
+Regra operacional obrigatoria:
+
+- a lista de creators deve ser lida com ordenacao estavel por `id.asc`;
+- o cursor salvo em `pipeline_state` representa o indice zero-based dessa lista;
+- sem ordenacao explicita, a posicao do creator pode variar entre execucoes e
+  a validacao do batch deixa de ser confiavel.
+
 Na chamada `channels.list`, o worker usa `part=contentDetails,statistics`.
 Assim, a mesma chamada que retorna a playlist de uploads tambem retorna as
 metricas do canal.

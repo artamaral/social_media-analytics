@@ -70,7 +70,9 @@ def fetch_creators():
 
     params = {
         "select": "*",
-        "platform": "eq.youtube"
+        "platform": "eq.youtube",
+        # Cursor pagination only works if the creator order is stable.
+        "order": "id.asc"
     }
 
     res = requests.get(url, headers=HEADERS, params=params)
