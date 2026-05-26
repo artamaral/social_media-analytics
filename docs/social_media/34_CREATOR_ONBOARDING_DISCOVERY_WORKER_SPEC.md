@@ -231,6 +231,46 @@ Se futuramente o Streamlit ganhar UI dedicada de monitoramento, retry ou fila
 de jobs de onboarding, ai sim deve ser criado um spec proprio em
 `docs/dashboard`.
 
+## Fallback manual para primeira carga
+
+O fluxo preferencial e automatico via Streamlit, logo apos o cadastro do
+creator no Supabase.
+
+Se o cadastro do creator funcionar, mas o dashboard ou a validacao SQL mostrar
+`post_count = 0`, o operador pode executar manualmente a primeira carga de
+discovery chamando a URL do worker.
+
+Esse fallback deve ser usado apenas quando:
+
+- o creator ja existe em `public.creators`;
+- o `creator_id` ja foi retornado pela UI ou confirmado no Supabase;
+- a UI nao chamou o worker automaticamente, ou o retorno do worker nao ficou
+  visivel;
+- `public.posts` ainda nao possui posts para o creator.
+
+Exemplo em PowerShell:
+
+```powershell
+Invoke-WebRequest `
+  -UseBasicParsing `
+  -Uri "https://youtube-creator-onboarding-750306104774.us-central1.run.app" `
+  -Method POST `
+  -Headers @{ "x-worker-token" = "SEU_TOKEN" } `
+  -ContentType "application/json" `
+  -Body '{"creator_id":56}'
+```
+
+Depois da chamada manual, executar
+`sql/dml/validate_creator_onboarding_discovery.sql` trocando o `creator_id` na
+CTE `params`.
+
+Resultado esperado:
+
+- `posts_total > 0`;
+- `queue_total = posts_total`;
+- `validation_status = 'ok'`;
+- a segunda chamada para o mesmo `creator_id` deve retornar `skipped`.
+
 ## Validacoes obrigatorias
 
 Antes de considerar o worker saudavel:

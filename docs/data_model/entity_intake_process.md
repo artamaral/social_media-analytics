@@ -62,6 +62,16 @@ Observacao sobre Streamlit:
 - o contrato do worker fica centralizado em
   `docs/social_media/34_CREATOR_ONBOARDING_DISCOVERY_WORKER_SPEC.md`.
 
+Fallback operacional:
+
+- se o cadastro final criar o creator, mas a primeira carga automatica falhar
+  ou nao popular posts, usar a chamada manual documentada em
+  `docs/social_media/34_CREATOR_ONBOARDING_DISCOVERY_WORKER_SPEC.md`;
+- esse fallback so deve ser usado depois que `creator_id` e `channel_id`
+  existirem em `public.creators`;
+- apos a chamada manual, validar com
+  `sql/dml/validate_creator_onboarding_discovery.sql`.
+
 ### Caminho manual legado
 
 ### 1. Cadastrar manualmente no Supabase UI

@@ -265,6 +265,12 @@ Validacao operacional do onboarding:
 
 - `sql/dml/validate_creator_onboarding_discovery.sql`
 
+Fallback manual:
+
+- se o automatico falhar apos o cadastro do creator, chamar manualmente o
+  worker com `creator_id` usando o exemplo em
+  `docs/social_media/34_CREATOR_ONBOARDING_DISCOVERY_WORKER_SPEC.md`
+
 ## Relacao Entre as Frentes
 
 - a frente de dados social media mostra comportamento de conteudo e audiencia
