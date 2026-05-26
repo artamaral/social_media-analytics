@@ -472,8 +472,29 @@ Essa alternativa deve ser tratada como evolucao de produto, nao como prioridade 
 - nenhum segredo exposto no codigo ou no navegador
 - overview mostra qualidade dos dados
 - ranking de creators funcionando
+- cadastro de criadores via Streamlit validado com RPC controlada
 - ranking de crescimento semanal funcionando
 - revisao de videos indisponiveis disponivel por view com URL clicavel
 - queries respondem sem leitura excessiva do historico
 - limitacao conhecida de frescor dos dados documentada
 - identidade visual aplicada com fundo em escala de cinza, sidebar escura, cards contrastados e pictos consistentes
+
+## Validacao operacional de cadastro
+
+Data:
+
+- 2026-05-26
+
+Resultado:
+
+- o fluxo `Cadastro > Criadores` foi validado com nova entity e novo criador
+- caso validado: `Autoesporte`
+- `creator_id`: `55`
+- `entity_id`: `52`
+- subnichos: `compra`, `noticia`, `review`, `teste`
+- o criador ja aparece na view de criadores do Streamlit
+
+Pendente:
+
+- validar nos proximos dias se os workers de discovery/coleta incorporam o novo
+  criador ao ciclo normal de atualizacao.

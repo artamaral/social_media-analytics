@@ -566,6 +566,24 @@ Entregaveis:
 10. Publicacao online
 11. Revisao analitica pos-MVP
 
+## Marco validado em 2026-05-26
+
+Cadastro de criadores via Streamlit validado:
+
+- tela: `Cadastro > Criadores`
+- caso: `Autoesporte`
+- `creator_id`: `55`
+- `entity_id`: `52`
+- `channel_id`: `UCc6jv88ebCrDVxJQUjZfGT`
+- subnichos: `compra`, `noticia`, `review`, `teste`
+- resultado: criador cadastrado, com subnicho, e visivel na view de criadores
+  do Streamlit
+
+Checkpoint pendente:
+
+- acompanhar nos proximos dias se o worker passa a incorporar esse criador ao
+  ciclo normal de discovery/coleta.
+
 ## Primeira entrega pratica sugerida
 
 Primeiro sprint:

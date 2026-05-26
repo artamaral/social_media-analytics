@@ -513,33 +513,67 @@ Filtros:
 - sub_niche_name
 - raw_name
 
-## Sequencia recomendada de implementacao
+## Status de implementacao
 
-1. Criar a pagina Streamlit `Cadastro > Criadores`.
-2. Criar a etapa de busca de entity existente por RPC.
-3. Criar a etapa de solicitacao de nova entity ou novo vinculo de subnicho via
-   `public.entity_intake`, sem escrita direta em tabelas finais.
-4. Conectar a leitura de `public.v_entity_intake_review`.
-5. Carregar subnichos existentes por RPC e permitir selecao multipla.
-6. Manter novos nichos/subnichos como solicitacao controlada para revisao.
-7. Criar RPC separada para cadastrar `public.creators` apenas quando
-   `entity_id`, canal e classificacao estiverem resolvidos.
-8. Validar o fluxo completo com um creator de teste.
-9. Documentar o resultado no pipeline status antes de considerar a tela pronta.
+Data da validacao:
+
+- 2026-05-26
+
+Status:
+
+- Cadastro de criadores via Streamlit validado com sucesso.
+- A tela `Cadastro > Criadores` ja executa o fluxo completo sem exigir SQL
+  manual durante a operacao normal.
+- O criador cadastrado ja aparece na view de criadores no Streamlit.
+- Ainda falta validar, em alguns dias, se o worker de descoberta/atualizacao
+  passou a incorporar o novo criador no ciclo normal de coleta.
+
+Caso validado:
+
+| Campo | Valor |
+| --- | --- |
+| `creator_id` | `55` |
+| `entity_id` | `52` |
+| `entity_name` | `Autoesporte` |
+| `platform` | `youtube` |
+| `username` | `Autoesporte` |
+| `channel_id` | `UCc6jv88ebCrDVxJQUjZfGT` |
+| `followers` | `647000` |
+| `is_active` | `true` |
+| `total_sub_niches` | `4` |
+| `sub_niches` | `compra, noticia, review, teste` |
+| `validation_status` | `OK: criador cadastrado com subnicho` |
+
+## Sequencia implementada
+
+1. Preencher `Nome da Entidade` e `Tipo de criador`.
+2. Clicar em `Checar entidade no banco`.
+3. Se a entidade nao existir, selecionar subnichos existentes e clicar em
+   `Enviar para entity_intake`.
+4. Clicar em `Publicar intake e resolver entidade`.
+5. A UI chama `public.publish_entity_intake_entry(p_intake_id)` e resolve o
+   `entity_id` sem sair do Streamlit.
+6. Preencher plataforma, username, channel id e seguidores.
+7. Clicar em `Checar canal no banco`.
+8. Se o canal nao estiver duplicado, clicar em `Cadastrar criador no Supabase`.
+9. Validar que o criador aparece na view de criadores.
+10. Acompanhar nos dias seguintes se o worker incorpora o criador ao ciclo
+    normal de discovery/coleta.
 
 ## Validacoes obrigatorias
 
 Antes de considerar a sub-view pronta:
 
-- confirmar que `raw_name` nao gera duplicidade inesperada em `entities`
-- confirmar que `sub_niche_name` encontra `sub_niche_id`
-- confirmar que novos nichos/subnichos possuem metodo de intake ou procedimento
-  manual documentado
-- confirmar que `channel_id` nao existe em `public.creators`
-- confirmar que `(platform, channel_id)` nao existe em `public.creators`
-- confirmar que nenhum segredo sensivel e usado no Streamlit
-- confirmar que a tela nao permite publicacao sem revisao
-- confirmar que creator criado entra no fluxo normal de discovery/coleta
+- [x] confirmar que `raw_name` nao gera duplicidade inesperada em `entities`
+- [x] confirmar que `sub_niche_name` encontra `sub_niche_id`
+- [x] confirmar que `channel_id` nao existe em `public.creators`
+- [x] confirmar que `(platform, channel_id)` nao existe em `public.creators`
+- [x] confirmar que nenhum segredo sensivel e usado no Streamlit
+- [x] confirmar que a tela nao permite publicacao sem revisao
+- [x] confirmar que creator criado aparece na view de criadores do Streamlit
+- [ ] confirmar que creator criado entra no fluxo normal de discovery/coleta
+- [ ] confirmar que novos nichos/subnichos possuem metodo de intake proprio ou
+  procedimento manual documentado
 
 ## Riscos
 
@@ -550,16 +584,17 @@ Antes de considerar a sub-view pronta:
 - sub_niche inexistente pode publicar uma entity sem classificacao util
 - criar nicho/subnicho direto pela UI sem revisao pode degradar a taxonomia
 
-## Decisao recomendada
+## Decisao adotada
 
-Implementar a tela em quatro etapas guiadas:
+A tela fica organizada em quatro etapas guiadas:
 
 1. Busca ou intake de entity usando o fluxo existente.
 2. Resolucao ou solicitacao controlada de nicho/subnicho.
 3. Cadastro de creator em `public.creators` somente depois de `entity_id` e
    classificacao resolvidos.
-4. Confirmacao de entrada do creator no fluxo normal de discovery/coleta.
+4. Confirmacao posterior de entrada do creator no fluxo normal de
+   discovery/coleta.
 
 Essa separacao preserva a governanca ja documentada, respeita o fluxo manual
 atual e transforma a UI em uma camada guiada de operacao, nao em uma porta de
-escrita direta nas tabelas finais.
+SQL livre nem em uma escrita direta sem revisao.
