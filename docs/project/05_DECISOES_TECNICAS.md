@@ -715,3 +715,68 @@ Documentos relacionados:
 
 - `docs/social_media/26_HYBRID_SCORE_V2_BASELINE_2026-05-17.md`
 - `docs/social_media/25_MINIMUM_HISTORY_COVERAGE_GUARDRAIL_SPEC.md`
+
+---
+
+## Filtros temporais com limite superior exclusivo
+
+Data:
+
+- 2026-05-25
+
+Decisao:
+
+- todo filtro sobre campo `timestamp` deve usar limite superior exclusivo
+- nao usar `timestamp_col <= data_final` quando `data_final` representa apenas
+  uma data sem horario
+- para janelas fechadas de calendario, usar `timestamp_col >= inicio` e
+  `timestamp_col < fim + intervalo`
+- para comparacoes por dia/semana em SQL, quando a regra for de calendario, usar
+  `timestamp_col::date` ou calcular `period_end_exclusive`
+
+Contexto:
+
+- a tabela de videos da semana no Streamlit deixou de listar posts publicados no
+  domingo depois de `00:00:00`
+- o bloco semanal estava correto porque a view usava `post_date::date`
+- a tabela estava incorreta porque filtrava `post_date <= week_end`, e
+  `week_end` era interpretado como `domingo 00:00:00`
+
+Motivo:
+
+- evitar perda silenciosa de registros no ultimo dia do periodo
+- manter consistencia entre cards, tabelas, graficos e queries SQL
+- reduzir risco de bugs quando GPT/Codex gerar filtros de periodo
+
+Padrao obrigatorio:
+
+```sql
+-- Para timestamp:
+where event_at >= period_start
+  and event_at < period_end + interval '1 day'
+
+-- Para campo convertido para calendario:
+where event_at::date between period_start::date and period_end::date
+```
+
+Padrao em Pandas/Streamlit:
+
+```python
+mask = (df["event_at"] >= period_start) & (
+    df["event_at"] < (period_end + pd.Timedelta(days=1))
+)
+```
+
+Diretriz:
+
+- sempre explicitar se o campo e `date` ou `timestamp`
+- qualquer nova view, tabela do dashboard, filtro de semana, filtro mensal ou
+  query gerada por GPT deve seguir esta regra
+- se houver comparacao entre bloco agregado e tabela detalhada, ambos devem usar
+  exatamente a mesma janela temporal
+
+Documentos relacionados:
+
+- `docs/dashboard/16_ONLINE_DASHBOARD_SUPABASE_SPEC.md`
+- `docs/dashboard/33_CREATOR_VIEW_STREAMLIT_SPEC.md`
+- `docs/dashboard/34_CREATOR_WEEKLY_TIMESERIES_CONTRACT.md`

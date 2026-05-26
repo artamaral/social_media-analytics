@@ -108,6 +108,46 @@ Essas views deixam o dashboard simples e evitam repetir logica analitica no app.
 
 Para estudos mais exploratorios, o Streamlit pode complementar as views com Pandas, desde que nao carregue historico bruto sem filtros de periodo.
 
+### Regra obrigatoria para filtros de periodo
+
+Quando o Streamlit, SQL ou codigo gerado por GPT/Codex filtrar campos
+`timestamp` por dia, semana, mes ou qualquer periodo de calendario, o fim do
+periodo deve ser tratado como limite superior exclusivo.
+
+Padrao obrigatorio:
+
+```sql
+where timestamp_col >= period_start
+  and timestamp_col < period_end + interval '1 day'
+```
+
+Em Pandas/Streamlit:
+
+```python
+mask = (df["timestamp_col"] >= period_start) & (
+    df["timestamp_col"] < (period_end + pd.Timedelta(days=1))
+)
+```
+
+Se o campo for convertido explicitamente para `date`, a regra pode usar
+`between`:
+
+```sql
+where timestamp_col::date between period_start::date and period_end::date
+```
+
+Evitar:
+
+```sql
+where timestamp_col <= period_end
+```
+
+Motivo:
+
+- `period_end` sem horario costuma virar `00:00:00`
+- isso exclui registros do ultimo dia depois da meia-noite
+- cards, graficos e tabelas detalhadas devem usar a mesma janela temporal
+
 ## MVP de telas
 
 ### 1. Overview

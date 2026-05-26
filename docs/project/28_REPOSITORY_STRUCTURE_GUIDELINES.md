@@ -219,6 +219,34 @@ Usar para views.
 
 Exemplos:
 
+- `create view`
+- `create or replace view`
+- views de consumo analitico do dashboard
+
+Regra obrigatoria para filtros temporais:
+
+- ao filtrar campo `timestamp` por periodo de calendario, nao usar
+  `timestamp_col <= data_final` se `data_final` nao tiver horario final
+  explicito
+- usar limite superior exclusivo:
+
+```sql
+where timestamp_col >= period_start
+  and timestamp_col < period_end + interval '1 day'
+```
+
+- quando a regra for puramente de calendario e o campo puder ser convertido com
+  seguranca, usar:
+
+```sql
+where timestamp_col::date between period_start::date and period_end::date
+```
+
+- qualquer codigo gerado por GPT/Codex para semanas, meses ou periodos deve
+  declarar se esta filtrando `date` ou `timestamp`
+- tabelas detalhadas e cards agregados devem usar a mesma janela temporal para
+  evitar diferenca entre totais e listas
+
 - views operacionais
 - views analiticas
 - views de revisao
