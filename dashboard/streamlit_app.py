@@ -1269,6 +1269,72 @@ def clear_supabase_data_cache() -> None:
     load_sub_niches_for_intake.clear()
 
 
+CREATOR_INTAKE_FORM_DEFAULTS: dict[str, Any] = {
+    "creator_intake_raw_name": "Auto Mercado Brasil",
+    "creator_intake_creator_type": "mid-tier",
+    "creator_intake_platform": "youtube",
+    "creator_intake_username": "@automercadobrasil",
+    "creator_intake_channel_id": "UC1234567890ABCDE",
+    "creator_intake_followers": 185000,
+    "creator_intake_niche": "automotivo",
+    "creator_intake_selected_sub_niches": [],
+    "creator_intake_taxonomy_request": "",
+    "creator_intake_notes": "",
+}
+
+
+def ensure_creator_intake_form_defaults(sub_niche_names: list[str]) -> None:
+    for key, default_value in CREATOR_INTAKE_FORM_DEFAULTS.items():
+        if key not in st.session_state:
+            st.session_state[key] = list(default_value) if isinstance(default_value, list) else default_value
+    if not st.session_state.get("creator_intake_selected_sub_niches") and sub_niche_names:
+        st.session_state["creator_intake_selected_sub_niches"] = [sub_niche_names[0]]
+
+
+def reset_creator_intake_form(sub_niche_names: list[str]) -> None:
+    st.session_state["creator_intake_raw_name"] = ""
+    st.session_state["creator_intake_creator_type"] = "mid-tier"
+    st.session_state["creator_intake_platform"] = "youtube"
+    st.session_state["creator_intake_username"] = ""
+    st.session_state["creator_intake_channel_id"] = ""
+    st.session_state["creator_intake_followers"] = 0
+    st.session_state["creator_intake_niche"] = "automotivo"
+    st.session_state["creator_intake_selected_sub_niches"] = []
+    st.session_state["creator_intake_taxonomy_request"] = ""
+    st.session_state["creator_intake_notes"] = ""
+
+    for key in [
+        "creator_intake_entity_matches",
+        "creator_intake_entity_error",
+        "creator_intake_entity_checked_name",
+        "creator_intake_channel_matches",
+        "creator_intake_channel_error",
+        "creator_intake_channel_checked_value",
+        "creator_intake_last_rows",
+    ]:
+        st.session_state[key] = [] if key.endswith("_matches") or key.endswith("_rows") else None
+
+
+def build_creator_created_summary(
+    creator_row: dict[str, Any],
+    resolved_entity: dict[str, Any] | None,
+    selected_sub_niches: list[str],
+) -> dict[str, Any]:
+    creator_id = int(creator_row.get("creator_id") or 0)
+    entity_id = int(creator_row.get("entity_id") or resolved_entity.get("entity_id") or 0) if resolved_entity else int(creator_row.get("entity_id") or 0)
+    return {
+        "creator_id": creator_id,
+        "entity_id": entity_id,
+        "entity_name": str(creator_row.get("entity_name") or (resolved_entity or {}).get("entity_name") or "--"),
+        "platform": str(creator_row.get("platform") or "--"),
+        "username": str(creator_row.get("username") or "--"),
+        "channel_id": str(creator_row.get("channel_id") or "--"),
+        "followers": int(creator_row.get("followers") or 0),
+        "creator_type": str(creator_row.get("creator_type") or "--"),
+        "sub_niches": ", ".join(selected_sub_niches) if selected_sub_niches else "--",
+    }
+
+
 def call_supabase_rpc(function_name: str, params: dict[str, Any] | None = None) -> tuple[list[dict[str, Any]], str | None]:
     if not is_supabase_configured():
         return [], "Supabase ainda nao configurado. Adicione SUPABASE_URL e SUPABASE_ANON_KEY nos secrets."
@@ -2256,17 +2322,22 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
     with tab_form:
         sub_niche_rows, sub_niche_error = get_sub_niches_for_intake()
         sub_niche_names = [str(row["sub_niche_name"]) for row in sub_niche_rows if row.get("sub_niche_name")]
+        ensure_creator_intake_form_defaults(sub_niche_names)
 
         if sub_niche_error:
             st.warning(sub_niche_error)
+
+        success_message = st.session_state.get("creator_intake_success_message")
+        if success_message:
+            st.success(success_message)
 
         col_left, col_right = st.columns([1.35, 1])
 
         with col_left:
             st.markdown("### 1. Cadastrar entidade")
-            raw_name = st.text_input("Nome da Entidade", value="Auto Mercado Brasil")
+            raw_name = st.text_input("Nome da Entidade", key="creator_intake_raw_name")
             normalized_name = normalize_name_for_intake(raw_name)
-            creator_type = st.selectbox("Tipo de criador", ["mid-tier", "editorial", "independente"])
+            creator_type = st.selectbox("Tipo de criador", ["mid-tier", "editorial", "independente"], key="creator_intake_creator_type")
             st.caption(f"Nome normalizado sugerido: {normalized_name or '--'}")
 
             if st.button("Checar entidade no banco", use_container_width=False, disabled=bool(connection_error)):
@@ -2308,10 +2379,10 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
                 st.info("Entidade nao encontrada nesta sessao. Para entidade nova, envie para entity_intake e publique pela propria tela.")
 
             st.markdown("### 2. Cadastrar criador")
-            platform = st.selectbox("Plataforma", ["youtube", "instagram", "tiktok"])
-            username = st.text_input("Username", value="@automercadobrasil")
-            channel_id = st.text_input("Channel ID", value="UC1234567890ABCDE")
-            followers = st.number_input("Followers", min_value=0, value=185000, step=1000)
+            platform = st.selectbox("Plataforma", ["youtube", "instagram", "tiktok"], key="creator_intake_platform")
+            username = st.text_input("Username", key="creator_intake_username")
+            channel_id = st.text_input("Channel ID", key="creator_intake_channel_id")
+            followers = st.number_input("Followers", min_value=0, step=1000, key="creator_intake_followers")
 
             if st.button("Checar canal no banco", use_container_width=False, disabled=bool(connection_error) or not channel_id.strip()):
                 matches, error = call_supabase_rpc(
@@ -2343,14 +2414,14 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
             st.markdown("### 3. Associar nichos")
             linked_entity_name = str(resolved_entity["entity_name"]) if resolved_entity else raw_name
             st.text_input("Entidade que recebera a associacao", value=linked_entity_name, disabled=True)
-            niche = st.selectbox("Nicho", ["automotivo"], index=0)
+            niche = st.selectbox("Nicho", ["automotivo"], index=0, key="creator_intake_niche")
             selected_sub_niches = st.multiselect(
                 "Subnichos existentes",
                 sub_niche_names,
-                default=sub_niche_names[:1] if sub_niche_names else [],
+                key="creator_intake_selected_sub_niches",
             )
-            taxonomy_request = st.text_input("Solicitar novo subnicho para revisao", value="")
-            intake_notes = st.text_area("Observacao da solicitacao", value="", height=88)
+            taxonomy_request = st.text_input("Solicitar novo subnicho para revisao", key="creator_intake_taxonomy_request")
+            intake_notes = st.text_area("Observacao da solicitacao", height=88, key="creator_intake_notes")
 
             st.markdown("### Acoes")
             intake_targets = selected_sub_niches + ([taxonomy_request.strip()] if taxonomy_request.strip() else [])
@@ -2456,10 +2527,10 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
                     st.warning(error)
                 elif rows:
                     clear_supabase_data_cache()
-                    st.session_state["creator_intake_creator_row"] = rows[0]
-                    creator_created = rows[0]
-                    creator_id = int(rows[0]["creator_id"])
-                    st.success(f"Criador cadastrado com id {creator_id}.")
+                    creator_summary = build_creator_created_summary(rows[0], resolved_entity, selected_sub_niches)
+                    st.session_state["creator_intake_creator_row"] = creator_summary
+                    creator_created = creator_summary
+                    creator_id = int(creator_summary["creator_id"])
 
                     if platform == "youtube":
                         with st.spinner("Executando discovery inicial do novo creator..."):
@@ -2474,23 +2545,18 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
 
                     st.session_state["creator_intake_onboarding_result"] = onboarding_result
                     st.session_state["creator_intake_onboarding_error"] = onboarding_error
-
-                    if onboarding_error:
-                        st.warning(onboarding_error)
-                    elif onboarding_result and onboarding_result.get("status") == "processed":
-                        st.success(
-                            "Discovery inicial concluido: "
-                            f"{int(onboarding_result.get('processed_posts') or 0)} posts processados."
-                        )
-                        clear_supabase_data_cache()
-                    elif onboarding_result and onboarding_result.get("status") == "skipped":
-                        reason = onboarding_result.get("reason")
-                        if reason == "platform_not_youtube":
-                            st.info("Discovery inicial ignorado: worker de onboarding e exclusivo para YouTube.")
-                        else:
-                            st.info("Discovery inicial ignorado: creator ja possui posts.")
-                    elif onboarding_result:
-                        st.info(f"Discovery inicial retornou status: {onboarding_result.get('status')}.")
+                    st.session_state["creator_intake_success_message"] = (
+                        "Criador cadastrado com sucesso. "
+                        f"Creator ID {creator_summary['creator_id']} | "
+                        f"Entidade {creator_summary['entity_name']} (ID {creator_summary['entity_id']}) | "
+                        f"Plataforma {creator_summary['platform']} | "
+                        f"Username {creator_summary['username']} | "
+                        f"Channel ID {creator_summary['channel_id']} | "
+                        f"Followers {format_int(creator_summary['followers'])} | "
+                        f"Subnichos {creator_summary['sub_niches']}."
+                    )
+                    reset_creator_intake_form(sub_niche_names)
+                    st.rerun()
 
         with col_right:
             st.markdown("### Leitura da UI")
@@ -2565,7 +2631,25 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
 
             if creator_created:
                 st.markdown("### Criador cadastrado")
-                st.json(creator_created)
+                st.dataframe(
+                    pd.DataFrame(
+                        [
+                            {
+                                "Creator ID": creator_created.get("creator_id"),
+                                "Entity ID": creator_created.get("entity_id"),
+                                "Entidade": creator_created.get("entity_name"),
+                                "Plataforma": creator_created.get("platform"),
+                                "Username": creator_created.get("username"),
+                                "Channel ID": creator_created.get("channel_id"),
+                                "Followers": format_int(creator_created.get("followers")),
+                                "Tipo": creator_created.get("creator_type"),
+                                "Subnichos": creator_created.get("sub_niches"),
+                            }
+                        ]
+                    ),
+                    use_container_width=True,
+                    hide_index=True,
+                )
 
             onboarding_result = st.session_state.get("creator_intake_onboarding_result")
             onboarding_error = st.session_state.get("creator_intake_onboarding_error")
@@ -2574,6 +2658,19 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
                 if onboarding_error:
                     st.warning(onboarding_error)
                 if onboarding_result:
+                    if onboarding_result.get("status") == "processed":
+                        st.success(
+                            "Discovery inicial concluido: "
+                            f"{int(onboarding_result.get('processed_posts') or 0)} posts processados."
+                        )
+                    elif onboarding_result.get("status") == "skipped":
+                        reason = onboarding_result.get("reason")
+                        if reason == "platform_not_youtube":
+                            st.info("Discovery inicial ignorado: worker de onboarding e exclusivo para YouTube.")
+                        else:
+                            st.info("Discovery inicial ignorado: creator ja possui posts.")
+                    else:
+                        st.info(f"Discovery inicial retornou status: {onboarding_result.get('status')}.")
                     st.json(onboarding_result)
             elif not is_creator_onboarding_configured():
                 st.markdown("### Discovery inicial")
