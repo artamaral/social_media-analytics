@@ -1,5 +1,6 @@
 from html import escape
 from typing import Any
+import unicodedata
 
 import pandas as pd
 import plotly.express as px
@@ -1250,6 +1251,54 @@ def get_filtered_rows(
         return [], f"Falha ao consultar {source_name}: {exc}"
 
 
+def normalize_name_for_intake(value: str) -> str:
+    without_accents = unicodedata.normalize("NFKD", value.strip())
+    ascii_value = "".join(char for char in without_accents if not unicodedata.combining(char))
+    return ascii_value.lower().strip()
+
+
+def clear_supabase_data_cache() -> None:
+    load_single_row_view.clear()
+    load_view_rows.clear()
+    load_filtered_rows.clear()
+    load_sub_niches_for_intake.clear()
+
+
+def call_supabase_rpc(function_name: str, params: dict[str, Any] | None = None) -> tuple[list[dict[str, Any]], str | None]:
+    if not is_supabase_configured():
+        return [], "Supabase ainda nao configurado. Adicione SUPABASE_URL e SUPABASE_ANON_KEY nos secrets."
+
+    client = get_supabase_client()
+    if client is None:
+        return [], "Cliente Supabase indisponivel."
+
+    try:
+        response = client.rpc(function_name, params or {}).execute()
+        return response.data or [], None
+    except Exception as exc:
+        return [], f"Falha ao executar {function_name}: {exc}"
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def load_sub_niches_for_intake() -> list[dict[str, Any]]:
+    client = get_supabase_client()
+    if client is None:
+        return []
+
+    response = client.rpc("list_sub_niches_for_intake").execute()
+    return response.data or []
+
+
+def get_sub_niches_for_intake() -> tuple[list[dict[str, Any]], str | None]:
+    if not is_supabase_configured():
+        return [], "Supabase ainda nao configurado. Adicione SUPABASE_URL e SUPABASE_ANON_KEY nos secrets."
+
+    try:
+        return load_sub_niches_for_intake(), None
+    except Exception as exc:
+        return [], f"Falha ao consultar subnichos para intake: {exc}"
+
+
 def render_connection_notice(error: str | None) -> None:
     if error:
         st.warning(error)
@@ -2073,84 +2122,106 @@ def growth_caption_from_values(current_value: int, previous_value: int | None) -
 
 
 def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> None:
-    state = get_external_intake_mock_state()
-    mock_entities = get_mock_entity_bank()
-    mock_taxonomy_options = get_mock_taxonomy_options()
-    page_header(page_title, "Prototipo de metodo sem ligacao com SQL")
+    page_header(page_title, "Intake controlado ligado ao Supabase")
     process_banner(
         "Regra obrigatoria de governanca",
-        "A UI pode guiar o operador, mas nao pode pular o fluxo: entidade_intake, revisao, publicacao, validacao e so depois cadastro do criador.",
+        "A UI guia o cadastro, mas a entidade e os vinculos de subnicho continuam passando por entity_intake e revisao antes de virarem base final.",
     )
+
+    connection_error = None if is_supabase_configured() else "Supabase ainda nao configurado. Adicione SUPABASE_URL e SUPABASE_ANON_KEY nos secrets."
+    render_connection_notice(connection_error)
+
+    entity_matches = st.session_state.get("creator_intake_entity_matches", [])
+    channel_matches = st.session_state.get("creator_intake_channel_matches", [])
+    last_intake_rows = st.session_state.get("creator_intake_last_rows", [])
+    creator_created = st.session_state.get("creator_intake_creator_row")
+    entity_exact_match = any(row.get("match_type") in {"display_name", "normalized_name"} for row in entity_matches)
 
     step_cards = [
         process_step_card(
             "Etapa 1",
             "Entidade",
-            "Checar se a entidade ja existe por nome exibido e nome normalizado. Se nao existir, cadastrar via intake em vez de gravar direto em public.entities.",
-            "ok-green" if state["entity_status"] == "existente" else "alert-yellow",
-            "entidade existente" if state["entity_status"] == "existente" else "cadastrar via intake",
+            "Checar nome exibido e nome normalizado. Se nao existir, enviar solicitacao para public.entity_intake.",
+            "ok-green" if entity_exact_match else "alert-yellow",
+            "resolvida" if entity_exact_match else "intake",
         ),
         process_step_card(
             "Etapa 2",
             "Criador",
-            "Cadastrar o criador somente depois da checagem da entidade. O cadastro final continua bloqueado ate review, publicacao e validacao.",
-            "ok-green" if state["creator_ready"] else "neutral",
-            "liberado" if state["creator_ready"] else "bloqueado",
+            "Cadastrar em public.creators apenas com entity_id resolvido, platform valido e channel_id sem duplicidade.",
+            "ok-green" if creator_created else "neutral",
+            "cadastrado" if creator_created else "pendente",
         ),
         process_step_card(
             "Etapa 3",
             "Associacao de nichos",
-            "Subir as opcoes existentes, permitir multiplas associacoes e garantir que o vinculo sera feito para a mesma entidade cadastrada na etapa 1.",
-            "neutral",
-            "multipla selecao",
+            "Selecionar subnichos existentes ou registrar solicitacao controlada para revisao.",
+            "ok-green" if last_intake_rows else "neutral",
+            "registrada" if last_intake_rows else "aguardando",
         ),
         process_step_card(
             "Etapa 4",
             "Revisao e publicacao",
-            "A entidade precisa passar por review, depois publish_entity_intake e por fim validacao de vinculos antes do criador.",
-            "ok-green" if state["validated"] else "alert-yellow",
-            "validado" if state["validated"] else "aguardando fluxo manual",
+            "A revisao segue pela view v_entity_intake_review e pela funcao publish_entity_intake fora do SQL livre da UI.",
+            "ok-green" if any(row.get("status") == "published" for row in last_intake_rows) else "alert-yellow",
+            "acompanhar",
         ),
     ]
     process_step_grid(step_cards)
 
-    tab_form, tab_review, tab_rules = st.tabs(
-        ["Novo criador de conteudo", "Simulacao de review", "Regras da governanca"]
-    )
+    tab_form, tab_review, tab_rules = st.tabs(["Novo criador de conteudo", "Revisao de intake", "Regras da governanca"])
 
     with tab_form:
+        sub_niche_rows, sub_niche_error = get_sub_niches_for_intake()
+        sub_niche_names = [str(row["sub_niche_name"]) for row in sub_niche_rows if row.get("sub_niche_name")]
+
+        if sub_niche_error:
+            st.warning(sub_niche_error)
+
         col_left, col_right = st.columns([1.35, 1])
 
         with col_left:
             st.markdown("### 1. Cadastrar entidade")
             raw_name = st.text_input("Nome da Entidade", value="Auto Mercado Brasil")
-            normalized_name = raw_name.strip().lower()
+            normalized_name = normalize_name_for_intake(raw_name)
             creator_type = st.selectbox("Tipo de criador", ["mid-tier", "editorial", "independente"])
+            st.caption(f"Nome normalizado sugerido: {normalized_name or '--'}")
 
-            if st.button("Checar entidade no banco", use_container_width=False):
-                display_match = next(
-                    (row for row in mock_entities if row["display_name"].strip().lower() == raw_name.strip().lower()),
-                    None,
-                )
-                normalized_match = next(
-                    (row for row in mock_entities if row["normalized_name"] == normalized_name),
-                    None,
-                )
-                if display_match or normalized_match:
-                    st.session_state["entity_status"] = "existente"
-                    st.session_state["entity_check_result"] = {
-                        "display_match": display_match,
-                        "normalized_match": normalized_match,
-                    }
+            if st.button("Checar entidade no banco", use_container_width=False, disabled=bool(connection_error)):
+                matches, error = call_supabase_rpc("search_entities_for_intake", {"p_raw_name": raw_name})
+                st.session_state["creator_intake_entity_matches"] = matches
+                st.session_state["creator_intake_entity_error"] = error
+                st.session_state["creator_intake_entity_checked_name"] = raw_name
+                st.session_state["creator_intake_last_rows"] = []
+                st.session_state["creator_intake_creator_row"] = None
+                if error:
+                    st.warning(error)
                 else:
-                    st.session_state["entity_status"] = "nova_entity"
-                    st.session_state["entity_check_result"] = {
-                        "display_match": None,
-                        "normalized_match": None,
-                    }
+                    st.success("Checagem concluida.")
 
-            entity_status = st.session_state["entity_status"]
-            entity_check_result = st.session_state.get("entity_check_result")
+            entity_matches = st.session_state.get("creator_intake_entity_matches", [])
+            entity_error = st.session_state.get("creator_intake_entity_error")
+            if st.session_state.get("creator_intake_entity_checked_name") != raw_name:
+                entity_matches = []
+                entity_error = None
+            if entity_error:
+                st.warning(entity_error)
+
+            resolved_entity = None
+            if entity_matches:
+                match_labels = [
+                    f'{row["entity_name"]} | id {row["entity_id"]} | {row["match_type"]}'
+                    for row in entity_matches
+                ]
+                selected_match_label = st.selectbox("Entidades encontradas", match_labels)
+                resolved_entity = entity_matches[match_labels.index(selected_match_label)]
+                exact_matches = [row for row in entity_matches if row.get("match_type") in {"display_name", "normalized_name"}]
+                if exact_matches:
+                    st.info("Entidade existente encontrada. O cadastro de nova entidade fica bloqueado; use a entidade resolvida para o criador.")
+                else:
+                    st.warning("Foram encontradas correspondencias parciais. Revise antes de cadastrar uma nova entidade.")
+            else:
+                st.info("Nenhuma entidade resolvida nesta sessao. Cheque o banco antes de enviar intake ou cadastrar criador.")
 
             st.markdown("### 2. Cadastrar criador")
             platform = st.selectbox("Plataforma", ["youtube", "instagram", "tiktok"])
@@ -2158,65 +2229,156 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
             channel_id = st.text_input("Channel ID", value="UC1234567890ABCDE")
             followers = st.number_input("Followers", min_value=0, value=185000, step=1000)
 
+            if st.button("Checar canal no banco", use_container_width=False, disabled=bool(connection_error) or not channel_id.strip()):
+                matches, error = call_supabase_rpc(
+                    "search_creators_for_intake",
+                    {"p_platform": platform, "p_channel_id": channel_id},
+                )
+                st.session_state["creator_intake_channel_matches"] = matches
+                st.session_state["creator_intake_channel_error"] = error
+                st.session_state["creator_intake_channel_checked_value"] = f"{platform}:{channel_id}"
+                if error:
+                    st.warning(error)
+                elif matches:
+                    st.warning("Canal ja existe na base. O cadastro final deve ficar bloqueado.")
+                else:
+                    st.success("Canal nao encontrado em public.creators.")
+
+            channel_matches = st.session_state.get("creator_intake_channel_matches", [])
+            channel_error = st.session_state.get("creator_intake_channel_error")
+            if st.session_state.get("creator_intake_channel_checked_value") != f"{platform}:{channel_id}":
+                channel_matches = []
+                channel_error = None
+            if channel_error:
+                st.warning(channel_error)
+            if channel_matches:
+                st.dataframe(pd.DataFrame(channel_matches), use_container_width=True, hide_index=True)
+
             st.markdown("### 3. Associar nichos")
-            linked_entity_name = raw_name if entity_status == "nova_entity" else (entity_check_result or {}).get("display_match", {}).get("display_name", raw_name)
+            linked_entity_name = str(resolved_entity["entity_name"]) if resolved_entity else raw_name
             st.text_input("Entidade que recebera a associacao", value=linked_entity_name, disabled=True)
-            taxonomy_selection = st.multiselect(
-                "Nichos e subnichos existentes",
-                mock_taxonomy_options,
-                default=["Mercado automotivo > Analise de mercado"],
+            niche = st.selectbox("Nicho", ["automotivo"], index=0)
+            selected_sub_niches = st.multiselect(
+                "Subnichos existentes",
+                sub_niche_names,
+                default=sub_niche_names[:1] if sub_niche_names else [],
             )
-            taxonomy_request = st.text_input("Solicitar novo nicho ou subnicho", value="")
+            taxonomy_request = st.text_input("Solicitar novo subnicho para revisao", value="")
+            intake_notes = st.text_area("Observacao da solicitacao", value="", height=88)
+
+            st.markdown("### Acoes")
+            intake_targets = selected_sub_niches + ([taxonomy_request.strip()] if taxonomy_request.strip() else [])
+            can_send_intake = bool(raw_name.strip()) and bool(intake_targets) and not connection_error
+            if st.button("Enviar para entity_intake", use_container_width=True, disabled=not can_send_intake):
+                created_rows: list[dict[str, Any]] = []
+                errors: list[str] = []
+                for sub_niche_name in intake_targets:
+                    rows, error = call_supabase_rpc(
+                        "create_entity_intake_entry",
+                        {
+                            "p_raw_name": raw_name,
+                            "p_sub_niche_name": sub_niche_name,
+                            "p_niche": niche,
+                            "p_creator_type": creator_type,
+                            "p_notes": intake_notes,
+                        },
+                    )
+                    if error:
+                        errors.append(error)
+                    else:
+                        created_rows.extend(rows)
+                if created_rows:
+                    clear_supabase_data_cache()
+                    st.session_state["creator_intake_last_rows"] = created_rows
+                    last_intake_rows = created_rows
+                    st.success(f"{len(created_rows)} registro(s) enviado(s) para entity_intake.")
+                if errors:
+                    st.warning(" | ".join(errors))
+
+            creator_disabled_reason = []
+            if connection_error:
+                creator_disabled_reason.append("configure Supabase")
+            if not resolved_entity:
+                creator_disabled_reason.append("resolva uma entidade existente")
+            if not selected_sub_niches:
+                creator_disabled_reason.append("selecione pelo menos um subnicho existente")
+            if taxonomy_request.strip():
+                creator_disabled_reason.append("novo subnicho precisa de revisao antes do creator")
+            if not channel_id.strip():
+                creator_disabled_reason.append("informe channel_id")
+            if channel_matches:
+                creator_disabled_reason.append("channel_id ja cadastrado")
+            can_create_creator = not creator_disabled_reason
+            if st.button("Cadastrar criador no Supabase", use_container_width=True, disabled=not can_create_creator):
+                rows, error = call_supabase_rpc(
+                    "create_creator_from_resolved_entity",
+                    {
+                        "p_entity_id": int(resolved_entity["entity_id"]),
+                        "p_platform": platform,
+                        "p_username": username,
+                        "p_channel_id": channel_id,
+                        "p_followers": int(followers),
+                    },
+                )
+                if error:
+                    st.warning(error)
+                elif rows:
+                    clear_supabase_data_cache()
+                    st.session_state["creator_intake_creator_row"] = rows[0]
+                    creator_created = rows[0]
+                    st.success(f"Criador cadastrado com id {rows[0]['creator_id']}.")
 
         with col_right:
             st.markdown("### Leitura da UI")
-            creator_blocked = entity_status != "nova_entity" or not state["validated"]
+            exact_entity = bool(resolved_entity and resolved_entity.get("match_type") in {"display_name", "normalized_name"})
+            partial_entity = bool(resolved_entity and resolved_entity.get("match_type") == "partial_name")
             local_warnings = []
-            entity_found = entity_status == "existente"
-            if entity_status == "nao_checada":
+            if not entity_matches:
                 local_warnings.append("Use o botao para checar o banco antes de cadastrar a entidade.")
-            if entity_found:
-                local_warnings.append("A entidade ja existe no banco. O cadastro de nova entidade deve ficar bloqueado.")
-            if not taxonomy_selection and not taxonomy_request.strip():
-                local_warnings.append("A entidade precisa sair desta tela com pelo menos uma associacao de nicho ou uma solicitacao aberta.")
+            if partial_entity:
+                local_warnings.append("Ha apenas correspondencia parcial. Revise antes de seguir.")
+            if not selected_sub_niches and not taxonomy_request.strip():
+                local_warnings.append("Escolha um subnicho existente ou registre uma solicitacao para revisao.")
             if taxonomy_request.strip():
                 local_warnings.append("Novo nicho ou subnicho deve entrar como solicitacao controlada, nao como cadastro direto.")
             if not channel_id.strip():
                 local_warnings.append("Channel ID e obrigatorio para o cadastro final do criador.")
-            if entity_status != "nova_entity":
-                local_warnings.append("O cadastro final em public.creators depende de uma nova entidade validada nesta jornada.")
-            elif creator_blocked:
-                local_warnings.append("O cadastro final em public.creators deve continuar bloqueado nesta etapa.")
+            if creator_disabled_reason:
+                local_warnings.append("Cadastro final bloqueado: " + ", ".join(creator_disabled_reason) + ".")
 
             chips = [
-                dq_chip("Entidade", "existente" if entity_found else "nova", "alert-yellow" if entity_found else "ok-green"),
-                dq_chip("Criador", "bloqueado" if creator_blocked else "liberado", "neutral" if creator_blocked else "ok-green"),
-                dq_chip("Nichos", str(len(taxonomy_selection)), "ok-green" if taxonomy_selection else "alert-yellow"),
+                dq_chip("Entidade", "resolvida" if exact_entity else "revisar", "ok-green" if exact_entity else "alert-yellow"),
+                dq_chip("Canal", "duplicado" if channel_matches else "ok", "alert-yellow" if channel_matches else "ok-green"),
+                dq_chip("Subnichos", str(len(selected_sub_niches)), "ok-green" if selected_sub_niches else "alert-yellow"),
             ]
             st.markdown(
                 dq_kpi_card(
                     "Prontidao do cadastro",
-                    "Bloqueado" if creator_blocked else "Liberado",
-                    "A UI so libera o criador depois do fluxo manual obrigatorio.",
-                    "#ff8069" if creator_blocked else "#98df96",
+                    "Liberado" if can_create_creator else "Bloqueado",
+                    "O creator so e gravado por RPC quando entity_id, canal e classificacao estao resolvidos.",
+                    "#98df96" if can_create_creator else "#ff8069",
                     chips,
                 ),
                 unsafe_allow_html=True,
             )
 
-            st.markdown("### Payload que iria para entidade_intake")
+            st.markdown("### Payload para entity_intake")
             st.json(
                 {
                     "raw_name": raw_name,
                     "normalized_name": normalized_name,
-                    "tipo_criador": creator_type,
+                    "niche": niche,
+                    "creator_type": creator_type,
+                    "sub_niche_names": intake_targets,
+                    "notes": intake_notes or None,
                     "status": "pending",
                 }
             )
 
-            st.markdown("### Payload que ficaria retido ate o fim do fluxo")
+            st.markdown("### Payload para public.creators")
             st.json(
                 {
+                    "entity_id": resolved_entity.get("entity_id") if resolved_entity else None,
                     "platform": platform,
                     "username": username,
                     "channel_id": channel_id,
@@ -2228,72 +2390,54 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
             st.json(
                 {
                     "nome_entidade": linked_entity_name,
-                    "associacoes_existentes": taxonomy_selection,
+                    "associacoes_existentes": selected_sub_niches,
                     "solicitacao_taxonomia": taxonomy_request.strip() or None,
                 }
             )
 
-            if entity_check_result:
-                st.markdown("### Resultado da checagem")
-                st.json(entity_check_result)
+            if last_intake_rows:
+                st.markdown("### Ultimo envio para review")
+                review_card_grid(last_intake_rows)
+
+            if creator_created:
+                st.markdown("### Criador cadastrado")
+                st.json(creator_created)
 
             if local_warnings:
                 st.warning(" | ".join(local_warnings))
             else:
-                st.success("A estrutura do rascunho respeita o processo de governanca atual.")
+                st.success("O cadastro esta pronto para a acao permitida nesta etapa.")
 
     with tab_review:
-        st.markdown("### Simulacao guiada do processo manual")
-        flow_col1, flow_col2, flow_col3, flow_col4 = st.columns(4)
+        st.markdown("### Revisao v_entity_intake_review")
+        refresh_col, _ = st.columns([0.25, 0.75])
+        with refresh_col:
+            if st.button("Atualizar revisao", use_container_width=True):
+                clear_supabase_data_cache()
+                st.rerun()
 
-        with flow_col1:
-            if st.button("Marcar review pronto", use_container_width=True):
-                st.session_state["review_ready"] = True
-        with flow_col2:
-            if st.button("Simular publicacao", use_container_width=True):
-                st.session_state["published"] = True
-        with flow_col3:
-            if st.button("Simular validacao", use_container_width=True):
-                st.session_state["validated"] = True
-        with flow_col4:
-            if st.button("Liberar criador", use_container_width=True):
-                st.session_state["creator_ready"] = True
-
-        review_rows = [
-            {
-                "raw_name": "Auto Mercado Brasil",
-                "sub_niche_name": "Analise de mercado",
-                "status": "pending" if not st.session_state["published"] else "published",
-                "review_result": "READY_TO_INSERT" if st.session_state["review_ready"] else "CHECK_DUPLICATE",
-                "existing_entity_id": 128 if st.session_state["entity_status"] == "existente" else None,
-                "existing_entity_name": "Auto Mercado Brasil" if st.session_state["entity_status"] == "existente" else None,
-                "sub_niche_id": 42,
-                "matched_sub_niche_name": "Analise de mercado",
-                "notes": "Mock de avaliacao sem SQL.",
-            }
-        ]
-        review_card_grid(review_rows)
-
-        with st.expander("Detalhe tecnico da revisao", expanded=False):
-            st.dataframe(pd.DataFrame(review_rows), use_container_width=True, hide_index=True)
+        review_rows, review_error = get_view_rows("v_entity_intake_review")
+        if review_error:
+            st.warning(review_error)
+        elif review_rows:
+            sorted_review_rows = sorted(review_rows, key=lambda row: str(row.get("created_at") or ""), reverse=True)
+            review_card_grid(sorted_review_rows[:12])
+            with st.expander("Detalhe tecnico da revisao", expanded=False):
+                st.dataframe(pd.DataFrame(sorted_review_rows), use_container_width=True, hide_index=True)
+        else:
+            st.info("Nenhum registro encontrado em v_entity_intake_review.")
 
         timeline = [
-            ("Cadastro em entity_intake", "ok"),
-            ("Review via v_entity_intake_review", "ok" if st.session_state["review_ready"] else "atencao"),
-            ("Publish via public.publish_entity_intake()", "ok" if st.session_state["published"] else "atencao"),
-            ("Validacao de vinculos", "ok" if st.session_state["validated"] else "atencao"),
-            ("Cadastro final em public.creators", "ok" if st.session_state["creator_ready"] else "neutral"),
+            ("Cadastro em entity_intake", "ok" if last_intake_rows else "atencao"),
+            ("Review via v_entity_intake_review", "ok" if review_rows and not review_error else "atencao"),
+            ("Publish via public.publish_entity_intake()", "atencao"),
+            ("Cadastro final em public.creators", "ok" if creator_created else "neutral"),
         ]
         st.markdown("### Estado atual do processo")
         st.markdown(
             "".join(dq_chip(label, status.upper(), "ok-green" if status == "ok" else "alert-yellow" if status == "atencao" else "neutral") for label, status in timeline),
             unsafe_allow_html=True,
         )
-
-        if st.button("Reiniciar simulacao", use_container_width=False):
-            for key in ["review_ready", "published", "validated", "creator_ready"]:
-                st.session_state[key] = False
-            st.rerun()
 
     with tab_rules:
         st.markdown("### O que a UI precisa respeitar")
@@ -2307,8 +2451,8 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
 - Se a entidade nao existir, a UI deve cadastrar via intake e nao gravar na tabela final.
 - O criador vem antes da associacao final de nichos nesta jornada.
 - Nicho e subnicho precisam subir como opcoes existentes, com selecao multipla, ou entrar como solicitacao controlada.
-- Review vem antes de publish, e publish vem antes de validate.
-- `platform`, `channel_id` e `followers` podem existir no rascunho da tela, mas nao podem virar criador final antes do fim do fluxo.
+- Review vem antes de publish, e publish continua usando `public.publish_entity_intake()`.
+- `platform`, `channel_id` e `followers` viram creator somente por RPC controlada e com `entity_id` resolvido.
 - O Streamlit deve funcionar como camada de operacao guiada, nao como editor SQL.
 """
         )

@@ -276,9 +276,57 @@ Campos relevantes:
 - `matched_sub_niche_name`
 - `review_result`
 
-### Escrita recomendada
+### Escrita implementada para a UI
 
-Primeira escrita:
+Arquivo SQL:
+
+```text
+sql/ddl/functions/006_creator_intake_rpc_functions.sql
+```
+
+Funcoes expostas para `anon` e `authenticated`:
+
+```text
+public.search_entities_for_intake(p_raw_name text)
+public.search_creators_for_intake(p_platform text, p_channel_id text)
+public.list_sub_niches_for_intake()
+public.create_entity_intake_entry(...)
+public.create_creator_from_resolved_entity(...)
+```
+
+Ordem obrigatoria de aplicacao no Supabase SQL Editor:
+
+1. `sql/ddl/tables/009_create_entity_intake.sql`
+2. `sql/ddl/views/001_create_v_entity_intake_review.sql`
+3. `sql/ddl/functions/001_create_publish_entity_intake_function.sql`
+4. `sql/ddl/functions/006_creator_intake_rpc_functions.sql`
+
+Preflight recomendado antes da aplicacao:
+
+```text
+sql/dml/check_creator_intake_dependencies.sql
+```
+
+Se `public.entity_intake` aparecer como inexistente, a view
+`public.v_entity_intake_review` falhara com `relation "public.entity_intake"
+does not exist`. Nesse caso, aplicar primeiro a tabela `009_create_entity_intake`
+e so depois reaplicar a view.
+
+Comportamento:
+
+- a UI consulta entidades existentes por nome exibido, nome normalizado e
+  candidatos parciais
+- a UI consulta duplicidade de creator por `channel_id` e `(platform,
+  channel_id)`
+- a UI carrega a lista de subnichos existentes sem ler a tabela diretamente
+- a UI cria registros em `public.entity_intake` por RPC controlada
+- a UI cria registros em `public.creators` apenas quando `entity_id` ja esta
+  resolvido e o canal nao esta duplicado
+- a UI nao grava diretamente em `public.entities`
+- a UI nao grava diretamente em `public.entity_sub_niches`
+- a UI nao usa `SUPABASE_SERVICE_ROLE_KEY`
+
+Primeira escrita operacional:
 
 ```text
 public.entity_intake
@@ -287,10 +335,10 @@ public.entity_intake
 Metodo preferido para o Streamlit:
 
 - RPC controlada para inserir registros em `entity_intake`
-- ou, em fase inicial, manter o cadastro manual pelo Supabase UI e usar o
-  Streamlit apenas para revisar
+- leitura da revisao por `public.v_entity_intake_review`
+- publicacao final de entity/subniche ainda pelo fluxo controlado existente
 
-RPC futura sugerida:
+RPC implementada:
 
 ```text
 public.create_entity_intake_entry(
@@ -308,6 +356,7 @@ Comportamento esperado:
 - preencher `status = 'pending'`
 - nao inserir diretamente em `public.entities`
 - nao inserir diretamente em `public.entity_sub_niches`
+- retornar a linha ja avaliada por `public.v_entity_intake_review`
 
 RPC futura para taxonomia:
 
@@ -327,11 +376,12 @@ Comportamento esperado:
 - nao publicar automaticamente classificacoes novas
 - permitir revisao antes de uso analitico
 
-## Lacuna atual: cadastro em `public.creators`
+## Cadastro em `public.creators`
 
-O procedimento documentado hoje cobre bem a criacao de `entities` e vinculos de
-`entity_sub_niches`, mas nao fecha sozinho o cadastro de uma linha em
-`public.creators`.
+O procedimento documentado cobre a criacao de `entities` e vinculos de
+`entity_sub_niches` por intake. O cadastro de uma linha em `public.creators`
+foi separado em uma RPC propria para evitar mistura entre governanca de entity
+e cadastro do canal.
 
 Como `public.creators` exige `entity_id`, `platform` e `channel_id`, a sub-view
 deve tratar isso como etapa final da jornada de inclusao.
@@ -347,7 +397,7 @@ Regra recomendada:
   - `instagram`
   - `tiktok`
 
-RPC futura sugerida:
+RPC implementada:
 
 ```text
 public.create_creator_from_resolved_entity(
@@ -366,6 +416,14 @@ Comportamento esperado:
 - rejeitar `channel_id` duplicado
 - inserir em `public.creators`
 - retornar o `creator_id`
+
+Observacao:
+
+- `public.publish_entity_intake()` continua existindo como funcao de publicacao
+  do intake, mas nao deve ser chamada automaticamente pela tela enquanto
+  processar todos os registros pendentes/aprovados de uma vez
+- se for necessario publicar pela UI, criar uma RPC futura por `intake_id`, com
+  efeito restrito ao registro selecionado
 
 ## Experiencia da tela
 
@@ -438,15 +496,15 @@ Filtros:
 
 ## Sequencia recomendada de implementacao
 
-1. Criar a pagina Streamlit `Inclusao de dados externos`.
-2. Criar a etapa de busca de entity existente.
-3. Criar a etapa de solicitacao de nova entity via `public.entity_intake`,
-   sem escrita direta em tabelas finais.
+1. Criar a pagina Streamlit `Cadastro > Criadores`.
+2. Criar a etapa de busca de entity existente por RPC.
+3. Criar a etapa de solicitacao de nova entity ou novo vinculo de subnicho via
+   `public.entity_intake`, sem escrita direta em tabelas finais.
 4. Conectar a leitura de `public.v_entity_intake_review`.
-5. Criar a etapa de resolucao de nicho/subnicho existente.
-6. Definir o metodo controlado para solicitacao de novos nichos/subnichos.
-7. Definir ou criar RPC separada para cadastrar `public.creators` apenas quando
-   `entity_id` e classificacao estiverem resolvidos.
+5. Carregar subnichos existentes por RPC e permitir selecao multipla.
+6. Manter novos nichos/subnichos como solicitacao controlada para revisao.
+7. Criar RPC separada para cadastrar `public.creators` apenas quando
+   `entity_id`, canal e classificacao estiverem resolvidos.
 8. Validar o fluxo completo com um creator de teste.
 9. Documentar o resultado no pipeline status antes de considerar a tela pronta.
 

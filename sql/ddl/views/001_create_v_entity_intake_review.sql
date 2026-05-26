@@ -31,3 +31,6 @@ LEFT JOIN public.entities e
   ON e.normalized_name = ei.normalized_name
 LEFT JOIN public.sub_niches sn
   ON LOWER(TRIM(unaccent(sn.name::text))) = LOWER(TRIM(unaccent(ei.sub_niche_name)));
+
+GRANT SELECT ON public.v_entity_intake_review TO anon;
+GRANT SELECT ON public.v_entity_intake_review TO authenticated;
