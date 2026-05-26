@@ -126,14 +126,15 @@ Discovery de catalogo
 Resumo operacional consolidado para a frente:
 
 ```text
-fabricantes -> modelos -> fichas -> parser -> atualizacao incremental
+fabricantes -> modelos -> anos -> fichas -> parser -> atualizacao incremental
 ```
 
 Observacao importante:
 
 - esse fluxo resume a direcao do produto
-- quando o catalogo do site exigir uma etapa intermediaria por ano, ela continua
-  valida como subetapa tecnica entre `modelos` e `fichas`
+- a etapa `anos` deixou de ser apenas opcional e passa a ser parte explicita do
+  pipeline atual, porque o catalogo exige navegacao por `url_ano` antes da
+  descoberta confiavel de fichas
 
 ## Escopo da fase 1
 
@@ -236,6 +237,8 @@ Estado atual de codigo versionado no repo:
   compartilhado com sessao aquecida
 - `scripts/carrosnaweb_ingestion/02_discover_modelos.py` para a camada
   `fabricantes -> modelos`
+- `scripts/carrosnaweb_ingestion/03_discover_anos.py` para a camada
+  `modelos -> anos_modelo`
 - `scripts/carrosnaweb_ingestion/src/parser.py` para extrair a ficha tecnica a
   partir de `table/tr/td`
 - `scripts/carrosnaweb_ingestion/07_parse_fichas.py` para converter HTML bruto
@@ -422,12 +425,12 @@ O script deve imprimir:
 - total de modelos unicos
 - preview do CSV
 
-### 5. Discovery de fichas por modelo
+### 5. Discovery de anos por modelo
 
 Script:
 
 ```text
-scripts/carrosnaweb_ingestion/03_discover_fichas.py
+scripts/carrosnaweb_ingestion/03_discover_anos.py
 ```
 
 Entrada:
@@ -436,19 +439,80 @@ Entrada:
 scripts/carrosnaweb_ingestion/data/discovery/modelos.csv
 ```
 
+Localizacao canonicamente esperada no repo:
+
+```text
+C:\social_media-analytics\scripts\carrosnaweb_ingestion\data\discovery\modelos.csv
+```
+
+Saida canonicamente esperada:
+
+```text
+C:\social_media-analytics\scripts\carrosnaweb_ingestion\data\discovery\anos_modelo.csv
+```
+
 Logica:
 
 - ler modelos
-- acessar cada pagina de modelo
-- encontrar links contendo `fichadetalhe.asp?codigo=`
-- extrair `codigo` via query string
+- acessar cada `url_modelo`
+- extrair ano por parametro, texto do link ou URL
+- aceitar links candidatos quando apontarem para `catalogo` ou `fichadetalhe`
 - remover duplicados por URL
+
+Colunas esperadas:
+
+```text
+fabricante
+modelo
+ano
+url_ano
+url_modelo_origem
+href_original
+texto_link
+params
+```
+
+Saida:
+
+```text
+scripts/carrosnaweb_ingestion/data/discovery/anos_modelo.csv
+```
+
+### 6. Salvar anos_modelo.csv
+
+O CSV deve ser salvo com:
+
+```text
+encoding="utf-8-sig"
+index=False
+```
+
+O script deve imprimir:
+
+- fabricante e modelo atuais
+- URL do modelo
+- quantidade de anos encontrados
+- preview das linhas de anos encontradas
+
+### 7. Discovery de fichas por modelo ou por ano validado
+
+Script:
+
+```text
+scripts/carrosnaweb_ingestion/04_discover_fichas.py
+```
+
+Entrada:
+
+```text
+scripts/carrosnaweb_ingestion/data/discovery/anos_modelo.csv
+```
 
 Regra critica:
 
 ```text
 O script nao pode enumerar IDs.
-Ele deve capturar somente links publicados nas paginas de catalogo.
+Ele deve capturar somente links publicados nas paginas reais do catalogo.
 ```
 
 Saida:
@@ -462,33 +526,17 @@ Colunas esperadas:
 ```text
 fabricante
 modelo
+ano
 codigo
 url
 ```
 
-### 6. Salvar fichas.csv
-
-O CSV deve ser salvo com:
-
-```text
-encoding="utf-8-sig"
-index=False
-```
-
-O script deve imprimir:
-
-- modelo atual
-- URL do modelo
-- quantidade de fichas encontradas por modelo
-- total de fichas unicas
-- preview do CSV
-
-### 7. Scraper de fichas apenas com URLs validas
+### 8. Scraper de fichas apenas com URLs validas
 
 Script:
 
 ```text
-scripts/carrosnaweb_ingestion/04_scrape_fichas.py
+scripts/carrosnaweb_ingestion/05_scrape_fichas.py
 ```
 
 Entrada:
@@ -497,47 +545,7 @@ Entrada:
 scripts/carrosnaweb_ingestion/data/discovery/fichas.csv
 ```
 
-Parametros esperados:
-
-```text
---max-items
---input-csv
---output-status-csv
-```
-
-Primeiro teste recomendado:
-
-```text
-max_items=10
-```
-
-Classificacao logica das respostas:
-
-```text
-success
-captcha_validation
-server_error
-blocked
-invalid_or_error_page
-unknown_error
-exception
-```
-
-Regras:
-
-- salvar HTML apenas quando `logical_status = success`
-- parar a execucao quando detectar captcha
-- registrar status de cada tentativa
-- nao retentar agressivamente
-
-Saidas:
-
-```text
-scripts/carrosnaweb_ingestion/data/raw_html/fichas/<codigo>.html
-scripts/carrosnaweb_ingestion/data/discovery/fichas_scrape_status.csv
-```
-
-### 8. Parser de tabela HTML
+### 9. Parser de tabela HTML
 
 Arquivo:
 
@@ -589,7 +597,7 @@ Campos esperados nas fichas:
 - Consumo
 - Autonomia
 
-### 9. Salvar raw HTML
+### 10. Salvar raw HTML
 
 O HTML bruto deve ser preservado em:
 
@@ -610,12 +618,12 @@ Motivo:
 - reduz risco de bloqueio
 - cria evidencia local para auditoria de parsing
 
-### 10. Salvar dados estruturados
+### 11. Salvar dados estruturados
 
 Script:
 
 ```text
-scripts/carrosnaweb_ingestion/05_parse_fichas.py
+scripts/carrosnaweb_ingestion/07_parse_fichas.py
 ```
 
 Entrada:
@@ -632,7 +640,7 @@ scripts/carrosnaweb_ingestion/data/processed/ficha_tecnica.csv
 
 O CSV deve consolidar todos os registros extraidos dos HTMLs brutos.
 
-### 11. Rodar validacoes de qualidade
+### 12. Rodar validacoes de qualidade
 
 Validacoes iniciais:
 
@@ -644,14 +652,21 @@ print(df["fabricante"].nunique())
 ```
 
 ```python
-df = pd.read_csv("data/discovery/modelos.csv")
+df = pd.read_csv("scripts/carrosnaweb_ingestion/data/discovery/modelos.csv")
 print(df.shape)
 print(df.head())
-print(df["url"].duplicated().sum())
+print(df["url_modelo"].duplicated().sum())
 ```
 
 ```python
-df = pd.read_csv("data/discovery/fichas.csv")
+df = pd.read_csv("scripts/carrosnaweb_ingestion/data/discovery/anos_modelo.csv")
+print(df.shape)
+print(df.head())
+print(df["url_ano"].duplicated().sum())
+```
+
+```python
+df = pd.read_csv("scripts/carrosnaweb_ingestion/data/discovery/fichas.csv")
 print(df.shape)
 print(df.head())
 print(df["codigo"].duplicated().sum())
@@ -835,14 +850,20 @@ Contrato atual entre as duas primeiras etapas:
 02_discover_modelos.py
   input  -> scripts/carrosnaweb_ingestion/data/discovery/fabricantes.csv
   output -> scripts/carrosnaweb_ingestion/data/discovery/modelos.csv
+
+03_discover_anos.py
+  input  -> scripts/carrosnaweb_ingestion/data/discovery/modelos.csv
+  output -> scripts/carrosnaweb_ingestion/data/discovery/anos_modelo.csv
 ```
 
 Implicacao pratica:
 
 - se `fabricantes.csv` ainda nao foi gerado, `02_discover_modelos.py` nao deve
   ser executado
+- se `modelos.csv` ainda nao foi gerado, `03_discover_anos.py` nao deve ser
+  executado
 - o fluxo correto no repo passa a ser rodar primeiro o script de fabricantes e
-  so depois o script de modelos
+  depois o script de modelos e o script de anos
 
 ## Parser validado no HTML
 
@@ -910,14 +931,14 @@ Implementar:
 
 ```text
 scripts/carrosnaweb_ingestion/02_discover_modelos.py
-scripts/carrosnaweb_ingestion/03_discover_fichas.py
+scripts/carrosnaweb_ingestion/03_discover_anos.py
 ```
 
 Resultado esperado:
 
 ```text
 scripts/carrosnaweb_ingestion/data/discovery/modelos.csv
-scripts/carrosnaweb_ingestion/data/discovery/fichas.csv
+scripts/carrosnaweb_ingestion/data/discovery/anos_modelo.csv
 ```
 
 ### Prioridade 4 - HTML bruto e parser
@@ -925,14 +946,16 @@ scripts/carrosnaweb_ingestion/data/discovery/fichas.csv
 Implementar:
 
 ```text
-scripts/carrosnaweb_ingestion/04_scrape_fichas.py
+scripts/carrosnaweb_ingestion/04_discover_fichas.py
+scripts/carrosnaweb_ingestion/05_scrape_fichas.py
 scripts/carrosnaweb_ingestion/src/parser.py
-scripts/carrosnaweb_ingestion/05_parse_fichas.py
+scripts/carrosnaweb_ingestion/07_parse_fichas.py
 ```
 
 Resultado esperado:
 
 ```text
+scripts/carrosnaweb_ingestion/data/discovery/fichas.csv
 scripts/carrosnaweb_ingestion/data/raw_html/fichas/<codigo>.html
 scripts/carrosnaweb_ingestion/data/processed/ficha_tecnica.csv
 ```
