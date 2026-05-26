@@ -72,15 +72,17 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 - [ ] Implementar MVP online com overview, creators e crescimento semanal.
 - [ ] Exibir status de qualidade dos dados antes dos rankings.
 - [x] Garantir que o app use Supabase sob demanda sem expor service role key.
-- [ ] Criar app Streamlit inicial consumindo as views do Supabase.
-- [ ] Aplicar tema visual do dashboard com fundo em escala de cinza, sidebar escura, cards contrastados e pictos.
-- [ ] Aplicar views de Data Quality do dashboard: guardrail legado e posts mortos/validados.
+- [x] Criar app Streamlit inicial consumindo as views do Supabase.
+- [x] Aplicar tema visual do dashboard com fundo em escala de cinza, sidebar escura, cards contrastados e pictos.
+- [x] Aplicar views de Data Quality do dashboard: guardrail legado e posts mortos/validados.
 - [x] Implementar mockup operacional de `Cadastro de Criadores` no Streamlit para validar processo sem ligacao SQL.
 - [x] Implementar mockup operacional de `Cadastro Fenabrave` no Streamlit, focado na rotina mensal de ingestao descrita no doc 23.
-- [ ] Ligar o `Cadastro de Criadores` ao SQL com busca real de entidade por nome exibido e nome normalizado.
-- [ ] Ligar o `Cadastro de Criadores` ao SQL com leitura real de opcoes de nicho/subnicho e associacao multipla.
-- [ ] Ligar o `Cadastro de Criadores` ao SQL com escrita controlada em `entity_intake` e etapa final de cadastro em `creators`.
-- [ ] Ligar a revisao de `Cadastro de Criadores` a `v_entity_intake_review` e ao fluxo manual de publish/validate.
+- [x] Ligar o `Cadastro de Criadores` ao SQL com busca real de entidade por nome exibido e nome normalizado.
+- [x] Ligar o `Cadastro de Criadores` ao SQL com leitura real de opcoes de nicho/subnicho e associacao multipla.
+- [x] Ligar o `Cadastro de Criadores` ao SQL com escrita controlada em `entity_intake` e etapa final de cadastro em `creators`.
+- [x] Ligar a revisao de `Cadastro de Criadores` a `v_entity_intake_review` e publicacao por RPC controlada.
+- [x] Validar cadastro de nova entity e novo criador via Streamlit com RPC controlada. Caso validado: `Autoesporte`, `creator_id=55`, `entity_id=52`.
+- [ ] Acompanhar nos proximos dias se o worker incorpora o novo criador validado ao ciclo normal de discovery/coleta.
 - [ ] Ligar o `Cadastro Fenabrave` ao SQL com registro real de metadados em `market_source_files`.
 - [ ] Definir e implementar a estrategia segura de upload do PDF Fenabrave a partir do app, sem expor credenciais privilegiadas.
 - [ ] Ligar o `Cadastro Fenabrave` ao preview operacional da extracao e aos status reais do periodo.

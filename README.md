@@ -117,8 +117,17 @@ Arquivos principais:
 
 - `sql/ddl/tables/009_create_entity_intake.sql`
 - `sql/ddl/views/001_create_v_entity_intake_review.sql`
+- `sql/ddl/functions/006_creator_intake_rpc_functions.sql`
 - `sql/dml/review_entity_intake.sql`
 - `sql/dml/publish_entity_intake_manual_run.sql`
+
+Status:
+
+- cadastro de criadores via Streamlit validado em 2026-05-26
+- caso validado: `Autoesporte`, `creator_id=55`, `entity_id=52`
+- criador aparece na view de criadores do Streamlit
+- ainda falta confirmar, em alguns dias, se os workers incorporaram o novo
+  criador ao ciclo normal de discovery/coleta
 
 ## Frente 2. Dados de Fontes Externas
 
@@ -210,6 +219,7 @@ Direcao atual:
 - dashboard interno
 - Streamlit como solucao atual
 - Supabase como fonte sob demanda
+- cadastro operacional de criadores via Streamlit validado
 
 ### Atividades principais
 
@@ -217,6 +227,7 @@ Direcao atual:
 - exibicao de indicadores de qualidade dos dados
 - overview executivo
 - ranking de creators
+- cadastro controlado de creators
 - crescimento semanal
 - cruzamento entre conteudo, mercado e catalogo
 - cadastro operacional guiado de criadores
@@ -468,16 +479,18 @@ Documentos importantes por frente:
 
 - estrategia definida
 - views analiticas principais ja preparadas
-- app Streamlit inicial em construcao
-- mockup de `Cadastro de Criadores` pronto para validacao visual e de processo
+- app Streamlit inicial em execucao na branch `codex/dashboard-streamlit-mvp`
+- cadastro de criadores via Streamlit validado com `Autoesporte`
+- mockup de `Cadastro de Criadores` evoluiu para fluxo validado com Supabase
 - mockup de `Cadastro Fenabrave` pronto para validacao visual e de processo
-- ligacao SQL das views de cadastro ainda pendente
+- ligacao SQL do `Cadastro Fenabrave` ainda pendente
+- pendente acompanhar se os workers incorporam o novo criador ao ciclo normal
 
 ## Proximos Passos Sugeridos
 
 - expandir a documentacao de multiplataforma para alem do YouTube
 - consolidar a frente de fontes externas em schema e ingestao versionados
-- ligar o `Cadastro de Criadores` ao SQL com busca, review e publicacao controlada
 - ligar o `Cadastro Fenabrave` ao SQL com metadados, preview e validacao do periodo
-- implementar o restante do app inicial do dashboard consumindo as views do Supabase
+- acompanhar o novo criador validado no ciclo dos workers
+- consolidar o app inicial do dashboard consumindo as views do Supabase
 

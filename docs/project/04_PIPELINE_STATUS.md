@@ -371,11 +371,29 @@ Proxima avaliacao:
   confirmado
 - o app Streamlit inicial ja existe na branch `codex/dashboard-streamlit-mvp`
 - a conexao com Supabase via secrets ja foi validada no app
-- Data Quality esta sendo ajustado para usar dois KPIs operacionais
+- Data Quality ja exibe:
+  - `Monitoramento de posts sem checagem`
+  - `Posts mortos e validacao humana`
+  - `Integridade da coleta`
+  - `Evidencia de processamento`
+  - `Sinais operacionais`
+- o principal uso atual do Data Quality e orientar a analise da regra de
+  `next_check` e da cobertura operacional do worker
+- `Cadastro > Criadores` ja foi validado em producao operacional via
+  Streamlit:
+  - caso validado: `Autoesporte`
+  - `creator_id`: `55`
+  - `entity_id`: `52`
+  - `channel_id`: `UCc6jv88ebCrDVxJQUjZfGT`
+  - subnichos: `compra`, `noticia`, `review`, `teste`
+  - resultado: criador cadastrado com subnicho e visivel na view de criadores
+  - pendente: confirmar nos proximos dias se o worker incorporou o criador ao
+    ciclo normal de discovery/coleta
 
 ### 3.4 Proximos checkpoints desta frente
 
-- implementar overview, creators e crescimento semanal
+- acompanhar se o novo criador validado entra no ciclo normal dos workers
+- consolidar overview, creators e crescimento semanal
 - expor indicadores de qualidade dos dados antes dos rankings
 - manter consumo sob demanda do Supabase sem expor `service role key`
 
@@ -410,11 +428,13 @@ Proxima avaliacao:
 
 ### 4.4 Ultima verificacao manual consolidada
 
-- Data de referencia deste status: `2026-05-19`
+- Data de referencia deste status: `2026-05-26`
 - Resultado:
   - frente social media segue como base operacional principal
   - frente Fenabrave ja saiu de estudo e entrou em implementacao local
   - frente Carros na Web segue em planejamento
   - frente SENATRAN / RENAVAM segue em estudo
-  - frente dashboard esta com estrategia pronta e aguarda implementacao do app
+  - frente dashboard ja validou cadastro de criadores via Streamlit com
+    visibilidade na view de criadores
+  - ainda falta acompanhar a incorporacao do criador validado pelos workers
 

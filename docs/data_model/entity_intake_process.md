@@ -11,7 +11,39 @@ Nunca inserir diretamente em:
 Toda entrada manual deve passar por:
 - public.entity_intake
 
-## Fluxo operacional
+## Fluxo operacional atual
+
+### Caminho preferencial pelo Streamlit
+
+Validado em 2026-05-26.
+
+Tela:
+- `Cadastro > Criadores`
+
+Fluxo:
+
+1. Checar se a entity ja existe.
+2. Se a entity nao existir, enviar o registro para `public.entity_intake`.
+3. Revisar o resultado pela propria UI, usando `public.v_entity_intake_review`.
+4. Publicar uma linha por vez com `public.publish_entity_intake_entry(p_intake_id)`.
+5. Cadastrar o criador com `public.create_creator_from_resolved_entity(...)`.
+6. Validar que o criador aparece na view de criadores no Streamlit.
+
+Caso validado:
+
+- entity: `Autoesporte`
+- creator_id: `55`
+- entity_id: `52`
+- channel_id: `UCc6jv88ebCrDVxJQUjZfGT`
+- subnichos: `compra`, `noticia`, `review`, `teste`
+- status: cadastro validado com subnicho e visivel na view de criadores
+
+Pendente:
+
+- confirmar, em alguns dias, se o worker passou a incorporar o novo criador ao
+  ciclo normal de discovery/coleta.
+
+### Caminho manual legado
 
 ### 1. Cadastrar manualmente no Supabase UI
 Preencher linhas na tabela:
@@ -55,6 +87,7 @@ Executar:
 
 ### Function
 - sql/ddl/003_create_publish_entity_intake_function.sql
+- sql/ddl/functions/006_creator_intake_rpc_functions.sql
 
 ### Índice de proteção
 - sql/ddl/004_create_unique_index_entities_normalized_name.sql

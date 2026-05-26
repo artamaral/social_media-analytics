@@ -67,6 +67,13 @@ considerada incompleta.
 - [entity_intake_process.md](/C:/social_media-analytics/docs/data_model/entity_intake_process.md)
 - [table_organization_v2.md](/C:/social_media-analytics/docs/data_model/table_organization_v2.md)
 
+Status recente:
+
+- cadastro de criadores via Streamlit validado em 2026-05-26
+- caso validado: `Autoesporte`, `creator_id=55`, `entity_id=52`
+- pendente: acompanhar se os workers passam a incorporar o novo criador ao
+  ciclo normal de discovery/coleta
+
 ## 2. Dados de fontes externas
 
 ### Escopo e plano geral
