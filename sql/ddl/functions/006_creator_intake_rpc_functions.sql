@@ -10,6 +10,7 @@
 -- 3) sql/ddl/functions/001_create_publish_entity_intake_function.sql
 
 DROP FUNCTION IF EXISTS public.search_creators_for_intake(text, text);
+DROP FUNCTION IF EXISTS public.publish_entity_intake_entry(bigint);
 DROP FUNCTION IF EXISTS public.create_creator_from_resolved_entity(integer, text, text, text, integer);
 DROP FUNCTION IF EXISTS public.create_creator_from_resolved_entity(integer, text, text, text, bigint);
 
@@ -109,7 +110,7 @@ BEGIN
     c.platform,
     c.username,
     c.channel_id,
-    c.followers,
+    c.followers::bigint,
     c.is_active
   FROM public.creators c
   JOIN public.entities e ON e.id = c.entity_id
@@ -228,6 +229,136 @@ END;
 $$;
 
 
+CREATE OR REPLACE FUNCTION public.publish_entity_intake_entry(
+  p_intake_id bigint
+)
+RETURNS TABLE (
+  id bigint,
+  raw_name text,
+  normalized_name text,
+  sub_niche_name text,
+  niche text,
+  creator_type text,
+  notes text,
+  status text,
+  created_at timestamp without time zone,
+  existing_entity_id integer,
+  existing_entity_name text,
+  sub_niche_id integer,
+  matched_sub_niche_name text,
+  review_result text
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_intake public.entity_intake%ROWTYPE;
+  v_entity_id integer;
+  v_sub_niche_id integer;
+BEGIN
+  IF p_intake_id IS NULL THEN
+    RAISE EXCEPTION 'p_intake_id is required' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT *
+  INTO v_intake
+  FROM public.entity_intake ei
+  WHERE ei.id = p_intake_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'entity_intake id % not found', p_intake_id USING ERRCODE = 'P0002';
+  END IF;
+
+  IF v_intake.status = 'rejected' THEN
+    RAISE EXCEPTION 'entity_intake id % is rejected', p_intake_id USING ERRCODE = '22023';
+  END IF;
+
+  UPDATE public.entity_intake ei
+  SET normalized_name = LOWER(BTRIM(unaccent(ei.raw_name)))
+  WHERE ei.id = p_intake_id
+    AND (
+      ei.normalized_name IS NULL
+      OR ei.normalized_name <> LOWER(BTRIM(unaccent(ei.raw_name)))
+    );
+
+  SELECT *
+  INTO v_intake
+  FROM public.entity_intake ei
+  WHERE ei.id = p_intake_id
+  FOR UPDATE;
+
+  SELECT sn.id
+  INTO v_sub_niche_id
+  FROM public.sub_niches sn
+  WHERE LOWER(BTRIM(unaccent(sn.name::text))) = LOWER(BTRIM(unaccent(v_intake.sub_niche_name)))
+  LIMIT 1;
+
+  IF v_sub_niche_id IS NULL THEN
+    RAISE EXCEPTION 'sub_niche not found: %', v_intake.sub_niche_name USING ERRCODE = '23503';
+  END IF;
+
+  SELECT e.id
+  INTO v_entity_id
+  FROM public.entities e
+  WHERE e.normalized_name = v_intake.normalized_name
+  LIMIT 1;
+
+  IF v_entity_id IS NULL THEN
+    INSERT INTO public.entities (
+      name,
+      niche,
+      creator_type,
+      normalized_name
+    )
+    VALUES (
+      v_intake.raw_name,
+      v_intake.niche,
+      v_intake.creator_type,
+      v_intake.normalized_name
+    )
+    RETURNING public.entities.id INTO v_entity_id;
+  END IF;
+
+  INSERT INTO public.entity_sub_niches (
+    entity_id,
+    sub_niche_id
+  )
+  VALUES (
+    v_entity_id,
+    v_sub_niche_id
+  )
+  ON CONFLICT (entity_id, sub_niche_id) DO NOTHING;
+
+  UPDATE public.entity_intake ei
+  SET
+    status = 'published',
+    published_at = CURRENT_TIMESTAMP
+  WHERE ei.id = p_intake_id;
+
+  RETURN QUERY
+  SELECT
+    r.id,
+    r.raw_name,
+    r.normalized_name,
+    r.sub_niche_name,
+    r.niche,
+    r.creator_type,
+    r.notes,
+    r.status,
+    r.created_at,
+    r.existing_entity_id,
+    r.existing_entity_name::text,
+    r.sub_niche_id,
+    r.matched_sub_niche_name::text,
+    r.review_result
+  FROM public.v_entity_intake_review r
+  WHERE r.id = p_intake_id;
+END;
+$$;
+
+
 CREATE OR REPLACE FUNCTION public.create_creator_from_resolved_entity(
   p_entity_id integer,
   p_platform text,
@@ -319,7 +450,7 @@ BEGIN
     c.platform,
     c.username,
     c.channel_id,
-    c.followers,
+    c.followers::bigint,
     c.is_active,
     c.created_at
   FROM public.creators c
@@ -332,10 +463,12 @@ REVOKE ALL ON FUNCTION public.search_entities_for_intake(text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.search_creators_for_intake(text, text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.list_sub_niches_for_intake() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.create_entity_intake_entry(text, text, text, text, text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.publish_entity_intake_entry(bigint) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.create_creator_from_resolved_entity(integer, text, text, text, bigint) FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION public.search_entities_for_intake(text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.search_creators_for_intake(text, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.list_sub_niches_for_intake() TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.create_entity_intake_entry(text, text, text, text, text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.publish_entity_intake_entry(bigint) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.create_creator_from_resolved_entity(integer, text, text, text, bigint) TO anon, authenticated;

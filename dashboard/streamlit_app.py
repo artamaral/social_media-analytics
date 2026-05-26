@@ -2162,7 +2162,7 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
         process_step_card(
             "Etapa 4",
             "Revisao e publicacao",
-            "A revisao segue pela view v_entity_intake_review e pela funcao publish_entity_intake fora do SQL livre da UI.",
+            "Publicar uma linha de intake por vez via RPC controlada e resolver o entity_id sem sair do Streamlit.",
             "ok-green" if any(row.get("status") == "published" for row in last_intake_rows) else "alert-yellow",
             "acompanhar",
         ),
@@ -2221,7 +2221,7 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
                 else:
                     st.warning("Foram encontradas correspondencias parciais. Revise antes de cadastrar uma nova entidade.")
             else:
-                st.info("Nenhuma entidade resolvida nesta sessao. Cheque o banco antes de enviar intake ou cadastrar criador.")
+                st.info("Entidade nao encontrada nesta sessao. Para entidade nova, envie para entity_intake e publique pela propria tela.")
 
             st.markdown("### 2. Cadastrar criador")
             platform = st.selectbox("Plataforma", ["youtube", "instagram", "tiktok"])
@@ -2295,11 +2295,55 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
                 if errors:
                     st.warning(" | ".join(errors))
 
+            publishable_intake_rows = [
+                row
+                for row in last_intake_rows
+                if row.get("id")
+                and row.get("status") != "published"
+                and row.get("sub_niche_id")
+                and row.get("review_result") in {"READY_TO_INSERT", "ENTITY_ALREADY_EXISTS"}
+            ]
+            if publishable_intake_rows:
+                if st.button("Publicar intake e resolver entidade", use_container_width=True, disabled=bool(connection_error)):
+                    published_rows: list[dict[str, Any]] = []
+                    publish_errors: list[str] = []
+                    for intake_row in publishable_intake_rows:
+                        rows, error = call_supabase_rpc(
+                            "publish_entity_intake_entry",
+                            {"p_intake_id": int(intake_row["id"])},
+                        )
+                        if error:
+                            publish_errors.append(error)
+                        else:
+                            published_rows.extend(rows)
+                    if published_rows:
+                        clear_supabase_data_cache()
+                        st.session_state["creator_intake_last_rows"] = published_rows
+                        last_intake_rows = published_rows
+                        refreshed_matches, refresh_error = call_supabase_rpc(
+                            "search_entities_for_intake",
+                            {"p_raw_name": raw_name},
+                        )
+                        st.session_state["creator_intake_entity_matches"] = refreshed_matches
+                        st.session_state["creator_intake_entity_checked_name"] = raw_name
+                        st.session_state["creator_intake_entity_error"] = refresh_error
+                        entity_matches = refreshed_matches
+                        resolved_entity = next(
+                            (row for row in entity_matches if row.get("match_type") in {"display_name", "normalized_name"}),
+                            entity_matches[0] if entity_matches else None,
+                        )
+                        if refresh_error:
+                            st.warning(refresh_error)
+                        else:
+                            st.success("Intake publicado e entidade resolvida. Revise a selecao de entidade antes de cadastrar o criador.")
+                    if publish_errors:
+                        st.warning(" | ".join(publish_errors))
+
             creator_disabled_reason = []
             if connection_error:
                 creator_disabled_reason.append("configure Supabase")
             if not resolved_entity:
-                creator_disabled_reason.append("resolva uma entidade existente")
+                creator_disabled_reason.append("resolva ou publique a entidade")
             if not selected_sub_niches:
                 creator_disabled_reason.append("selecione pelo menos um subnicho existente")
             if taxonomy_request.strip():
@@ -2334,7 +2378,7 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
             partial_entity = bool(resolved_entity and resolved_entity.get("match_type") == "partial_name")
             local_warnings = []
             if not entity_matches:
-                local_warnings.append("Use o botao para checar o banco antes de cadastrar a entidade.")
+                local_warnings.append("Entidade ainda nao resolvida. Para uma entidade nova, envie para intake e publique pela propria tela.")
             if partial_entity:
                 local_warnings.append("Ha apenas correspondencia parcial. Revise antes de seguir.")
             if not selected_sub_niches and not taxonomy_request.strip():
@@ -2430,7 +2474,7 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
         timeline = [
             ("Cadastro em entity_intake", "ok" if last_intake_rows else "atencao"),
             ("Review via v_entity_intake_review", "ok" if review_rows and not review_error else "atencao"),
-            ("Publish via public.publish_entity_intake()", "atencao"),
+            ("Publish via public.publish_entity_intake_entry()", "ok" if any(row.get("status") == "published" for row in last_intake_rows) else "atencao"),
             ("Cadastro final em public.creators", "ok" if creator_created else "neutral"),
         ]
         st.markdown("### Estado atual do processo")
@@ -2451,7 +2495,7 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
 - Se a entidade nao existir, a UI deve cadastrar via intake e nao gravar na tabela final.
 - O criador vem antes da associacao final de nichos nesta jornada.
 - Nicho e subnicho precisam subir como opcoes existentes, com selecao multipla, ou entrar como solicitacao controlada.
-- Review vem antes de publish, e publish continua usando `public.publish_entity_intake()`.
+- Review vem antes de publish, e publish usa `public.publish_entity_intake_entry()` para uma linha por vez.
 - `platform`, `channel_id` e `followers` viram creator somente por RPC controlada e com `entity_id` resolvido.
 - O Streamlit deve funcionar como camada de operacao guiada, nao como editor SQL.
 """

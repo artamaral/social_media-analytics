@@ -291,6 +291,7 @@ public.search_entities_for_intake(p_raw_name text)
 public.search_creators_for_intake(p_platform text, p_channel_id text)
 public.list_sub_niches_for_intake()
 public.create_entity_intake_entry(...)
+public.publish_entity_intake_entry(p_intake_id bigint)
 public.create_creator_from_resolved_entity(...)
 ```
 
@@ -320,6 +321,7 @@ Comportamento:
   channel_id)`
 - a UI carrega a lista de subnichos existentes sem ler a tabela diretamente
 - a UI cria registros em `public.entity_intake` por RPC controlada
+- a UI publica um registro de intake por vez por RPC controlada
 - a UI cria registros em `public.creators` apenas quando `entity_id` ja esta
   resolvido e o canal nao esta duplicado
 - a UI nao grava diretamente em `public.entities`
@@ -336,7 +338,7 @@ Metodo preferido para o Streamlit:
 
 - RPC controlada para inserir registros em `entity_intake`
 - leitura da revisao por `public.v_entity_intake_review`
-- publicacao final de entity/subniche ainda pelo fluxo controlado existente
+- publicacao final de entity/subniche por RPC restrita a um `intake_id`
 
 RPC implementada:
 
@@ -357,6 +359,24 @@ Comportamento esperado:
 - nao inserir diretamente em `public.entities`
 - nao inserir diretamente em `public.entity_sub_niches`
 - retornar a linha ja avaliada por `public.v_entity_intake_review`
+
+RPC de publicacao implementada:
+
+```text
+public.publish_entity_intake_entry(
+  p_intake_id bigint
+)
+```
+
+Comportamento esperado:
+
+- validar se o registro existe em `public.entity_intake`
+- normalizar o nome da entidade
+- bloquear quando o subnicho nao existe
+- inserir a entidade se ela ainda nao existir
+- inserir o vinculo em `public.entity_sub_niches`
+- marcar apenas o registro selecionado como `published`
+- retornar a linha ja reavaliada por `public.v_entity_intake_review`
 
 RPC futura para taxonomia:
 
@@ -419,11 +439,10 @@ Comportamento esperado:
 
 Observacao:
 
-- `public.publish_entity_intake()` continua existindo como funcao de publicacao
-  do intake, mas nao deve ser chamada automaticamente pela tela enquanto
-  processar todos os registros pendentes/aprovados de uma vez
-- se for necessario publicar pela UI, criar uma RPC futura por `intake_id`, com
-  efeito restrito ao registro selecionado
+- `public.publish_entity_intake()` continua existindo como funcao global/manual
+  de publicacao do intake
+- a tela Streamlit deve usar `public.publish_entity_intake_entry(p_intake_id)`
+  para publicar apenas a linha selecionada e manter a operacao auditavel
 
 ## Experiencia da tela
 
