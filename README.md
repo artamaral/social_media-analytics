@@ -250,7 +250,20 @@ Direcao atual:
 - pagina de Data Quality implementada com KPIs e monitoramento operacional
 - mockup operacional de `Cadastro de Criadores` implementado no app
 - mockup operacional de `Cadastro Fenabrave` implementado no app
-- integracao SQL dessas duas views ainda pendente
+- `Cadastro de Criadores` ja aciona o worker de discovery inicial apos o
+  cadastro do creator no Supabase na branch `codex/dashboard-streamlit-mvp`
+- integracao SQL do `Cadastro Fenabrave` ainda pendente
+
+Secrets adicionais para o onboarding de creators no Streamlit:
+
+```toml
+CREATOR_ONBOARDING_WORKER_URL = "https://youtube-creator-onboarding-750306104774.us-central1.run.app"
+ONBOARDING_WORKER_TOKEN = "your-worker-token"
+```
+
+Validacao operacional do onboarding:
+
+- `sql/dml/validate_creator_onboarding_discovery.sql`
 
 ## Relacao Entre as Frentes
 
@@ -482,15 +495,17 @@ Documentos importantes por frente:
 - app Streamlit inicial em execucao na branch `codex/dashboard-streamlit-mvp`
 - cadastro de criadores via Streamlit validado com `Autoesporte`
 - mockup de `Cadastro de Criadores` evoluiu para fluxo validado com Supabase
+- worker de discovery inicial integrado ao fluxo de cadastro na branch
+  `codex/dashboard-streamlit-mvp`
 - mockup de `Cadastro Fenabrave` pronto para validacao visual e de processo
 - ligacao SQL do `Cadastro Fenabrave` ainda pendente
-- pendente acompanhar se os workers incorporam o novo criador ao ciclo normal
+- pendente validar o fluxo completo com novo creator pela UI publicada
 
 ## Proximos Passos Sugeridos
 
 - expandir a documentacao de multiplataforma para alem do YouTube
 - consolidar a frente de fontes externas em schema e ingestao versionados
 - ligar o `Cadastro Fenabrave` ao SQL com metadados, preview e validacao do periodo
-- acompanhar o novo criador validado no ciclo dos workers
+- validar o onboarding de novo creator pelo Streamlit publicado
 - consolidar o app inicial do dashboard consumindo as views do Supabase
 
