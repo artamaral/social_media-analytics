@@ -45,6 +45,7 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 
 ### Prioridade alta - novos blocos estruturados
 
+- [ ] Consolidar o fluxo operacional do Carros na Web em camadas persistidas: `fabricantes -> modelos -> fichas -> parser -> atualizacao incremental`, usando a etapa por ano como subetapa tecnica quando o catalogo exigir.
 - [ ] Validar a etapa intermediaria do Carros na Web: gerar e revisar `anos_modelo_validos.csv` a partir de `anos_modelo.csv`, classificando cada URL de ano como `valid_year_page`, `no_ficha_links`, `site_error`, `http_error` ou `unexpected_page`.
 - [ ] Se houver paginas de ano validas, retomar a descoberta de fichas tecnicas a partir de `anos_modelo_validos.csv`, mantendo discovery por links reais do catalogo, sem enumeracao sequencial de IDs e sem bypass de captcha.
 - [ ] Manter Carros na Web fora de schema definitivo no Supabase ate provar captura etica, repetivel e com cobertura suficiente. Usar `docs/external_data/27_CARROSNAWEB_VEHICLE_SPECS_INGESTION_PLAN.md` como referencia obrigatoria.
