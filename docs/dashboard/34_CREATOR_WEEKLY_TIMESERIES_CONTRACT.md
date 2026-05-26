@@ -242,6 +242,8 @@ Decisao recomendada para o app:
 
 - usar `week_label` como rotulo principal
 - usar `week_end` como campo de apoio para ordenacao e tooltip
+- ao filtrar a tabela editorial pela semana selecionada, incluir o dia final
+  inteiro com limite superior exclusivo: `post_date < week_end + 1 dia`
 
 Motivo:
 

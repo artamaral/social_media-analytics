@@ -2581,7 +2581,8 @@ def render_creator_detail_page() -> None:
         week_end = pd.to_datetime(selected_week_row.get("week_end"), errors="coerce")
         if pd.notna(week_start) and pd.notna(week_end):
             videos_source_df = videos_source_df[
-                (videos_source_df["post_date"] >= week_start) & (videos_source_df["post_date"] <= week_end)
+                (videos_source_df["post_date"] >= week_start)
+                & (videos_source_df["post_date"] < (week_end + pd.Timedelta(days=1)))
             ]
     videos_source_df = videos_source_df.sort_values(by="views", ascending=False, na_position="last") if "views" in videos_source_df.columns else videos_source_df
     top_videos_display = videos_source_df.copy()

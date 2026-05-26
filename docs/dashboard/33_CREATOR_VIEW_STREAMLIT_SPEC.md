@@ -273,6 +273,9 @@ Observacao:
 - a unidade recomendada para comparacao e a semana fechada, nao o dia isolado
 - semanas abertas nao devem aparecer no grafico
 - o rotulo recomendado para exibicao e o intervalo completo da semana
+- quando a tabela editorial estiver filtrada pela semana selecionada, o filtro
+  deve incluir o dia final inteiro: `post_date >= week_start` e
+  `post_date < week_end + 1 dia`
 - o grafico deve manter hover/tooltip ativo
 - a janela temporal exibida deve ser controlada pelo app, sem mudar por selecao
   de semana fora da regra de corte
