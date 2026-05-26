@@ -313,6 +313,51 @@ Motivo:
 
 ---
 
+## Worker separado de discovery inicial para novos creators
+
+Data:
+
+- 2026-05-26
+
+Decisao:
+
+- criar um worker separado para discovery inicial de posts quando um novo
+  creator do YouTube for cadastrado
+- manter o `youtube_main_scraper` recorrente como fluxo principal por
+  lote/cursor
+- nao alterar `pipeline_state` nem o cursor `youtube_cursor` no worker de
+  onboarding
+- nao gravar snapshots em `creator_metrics_history` nesse worker
+- nao atualizar followers ou metricas correntes de canal nesse worker
+- inserir apenas posts descobertos, deixando o trigger `add_to_queue()` enviar
+  os posts para `post_update_queue`
+- deixar a `v_post_update_queue_batch` priorizar os posts novos pelo guardrail
+  normal, pois eles entram com `total_checagens = 0`
+
+Motivo:
+
+- reduzir a espera entre cadastro de creator e descoberta inicial de videos
+- evitar mexer no scraper principal que ja esta operacional
+- evitar complexidade em views e regras de fila
+- preservar separacao clara entre discovery inicial, snapshots de creator e
+  snapshots historicos de posts
+
+Diretriz:
+
+- a chamada externa deve enviar apenas `creator_id`
+- o worker deve buscar `channel_id` no banco
+- a trava simples de idempotencia deve ser existencia de posts em
+  `public.posts` para o `creator_id`
+- a URL deve exigir autenticacao por token ou mecanismo equivalente
+- a integracao com Streamlit nao precisa de documento separado agora; o fluxo
+  fica no processo de intake e o contrato do worker no spec social media
+
+Documento de referencia:
+
+- `docs/social_media/34_CREATOR_ONBOARDING_DISCOVERY_WORKER_SPEC.md`
+
+---
+
 ## Data Quality do dashboard com dois KPIs operacionais
 
 Data:

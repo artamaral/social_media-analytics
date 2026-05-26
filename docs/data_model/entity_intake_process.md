@@ -28,6 +28,8 @@ Fluxo:
 4. Publicar uma linha por vez com `public.publish_entity_intake_entry(p_intake_id)`.
 5. Cadastrar o criador com `public.create_creator_from_resolved_entity(...)`.
 6. Validar que o criador aparece na view de criadores no Streamlit.
+7. Se o criador for novo, chamar o worker de discovery inicial descrito em
+   `docs/social_media/34_CREATOR_ONBOARDING_DISCOVERY_WORKER_SPEC.md`.
 
 Caso validado:
 
@@ -40,8 +42,16 @@ Caso validado:
 
 Pendente:
 
-- confirmar, em alguns dias, se o worker passou a incorporar o novo criador ao
-  ciclo normal de discovery/coleta.
+- implementar o worker separado de discovery inicial para reduzir a espera ate
+  o ciclo normal de discovery/coleta.
+
+Observacao sobre Streamlit:
+
+- nao e necessario criar um arquivo separado apenas para a integracao com o
+  Streamlit neste momento;
+- a UI deve apenas acionar o worker com `creator_id` apos o cadastro controlado;
+- o contrato do worker fica centralizado em
+  `docs/social_media/34_CREATOR_ONBOARDING_DISCOVERY_WORKER_SPEC.md`.
 
 ### Caminho manual legado
 

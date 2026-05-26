@@ -25,6 +25,7 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 - [ ] Validar atualizacao de `collected_at`.
 - [ ] Implementar monitoramento operacional do worker horario com KPIs de fluxo: `itens_atrasados`, `at_risk_bootstrap` e `recovery_low`.
 - [ ] Prioridade alta: revisar a regra de calculo de `next_check` com base nos sinais operacionais do worker horario e nos intervalos observados no dashboard.
+- [ ] Implementar worker separado de discovery inicial para novos creators, seguindo `docs/social_media/34_CREATOR_ONBOARDING_DISCOVERY_WORKER_SPEC.md`.
 
 ### Prioridade estrategica - modelo de priorizacao
 
@@ -82,7 +83,7 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 - [x] Ligar o `Cadastro de Criadores` ao SQL com escrita controlada em `entity_intake` e etapa final de cadastro em `creators`.
 - [x] Ligar a revisao de `Cadastro de Criadores` a `v_entity_intake_review` e publicacao por RPC controlada.
 - [x] Validar cadastro de nova entity e novo criador via Streamlit com RPC controlada. Caso validado: `Autoesporte`, `creator_id=55`, `entity_id=52`.
-- [ ] Acompanhar nos proximos dias se o worker incorpora o novo criador validado ao ciclo normal de discovery/coleta.
+- [ ] Acionar worker de discovery inicial apos cadastro de novo creator, sem criar arquivo separado de integracao Streamlit enquanto o contrato estiver centralizado no spec social media.
 - [ ] Ligar o `Cadastro Fenabrave` ao SQL com registro real de metadados em `market_source_files`.
 - [ ] Definir e implementar a estrategia segura de upload do PDF Fenabrave a partir do app, sem expor credenciais privilegiadas.
 - [ ] Ligar o `Cadastro Fenabrave` ao preview operacional da extracao e aos status reais do periodo.

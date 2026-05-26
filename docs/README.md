@@ -43,6 +43,7 @@ considerada incompleta.
 - [09_QUEUE_SLICING_AND_RESCHEDULING.md](/C:/social_media-analytics/docs/social_media/09_QUEUE_SLICING_AND_RESCHEDULING.md)
 - [10_QUEUE_CAPACITY_RESULTS_2026-05-08.md](/C:/social_media-analytics/docs/social_media/10_QUEUE_CAPACITY_RESULTS_2026-05-08.md)
 - [11_QUEUE_FIFO_VALIDATION_2026-05-08.md](/C:/social_media-analytics/docs/social_media/11_QUEUE_FIFO_VALIDATION_2026-05-08.md)
+- [34_CREATOR_ONBOARDING_DISCOVERY_WORKER_SPEC.md](/C:/social_media-analytics/docs/social_media/34_CREATOR_ONBOARDING_DISCOVERY_WORKER_SPEC.md)
 
 ### Score hibrido e priorizacao
 
@@ -71,8 +72,8 @@ Status recente:
 
 - cadastro de criadores via Streamlit validado em 2026-05-26
 - caso validado: `Autoesporte`, `creator_id=55`, `entity_id=52`
-- pendente: acompanhar se os workers passam a incorporar o novo criador ao
-  ciclo normal de discovery/coleta
+- pendente: implementar worker separado de discovery inicial para creators
+  recem-cadastrados
 
 ## 2. Dados de fontes externas
 
