@@ -346,6 +346,9 @@ Diretriz:
 
 - a chamada externa deve enviar apenas `creator_id`
 - o worker deve buscar `channel_id` no banco
+- a chamada do worker deve acontecer somente apos a acao `Cadastrar criador no
+  Supabase` concluir com sucesso, garantindo que `creator_id` e `channel_id`
+  ja estejam persistidos em `public.creators`
 - a trava simples de idempotencia deve ser existencia de posts em
   `public.posts` para o `creator_id`
 - a URL deve exigir autenticacao por token ou mecanismo equivalente

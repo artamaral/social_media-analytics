@@ -31,6 +31,14 @@ Fluxo:
 7. Se o criador for novo, chamar o worker de discovery inicial descrito em
    `docs/social_media/34_CREATOR_ONBOARDING_DISCOVERY_WORKER_SPEC.md`.
 
+Reforco operacional:
+
+- o worker de discovery inicial deve rodar apenas depois do clique/acao
+  `Cadastrar criador no Supabase`;
+- essa ordem garante que `creator_id` e `channel_id` ja existem em
+  `public.creators`;
+- o Streamlit deve enviar apenas `creator_id` para o worker.
+
 Caso validado:
 
 - entity: `Autoesporte`
@@ -49,7 +57,8 @@ Observacao sobre Streamlit:
 
 - nao e necessario criar um arquivo separado apenas para a integracao com o
   Streamlit neste momento;
-- a UI deve apenas acionar o worker com `creator_id` apos o cadastro controlado;
+- a UI deve apenas acionar o worker com `creator_id` apos o cadastro controlado
+  e confirmado no Supabase;
 - o contrato do worker fica centralizado em
   `docs/social_media/34_CREATOR_ONBOARDING_DISCOVERY_WORKER_SPEC.md`.
 

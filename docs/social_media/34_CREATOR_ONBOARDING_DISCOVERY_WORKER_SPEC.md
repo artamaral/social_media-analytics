@@ -21,6 +21,8 @@ Regra de fluxo:
 ```text
 Novo creator cadastrado?
   sim
+    -> concluir a acao "Cadastrar criador no Supabase"
+    -> confirmar sucesso da criacao do creator no banco
     -> chamar URL do worker de onboarding
     -> worker recebe creator_id
     -> worker busca channel_id no banco
@@ -203,11 +205,17 @@ Motivo:
 Regra para o Streamlit:
 
 1. cadastrar o creator pelo fluxo controlado existente;
-2. receber ou resolver o `creator_id` criado;
-3. chamar o worker de onboarding com `creator_id`;
-4. nao enviar `channel_id` no payload;
-5. nao expor token no navegador;
-6. mostrar retorno operacional simples: `processed`, `skipped` ou `error`.
+2. executar a acao/botao `Cadastrar criador no Supabase`;
+3. aguardar sucesso da RPC que cria o registro em `public.creators`;
+4. receber ou resolver o `creator_id` criado;
+5. chamar o worker de onboarding com `creator_id`;
+6. nao enviar `channel_id` no payload;
+7. nao expor token no navegador;
+8. mostrar retorno operacional simples: `processed`, `skipped` ou `error`.
+
+O worker deve rodar somente depois do sucesso do cadastro do creator no
+Supabase. Essa ordem garante que o `channel_id` novo ja esta persistido em
+`public.creators` antes da chamada do worker.
 
 Se futuramente o Streamlit ganhar UI dedicada de monitoramento, retry ou fila
 de jobs de onboarding, ai sim deve ser criado um spec proprio em
