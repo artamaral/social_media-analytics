@@ -2180,6 +2180,29 @@ def growth_caption_from_values(current_value: int, previous_value: int | None) -
     return format_growth_caption(delta_value, pct_value)
 
 
+def nullable_int(value: Any) -> int | None:
+    if value in (None, ""):
+        return None
+    try:
+        if pd.isna(value):
+            return None
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def weekly_row_has_metric_base(row: dict[str, Any]) -> bool:
+    if bool(row.get("semana_tem_base")):
+        return True
+    return (nullable_int(row.get("posts_com_base_para_delta")) or 0) > 0
+
+
+def weekly_growth_caption(current_value: int | None, previous_value: int | None) -> tuple[str, str]:
+    if current_value is None:
+        return "Sem base semanal", "#aeb4bf"
+    return growth_caption_from_values(current_value, previous_value)
+
+
 def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> None:
     page_header(page_title, "Intake controlado ligado ao Supabase")
     process_banner(
@@ -2728,23 +2751,28 @@ def render_creator_detail_page() -> None:
     )
     previous_week_row = weekly_selected_type_rows[selected_week_index - 1] if selected_week_index is not None and selected_week_index > 0 else None
 
+    selected_week_has_metric_base = weekly_row_has_metric_base(selected_week_metric_row)
+    previous_week_has_metric_base = weekly_row_has_metric_base(previous_week_row or {})
+
     weekly_videos_value = int(selected_week_metric_row.get("videos_publicados") or 0)
-    weekly_views_value = int(selected_week_metric_row.get("views_novas") or 0)
-    weekly_likes_value = int(selected_week_metric_row.get("likes_novos") or 0)
-    weekly_comments_value = int(selected_week_metric_row.get("comentarios_novos") or 0)
+    weekly_views_value = nullable_int(selected_week_metric_row.get("views_novas")) if selected_week_has_metric_base else None
+    weekly_likes_value = nullable_int(selected_week_metric_row.get("likes_novos")) if selected_week_has_metric_base else None
+    weekly_comments_value = nullable_int(selected_week_metric_row.get("comentarios_novos")) if selected_week_has_metric_base else None
     previous_week_videos_value = int(previous_week_row.get("videos_publicados") or 0) if previous_week_row else None
-    previous_week_views_value = int(previous_week_row.get("views_novas") or 0) if previous_week_row else None
-    previous_week_likes_value = int(previous_week_row.get("likes_novos") or 0) if previous_week_row else None
-    previous_week_comments_value = int(previous_week_row.get("comentarios_novos") or 0) if previous_week_row else None
+    previous_week_views_value = nullable_int(previous_week_row.get("views_novas")) if previous_week_has_metric_base else None
+    previous_week_likes_value = nullable_int(previous_week_row.get("likes_novos")) if previous_week_has_metric_base else None
+    previous_week_comments_value = nullable_int(previous_week_row.get("comentarios_novos")) if previous_week_has_metric_base else None
 
     chart_rows = []
     for row in [row for row in weekly_selected_type_rows if str(row["week_start"]) <= str(selected_week_row.get("week_start", ""))][-8:]:
+        if not weekly_row_has_metric_base(row):
+            continue
         chart_rows.append(
             {
                 "week_label": str(row.get("week_label") or ""),
-                "views_novas": int(row.get("views_novas") or 0),
-                "likes_novos": int(row.get("likes_novos") or 0),
-                "comentarios_novos": int(row.get("comentarios_novos") or 0),
+                "views_novas": nullable_int(row.get("views_novas")) or 0,
+                "likes_novos": nullable_int(row.get("likes_novos")) or 0,
+                "comentarios_novos": nullable_int(row.get("comentarios_novos")) or 0,
                 "views_growth_pct_vs_prev_week": row.get("views_growth_pct_vs_prev_week"),
             }
         )
@@ -2754,15 +2782,15 @@ def render_creator_detail_page() -> None:
         weekly_videos_value,
         previous_week_videos_value,
     )
-    weekly_views_caption, weekly_views_caption_color = growth_caption_from_values(
+    weekly_views_caption, weekly_views_caption_color = weekly_growth_caption(
         weekly_views_value,
         previous_week_views_value,
     )
-    weekly_likes_caption, weekly_likes_caption_color = growth_caption_from_values(
+    weekly_likes_caption, weekly_likes_caption_color = weekly_growth_caption(
         weekly_likes_value,
         previous_week_likes_value,
     )
-    weekly_comments_caption, weekly_comments_caption_color = growth_caption_from_values(
+    weekly_comments_caption, weekly_comments_caption_color = weekly_growth_caption(
         weekly_comments_value,
         previous_week_comments_value,
     )
@@ -2853,7 +2881,7 @@ def render_creator_detail_page() -> None:
         f'<div class="creator-kpi-section-title">Semana selecionada: {escape(selected_week_label)} | {escape(selected_video_type_label)}</div>',
         unsafe_allow_html=True,
     )
-    st.caption("Performance atual dos videos publicados na semana fechada selecionada, respeitando o tipo de video escolhido.")
+    st.caption("Videos por data de publicacao; views, likes e comentarios por movimento observado em snapshots da semana.")
     metric_card_grid(
         [
             metric_card_html("Seguidores", "--", weekly_followers_caption, "SG", caption_color=weekly_followers_caption_color),
@@ -2877,7 +2905,7 @@ def render_creator_detail_page() -> None:
         st.plotly_chart(donut_fig, use_container_width=True, config={"displayModeBar": False})
     with chart_right:
         st.markdown(f"#### Crescimento semanal | {selected_video_type_label}")
-        st.caption("Views em barras; likes e comentarios em linhas para o tipo de video escolhido. Semanas a partir de 04/05/2026.")
+        st.caption("Views em barras; likes e comentarios em linhas com base em snapshots semanais. Semanas sem base suficiente nao entram no grafico.")
         st.plotly_chart(weekly_fig, use_container_width=True, config={"displayModeBar": False})
 
     video_scope_weekly = st.checkbox("Mostrar videos da semana selecionada", value=False)

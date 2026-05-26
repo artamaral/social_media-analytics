@@ -218,19 +218,25 @@ Objetivo:
 
 Definicao obrigatoria dos cards semanais:
 
-- o bloco semanal representa a performance atual dos videos publicados na semana fechada
-- o bloco semanal deve responder: `como meu portfolio publicado nesta semana performa hoje?`
+- o bloco semanal deve responder: `como meu portfolio performou nesta semana?`
+- existe uma distincao obrigatoria de origem:
+  - `Videos` e fato editorial e vem de `public.posts.post_date`
+  - `Views`, `Likes` e `Comentarios` sao performance observada e vem de
+    `public.post_metrics_history`
 - os cards semanais devem respeitar o filtro `Tipo de video`, alternando entre
   as linhas `video_type = 'todos'`, `long` e `short`
 - a tela nao deve duplicar essa leitura em tabela; o proprio bloco de cards e o
   grafico semanal devem refletir o tipo selecionado
 - `Videos` mede videos novos publicados na semana, a partir de `public.posts.post_date`
-- `Views` mede as views atuais de todos os videos publicados naquela semana
-- `Likes` mede os likes atuais de todos os videos publicados naquela semana
-- `Comentarios` mede os comentarios atuais de todos os videos publicados naquela semana
-- `Views`, `Likes` e `Comentarios` usam a mesma base de `post_date` do card
-  `Videos`, para que os totais da semana batam com a lista editorial de videos
-  daquela semana
+- `Views` mede views ganhas na semana por todos os videos do criador com
+  snapshots suficientes no periodo
+- `Likes` mede likes ganhos na semana por todos os videos do criador com
+  snapshots suficientes no periodo
+- `Comentarios` mede comentarios ganhos na semana por todos os videos do criador
+  com snapshots suficientes no periodo
+- se nao houver snapshots suficientes na semana, `Views`, `Likes` e
+  `Comentarios` devem aparecer como `--`; `Videos` ainda pode aparecer porque
+  independe de snapshot
 - analise de posts isolados permanece na tabela editorial de videos e em views especificas de detalhe por post
 
 Contrato recomendado:
@@ -254,14 +260,17 @@ Dados esperados da view:
 - `comentarios_novos`
 - `posts_com_snapshot_na_semana`
 - `posts_sem_baseline_para_delta`
+- `posts_com_base_para_delta`
+- `snapshots_na_semana`
+- `semana_tem_base`
 
 Observacao:
 
 - este grafico deve sempre ser de um unico criador por vez
 - o Streamlit nao deve calcular a serie bruta localmente; deve consumir a view
   semanal ja consolidada
-- a view semanal deve somar os valores atuais de `public.posts` para os videos
-  publicados na semana
+- a view semanal deve somar videos por `public.posts.post_date`, mas deve somar
+  views, likes e comentarios por delta de `public.post_metrics_history`
 - quando a ligacao SQL acontecer, o ideal e filtrar por `creator_id`
 - a linha `video_type = 'todos'` deve alimentar os cards e graficos semanais
   quando o filtro estiver em `todos`
@@ -349,9 +358,9 @@ Campos da tabela de posts que ajudam a aproximar a imagem:
 | Campo | Origem | Uso na view |
 |---|---|---|
 | `title` | `public.posts` | tabela de top videos |
-| `post_date` | `public.posts` | tabela de top videos e serie temporal semanal |
-| `views` | `public.posts` | top videos e serie temporal semanal |
-| `likes` | `public.posts` | distribuicao e serie temporal semanal |
+| `post_date` | `public.posts` | tabela de top videos e card semanal de videos |
+| `views` | `public.posts` | top videos e bloco total do criador |
+| `likes` | `public.posts` | distribuicao e bloco total do criador |
 | `comments` | `public.posts` | distribuicao e tabela |
 | `video_type` | `public.posts` | etiqueta editorial |
 | `post_id` | `public.posts` | base potencial para URL futura |
@@ -365,10 +374,10 @@ Nova camada recomendada para serie temporal:
 | `week_label` | `v_dashboard_creator_weekly_activity` | rotulo amigavel no grafico |
 | `video_type` | `v_dashboard_creator_weekly_activity` | cards e graficos semanais respeitam o tipo selecionado |
 | `videos_publicados` | `v_dashboard_creator_weekly_activity` | videos novos publicados na semana |
-| `views_novas` | `v_dashboard_creator_weekly_activity` | views atuais dos videos publicados na semana |
+| `views_novas` | `v_dashboard_creator_weekly_activity` | views ganhas na semana por snapshots |
 | `views_growth_pct_vs_prev_week` | `v_dashboard_creator_weekly_activity` | intensidade relativa da variacao |
-| `likes_novos` | `v_dashboard_creator_weekly_activity` | likes atuais dos videos publicados na semana |
-| `comentarios_novos` | `v_dashboard_creator_weekly_activity` | comentarios atuais dos videos publicados na semana |
+| `likes_novos` | `v_dashboard_creator_weekly_activity` | likes ganhos na semana por snapshots |
+| `comentarios_novos` | `v_dashboard_creator_weekly_activity` | comentarios ganhos na semana por snapshots |
 
 Campos complementares documentados fora da view atual:
 

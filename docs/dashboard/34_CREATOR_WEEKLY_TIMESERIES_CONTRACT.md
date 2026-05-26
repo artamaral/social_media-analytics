@@ -77,9 +77,9 @@ Nome recomendado para os cards semanais:
 Observacao:
 
 - `public.v_dashboard_creator_weekly_timeseries` existe como primeira leitura de
-  snapshots semanais, mas nao deve alimentar os cards semanais principais porque
-  `active_posts_in_week` mede posts com snapshot util na semana, nao videos novos
-  publicados na semana
+  snapshots semanais, mas nao deve alimentar diretamente os cards semanais
+  principais porque nao separa o fato editorial `Videos` das metricas de
+  performance `Views`, `Likes` e `Comentarios`
 
 Colunas minimas:
 
@@ -94,26 +94,37 @@ Colunas minimas:
 | `week_label` | texto | rotulo pronto para exibicao no app |
 | `video_type` | texto | `long`, `short` ou `todos` |
 | `videos_publicados` | numerico | videos novos publicados na semana |
-| `views_novas` | numerico | nome legado; views atuais dos videos publicados na semana |
+| `views_novas` | numerico | nome legado; views ganhas na semana por todos os videos observados do criador |
 | `views_growth_pct_vs_prev_week` | numerico | crescimento percentual de views contra a semana anterior |
-| `likes_novos` | numerico | nome legado; likes atuais dos videos publicados na semana |
-| `comentarios_novos` | numerico | nome legado; comentarios atuais dos videos publicados na semana |
-| `posts_com_snapshot_na_semana` | numerico | quantidade de posts publicados na semana com `collected_at` preenchido |
-| `posts_sem_baseline_para_delta` | numerico | campo legado mantido por compatibilidade; usar `0` nesta view |
+| `likes_novos` | numerico | nome legado; likes ganhos na semana por todos os videos observados do criador |
+| `comentarios_novos` | numerico | nome legado; comentarios ganhos na semana por todos os videos observados do criador |
+| `posts_com_snapshot_na_semana` | numerico | quantidade de posts com pelo menos 1 snapshot na semana |
+| `posts_sem_baseline_para_delta` | numerico | posts com snapshot na semana, mas sem base suficiente para delta |
+| `posts_com_base_para_delta` | numerico | posts com pelo menos 2 snapshots na semana |
+| `snapshots_na_semana` | numerico | total de snapshots usados para evidenciar movimento semanal |
+| `semana_tem_base` | booleano | indica se a semana tem base minima para mostrar views, likes e comentarios |
 
 Semantica dos cards semanais:
 
-- o card semanal mede a performance atual dos videos publicados naquela semana
-- o card semanal responde: `como meu portfolio publicado nesta semana performa hoje?`
+- o card semanal responde: `como meu portfolio performou nesta semana?`
+- existe uma distincao obrigatoria entre fatos editoriais e metricas de
+  performance:
+  - `Videos` mede videos novos publicados naquela semana e vem de
+    `public.posts.post_date`
+  - `Views`, `Likes` e `Comentarios` medem movimento observado naquela semana e
+    vem de `public.post_metrics_history`
 - os cards semanais devem consumir a linha do `video_type` selecionado no app:
   `todos`, `long` ou `short`
 - `videos_publicados` deve ser calculado por `public.posts.post_date`
-- `views_novas`, `likes_novos` e `comentarios_novos` devem somar os valores
-  atuais de `public.posts` para todos os videos publicados na semana
-- apesar do sufixo `_novas` no contrato, esses campos nao representam delta de
-  snapshot; eles representam o estado atual do portfolio publicado naquela semana
-- por usar estado atual de `public.posts`, os contadores dos cards nao devem
-  ficar negativos
+- `views_novas`, `likes_novos` e `comentarios_novos` devem somar deltas
+  observados entre snapshots da propria semana
+- apesar do sufixo `_novas` no contrato, esses campos representam ganhos
+  observados na semana, nao valores atuais do post
+- como sao deltas de contador acumulado, valores negativos devem ser truncados
+  para `0`
+- quando nao houver pelo menos 2 snapshots na semana para nenhum post do recorte,
+  `Views`, `Likes` e `Comentarios` devem ficar sem valor executivo (`--` no
+  Streamlit), mesmo que `Videos` tenha valor por `post_date`
 - alem da linha `video_type = 'todos'`, a view deve expor linhas por tipo de
   video para que o mesmo bloco semanal possa alternar entre `todos`, `long` e
   `short`
@@ -137,24 +148,28 @@ Colunas desejaveis:
 
 Fonte primaria dos cards semanais:
 
-- `public.posts`
+- `public.posts` para `Videos`
+- `public.post_metrics_history` para `Views`, `Likes` e `Comentarios`
 
 Justificativa:
 
-- os cards semanais precisam bater com a lista editorial de videos publicados na
-  mesma semana
-- `public.posts` guarda o estado atual do video e a data de publicacao
-- `public.post_metrics_history` continua relevante para analises historicas de
-  movimento por snapshot, mas nao deve alimentar os cards semanais desta view
+- `Videos` precisa bater com a lista editorial de videos publicados na mesma
+  semana
+- `Views`, `Likes` e `Comentarios` precisam responder a performance semanal do
+  portfolio inteiro do criador, portanto dependem de snapshots
+- usar valores atuais de `public.posts` para semanas passadas constroi uma
+  historia que o banco pode nao ter observado e cria falso sinal para creators
+  recem cadastrados
 
 Regras de desenho:
 
 - consolidar por `creator_id`
-- derivar semana a partir de `public.posts.post_date`
-- somar todos os posts publicados entre `week_start` e `week_end`
+- derivar a semana editorial de `public.posts.post_date` para contar videos
+- derivar a semana de performance de `post_metrics_history.collected_at` para
+  contar ganhos de views, likes e comentarios
 - gerar linhas por `video_type` e uma linha agregada `video_type = 'todos'`
 - comparar cada semana com a semana imediatamente anterior do mesmo criador e
-  tipo usando a soma atual dos videos publicados em cada semana
+  tipo usando os ganhos observados por snapshot
 - data de corte inicial do dashboard: `2026-05-04`
 - o app nao deve exibir semanas anteriores a essa data nos cards e graficos
   semanais de criador
@@ -166,7 +181,8 @@ Regras de desenho:
   dashboard
 - na primeira versao, a comparacao usa a ultima semana completa observada do
   criador
-- semanas sem observacao util nao geram linha propria nesta versao inicial
+- semanas com publicacao podem gerar linha mesmo sem base de snapshot; nesse
+  caso apenas `Videos` tem valor executivo
 
 ## Como o Supabase gera os dados semanais
 
@@ -175,20 +191,23 @@ Modelo de geracao:
 - a serie semanal nao depende de job separado no fim da semana
 - a serie nasce de uma `view` SQL consultada sob demanda no Supabase
 - essa `view` le `public.posts` no momento da consulta
-- conforme os workers atualizam `public.posts`, as semanas fechadas passam a
-  refletir automaticamente o estado atual dos videos publicados em cada semana
+- conforme os workers inserem snapshots em `post_metrics_history`, as semanas
+  fechadas passam a refletir automaticamente o movimento observado do portfolio
+  do criador
 
 Fluxo real de incorporacao:
 
-1. os workers continuam atualizando `public.posts` com metricas atuais
-2. a view semanal agrupa os posts por semana de publicacao e por `creator_id`
-3. a semana e calculada com `DATE_TRUNC('week', post_date)`
+1. os workers continuam atualizando `public.posts` com metricas atuais e
+   inserindo historico em `post_metrics_history`
+2. a view semanal agrupa videos publicados por semana de `post_date`
+3. a mesma view agrupa snapshots por semana de `collected_at`
 4. semanas abertas sao excluidas da view executiva
-5. a view soma `views`, `likes` e `comments` atuais dos posts publicados naquela
-   semana
-6. depois agrega os posts por criador e `video_type`
-7. a linha `video_type = 'todos'` soma `long`, `short` e demais tipos existentes
-8. por fim calcula percentual contra a semana anterior do mesmo criador e tipo
+5. `Videos` vem da quantidade publicada naquela semana
+6. `Views`, `Likes` e `Comentarios` vem da diferenca entre primeiro e ultimo
+   snapshot disponivel na semana, por post
+7. depois agrega os posts por criador e `video_type`
+8. a linha `video_type = 'todos'` soma `long`, `short` e demais tipos existentes
+9. por fim calcula percentual contra a semana anterior do mesmo criador e tipo
 
 Implicacao importante:
 
@@ -380,15 +399,18 @@ Gap atual:
 
 Objetivo:
 
-- confirmar que `public.posts` tem `post_date`, `views`, `likes`, `comments` e
-  `video_type` suficientes para leitura semanal por criador
+- confirmar que `public.posts` tem `post_date` e `video_type` suficientes para
+  leitura editorial semanal por criador
+- confirmar que `public.post_metrics_history` tem snapshots suficientes para
+  leitura semanal de views, likes e comentarios
 
 Checar:
 
 - posts com `post_date` nulo
 - posts sem `creator_id`
-- posts com contadores nulos
 - distribuicao de `video_type`
+- posts sem snapshots na semana
+- posts com apenas 1 snapshot na semana, sem base para delta
 
 ### Etapa 2. Definir a logica semanal
 
@@ -408,7 +430,8 @@ Decisoes:
 Recomendacao:
 
 - usar segunda a domingo como calendario semanal
-- somar os valores atuais de todos os posts publicados na semana
+- contar videos publicados na semana via `public.posts.post_date`
+- somar views, likes e comentarios por delta entre snapshots da semana
 - depois agregar por criador e `video_type`
 - manter a linha `video_type = 'todos'` como leitura agregada dos cards
   executivos quando o filtro estiver em `todos`
