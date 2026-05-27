@@ -1,7 +1,9 @@
 import argparse
+import json
 import os
 import re
 from collections import deque
+from datetime import datetime, timezone
 from urllib.parse import parse_qs, urljoin, urlparse
 
 import pandas as pd
@@ -17,6 +19,7 @@ ANOS_CSV = os.path.join(DATA_DIR, "anos_modelo.csv")
 TEST_ANOS_CSV = os.path.join(DATA_DIR, "anos_modelo_test.csv")
 OUTPUT_CSV = os.path.join(DATA_DIR, "aplicacoes_modelo_ano.csv")
 TEST_OUTPUT_CSV = os.path.join(DATA_DIR, "aplicacoes_modelo_ano_test.csv")
+CHECKPOINT_FILE = os.path.join(DATA_DIR, "aplicacoes_modelo_ano_checkpoint.json")
 MAX_DEBUG_LINKS = 120
 PAGE_PARAM_KEYS = ("curpage", "pagina", "page", "pag", "pg")
 CATALOG_SIGNATURE_KEYS = (
@@ -49,6 +52,16 @@ def parse_args():
         "--output-csv",
         default=OUTPUT_CSV,
         help="Caminho do CSV final de aplicacoes por modelo/ano.",
+    )
+    parser.add_argument(
+        "--checkpoint-file",
+        default=CHECKPOINT_FILE,
+        help="Caminho do arquivo de checkpoint para retomada.",
+    )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Retoma a partir do ultimo checkpoint concluido com sucesso.",
     )
     parser.add_argument(
         "--max-pages",
@@ -93,6 +106,12 @@ def resolve_input_output_paths(args):
             output_csv = TEST_OUTPUT_CSV
 
     return anos_csv, output_csv
+
+
+class StopScrape(Exception):
+    def __init__(self, message, context):
+        super().__init__(message)
+        self.context = context
 
 
 def safe_filename(text):
@@ -178,6 +197,51 @@ def save_debug_html(html, fabricante, modelo, ano, page_number):
     return path
 
 
+def save_checkpoint(checkpoint_path, payload):
+    os.makedirs(os.path.dirname(checkpoint_path), exist_ok=True)
+    checkpoint_payload = dict(payload)
+    checkpoint_payload["updated_at_utc"] = datetime.now(timezone.utc).isoformat()
+
+    with open(checkpoint_path, "w", encoding="utf-8") as checkpoint_file:
+        json.dump(checkpoint_payload, checkpoint_file, ensure_ascii=False, indent=2)
+
+    print(f"[CHECKPOINT] salvo em: {checkpoint_path}")
+    print(f"[CHECKPOINT] payload: {checkpoint_payload}")
+
+
+def load_checkpoint(checkpoint_path):
+    if not os.path.exists(checkpoint_path):
+        return None
+
+    with open(checkpoint_path, "r", encoding="utf-8") as checkpoint_file:
+        payload = json.load(checkpoint_file)
+
+    print(f"[CHECKPOINT] carregado de: {checkpoint_path}")
+    print(f"[CHECKPOINT] payload: {payload}")
+    return payload
+
+
+def resolve_start_index(args, total_rows):
+    if not args.resume:
+        return 0
+
+    checkpoint = load_checkpoint(args.checkpoint_file)
+    if not checkpoint:
+        print("[CHECKPOINT] nenhum checkpoint encontrado; iniciando do zero.")
+        return 0
+
+    last_completed_index = int(checkpoint.get("last_completed_index", -1))
+    start_index = last_completed_index + 1
+    if start_index < 0:
+        start_index = 0
+    if start_index >= total_rows:
+        print("[CHECKPOINT] checkpoint aponta para o fim da lista; nada para retomar.")
+        return total_rows
+
+    print(f"[CHECKPOINT] retomando a partir do indice {start_index}.")
+    return start_index
+
+
 def load_anos_csv(csv_path):
     csv_path = resolve_anos_csv(csv_path)
     df = pd.read_csv(csv_path)
@@ -186,6 +250,17 @@ def load_anos_csv(csv_path):
     print("[LOAD] Colunas:", list(df.columns))
     print(df.head())
 
+    return df
+
+
+def load_existing_output_csv(csv_path):
+    if not os.path.exists(csv_path):
+        print(f"[LOAD] Nenhum CSV previo encontrado em: {csv_path}")
+        return pd.DataFrame()
+
+    df = pd.read_csv(csv_path)
+    print(f"[LOAD] CSV previo carregado: {csv_path}")
+    print(f"[LOAD] Linhas previas: {len(df)}")
     return df
 
 
@@ -200,6 +275,11 @@ def page_number_from_url(url):
                 return int(match.group(0))
 
     return 1
+
+
+def is_error_final_url(url):
+    parsed = urlparse(str(url or ""))
+    return parsed.path.lower().endswith("/erro.asp")
 
 
 def catalog_signature(url):
@@ -399,6 +479,20 @@ def scrape_applications_for_year(session, row, max_pages):
         print("URL lista:", current_url)
 
         response = safe_get(session, current_url, timeout=30, delay_min=1.5, delay_max=3.0)
+        if is_error_final_url(response.url):
+            raise StopScrape(
+                "Final URL caiu em erro.asp; interrompendo para evitar avanço cego em lista longa.",
+                {
+                    "stop_reason": "error_final_url",
+                    "fabricante": fabricante,
+                    "modelo": modelo,
+                    "ano": ano,
+                    "url_ano": seed_url,
+                    "current_url": current_url,
+                    "final_url": response.url,
+                    "page_counter": page_counter,
+                },
+            )
         inspect_page(
             html=response.text,
             fabricante=fabricante,
@@ -448,11 +542,12 @@ def scrape_applications_for_year(session, row, max_pages):
     return all_rows
 
 
-def scrape_aplicacoes_modelo_ano(anos_df, session, max_pages):
+def scrape_aplicacoes_modelo_ano(anos_df, session, max_pages, checkpoint_path, start_index=0):
     all_applications = []
     total = len(anos_df)
+    last_completed_index = start_index - 1
 
-    for idx, row in anos_df.iterrows():
+    for idx, row in anos_df.iloc[start_index:].iterrows():
         print("\n" + "=" * 80)
         print(f"[{idx + 1}/{total}] {row['fabricante']} | {row['modelo']} | {row['ano']}")
         print("URL ano:", row["url_ano"])
@@ -461,6 +556,32 @@ def scrape_aplicacoes_modelo_ano(anos_df, session, max_pages):
             applications = scrape_applications_for_year(session=session, row=row, max_pages=max_pages)
             print(f"[RESULT] Aplicacoes totais no ano: {len(applications)}")
             all_applications.extend(applications)
+            last_completed_index = idx
+            save_checkpoint(
+                checkpoint_path,
+                {
+                    "status": "ok",
+                    "last_completed_index": last_completed_index,
+                    "next_row_index": last_completed_index + 1,
+                    "fabricante": row["fabricante"],
+                    "modelo": row["modelo"],
+                    "ano": row["ano"],
+                    "url_ano": row["url_ano"],
+                },
+            )
+        except StopScrape as exc:
+            save_checkpoint(
+                checkpoint_path,
+                {
+                    "status": "stopped_on_error_page",
+                    "last_completed_index": last_completed_index,
+                    "next_row_index": last_completed_index + 1,
+                    "failed_row_index": idx,
+                    **exc.context,
+                },
+            )
+            print(f"[STOP] {exc}")
+            break
         except Exception as exc:
             print(f"[ERROR] Erro em {row['fabricante']} | {row['modelo']} | {row['ano']}: {exc}")
 
@@ -494,20 +615,25 @@ def save_csv(df, output_path):
 def main():
     args = parse_args()
     anos_csv, output_csv = resolve_input_output_paths(args)
-    session = create_session()
     anos_df = load_anos_csv(anos_csv)
+    start_index = resolve_start_index(args, len(anos_df))
+    session = create_session()
+    existing_df = load_existing_output_csv(output_csv) if args.resume else pd.DataFrame()
     aplicacoes_df = scrape_aplicacoes_modelo_ano(
         anos_df=anos_df,
         session=session,
         max_pages=args.max_pages,
+        checkpoint_path=args.checkpoint_file,
+        start_index=start_index,
     )
-    aplicacoes_df = clean_aplicacoes(aplicacoes_df)
-    save_csv(aplicacoes_df, output_csv)
+    combined_df = pd.concat([existing_df, aplicacoes_df], ignore_index=True, sort=False)
+    combined_df = clean_aplicacoes(combined_df)
+    save_csv(combined_df, output_csv)
 
     print("\nFINALIZADO")
-    print("Total aplicacoes encontradas:", len(aplicacoes_df))
-    if not aplicacoes_df.empty:
-        print(aplicacoes_df.head(30))
+    print("Total aplicacoes encontradas:", len(combined_df))
+    if not combined_df.empty:
+        print(combined_df.head(30))
 
 
 if __name__ == "__main__":

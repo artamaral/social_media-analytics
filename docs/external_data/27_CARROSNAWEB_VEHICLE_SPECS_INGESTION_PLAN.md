@@ -551,6 +551,11 @@ Regras adicionais:
 - a paginacao precisa reconhecer parametros reais do site, incluindo `curpage`
 - a paginacao deve ser seguida apenas quando a URL continuar pertencendo ao
   mesmo contexto de fabricante, modelo e ano
+- se a `final_url` cair em `https://www.carrosnaweb.com.br/erro.asp`, a
+  execucao deve parar imediatamente para evitar continuar em uma lista longa
+  com respostas degradadas
+- o script deve persistir um checkpoint com o ultimo indice concluido com
+  sucesso para permitir retomada posterior sem perder o ponto de parada
 - os links coletados devem apontar para `fichadetalhe.asp?codigo=...`
 - `modelo_texto` deve capturar o texto visivel da aplicacao no card/listagem
   como `HB20 Comfort Plus 1.0 Turbo AT`

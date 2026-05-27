@@ -393,6 +393,9 @@ Proxima avaliacao:
   deve ler `scripts/carrosnaweb_ingestion/data/discovery/anos_modelo.csv`,
   percorrer paginacao em `catalogo.asp` e gerar
   `scripts/carrosnaweb_ingestion/data/discovery/aplicacoes_modelo_ano.csv`
+- esse script agora deve interromper a execucao se a `final_url` cair em
+  `erro.asp` e persistir checkpoint com o ultimo indice concluido para retomada
+  posterior da lista longa
 - o diagnostico recente conseguiu retornar `success` para fichas reais como
   `44763`, `22547` e `4801`
 - a captura real ainda encontra captcha em alguns padroes e por isso os dados
