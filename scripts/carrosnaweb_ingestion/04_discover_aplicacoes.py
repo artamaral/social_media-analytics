@@ -18,7 +18,7 @@ TEST_ANOS_CSV = os.path.join(DATA_DIR, "anos_modelo_test.csv")
 OUTPUT_CSV = os.path.join(DATA_DIR, "aplicacoes_modelo_ano.csv")
 TEST_OUTPUT_CSV = os.path.join(DATA_DIR, "aplicacoes_modelo_ano_test.csv")
 MAX_DEBUG_LINKS = 120
-PAGE_PARAM_KEYS = ("pagina", "page", "pag", "pg")
+PAGE_PARAM_KEYS = ("curpage", "pagina", "page", "pag", "pg")
 CATALOG_SIGNATURE_KEYS = (
     "fabricante",
     "varnome",
@@ -120,6 +120,22 @@ def normalize_text(text):
     return re.sub(r"\s+", " ", value)
 
 
+def extract_application_display_text(a_tag):
+    darkred_font = a_tag.find("font", attrs={"color": "darkred"})
+    if darkred_font:
+        value = darkred_font.get_text(" ", strip=True)
+        if value:
+            return value
+
+    title_value = a_tag.get("title", "")
+    if title_value:
+        cleaned_title = BeautifulSoup(title_value, "html.parser").get_text(" ", strip=True)
+        if cleaned_title:
+            return cleaned_title
+
+    return a_tag.get_text(" ", strip=True)
+
+
 def save_debug_html(html, fabricante, modelo, ano, page_number):
     os.makedirs(DEBUG_DIR, exist_ok=True)
     file_name = (
@@ -178,7 +194,7 @@ def same_catalog_signature(candidate_url, seed_url):
         candidate_value = candidate_signature.get(key)
         if candidate_value is None:
             continue
-        if str(candidate_value) != str(seed_value):
+        if normalize_text(candidate_value) != normalize_text(seed_value):
             return False
 
     return True
@@ -244,7 +260,9 @@ def extract_application_links(html, fabricante, modelo, ano, url_ano_origem, cur
         if not codigo_ficha:
             continue
 
-        versao = texto_link or params.get("varnome", [""])[0]
+        modelo_texto = extract_application_display_text(a_tag)
+        versao = modelo_texto or texto_link or params.get("varnome", [""])[0]
+        titulo_aplicacao = a_tag.get("title", "")
 
         applications.append(
             {
@@ -256,7 +274,9 @@ def extract_application_links(html, fabricante, modelo, ano, url_ano_origem, cur
                 "url_lista_atual": current_url,
                 "codigo_ficha": codigo_ficha,
                 "url_ficha": full_url,
+                "modelo_texto": modelo_texto,
                 "versao": versao,
+                "titulo_aplicacao": titulo_aplicacao,
                 "href_original": href,
                 "texto_link": texto_link,
                 "params": str(params),
@@ -428,7 +448,7 @@ def clean_aplicacoes(df):
         subset=["fabricante", "modelo", "ano", "codigo_ficha", "url_ficha"],
         inplace=True,
     )
-    df.sort_values(by=["fabricante", "modelo", "ano", "versao", "codigo_ficha"], inplace=True)
+    df.sort_values(by=["fabricante", "modelo", "ano", "modelo_texto", "codigo_ficha"], inplace=True)
     after = len(df)
 
     print(f"[CLEAN] Antes: {before} | Depois: {after}")

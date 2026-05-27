@@ -537,7 +537,9 @@ url_ano_origem
 url_lista_atual
 codigo_ficha
 url_ficha
+modelo_texto
 versao
+titulo_aplicacao
 href_original
 texto_link
 params
@@ -546,9 +548,12 @@ params
 Regras adicionais:
 
 - a camada deve suportar listas grandes com `next page`
+- a paginacao precisa reconhecer parametros reais do site, incluindo `curpage`
 - a paginacao deve ser seguida apenas quando a URL continuar pertencendo ao
   mesmo contexto de fabricante, modelo e ano
 - os links coletados devem apontar para `fichadetalhe.asp?codigo=...`
+- `modelo_texto` deve capturar o texto visivel da aplicacao no card/listagem
+  como `HB20 Comfort Plus 1.0 Turbo AT`
 - deduplicar por `codigo_ficha` e `url_ficha`
 
 ### 8. Scraper de fichas apenas com URLs validas
