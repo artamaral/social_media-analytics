@@ -126,15 +126,17 @@ Discovery de catalogo
 Resumo operacional consolidado para a frente:
 
 ```text
-fabricantes -> modelos -> anos -> fichas -> parser -> atualizacao incremental
+fabricantes -> modelos -> anos -> aplicacoes -> fichas -> parser -> atualizacao incremental
 ```
 
 Observacao importante:
 
 - esse fluxo resume a direcao do produto
 - a etapa `anos` deixou de ser apenas opcional e passa a ser parte explicita do
-  pipeline atual, porque o catalogo exige navegacao por `url_ano` antes da
-  descoberta confiavel de fichas
+  pipeline atual, porque o catalogo exige navegacao por `url_ano`
+- a etapa `aplicacoes` passa a ser a listagem real por modelo/ano, incluindo
+  cenarios com paginacao em `catalogo.asp`, antes da captura confiavel das
+  fichas
 
 ## Escopo da fase 1
 
@@ -239,6 +241,9 @@ Estado atual de codigo versionado no repo:
   `fabricantes -> modelos`
 - `scripts/carrosnaweb_ingestion/03_discover_anos.py` para a camada
   `modelos -> anos_modelo`
+- `scripts/carrosnaweb_ingestion/04_discover_aplicacoes.py` para a camada
+  `anos_modelo -> aplicacoes_modelo_ano`, com suporte a paginacao em
+  `catalogo.asp`
 - `scripts/carrosnaweb_ingestion/src/parser.py` para extrair a ficha tecnica a
   partir de `table/tr/td`
 - `scripts/carrosnaweb_ingestion/07_parse_fichas.py` para converter HTML bruto
@@ -494,12 +499,12 @@ O script deve imprimir:
 - quantidade de anos encontrados
 - preview das linhas de anos encontradas
 
-### 7. Discovery de fichas por modelo ou por ano validado
+### 7. Discovery de aplicacoes por modelo/ano com paginacao
 
 Script:
 
 ```text
-scripts/carrosnaweb_ingestion/04_discover_fichas.py
+scripts/carrosnaweb_ingestion/04_discover_aplicacoes.py
 ```
 
 Entrada:
@@ -518,7 +523,7 @@ Ele deve capturar somente links publicados nas paginas reais do catalogo.
 Saida:
 
 ```text
-scripts/carrosnaweb_ingestion/data/discovery/fichas.csv
+scripts/carrosnaweb_ingestion/data/discovery/aplicacoes_modelo_ano.csv
 ```
 
 Colunas esperadas:
@@ -527,9 +532,24 @@ Colunas esperadas:
 fabricante
 modelo
 ano
-codigo
-url
+pagina_lista
+url_ano_origem
+url_lista_atual
+codigo_ficha
+url_ficha
+versao
+href_original
+texto_link
+params
 ```
+
+Regras adicionais:
+
+- a camada deve suportar listas grandes com `next page`
+- a paginacao deve ser seguida apenas quando a URL continuar pertencendo ao
+  mesmo contexto de fabricante, modelo e ano
+- os links coletados devem apontar para `fichadetalhe.asp?codigo=...`
+- deduplicar por `codigo_ficha` e `url_ficha`
 
 ### 8. Scraper de fichas apenas com URLs validas
 
@@ -542,7 +562,7 @@ scripts/carrosnaweb_ingestion/05_scrape_fichas.py
 Entrada:
 
 ```text
-scripts/carrosnaweb_ingestion/data/discovery/fichas.csv
+scripts/carrosnaweb_ingestion/data/discovery/aplicacoes_modelo_ano.csv
 ```
 
 ### 9. Parser de tabela HTML
@@ -841,7 +861,7 @@ Essa tarefa agora tambem esta refletida no roadmap do projeto.
 
 ## Dependencia entre CSVs
 
-Contrato atual entre as duas primeiras etapas:
+Contrato atual entre as camadas de discovery:
 
 ```text
 01_discover_fabricantes.py
@@ -854,6 +874,10 @@ Contrato atual entre as duas primeiras etapas:
 03_discover_anos.py
   input  -> scripts/carrosnaweb_ingestion/data/discovery/modelos.csv
   output -> scripts/carrosnaweb_ingestion/data/discovery/anos_modelo.csv
+
+04_discover_aplicacoes.py
+  input  -> scripts/carrosnaweb_ingestion/data/discovery/anos_modelo.csv
+  output -> scripts/carrosnaweb_ingestion/data/discovery/aplicacoes_modelo_ano.csv
 ```
 
 Implicacao pratica:
@@ -946,7 +970,7 @@ scripts/carrosnaweb_ingestion/data/discovery/anos_modelo.csv
 Implementar:
 
 ```text
-scripts/carrosnaweb_ingestion/04_discover_fichas.py
+scripts/carrosnaweb_ingestion/04_discover_aplicacoes.py
 scripts/carrosnaweb_ingestion/05_scrape_fichas.py
 scripts/carrosnaweb_ingestion/src/parser.py
 scripts/carrosnaweb_ingestion/07_parse_fichas.py
@@ -955,7 +979,7 @@ scripts/carrosnaweb_ingestion/07_parse_fichas.py
 Resultado esperado:
 
 ```text
-scripts/carrosnaweb_ingestion/data/discovery/fichas.csv
+scripts/carrosnaweb_ingestion/data/discovery/aplicacoes_modelo_ano.csv
 scripts/carrosnaweb_ingestion/data/raw_html/fichas/<codigo>.html
 scripts/carrosnaweb_ingestion/data/processed/ficha_tecnica.csv
 ```

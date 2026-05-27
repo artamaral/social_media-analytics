@@ -389,6 +389,10 @@ Proxima avaliacao:
 - ja existe script versionado para discovery de anos por modelo, que deve ler
   `scripts/carrosnaweb_ingestion/data/discovery/modelos.csv` e gerar
   `scripts/carrosnaweb_ingestion/data/discovery/anos_modelo.csv`
+- ja existe script versionado para discovery de aplicacoes por modelo/ano, que
+  deve ler `scripts/carrosnaweb_ingestion/data/discovery/anos_modelo.csv`,
+  percorrer paginacao em `catalogo.asp` e gerar
+  `scripts/carrosnaweb_ingestion/data/discovery/aplicacoes_modelo_ano.csv`
 - o diagnostico recente conseguiu retornar `success` para fichas reais como
   `44763`, `22547` e `4801`
 - a captura real ainda encontra captcha em alguns padroes e por isso os dados
