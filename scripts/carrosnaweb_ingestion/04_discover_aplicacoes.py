@@ -120,20 +120,48 @@ def normalize_text(text):
     return re.sub(r"\s+", " ", value)
 
 
-def extract_application_display_text(a_tag):
+def clean_visible_text(text):
+    return str(text or "").replace("\xa0", " ").strip()
+
+
+def extract_application_display_text(a_tag, fabricante):
     darkred_font = a_tag.find("font", attrs={"color": "darkred"})
     if darkred_font:
-        value = darkred_font.get_text(" ", strip=True)
+        direct_text_parts = []
+        for child in darkred_font.children:
+            if isinstance(child, str):
+                clean_part = clean_visible_text(child)
+                if clean_part:
+                    direct_text_parts.append(clean_part)
+        value = " ".join(direct_text_parts).strip()
         if value:
             return value
 
     title_value = a_tag.get("title", "")
     if title_value:
-        cleaned_title = BeautifulSoup(title_value, "html.parser").get_text(" ", strip=True)
+        cleaned_title = clean_visible_text(
+            BeautifulSoup(title_value, "html.parser").get_text(" ", strip=True)
+        )
         if cleaned_title:
+            fabricante_prefix = f"{fabricante} "
+            if cleaned_title.startswith(fabricante_prefix):
+                cleaned_title = cleaned_title[len(fabricante_prefix):].strip()
             return cleaned_title
 
-    return a_tag.get_text(" ", strip=True)
+    return clean_visible_text(a_tag.get_text(" ", strip=True))
+
+
+def row_richness_score(row):
+    score = 0
+    if row.get("modelo_texto"):
+        score += 10
+    if row.get("titulo_aplicacao"):
+        score += 4
+    if row.get("texto_link"):
+        score += 2
+    if row.get("href_original") and "fichadetalhe.asp" in row["href_original"].lower():
+        score += 1
+    return score
 
 
 def save_debug_html(html, fabricante, modelo, ano, page_number):
@@ -242,7 +270,7 @@ def inspect_page(html, fabricante, modelo, ano, url, page_number):
 
 def extract_application_links(html, fabricante, modelo, ano, url_ano_origem, current_url, page_number):
     soup = BeautifulSoup(html, "html.parser")
-    applications = []
+    applications_by_key = {}
 
     for a_tag in soup.find_all("a", href=True):
         href = a_tag.get("href", "")
@@ -260,30 +288,32 @@ def extract_application_links(html, fabricante, modelo, ano, url_ano_origem, cur
         if not codigo_ficha:
             continue
 
-        modelo_texto = extract_application_display_text(a_tag)
+        modelo_texto = extract_application_display_text(a_tag, fabricante)
         versao = modelo_texto or texto_link or params.get("varnome", [""])[0]
         titulo_aplicacao = a_tag.get("title", "")
+        candidate_row = {
+            "fabricante": fabricante,
+            "modelo": modelo,
+            "ano": ano,
+            "pagina_lista": page_number,
+            "url_ano_origem": url_ano_origem,
+            "url_lista_atual": current_url,
+            "codigo_ficha": codigo_ficha,
+            "url_ficha": full_url,
+            "modelo_texto": modelo_texto,
+            "versao": versao,
+            "titulo_aplicacao": titulo_aplicacao,
+            "href_original": href,
+            "texto_link": texto_link,
+            "params": str(params),
+        }
 
-        applications.append(
-            {
-                "fabricante": fabricante,
-                "modelo": modelo,
-                "ano": ano,
-                "pagina_lista": page_number,
-                "url_ano_origem": url_ano_origem,
-                "url_lista_atual": current_url,
-                "codigo_ficha": codigo_ficha,
-                "url_ficha": full_url,
-                "modelo_texto": modelo_texto,
-                "versao": versao,
-                "titulo_aplicacao": titulo_aplicacao,
-                "href_original": href,
-                "texto_link": texto_link,
-                "params": str(params),
-            }
-        )
+        row_key = (codigo_ficha, full_url)
+        current_best = applications_by_key.get(row_key)
+        if current_best is None or row_richness_score(candidate_row) > row_richness_score(current_best):
+            applications_by_key[row_key] = candidate_row
 
-    return applications
+    return list(applications_by_key.values())
 
 
 def extract_pagination_links(html, current_url, seed_url):
