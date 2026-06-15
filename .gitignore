@@ -3,3 +3,4 @@ __pycache__/
 *.py[cod]
 .streamlit/secrets.toml
 scripts/offline_backfill/logs/*.log
+scripts/carrosnaweb_ingestion/data/
