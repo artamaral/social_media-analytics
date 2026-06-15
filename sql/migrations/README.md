@@ -31,3 +31,7 @@ YYYY-MM-DD_NNN_descricao_down.sql
   - Adiciona regra de `next_check` por idade do post e cobertura historica, ajusta trigger da fila, recalcula `next_check` existente e cria `v_dashboard_queue_bottleneck_status`.
 - `2026-06-15_004_queue_next_check_age_coverage_down.sql`
   - Remove a view de gargalo da fila, remove a regra por idade/cobertura e volta o trigger para a regra baseada apenas em `priority_score`.
+- `2026-06-15_005_dashboard_queue_batch_timezone_up.sql`
+  - Cria `v_dashboard_post_update_queue_batch` com horarios da fila em UTC e America/Sao_Paulo, sem alterar a view operacional do worker.
+- `2026-06-15_005_dashboard_queue_batch_timezone_down.sql`
+  - Remove a view de dashboard com conversao explicita de timezone da fila.

@@ -423,6 +423,49 @@ Regra de consolidacao visual no Streamlit:
   - soma de `posts_vencidos`
   - soma de `posts_no_batch_atual`
 
+### Fila atual com horario local
+
+Para exibir os itens da proxima execucao do worker no Streamlit, usar a view
+de dashboard abaixo, e nao a view operacional bruta:
+
+- `public.v_dashboard_post_update_queue_batch`
+
+Motivo:
+
+- `public.v_post_update_queue_batch` e fonte operacional do worker
+- `post_update_queue.next_check` esta armazenado como `timestamp without time zone`
+  em referencia UTC
+- na tela, esse campo pode parecer futuro quando lido como horario local
+- a view de dashboard explicita `next_check_utc`, `next_check_br` e
+  `vencido_pela_regra_atual`
+
+Campos recomendados para a tabela no Streamlit:
+
+- `display_rank`
+- `post_id`
+- `priority_band`
+- `priority_score`
+- `last_checked_br`
+- `next_check_br`
+- `vencido_pela_regra_atual`
+- `atraso_minutos`
+
+Query recomendada:
+
+```sql
+select
+  display_rank,
+  post_id,
+  priority_band,
+  priority_score,
+  last_checked_br,
+  next_check_br,
+  vencido_pela_regra_atual,
+  atraso_minutos
+from public.v_dashboard_post_update_queue_batch
+order by display_rank;
+```
+
 ## GPT dentro do dashboard
 
 Se um GPT/assistente for implementado dentro do Streamlit, ele nao deve depender de "ler a tela" de forma implicita. O app deve montar explicitamente um pacote de contexto com os dados relevantes da pagina atual.

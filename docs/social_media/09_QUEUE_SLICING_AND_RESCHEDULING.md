@@ -518,6 +518,41 @@ Leitura recomendada:
   staleness
 - `next_check_mais_atrasado`: `next_check` mais antigo entre os posts vencidos
 
+### Leitura da fila atual no dashboard
+
+Para leitura humana da fila atual, usar:
+
+- `public.v_dashboard_post_update_queue_batch`
+
+Essa view nao substitui `public.v_post_update_queue_batch` no worker. Ela existe
+para evitar ambiguidade visual de timezone no Streamlit.
+
+Contrato:
+
+- `next_check_utc`: valor operacional de `next_check`, armazenado como UTC
+- `next_check_br`: mesmo instante exibido em `America/Sao_Paulo`
+- `last_checked_utc`: ultima checagem em UTC
+- `last_checked_br`: ultima checagem em `America/Sao_Paulo`
+- `vencido_pela_regra_atual`: confirma se o item esta vencido no momento da
+  consulta
+- `atraso_minutos`: diferenca em minutos entre `now()` e `next_check_utc`
+
+Query recomendada:
+
+```sql
+select
+  display_rank,
+  post_id,
+  priority_band,
+  priority_score,
+  last_checked_br,
+  next_check_br,
+  vencido_pela_regra_atual,
+  atraso_minutos
+from public.v_dashboard_post_update_queue_batch
+order by display_rank;
+```
+
 Indicadores principais para o dashboard:
 
 - `posts_acima_3_2d`
