@@ -1003,7 +1003,14 @@ def metric_card_grid(cards: list[str], class_name: str = "fenabrave-card-grid") 
     )
 
 
-def dq_kpi_card(title: str, value: str, subtitle: str, accent_color: str, chips: list[str]) -> str:
+def dq_kpi_card(
+    title: str,
+    value: str,
+    subtitle: str,
+    accent_color: str,
+    chips: list[str],
+    footer_html: str = "",
+) -> str:
     chip_html = "".join(chips)
     return (
         f'<div class="dq-kpi-card" style="border-top-color: {escape(accent_color)};">'
@@ -1011,6 +1018,7 @@ def dq_kpi_card(title: str, value: str, subtitle: str, accent_color: str, chips:
         f'<div class="dq-kpi-value">{escape(value)}</div>'
         f'<div class="dq-kpi-subtitle">{escape(subtitle)}</div>'
         f'<div class="dq-chip-row">{chip_html}</div>'
+        f"{footer_html}"
         "</div>"
     )
 
@@ -1714,8 +1722,8 @@ def render_queue_bottleneck_section(queue_rows: list[dict[str, Any]], queue_erro
                     dq_chip("Pior atraso", f"{max_staleness_days:.1f}d".replace(".", ","), staleness_tone),
                     dq_chip("Próximo batch", format_int(next_batch_count), "ok-green" if next_batch_count > 0 else "neutral"),
                 ],
+                queue_overdue_block_html(overdue_count, int(row.get("total_posts") or 0)),
             )
-            + queue_overdue_block_html(overdue_count, int(row.get("total_posts") or 0))
         )
 
     st.markdown(
