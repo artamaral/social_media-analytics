@@ -23,3 +23,11 @@ YYYY-MM-DD_NNN_descricao_down.sql
   - Cria indices para leituras sob demanda do dashboard online.
 - `2026-05-08_002_dashboard_on_demand_indexes_down.sql`
   - Remove indices criados para o dashboard online.
+- `2026-05-22_003_creator_metrics_history_up.sql`
+  - Cria historico de metricas de creators, campos correntes em `creators` e trigger de sincronizacao.
+- `2026-05-22_003_creator_metrics_history_down.sql`
+  - Remove historico de metricas de creators, trigger e campos correntes adicionados.
+- `2026-06-15_004_queue_next_check_age_coverage_up.sql`
+  - Adiciona regra de `next_check` por idade do post e cobertura historica, ajusta trigger da fila, recalcula `next_check` existente e cria `v_dashboard_queue_bottleneck_status`.
+- `2026-06-15_004_queue_next_check_age_coverage_down.sql`
+  - Remove a view de gargalo da fila, remove a regra por idade/cobertura e volta o trigger para a regra baseada apenas em `priority_score`.

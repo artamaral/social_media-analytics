@@ -373,7 +373,8 @@ Objetivo:
 
 Fonte recomendada:
 
-- query documentada em
+- view `public.v_dashboard_queue_bottleneck_status`
+- contrato e query-base documentados em
   `docs/social_media/09_QUEUE_SLICING_AND_RESCHEDULING.md`
 
 Campos minimos para o Streamlit:
