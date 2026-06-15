@@ -256,6 +256,61 @@ Motivo:
 - tornar o topo da fila mais responsivo
 - manter a regra simples e editavel no banco
 
+### Revisao proposta por idade e cobertura - 2026-06-15
+
+Analises operacionais posteriores mostraram que a regra acima ficou
+excessivamente sensivel ao volume acumulado. Como `priority_score` e calculado
+a partir de views, likes e comments acumulados, posts antigos muito grandes
+continuam voltando com cadencia curta mesmo quando ja possuem centenas de
+snapshots.
+
+Evidencias observadas:
+
+- posts `old_30d_plus`, `priority_band = 6`, com `777` a `940` checagens
+  estavam sendo reagendados em `30 minutes`
+- simulacao com `old_30d_plus` desacelerado removeu `289` posts do `due_now`
+- simulacao com `warm_8_30d` ja coberto (`3+` checagens) desacelerado removeu
+  `130` posts do `due_now`
+- `warm_8_30d` com menos de `3` checagens nao deve ser desacelerado por essa
+  regra, pois ja pertence a politica de guardrail/cobertura minima
+
+Regra candidata:
+
+```text
+total_checagens < 3:
+  manter politica atual e guardrail
+
+new_0_3d e recent_4_7d:
+  manter politica atual
+
+warm_8_30d com total_checagens >= 3:
+  priority_band 5 ou 6 -> minimo 12h
+  priority_band 1 a 4 -> minimo 24h
+
+old_30d_plus com total_checagens >= 3:
+  priority_band 5 ou 6 -> minimo 12h
+  priority_band 1 a 4 -> minimo 24h
+```
+
+Interpretacao:
+
+- posts novos e recentes continuam responsivos
+- posts sem cobertura minima continuam protegidos pelo guardrail
+- posts `warm` e antigos ja cobertos deixam de competir com a mesma cadencia
+  de posts em janela inicial de crescimento
+- a regra continua simples o suficiente para operacao e auditoria
+
+Observacao de implementacao:
+
+- a funcao atual `calculate_next_check(priority_score, checked_at)` nao recebe
+  `post_date` nem `total_checagens`
+- portanto, a implementacao correta exige uma funcao nova/expandida e ajuste
+  no trigger `refresh_post_queue_on_metrics()`
+- o trigger deve buscar `posts.post_date` e o total historico de checagens antes
+  de calcular o novo `next_check`
+- apos a mudanca, pode ser necessario rodar um update controlado para recalcular
+  `next_check` de posts ja existentes em `post_update_queue`
+
 ### Como `next_check` e definido
 
 O campo `next_check` e controlado pelo banco, e nao pelo worker Python.
@@ -307,6 +362,137 @@ Pontos principais de validacao:
 - custo do Cloud Run nao crescer de forma desproporcional
 - quota do YouTube permanecer dentro de margem segura
 - duracao media do Cloud Run e taxa de erro continuarem aceitaveis
+
+### Indicador recomendado para Streamlit
+
+Objetivo:
+
+- acompanhar se a fila continua concentrada em posts antigos ja cobertos
+- medir posts vencidos por banda
+- medir media de checagens por banda
+- identificar gargalo por idade, cobertura e atraso de `next_check`
+
+Query base:
+
+```sql
+with checks as (
+  select
+    post_id,
+    count(*) as total_checagens,
+    max(collected_at) as last_snapshot_at
+  from public.post_metrics_history
+  group by post_id
+),
+current_batch as (
+  select post_id
+  from public.v_post_update_queue_batch
+),
+classified as (
+  select
+    p.post_id,
+    p.post_date,
+    q.priority_score,
+    public.calculate_priority_band(q.priority_score) as priority_band,
+    q.last_checked,
+    q.next_check,
+    q.needs_update,
+    coalesce(c.total_checagens, 0) as total_checagens,
+    c.last_snapshot_at,
+    case
+      when b.post_id is not null then true
+      else false
+    end as in_current_batch,
+    case
+      when q.next_check <= now() then true
+      else false
+    end as is_due_now,
+    extract(epoch from (now() - q.next_check)) / 3600 as overdue_hours,
+    case
+      when p.post_date >= now() - interval '3 days' then 'new_0_3d'
+      when p.post_date >= now() - interval '7 days' then 'recent_4_7d'
+      when p.post_date >= now() - interval '30 days' then 'warm_8_30d'
+      else 'old_30d_plus'
+    end as video_age_bucket,
+    case
+      when coalesce(c.total_checagens, 0) < 3 then 'needs_coverage'
+      when coalesce(c.total_checagens, 0) between 3 and 49 then 'covered_3_49'
+      when coalesce(c.total_checagens, 0) between 50 and 199 then 'overchecked_50_199'
+      when coalesce(c.total_checagens, 0) between 200 and 499 then 'overchecked_200_499'
+      else 'overchecked_500_plus'
+    end as check_band
+  from public.post_update_queue q
+  join public.posts p
+    on p.post_id = q.post_id
+  left join checks c
+    on c.post_id = q.post_id
+  left join current_batch b
+    on b.post_id = q.post_id
+  left join public.post_collection_failures f
+    on f.post_id = q.post_id
+  where q.needs_update = true
+    and coalesce(f.status, 'active') <> 'unavailable'
+)
+select
+  priority_band,
+  video_age_bucket,
+  check_band,
+  count(*) as total_posts,
+  count(*) filter (where is_due_now) as posts_vencidos,
+  count(*) filter (where in_current_batch) as posts_no_batch_atual,
+  round(avg(total_checagens)::numeric, 2) as media_checagens,
+  max(total_checagens) as max_checagens,
+  round(avg(overdue_hours) filter (where is_due_now)::numeric, 2) as atraso_medio_horas,
+  round(max(overdue_hours) filter (where is_due_now)::numeric, 2) as maior_atraso_horas,
+  min(next_check) filter (where is_due_now) as next_check_mais_atrasado,
+  max(last_snapshot_at) as ultimo_snapshot_do_grupo,
+  round(
+    (
+      count(*) filter (
+        where is_due_now
+          and video_age_bucket in ('warm_8_30d', 'old_30d_plus')
+          and total_checagens >= 3
+      )::numeric
+      / nullif(count(*) filter (where is_due_now), 0)
+    ) * 100,
+    2
+  ) as pct_vencidos_warm_old_cobertos,
+  round(
+    (
+      count(*) filter (
+        where is_due_now
+          and check_band in (
+            'overchecked_50_199',
+            'overchecked_200_499',
+            'overchecked_500_plus'
+          )
+      )::numeric
+      / nullif(count(*) filter (where is_due_now), 0)
+    ) * 100,
+    2
+  ) as pct_vencidos_overchecked
+from classified
+group by
+  priority_band,
+  video_age_bucket,
+  check_band
+order by
+  posts_vencidos desc,
+  priority_band desc,
+  video_age_bucket,
+  check_band;
+```
+
+Leitura recomendada:
+
+- `posts_vencidos`: tamanho do backlog por banda e idade
+- `media_checagens`: indica saturacao do grupo
+- `atraso_medio_horas` e `maior_atraso_horas`: mostram gargalo real de fila
+- `pct_vencidos_warm_old_cobertos`: mede quanto do atraso vem de posts ja
+  cobertos fora da janela inicial
+- `pct_vencidos_overchecked`: mede desperdicio potencial com posts muito
+  checados
+- `posts_no_batch_atual`: mostra se o batch de 50 esta sendo consumido pelo
+  mesmo gargalo
 
 ---
 

@@ -604,12 +604,16 @@ Impacto esperado:
 Data:
 
 - 2026-05-21
+- Atualizacao: 2026-06-15
 
 Decisao:
 
 - abrir revisao de prioridade alta sobre a regra de geracao de `next_check`
 - nao alterar a funcao ainda sem analisar a distribuicao por banda, idade do
   post e cobertura minima
+- adotar como direcao de regra revisada a desaceleracao de posts ja cobertos em
+  `warm_8_30d` e `old_30d_plus`
+- manter a politica atual/guardrail para posts com menos de `3` checagens
 
 Contexto:
 
@@ -621,6 +625,17 @@ Contexto:
   - `Ate 24h = 430`
 - esses numeros sugerem que o agendamento atual merece reavaliacao, mas ainda
   nao fecham sozinhos a regra ideal
+- analise de 2026-06-15 mostrou que posts `old_30d_plus` com centenas de
+  checagens continuavam voltando muito rapido por causa de `priority_score`
+  alto
+- exemplos observados:
+  - posts `old_30d_plus`, `priority_band = 6`, com `777` a `940` checagens
+    eram reagendados em `30 minutes`
+  - simulacao com `old_30d_plus`, bandas `5` e `6` a cada `12h`, e demais
+    bandas a cada `24h`, removeu `289` posts do `due_now`
+  - simulacao em `warm_8_30d` apenas para posts ja cobertos (`3+`
+    checagens), com bandas `5` e `6` a cada `12h`, e demais bandas a cada
+    `24h`, removeu `130` posts do `due_now`
 
 Motivo:
 
@@ -630,6 +645,10 @@ Motivo:
   faixa errada
 - a leitura precisa continuar conectada ao guardrail, ao tamanho do bucket e a
   idade dos posts
+- a frequencia alta deve capturar mudanca recente e janela de crescimento, nao
+  apenas volume acumulado de views/likes/comments
+- posts antigos ja cobertos continuam relevantes para rankings historicos, mas
+  nao devem consumir a mesma cadencia de posts novos ou em bootstrap
 
 Diretriz:
 
@@ -638,6 +657,26 @@ Diretriz:
   `calculate_next_check(...)`
 - documentar qualquer nova regra de agendamento com os criterios usados para
   separar `Ate 1h`, `Ate 6h` e `Ate 24h`
+- regra candidata aprovada para simulacao final:
+  - `total_checagens < 3`: preservar politica atual e guardrail
+  - `new_0_3d` e `recent_4_7d`: preservar politica atual
+  - `warm_8_30d` com `total_checagens >= 3`:
+    - bandas `5` e `6`: minimo `12h`
+    - bandas `1` a `4`: minimo `24h`
+  - `old_30d_plus` com `total_checagens >= 3`:
+    - bandas `5` e `6`: minimo `12h`
+    - bandas `1` a `4`: minimo `24h`
+- a implementacao nao deve ser feita apenas editando a funcao atual, pois
+  `calculate_next_check(priority_score, checked_at)` nao recebe `post_date` nem
+  `total_checagens`
+- a implementacao correta deve criar uma funcao nova ou expandida e ajustar o
+  trigger `refresh_post_queue_on_metrics()` para buscar `post_date` e
+  `total_checagens`
+- o Streamlit deve acompanhar a fila por banda com:
+  - posts vencidos por banda
+  - media de checagens por banda
+  - backlog atrasado por idade/check band
+  - concentracao do batch atual por idade e saturacao
 
 ---
 

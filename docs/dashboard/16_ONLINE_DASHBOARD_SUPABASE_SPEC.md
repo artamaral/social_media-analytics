@@ -350,6 +350,49 @@ Regra de fronteira:
 - foco inicial da pagina operacional: revisar itens de
   `v_dashboard_unavailable_video_review` e registrar validacao humana
 
+### Indicador complementar de gargalo da fila
+
+O dashboard pode exibir um indicador operacional complementar para acompanhar a
+saude da fila de `postMetrics`, sem substituir os dois KPIs principais de Data
+Quality.
+
+Objetivo:
+
+- medir posts vencidos por banda de prioridade
+- medir media de checagens por banda
+- identificar se o gargalo vem de posts novos sem cobertura, de posts `warm`
+  ainda abaixo de `3` checagens ou de posts antigos ja cobertos
+- acompanhar se posts `warm_8_30d` e `old_30d_plus` ja cobertos continuam
+  dominando o batch atual
+
+Fonte recomendada:
+
+- query documentada em
+  `docs/social_media/09_QUEUE_SLICING_AND_RESCHEDULING.md`
+
+Campos minimos para o Streamlit:
+
+- `priority_band`
+- `video_age_bucket`
+- `check_band`
+- `posts_vencidos`
+- `posts_no_batch_atual`
+- `media_checagens`
+- `atraso_medio_horas`
+- `maior_atraso_horas`
+- `pct_vencidos_warm_old_cobertos`
+- `pct_vencidos_overchecked`
+
+Leitura:
+
+- `posts_vencidos` por banda mostra pressao operacional
+- `media_checagens` por banda mostra saturacao
+- `atraso_medio_horas` e `maior_atraso_horas` mostram o gargalo real
+- `pct_vencidos_warm_old_cobertos` alto indica que a fila esta gastando
+  capacidade em posts fora da janela inicial e ja cobertos
+- `pct_vencidos_overchecked` alto indica possivel excesso de rechecagem em
+  posts saturados
+
 ## GPT dentro do dashboard
 
 Se um GPT/assistente for implementado dentro do Streamlit, ele nao deve depender de "ler a tela" de forma implicita. O app deve montar explicitamente um pacote de contexto com os dados relevantes da pagina atual.
