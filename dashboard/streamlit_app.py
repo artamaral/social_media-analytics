@@ -2484,6 +2484,17 @@ def weekly_growth_caption(current_value: int | None, previous_value: int | None)
     return growth_caption_from_values(current_value, previous_value)
 
 
+def weekly_audience_caption(status: Any) -> tuple[str, str]:
+    status_key = str(status or "").strip().lower()
+    if status_key == "cresceu":
+        return "Cresceu vs semana anterior", "#7ddc8e"
+    if status_key == "caiu":
+        return "Caiu vs semana anterior", "#ff7b6f"
+    if status_key == "estavel":
+        return "Estavel vs semana anterior", "#f4c453"
+    return "Sem base semanal", "#aeb4bf"
+
+
 def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> None:
     page_header(page_title, "Intake controlado ligado ao Supabase")
     process_banner(
@@ -3000,6 +3011,19 @@ def render_creator_detail_page() -> None:
         for row in weekly_rows
         if pd.to_datetime(row.get("week_start"), errors="coerce") >= CREATOR_WEEKLY_ACTIVITY_CUTOFF
     ]
+    weekly_audience_rows, weekly_audience_error = get_filtered_rows(
+        "v_dashboard_creator_weekly_audience",
+        filters=tuple(weekly_filters),
+        order_by="week_start",
+        order_desc=False,
+    )
+    if not weekly_audience_rows:
+        weekly_audience_rows = []
+    weekly_audience_rows = [
+        row
+        for row in weekly_audience_rows
+        if pd.to_datetime(row.get("week_start"), errors="coerce") >= CREATOR_WEEKLY_ACTIVITY_CUTOFF
+    ]
     weekly_total_rows = [
         row
         for row in weekly_rows
@@ -3014,6 +3038,10 @@ def render_creator_detail_page() -> None:
     selected_week_row = next(
         (row for row in weekly_total_rows if str(row["week_label"]) == selected_period_label),
         weekly_total_rows[-1] if weekly_total_rows else {},
+    )
+    selected_week_audience_row = next(
+        (row for row in weekly_audience_rows if str(row.get("week_label")) == selected_period_label),
+        {},
     )
     selected_week_start = str(selected_week_row.get("week_start") or "")
     weekly_selected_type_rows = (
@@ -3076,6 +3104,10 @@ def render_creator_detail_page() -> None:
     previous_week_views_value = nullable_int(previous_week_row.get("views_novas")) if previous_week_has_metric_base else None
     previous_week_likes_value = nullable_int(previous_week_row.get("likes_novos")) if previous_week_has_metric_base else None
     previous_week_comments_value = nullable_int(previous_week_row.get("comentarios_novos")) if previous_week_has_metric_base else None
+    weekly_followers_value = nullable_int(selected_week_audience_row.get("followers_delta_vs_prev_week")) if selected_week_audience_row else None
+    weekly_followers_status = str(selected_week_audience_row.get("followers_weekly_status") or "") if selected_week_audience_row else ""
+    weekly_followers_caption, weekly_followers_caption_color = weekly_audience_caption(weekly_followers_status)
+    weekly_followers_display = format_compact_number(weekly_followers_value) if weekly_followers_value is not None else "--"
 
     chart_rows = []
     for row in [row for row in weekly_selected_type_rows if str(row["week_start"]) <= str(selected_week_row.get("week_start", ""))][-8:]:
@@ -3189,16 +3221,15 @@ def render_creator_detail_page() -> None:
 
     selected_week_label = str(selected_week_row.get("week_label") or "Sem base semanal")
     selected_video_type_label = selected_video_type.title() if selected_video_type != "todos" else "Todos"
-    weekly_followers_caption, weekly_followers_caption_color = "Sem serie semanal", "#aeb4bf"
     weekly_engagement_caption, weekly_engagement_caption_color = "Sem serie semanal", "#aeb4bf"
     st.markdown(
         f'<div class="creator-kpi-section-title">Semana selecionada: {escape(selected_week_label)} | {escape(selected_video_type_label)}</div>',
         unsafe_allow_html=True,
     )
-    st.caption("Videos por data de publicacao; views, likes e comentarios por movimento observado em snapshots da semana.")
+    st.caption("Videos por data de publicacao; views, likes e comentarios por movimento observado em snapshots da semana; seguidores por fechamento semanal contra a semana anterior.")
     metric_card_grid(
         [
-            metric_card_html("Seguidores", "--", weekly_followers_caption, "SG", caption_color=weekly_followers_caption_color),
+            metric_card_html("Seguidores", weekly_followers_display, weekly_followers_caption, "SG", caption_color=weekly_followers_caption_color),
             metric_card_html("Engajamento", "--", weekly_engagement_caption, "RK", caption_color=weekly_engagement_caption_color),
             metric_card_html("Videos", format_compact_number(weekly_videos_value), weekly_videos_caption, "VD", caption_color=weekly_videos_caption_color),
             metric_card_html("Views", format_compact_number(weekly_views_value), weekly_views_caption, "VW", caption_color=weekly_views_caption_color),
@@ -3208,8 +3239,8 @@ def render_creator_detail_page() -> None:
         class_name="creator-kpi-grid weekly-grid",
     )
 
-    if summary_error or weekly_error or top_videos_error:
-        active_errors = [error for error in [summary_error, weekly_error, top_videos_error] if error]
+    if summary_error or weekly_error or weekly_audience_error or top_videos_error:
+        active_errors = [error for error in [summary_error, weekly_error, weekly_audience_error, top_videos_error] if error]
         st.warning(" | ".join(active_errors))
 
     chart_left, chart_right = st.columns(2)
@@ -3282,12 +3313,12 @@ def render_creator_detail_page() -> None:
             "</div>"
             '<div class="dq-chip-row">'
             f'{dq_chip("Subnicho", selected_sub_niche, "ok-green")}'
-            f'{dq_chip("Curva followers", "pendente", "alert-yellow")}'
+            f'{dq_chip("Curva followers", weekly_followers_caption.replace(" vs semana anterior", ""), "ok-green" if weekly_followers_status == "cresceu" else "alert-red" if weekly_followers_status == "caiu" else "alert-yellow" if weekly_followers_status == "estavel" else "neutral")}'
             f'{dq_chip("URL do post", "pendente", "alert-yellow")}'
             "</div>"
             '<div class="creator-gap-list">'
             '<div class="creator-gap-item"><strong>Campo faltante: subnichos reais</strong><span>A view atual ainda nao sobe a associacao real de entity_sub_niches. O mockup mostra a necessidade, mas nao finge que o dado ja existe.</span></div>'
-            '<div class="creator-gap-item"><strong>Campo faltante: delta de audiencia</strong><span>A imagem sugere comparacoes temporais mais fortes. Para isso, precisamos de followers_delta_7d ou followers_delta_30d, alem da data da ultima coleta de audiencia.</span></div>'
+            '<div class="creator-gap-item"><strong>Serie de audiencia semanal</strong><span>A leitura executiva de seguidores agora usa o fechamento da semana contra a semana anterior, com base em creator_metrics_history e na nova view semanal de audiencia.</span></div>'
             '<div class="creator-gap-item"><strong>Campo faltante: URL e resumo editorial</strong><span>Conseguimos montar a tabela de top videos com titulo, data, views, likes e comentarios. Ainda faltam URL publica e agregados editoriais mais ricos.</span></div>'
             "</div>"
             "</div>"
@@ -3314,6 +3345,13 @@ def render_creator_detail_page() -> None:
                     {"campo": "latest_post_date", "origem": "v_dashboard_creator_summary", "uso": "detalhe"},
                     {"campo": "latest_collected_at", "origem": "v_dashboard_creator_summary", "uso": "detalhe operacional"},
                     {"campo": "is_active", "origem": "v_dashboard_creator_summary", "uso": "status"},
+                    {"campo": "snapshots_na_semana", "origem": "v_dashboard_creator_weekly_audience", "uso": "auditoria da cobertura semanal"},
+                    {"campo": "snapshots_com_followers", "origem": "v_dashboard_creator_weekly_audience", "uso": "auditoria da cobertura semanal"},
+                    {"campo": "followers_first", "origem": "v_dashboard_creator_weekly_audience", "uso": "auditoria semanal de audiencia"},
+                    {"campo": "followers_last", "origem": "v_dashboard_creator_weekly_audience", "uso": "auditoria semanal de audiencia"},
+                    {"campo": "followers_delta_vs_prev_week", "origem": "v_dashboard_creator_weekly_audience", "uso": "card semanal de seguidores"},
+                    {"campo": "followers_weekly_status", "origem": "v_dashboard_creator_weekly_audience", "uso": "status executivo da audiencia"},
+                    {"campo": "followers_latest_collected_at", "origem": "v_dashboard_creator_weekly_audience", "uso": "frescor da audiencia"},
                     {"campo": "week_label", "origem": "v_dashboard_creator_weekly_activity", "uso": "periodo semanal selecionado"},
                     {"campo": "week_end", "origem": "v_dashboard_creator_weekly_activity", "uso": "ordem e semana completa"},
                     {"campo": "video_type", "origem": "v_dashboard_creator_weekly_activity", "uso": "cards e graficos semanais conforme tipo selecionado"},

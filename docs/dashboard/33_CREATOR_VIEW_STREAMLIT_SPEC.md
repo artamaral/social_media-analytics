@@ -330,6 +330,8 @@ Fontes principais atuais:
 
 - `public.v_dashboard_creator_summary`
 - `public.posts`
+- `public.v_dashboard_creator_weekly_activity`
+- `public.v_dashboard_creator_weekly_audience`
 
 Campos da view resumida:
 
@@ -385,7 +387,7 @@ Campos complementares documentados fora da view atual:
 |---|---|---|
 | `created_at` | `public.creators` | existe na tabela, nao sobe na view |
 | `normalized_name` | `public.entities` | existe na tabela, nao sobe na view |
-| `followers` historico | `creator_metrics_history` na documentacao de projeto | documentado como direcao, nao disponivel nesta branch via view |
+| `followers` historico | `v_dashboard_creator_weekly_audience` alimentada por `creator_metrics_history` | serie semanal de audiencia disponivel para o bloco de seguidores |
 
 ## Campos que faltam para uma boa Creator View
 
@@ -395,8 +397,6 @@ Campos faltantes mais importantes:
 |---|---|---|
 | `sub_niches` do criador | a referencia de tela pede comparacao mais fina do que apenas `niche` | nao sobe na view atual |
 | `monitoring_started_at` | permite mostrar desde quando o criador esta monitorado | nao existe na view atual |
-| `followers_delta_7d` / `followers_delta_30d` | ajuda a ver crescimento de audiencia | nao existe na view atual |
-| `followers_latest_collected_at` | separa frescor de audiencia do frescor de posts | nao existe na view atual |
 | `avg_views_per_post` como coluna da view | pode ser calculado no app, mas idealmente deveria vir pronto do SQL | hoje depende de derivacao local |
 | `latest_post_url` | facilitaria drill-down rapido para o ultimo conteudo | nao existe na view atual |
 | `content_mix` ou distribuicao de tipo de conteudo | importante para leitura editorial | nao existe no contrato atual |
@@ -406,12 +406,17 @@ Campos faltantes mais importantes:
 | `average_view_pct` | a imagem usa essa leitura no topo | nao existe no contrato atual |
 | `post_url` | a tabela da imagem tem coluna de URL | nao existe no contrato atual |
 
+Serie semanal de audiencia ja coberta pela nova view:
+
+- `followers_delta_vs_prev_week`
+- `followers_latest_collected_at`
+
 ## Campos que o mockup usa com fallback visual
 
 No mockup inicial do Streamlit:
 
 - `subnicho` aparece como placeholder visual
-- `curva de followers` aparece como gap explicito
+- `curva de followers` agora usa a nova view semanal de audiencia
 - `top videos` usa apenas os campos ja documentados em `public.posts`
 - `rank de engajamento medio` e derivado localmente para leitura visual
 - a serie temporal precisa priorizar janela semanal
@@ -447,7 +452,10 @@ latest_collected_at
 is_active
 sub_niches_display
 monitoring_started_at
-followers_delta_30d
+followers_first
+followers_last
+followers_delta_vs_prev_week
+followers_weekly_status
 followers_latest_collected_at
 avg_views_per_post
 ```
@@ -456,6 +464,7 @@ Nova view recomendada para o criador individual:
 
 ```text
 v_dashboard_creator_weekly_activity
+v_dashboard_creator_weekly_audience
 ```
 
 Papel dessa view:
@@ -463,12 +472,19 @@ Papel dessa view:
 - sustentar a serie temporal semanal do criador individual
 - separar leitura de crescimento por criador da leitura de crescimento por post
 - evitar que o Streamlit agregue historico bruto localmente
+- usar `v_dashboard_creator_weekly_audience` para seguidores semanais fechados
+- a serie semanal de seguidores nao deve usar o delta entre o primeiro e o
+  ultimo snapshot da mesma semana como leitura executiva
+- a leitura principal deve comparar o ultimo snapshot fechado da semana com o
+  ultimo snapshot fechado da semana anterior
+- `followers_first` e `followers_last` ficam como auditoria visual e tecnica,
+  nao como numero principal do card
 
 Prioridade dos campos novos:
 
 1. `sub_niches_display`
 2. `monitoring_started_at`
-3. `followers_delta_30d`
+3. `followers_delta_vs_prev_week`
 4. `followers_latest_collected_at`
 5. `avg_views_per_post`
 

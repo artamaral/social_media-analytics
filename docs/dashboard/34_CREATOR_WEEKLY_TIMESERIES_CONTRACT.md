@@ -61,18 +61,22 @@ Papel:
 Fonte nova:
 
 - `public.v_dashboard_creator_weekly_activity`
+- `public.v_dashboard_creator_weekly_audience`
 
 Papel:
 
 - alimentar o grafico temporal da view `Criador individual`
 - mostrar crescimento ou encolhimento por semana
 - sustentar comparacoes sem depender de agregacao local no Streamlit
+- `v_dashboard_creator_weekly_audience` sustenta a leitura semanal de
+  seguidores por fechamento de semana
 
 ## Contrato proposto
 
 Nome recomendado para os cards semanais:
 
 - `public.v_dashboard_creator_weekly_activity`
+- `public.v_dashboard_creator_weekly_audience`
 
 Observacao:
 
@@ -103,6 +107,12 @@ Colunas minimas:
 | `posts_com_base_para_delta` | numerico | posts com pelo menos 2 snapshots na semana |
 | `snapshots_na_semana` | numerico | total de snapshots usados para evidenciar movimento semanal |
 | `semana_tem_base` | booleano | indica se a semana tem base minima para mostrar views, likes e comentarios |
+| `followers_first` | numerico | primeiro snapshot de seguidores da semana |
+| `followers_last` | numerico | ultimo snapshot de seguidores da semana |
+| `snapshots_com_followers` | numerico | total de snapshots de audiencia com followers util para auditoria |
+| `latest_collected_at` | timestamp | ultima coleta da semana para auditoria de frescor |
+| `followers_delta_vs_prev_week` | numerico | delta de seguidores contra a semana anterior, usando o fechamento da semana |
+| `followers_weekly_status` | texto | leitura executiva de alta, queda, estabilidade ou sem base |
 
 Semantica dos cards semanais:
 
@@ -125,6 +135,12 @@ Semantica dos cards semanais:
 - quando nao houver pelo menos 2 snapshots na semana para nenhum post do recorte,
   `Views`, `Likes` e `Comentarios` devem ficar sem valor executivo (`--` no
   Streamlit), mesmo que `Videos` tenha valor por `post_date`
+- para seguidores, a leitura semanal deve usar o ultimo snapshot da semana
+  comparado ao ultimo snapshot da semana anterior; nao usar o delta entre o
+  primeiro e o ultimo snapshot da mesma semana como leitura executiva
+- isso significa que `followers_first` e `followers_last` continuam sendo
+  metadados de auditoria, mas o valor principal exibido no card deve vir de
+  `followers_delta_vs_prev_week`
 - alem da linha `video_type = 'todos'`, a view deve expor linhas por tipo de
   video para que o mesmo bloco semanal possa alternar entre `todos`, `long` e
   `short`
@@ -143,6 +159,10 @@ Colunas desejaveis:
 | `top_post_title_in_week` | dar contexto narrativo ao pico semanal |
 | `top_post_views_delta_in_week` | identificar o principal motor da semana |
 | `week_status` | facilitar leitura visual de alta, queda ou estabilidade |
+| `followers_first` | auditoria da base semanal de audiencia |
+| `followers_last` | auditoria da base semanal de audiencia |
+| `followers_delta_vs_prev_week` | leitura executiva de crescimento de audiencia |
+| `followers_weekly_status` | leitura executiva de crescimento, queda ou estabilidade |
 
 ## Base de calculo
 
@@ -170,6 +190,8 @@ Regras de desenho:
 - gerar linhas por `video_type` e uma linha agregada `video_type = 'todos'`
 - comparar cada semana com a semana imediatamente anterior do mesmo criador e
   tipo usando os ganhos observados por snapshot
+- para seguidores, comparar o ultimo snapshot da semana com o ultimo snapshot
+  da semana anterior, ambos no mesmo fuso de exibicao do dashboard
 - data de corte inicial do dashboard: `2026-05-04`
 - o app nao deve exibir semanas anteriores a essa data nos cards e graficos
   semanais de criador
@@ -207,7 +229,9 @@ Fluxo real de incorporacao:
    snapshot disponivel na semana, por post
 7. depois agrega os posts por criador e `video_type`
 8. a linha `video_type = 'todos'` soma `long`, `short` e demais tipos existentes
-9. por fim calcula percentual contra a semana anterior do mesmo criador e tipo
+9. para seguidores, usa o fechamento semanal e compara contra o fechamento da
+   semana anterior do mesmo criador
+10. por fim calcula percentual contra a semana anterior do mesmo criador e tipo
 
 Implicacao importante:
 
@@ -261,6 +285,9 @@ Decisao recomendada para o app:
 
 - usar `week_label` como rotulo principal
 - usar `week_end` como campo de apoio para ordenacao e tooltip
+- para seguidores, o valor exibido no card semanal deve vir do fechamento
+  semanal contra a semana anterior, e nao da diferenca interna entre
+  `followers_first` e `followers_last`
 - ao filtrar a tabela editorial pela semana selecionada, incluir o dia final
   inteiro com limite superior exclusivo: `post_date < week_end + 1 dia`
 
@@ -388,8 +415,8 @@ Gap atual:
 | Atividade semanal | `comentarios_novos` | `v_dashboard_creator_weekly_activity` |
 | Atividade semanal | `posts_com_snapshot_na_semana` | `v_dashboard_creator_weekly_activity` |
 | Atividade semanal | `posts_sem_baseline_para_delta` | `v_dashboard_creator_weekly_activity` |
-| Audiencia temporal | `followers_delta_7d` | evolucao futura da camada de creator |
-| Audiencia temporal | `followers_latest_collected_at` | evolucao futura da camada de creator |
+| Audiencia temporal | `followers_delta_vs_prev_week` | `v_dashboard_creator_weekly_audience` |
+| Audiencia temporal | `followers_latest_collected_at` | `v_dashboard_creator_weekly_audience` |
 | Editorial | `post_url` | enrich ou contrato futuro sobre `posts` |
 | Classificacao | `sub_niches_display` real | evolucao de `v_dashboard_creator_summary` |
 

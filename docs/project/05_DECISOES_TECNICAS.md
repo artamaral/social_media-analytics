@@ -639,11 +639,19 @@ Decisao:
 - usar a YouTube Data API `channels.list` com `part=statistics` para coletar `statistics.subscriberCount`
 - gravar cada coleta na tabela `creator_metrics_history`
 - manter `creators.followers` sincronizado com o snapshot mais recente para consumo rapido no dashboard
+- a leitura semanal de audiencia deve usar o fechamento da semana contra o
+  fechamento da semana anterior, nunca o delta entre primeiro e ultimo snapshot
+  da mesma semana como numero executivo
 
 Contexto:
 
 - followers de creator sao metricas dinamicas, assim como views, likes e comments dos posts
 - a tabela `creators` ja possui o campo `followers`, mas ele representa apenas o estado atual
+- a tabela `creator_metrics_history` passa a ser a fonte de verdade para serie
+  semanal de audiencia no Streamlit
+- a tela semanal de criadores deve consumir `v_dashboard_creator_weekly_audience`
+  para seguidores e manter `v_dashboard_creator_weekly_activity` apenas para
+  videos, views, likes e comentarios
 - sem snapshots, nao sera possivel medir crescimento de canal, aceleracao ou tendencia de audiencia
 - a API oficial do YouTube expoe `statistics.subscriberCount`, `statistics.hiddenSubscriberCount`, `statistics.viewCount` e `statistics.videoCount` no recurso de canal
 - o `subscriberCount` retornado pela API pode ser arredondado para tres algarismos significativos
