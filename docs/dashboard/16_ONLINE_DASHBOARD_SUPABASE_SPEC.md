@@ -364,12 +364,11 @@ Quality.
 
 Objetivo:
 
-- medir posts vencidos por banda de prioridade
+- medir dias desde a ultima checagem por banda de prioridade
 - medir media de checagens por banda
 - identificar se o gargalo vem de posts novos sem cobertura, de posts `warm`
   ainda abaixo de `3` checagens ou de posts antigos ja cobertos
-- acompanhar se posts `warm_8_30d` e `old_30d_plus` ja cobertos continuam
-  dominando o batch atual
+- acompanhar se a capacidade teorica esta chegando na base inteira
 
 Fonte recomendada:
 
@@ -382,23 +381,30 @@ Campos minimos para o Streamlit:
 - `priority_band`
 - `video_age_bucket`
 - `check_band`
+- `total_posts`
+- `media_checagens`
+- `avg_staleness_days`
+- `p50_staleness_days`
+- `p90_staleness_days`
+- `p95_staleness_days`
+- `max_staleness_days`
+- `posts_acima_3_2d`
+- `posts_acima_5d`
+- `posts_acima_7d`
 - `posts_vencidos`
 - `posts_no_batch_atual`
-- `media_checagens`
-- `atraso_medio_horas`
-- `maior_atraso_horas`
-- `pct_vencidos_warm_old_cobertos`
-- `pct_vencidos_overchecked`
 
 Leitura:
 
-- `posts_vencidos` por banda mostra pressao operacional
+- `avg_staleness_days` mostra a media de dias desde a ultima checagem
+- `p50_staleness_days` mostra a mediana do grupo
+- `p90_staleness_days` e `p95_staleness_days` mostram a cauda de atraso
+- `max_staleness_days` mostra o pior caso do grupo
+- `posts_acima_3_2d` compara o grupo contra a rotacao teorica atual da base
+- `posts_acima_5d` e `posts_acima_7d` sinalizam gargalos mais fortes
+- `posts_vencidos` por banda mostra pressao operacional por `next_check`
 - `media_checagens` por banda mostra saturacao
-- `atraso_medio_horas` e `maior_atraso_horas` mostram o gargalo real
-- `pct_vencidos_warm_old_cobertos` alto indica que a fila esta gastando
-  capacidade em posts fora da janela inicial e ja cobertos
-- `pct_vencidos_overchecked` alto indica possivel excesso de rechecagem em
-  posts saturados
+- `posts_no_batch_atual` mostra como o lote de 50 esta sendo consumido
 
 ## GPT dentro do dashboard
 

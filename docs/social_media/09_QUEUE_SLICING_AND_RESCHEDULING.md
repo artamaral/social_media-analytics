@@ -373,10 +373,11 @@ Pontos principais de validacao:
 
 Objetivo:
 
-- acompanhar se a fila continua concentrada em posts antigos ja cobertos
-- medir posts vencidos por banda
-- medir media de checagens por banda
-- identificar gargalo por idade, cobertura e atraso de `next_check`
+- acompanhar a idade real da ultima checagem por grupo de posts
+- medir se a capacidade teorica esta chegando na base inteira
+- identificar grupos com muitos posts acima de `3.2`, `5` ou `7` dias sem
+  checagem
+- manter contexto por banda de prioridade, idade do post e faixa de cobertura
 
 View recomendada:
 
@@ -406,9 +407,13 @@ classified as (
     public.calculate_priority_band(q.priority_score) as priority_band,
     q.last_checked,
     q.next_check,
-    q.needs_update,
     coalesce(c.total_checagens, 0) as total_checagens,
-    c.last_snapshot_at,
+    coalesce(c.last_snapshot_at, q.last_checked::timestamp, p.created_at) as effective_last_check,
+    extract(
+      epoch from (
+        now()::timestamp - coalesce(c.last_snapshot_at, q.last_checked::timestamp, p.created_at)
+      )
+    ) / 86400 as staleness_days,
     case
       when b.post_id is not null then true
       else false
@@ -417,7 +422,6 @@ classified as (
       when q.next_check <= now()::timestamp then true
       else false
     end as is_due_now,
-    extract(epoch from (now()::timestamp - q.next_check)) / 3600 as overdue_hours,
     case
       when p.post_date >= now()::timestamp - interval '3 days' then 'new_0_3d'
       when p.post_date >= now()::timestamp - interval '7 days' then 'recent_4_7d'
@@ -448,62 +452,87 @@ select
   video_age_bucket,
   check_band,
   count(*) as total_posts,
-  count(*) filter (where is_due_now) as posts_vencidos,
-  count(*) filter (where in_current_batch) as posts_no_batch_atual,
   round(avg(total_checagens)::numeric, 2) as media_checagens,
   max(total_checagens) as max_checagens,
-  round((avg(overdue_hours) filter (where is_due_now))::numeric, 2) as atraso_medio_horas,
-  round((max(overdue_hours) filter (where is_due_now))::numeric, 2) as maior_atraso_horas,
-  min(next_check) filter (where is_due_now) as next_check_mais_atrasado,
-  max(last_snapshot_at) as ultimo_snapshot_do_grupo,
+  round(avg(staleness_days)::numeric, 2) as avg_staleness_days,
   round(
-    (
-      count(*) filter (
-        where is_due_now
-          and video_age_bucket in ('warm_8_30d', 'old_30d_plus')
-          and total_checagens >= 3
-      )::numeric
-      / nullif(count(*) filter (where is_due_now), 0)
-    ) * 100,
+    (percentile_cont(0.5) within group (order by staleness_days))::numeric,
     2
-  ) as pct_vencidos_warm_old_cobertos,
+  ) as p50_staleness_days,
   round(
-    (
-      count(*) filter (
-        where is_due_now
-          and check_band in (
-            'overchecked_50_199',
-            'overchecked_200_499',
-            'overchecked_500_plus'
-          )
-      )::numeric
-      / nullif(count(*) filter (where is_due_now), 0)
-    ) * 100,
+    (percentile_cont(0.9) within group (order by staleness_days))::numeric,
     2
-  ) as pct_vencidos_overchecked
+  ) as p90_staleness_days,
+  round(
+    (percentile_cont(0.95) within group (order by staleness_days))::numeric,
+    2
+  ) as p95_staleness_days,
+  round(max(staleness_days)::numeric, 2) as max_staleness_days,
+  count(*) filter (
+    where staleness_days > 3.2
+  ) as posts_acima_3_2d,
+  count(*) filter (
+    where staleness_days > 5
+  ) as posts_acima_5d,
+  count(*) filter (
+    where staleness_days > 7
+  ) as posts_acima_7d,
+  count(*) filter (
+    where is_due_now
+  ) as posts_vencidos,
+  count(*) filter (
+    where in_current_batch
+  ) as posts_no_batch_atual,
+  min(effective_last_check) as oldest_effective_last_check,
+  max(effective_last_check) as newest_effective_last_check,
+  min(next_check) filter (
+    where is_due_now
+  ) as next_check_mais_atrasado
 from classified
 group by
   priority_band,
-  video_age_bucket,
-  check_band
-order by
-  posts_vencidos desc,
-  priority_band desc,
   video_age_bucket,
   check_band;
 ```
 
 Leitura recomendada:
 
-- `posts_vencidos`: tamanho do backlog por banda e idade
-- `media_checagens`: indica saturacao do grupo
-- `atraso_medio_horas` e `maior_atraso_horas`: mostram gargalo real de fila
-- `pct_vencidos_warm_old_cobertos`: mede quanto do atraso vem de posts ja
-  cobertos fora da janela inicial
-- `pct_vencidos_overchecked`: mede desperdicio potencial com posts muito
-  checados
-- `posts_no_batch_atual`: mostra se o batch de 50 esta sendo consumido pelo
-  mesmo gargalo
+- `total_posts`: quantidade de posts no grupo
+- `media_checagens`: media de snapshots historicos do grupo
+- `avg_staleness_days`: media de dias desde a ultima checagem
+- `p50_staleness_days`: mediana; metade dos posts esta abaixo/acima desse
+  tempo sem checagem
+- `p90_staleness_days`: 90% dos posts estao ate esse tempo sem checagem; os
+  10% piores estao acima
+- `p95_staleness_days`: 95% dos posts estao ate esse tempo sem checagem; os
+  5% piores estao acima
+- `max_staleness_days`: pior caso do grupo
+- `posts_acima_3_2d`: posts acima da media teorica atual de rotacao completa
+  da base (`3820 / 1200 ~= 3.2 dias`)
+- `posts_acima_5d`: alerta intermediario de atraso
+- `posts_acima_7d`: alerta forte de gargalo real
+- `posts_vencidos`: posts cujo `next_check` ja venceu
+- `posts_no_batch_atual`: posts do grupo que aparecem no lote atual de
+  `v_post_update_queue_batch`
+- `oldest_effective_last_check`: checagem mais antiga usada no calculo de
+  staleness
+- `next_check_mais_atrasado`: `next_check` mais antigo entre os posts vencidos
+
+Indicadores principais para o dashboard:
+
+- `posts_acima_3_2d`
+- `posts_acima_5d`
+- `posts_acima_7d`
+- `p95_staleness_days`
+- `max_staleness_days`
+- `posts_no_batch_atual`
+
+Meta operacional:
+
+- `posts_acima_7d` deve ficar proximo de zero
+- `p95_staleness_days` nao deve crescer semana contra semana
+- se `posts_acima_3_2d` crescer muito, a capacidade media teorica nao esta
+  chegando na base inteira
 
 ---
 
