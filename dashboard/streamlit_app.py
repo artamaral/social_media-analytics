@@ -456,43 +456,6 @@ def inject_theme() -> None:
             color: var(--text);
         }
 
-        .queue-overdue {
-            margin-top: 0.5rem;
-            padding: 0.5rem 0.6rem 0.45rem;
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: #252733;
-            display: flex;
-            flex-direction: column;
-            gap: 0.18rem;
-        }
-
-        .queue-overdue.alert-red {
-            background: #7a2323;
-        }
-
-        .queue-overdue.alert-yellow {
-            background: #8b6b10;
-            color: #fff7d6;
-        }
-
-        .queue-overdue.ok-green {
-            background: #214d37;
-        }
-
-        .queue-overdue-label {
-            font-size: 0.72rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0;
-        }
-
-        .queue-overdue-value {
-            font-size: 1.3rem;
-            font-weight: 900;
-            line-height: 1;
-        }
-
         .dq-detail {
             margin-top: 1rem;
         }
@@ -1057,17 +1020,9 @@ def queue_staleness_tone(value: float) -> str:
     return "alert-red"
 
 
-def queue_overdue_block_html(overdue_count: int, total_posts: int) -> str:
+def queue_overdue_label(overdue_count: int, total_posts: int) -> str:
     pct = (overdue_count / total_posts * 100) if total_posts else 0.0
-    pct_label = f"{int(round(pct))}%"
-    tone = "alert-yellow" if overdue_count > 0 else "neutral"
-    return (
-        f'<div class="queue-overdue {escape(tone)}">'
-        f'<div class="queue-overdue-label">Vencidos</div>'
-        f'<div class="queue-overdue-value">{escape(format_int(overdue_count))}</div>'
-        f'<div class="queue-overdue-detail">{escape(pct_label)}</div>'
-        "</div>"
-    )
+    return f"{format_int(overdue_count)} | {int(round(pct))}%"
 
 
 def review_state_chip(review_ready: bool | None, pending_review: int, confirmed: int, candidates: int) -> str:
@@ -1720,9 +1675,9 @@ def render_queue_bottleneck_section(queue_rows: list[dict[str, Any]], queue_erro
                 [
                     dq_chip("Média checagens", f"{avg_checks:.1f}".replace(".", ",")),
                     dq_chip("Pior atraso", f"{max_staleness_days:.1f}d".replace(".", ","), staleness_tone),
+                    dq_chip("Vencidos", queue_overdue_label(overdue_count, int(row.get("total_posts") or 0)), "ok-green"),
                     dq_chip("Próximo batch", format_int(next_batch_count), "ok-green" if next_batch_count > 0 else "neutral"),
                 ],
-                queue_overdue_block_html(overdue_count, int(row.get("total_posts") or 0)),
             )
         )
 
