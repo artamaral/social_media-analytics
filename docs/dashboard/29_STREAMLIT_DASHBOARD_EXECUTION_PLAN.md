@@ -418,6 +418,22 @@ Sequencia minima de execucao:
 4. ligar cada bloco no Streamlit sem tabela detalhada no primeiro momento
 5. validar texto, cor e semantica antes de abrir detalhamento tecnico
 
+Regra de renderizacao complementar validada para `Data quality`:
+
+- incluir abaixo dos blocos `Monitoramento de posts sem checagem` e
+  `Posts mortos e validacao humana` uma leitura agregada de
+  `v_dashboard_queue_bottleneck_status`
+- renderizar um card por `priority_band`
+- excluir da consolidacao as linhas onde:
+  - `check_band = needs_coverage`
+  - e `video_age_bucket` esteja em `new_0_3d` ou `recent_4_7d`
+- por banda, mostrar:
+  - soma de `total_posts`
+  - media simples de `media_checagens`
+  - pior `max_staleness_days`
+  - soma de `posts_vencidos`
+  - soma de `posts_no_batch_atual`
+
 Regra de economia de tokens:
 
 1. discutir primeiro o contrato da view, nao varias queries paralelas

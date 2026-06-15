@@ -406,6 +406,21 @@ Leitura:
 - `media_checagens` por banda mostra saturacao
 - `posts_no_batch_atual` mostra como o lote de 50 esta sendo consumido
 
+Regra de consolidacao visual no Streamlit:
+
+- abaixo dos 2 KPIs principais de `Data Quality`, o dashboard deve exibir um
+  bloco complementar por `priority_band`
+- cada bloco deve agregar todas as linhas da banda
+- excecao: quando `check_band = needs_coverage`, os buckets `new_0_3d` e
+  `recent_4_7d` ficam fora dessa consolidacao, porque ja pertencem ao KPI
+  `Monitoramento de posts sem checagem`
+- cada bloco por banda deve mostrar:
+  - soma de `total_posts`
+  - media simples de `media_checagens`
+  - pior valor de `max_staleness_days`
+  - soma de `posts_vencidos`
+  - soma de `posts_no_batch_atual`
+
 ## GPT dentro do dashboard
 
 Se um GPT/assistente for implementado dentro do Streamlit, ele nao deve depender de "ler a tela" de forma implicita. O app deve montar explicitamente um pacote de contexto com os dados relevantes da pagina atual.

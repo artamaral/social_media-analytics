@@ -303,11 +303,20 @@ def inject_theme() -> None:
             .creator-kpi-grid {
                 grid-template-columns: repeat(3, minmax(0, 1fr));
             }
+
+            .dq-kpi-grid.dq-kpi-grid-third {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
         }
 
         @media (max-width: 900px) {
             .creator-kpi-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .dq-kpi-grid,
+            .dq-kpi-grid.dq-kpi-grid-third {
+                grid-template-columns: repeat(1, minmax(0, 1fr));
             }
         }
 
@@ -357,6 +366,10 @@ def inject_theme() -> None:
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 1rem;
             margin-top: 1rem;
+        }
+
+        .dq-kpi-grid.dq-kpi-grid-third {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
         }
 
         .dq-kpi-card {
@@ -969,6 +982,13 @@ def dq_chip(label: str, amount: str, tone: str = "neutral") -> str:
     return f'<span class="dq-chip {escape(tone)}">{escape(label)} <strong>{escape(amount)}</strong></span>'
 
 
+def humanize_queue_band(value: Any) -> str:
+    text = str(value or "--").strip()
+    if not text or text == "--":
+        return "--"
+    return text.replace("_", " ").title()
+
+
 def review_state_chip(review_ready: bool | None, pending_review: int, confirmed: int, candidates: int) -> str:
     if review_ready and pending_review == 0:
         return dq_chip("Estado", "Dados OK", "ok-green")
@@ -1516,16 +1536,147 @@ def render_data_quality_cards(
             )
 
 
-def load_data_quality_context() -> tuple[list[dict[str, Any]], dict[str, Any] | None, list[str]]:
+def aggregate_queue_bottleneck_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped: dict[str, dict[str, Any]] = {}
+    priority_order = {
+        "critical": 0,
+        "urgent": 1,
+        "high": 2,
+        "medium": 3,
+        "low": 4,
+        "long_tail": 5,
+    }
+
+    for row in rows:
+        check_band = str(row.get("check_band") or "").strip().lower()
+        video_age_bucket = str(row.get("video_age_bucket") or "").strip().lower()
+        if check_band == "needs_coverage" and video_age_bucket in {"new_0_3d", "recent_4_7d"}:
+            continue
+
+        priority_band = str(row.get("priority_band") or "sem_banda").strip().lower()
+        current = grouped.setdefault(
+            priority_band,
+            {
+                "priority_band": priority_band,
+                "total_posts": 0,
+                "media_checagens_sum": 0.0,
+                "media_checagens_count": 0,
+                "max_staleness_days": 0.0,
+                "posts_vencidos": 0,
+                "posts_no_batch_atual": 0,
+            },
+        )
+
+        current["total_posts"] += int(row.get("total_posts") or 0)
+        if row.get("media_checagens") is not None:
+            current["media_checagens_sum"] += float(row.get("media_checagens") or 0)
+            current["media_checagens_count"] += 1
+        current["max_staleness_days"] = max(
+            float(current.get("max_staleness_days") or 0),
+            float(row.get("max_staleness_days") or 0),
+        )
+        current["posts_vencidos"] += int(row.get("posts_vencidos") or 0)
+        current["posts_no_batch_atual"] += int(row.get("posts_no_batch_atual") or 0)
+
+    aggregated_rows: list[dict[str, Any]] = []
+    for current in grouped.values():
+        count = int(current.get("media_checagens_count") or 0)
+        avg_checks = (float(current.get("media_checagens_sum") or 0) / count) if count else 0.0
+        aggregated_rows.append(
+            {
+                "priority_band": current["priority_band"],
+                "total_posts": int(current["total_posts"]),
+                "media_checagens_media": avg_checks,
+                "max_staleness_days": float(current["max_staleness_days"]),
+                "posts_vencidos": int(current["posts_vencidos"]),
+                "posts_no_batch_atual": int(current["posts_no_batch_atual"]),
+            }
+        )
+
+    return sorted(
+        aggregated_rows,
+        key=lambda row: (
+            priority_order.get(str(row.get("priority_band") or "").lower(), 99),
+            str(row.get("priority_band") or ""),
+        ),
+    )
+
+
+def render_queue_bottleneck_section(queue_rows: list[dict[str, Any]], queue_error: str | None) -> None:
+    st.write("")
+    st.markdown("### Gargalo da fila por banda")
+
+    if queue_error:
+        st.warning(queue_error)
+
+    aggregated_rows = aggregate_queue_bottleneck_rows(queue_rows)
+    if not aggregated_rows:
+        st.markdown(
+            '<div class="dq-kpi-grid">'
+            + dq_kpi_card(
+                "Sem dados da fila",
+                "--",
+                "View v_dashboard_queue_bottleneck_status indisponivel ou vazia.",
+                "#f2c14e",
+                [
+                    dq_chip("Posts", "--"),
+                    dq_chip("Média checagens", "--"),
+                    dq_chip("Pior atraso", "--"),
+                    dq_chip("Vencidos", "--"),
+                    dq_chip("Próximo batch", "--"),
+                ],
+            )
+            + "</div>",
+            unsafe_allow_html=True,
+        )
+        return
+
+    cards: list[str] = []
+    for row in aggregated_rows:
+        avg_checks = float(row.get("media_checagens_media") or 0)
+        max_staleness_days = float(row.get("max_staleness_days") or 0)
+        overdue_count = int(row.get("posts_vencidos") or 0)
+        next_batch_count = int(row.get("posts_no_batch_atual") or 0)
+        cards.append(
+            dq_kpi_card(
+                humanize_queue_band(row.get("priority_band")),
+                format_int(row.get("total_posts")),
+                "Posts monitorados na banda",
+                "#ff8069",
+                [
+                    dq_chip("Média checagens", f"{avg_checks:.1f}".replace(".", ",")),
+                    dq_chip("Pior atraso", f"{int(round(max_staleness_days))}d", "alert-yellow" if max_staleness_days > 0 else "neutral"),
+                    dq_chip("Vencidos", format_int(overdue_count), "alert-yellow" if overdue_count > 0 else "neutral"),
+                    dq_chip("Próximo batch", format_int(next_batch_count), "ok-green" if next_batch_count > 0 else "neutral"),
+                ],
+            )
+        )
+
+    st.markdown(
+        '<div class="dq-kpi-grid dq-kpi-grid-third">' + "".join(cards) + "</div>",
+        unsafe_allow_html=True,
+    )
+    st.caption("Buckets new e recent com check band needs coverage ficam fora deste bloco porque ja pertencem ao KPI de cobertura.")
+
+
+def load_data_quality_context() -> tuple[
+    list[dict[str, Any]],
+    dict[str, Any] | None,
+    list[dict[str, Any]],
+    str | None,
+    list[str],
+]:
     guardrail_rows, guardrail_error = get_view_rows("v_dashboard_guardrail_coverage_status")
     dead_posts, dead_posts_error = get_single_row_view("v_dashboard_dead_post_validation_status")
+    queue_rows, queue_error = get_view_rows("v_dashboard_queue_bottleneck_status")
     errors = [error for error in [guardrail_error, dead_posts_error] if error]
-    return guardrail_rows, dead_posts, errors
+    return guardrail_rows, dead_posts, queue_rows, queue_error, errors
 
 
 def render_data_quality_raw_tables(
     guardrail_rows: list[dict[str, Any]],
     dead_posts: dict[str, Any] | None,
+    queue_rows: list[dict[str, Any]],
 ) -> None:
     with st.expander("Detalhamento tecnico", expanded=False):
         if guardrail_rows:
@@ -1549,10 +1700,14 @@ def render_data_quality_raw_tables(
             st.write("")
             st.markdown("### Posts mortos e validacao humana")
             st.dataframe([dead_posts], use_container_width=True)
+        if queue_rows:
+            st.write("")
+            st.markdown("### Gargalo da fila por banda")
+            st.dataframe(queue_rows, use_container_width=True, hide_index=True)
 
 
 def render_overview() -> None:
-    guardrail_rows, dead_posts, errors = load_data_quality_context()
+    guardrail_rows, dead_posts, _queue_rows, _queue_error, errors = load_data_quality_context()
     page_header(
         "Social Media Analytics",
         "Dashboard interno para estudos de mercado automotivo",
@@ -1582,12 +1737,13 @@ def render_placeholder_page(title: str, description: str) -> None:
 
 
 def render_data_quality_page() -> None:
-    guardrail_rows, dead_posts, errors = load_data_quality_context()
+    guardrail_rows, dead_posts, queue_rows, queue_error, errors = load_data_quality_context()
     page_header("Data quality", "Confiabilidade operacional antes das análises")
     render_connection_notice(errors[0] if errors else None)
     render_data_quality_cards(guardrail_rows, dead_posts, errors)
+    render_queue_bottleneck_section(queue_rows, queue_error)
     render_collection_integrity_section()
-    render_data_quality_raw_tables(guardrail_rows, dead_posts)
+    render_data_quality_raw_tables(guardrail_rows, dead_posts, queue_rows)
 
 
 def format_int(value: Any) -> str:
