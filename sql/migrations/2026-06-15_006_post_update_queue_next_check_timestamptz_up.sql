@@ -108,6 +108,7 @@ guardrail_ranked as (
     row_number() over (
       order by
         e.total_checagens asc,
+        e.next_check asc,
         e.created_at asc,
         e.priority_score desc,
         e.post_id
@@ -127,7 +128,7 @@ guardrail_slice as (
     g.priority_band,
     0 as slice_order
   from guardrail_ranked g
-  where g.guardrail_rank <= 4
+  where g.guardrail_rank <= 6
 ),
 normal_eligible as (
   select e.*
@@ -138,12 +139,12 @@ quotas as (
   select *
   from (
     values
-      (6, 7),
-      (5, 7),
-      (4, 7),
-      (3, 6),
-      (2, 5),
-      (1, 4)
+      (6, 8),
+      (5, 8),
+      (4, 8),
+      (3, 7),
+      (2, 7),
+      (1, 6)
   ) as t(priority_band, quota)
 ),
 ranked as (
@@ -176,26 +177,32 @@ primary_slice as (
 ),
 remaining as (
   select
-    r.post_id,
-    r.priority_score,
-    r.last_checked,
-    r.next_check,
-    r.needs_update,
-    r.created_at,
-    r.total_checagens,
-    r.priority_band,
+    e.post_id,
+    e.priority_score,
+    e.last_checked,
+    e.next_check,
+    e.needs_update,
+    e.created_at,
+    e.total_checagens,
+    e.priority_band,
     row_number() over (
       order by
-        r.next_check asc,
-        r.last_checked asc nulls first,
-        r.priority_band desc,
-        r.post_id
+        e.next_check asc,
+        case when e.total_checagens < 3 then 0 else 1 end asc,
+        e.last_checked asc nulls first,
+        e.priority_band desc,
+        e.post_id
     ) as refill_rank
-  from ranked r
+  from eligible e
   where not exists (
     select 1
     from primary_slice p
-    where p.post_id = r.post_id
+    where p.post_id = e.post_id
+  )
+  and not exists (
+    select 1
+    from guardrail_slice g
+    where g.post_id = e.post_id
   )
 ),
 final_batch as (
@@ -215,7 +222,7 @@ final_batch as (
     2 as slice_order
   from remaining
   where refill_rank <= greatest(
-    40
+    50
     - (select count(*) from guardrail_slice)
     - (select count(*) from primary_slice),
     0
@@ -243,7 +250,7 @@ order by
   next_check asc,
   last_checked asc nulls first,
   post_id
-limit 40;
+limit 50;
 
 create or replace view public.v_post_update_queue_batch_v2 as
 with eligible as (
@@ -276,9 +283,9 @@ quotas as (
       (6, 8),
       (5, 8),
       (4, 8),
-      (3, 6),
-      (2, 6),
-      (1, 4)
+      (3, 7),
+      (2, 7),
+      (1, 6)
   ) as t(priority_band_v2, quota)
 ),
 ranked as (
@@ -337,7 +344,7 @@ final_batch as (
     band_rank
   from remaining
   where refill_rank <= greatest(
-    40 - (select count(*) from primary_slice),
+    50 - (select count(*) from primary_slice),
     0
   )
 )
@@ -360,7 +367,7 @@ order by
   next_check asc,
   last_checked asc nulls first,
   post_id
-limit 40;
+limit 50;
 
 create or replace view public.v_dashboard_post_update_operational_signals as
 with checks as (

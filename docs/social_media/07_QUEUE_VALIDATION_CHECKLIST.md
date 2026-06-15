@@ -137,13 +137,13 @@ order by 1, 2, 3 desc;
 
 Esperado:
 
-- ate `4` posts no slice `guardrail`
+- ate `6` posts na fatia protegida de `guardrail`
+- guardrail excedente pode aparecer no refill global quando houver slots
 - demais posts no slice `priority_band`
-- lote total permanecendo em ate `40` posts
+- lote total permanecendo em ate `50` posts
 
 Sinal de problema:
 
-- mais de `4` posts com `total_checagens < 3`
 - guardrail vazio por varios ciclos enquanto existem posts elegiveis com menos
   de `3` checagens
 - lote normal deixar de preencher quando existem posts elegiveis

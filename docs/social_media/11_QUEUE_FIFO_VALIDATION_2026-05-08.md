@@ -92,7 +92,7 @@ Se a mudanca estiver correta:
 - Worker: Cloud Run
 - Pre-condicao obrigatoria: logs do Cloud Run confirmando uso de `v_post_update_queue_batch`
 - Frequencia do worker: preencher
-- Limite por execucao: 40
+- Limite por execucao: 50
 - View validada: `public.v_post_update_queue_batch`
 
 Distribuicao esperada por execucao:
@@ -100,9 +100,14 @@ Distribuicao esperada por execucao:
 - banda `6`: `8`
 - banda `5`: `8`
 - banda `4`: `8`
-- banda `3`: `6`
-- banda `2`: `6`
-- banda `1`: `4`
+- banda `3`: `7`
+- banda `2`: `7`
+- banda `1`: `6`
+
+Observacao:
+
+- a fatia guardrail protegida ocupa ate `6` slots antes da fila normal
+- guardrail excedente pode disputar o refill global se continuar vencido
 
 Observacao:
 
@@ -138,7 +143,7 @@ Resultado:
 Leitura:
 
 - a validacao de custo do worker pode ser considerada satisfatoria
-- a decisao de manter lote `40` nao encontra impedimento relevante do lado de Cloud Run
+- a decisao de manter lote `50` nao encontra impedimento relevante do lado de Cloud Run enquanto `videos.list` continuar em uma unica chamada
 
 Atualizacao em 2026-05-21:
 
@@ -149,6 +154,12 @@ Atualizacao em 2026-05-21:
   continua em uma unica requisicao ate `50` IDs
 - esta alteracao deve ser acompanhada por alguns dias antes de ser considerada
   validada do ponto de vista FinOps
+
+Atualizacao em 2026-06-15:
+
+- guardrail excedente passou a disputar o refill global sem teto dedicado
+- objetivo: evitar que posts com menos de `3` checagens fiquem invisiveis ao
+  refill quando houver capacidade disponivel no lote de `50`
 
 ---
 

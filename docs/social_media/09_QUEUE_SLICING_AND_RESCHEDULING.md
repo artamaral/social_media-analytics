@@ -188,6 +188,7 @@ Motivo:
 Ordem da fatia guardrail:
 
 - `total_checagens asc`
+- `next_check asc`
 - `created_at asc`
 - `priority_score desc`
 - `post_id`
@@ -216,6 +217,7 @@ Ou seja:
 Em vez disso, o refill e feito sobre um pool global de itens elegiveis restantes, ordenado por:
 
 - `next_check asc`
+- guardrail excedente antes de fila normal em caso de empate de `next_check`
 - `last_checked asc nulls first`
 - `priority_band desc`
 - `post_id`
@@ -223,6 +225,8 @@ Em vez disso, o refill e feito sobre um pool global de itens elegiveis restantes
 Consequencia pratica:
 
 - uma banda intermediaria pode receber slots excedentes se tiver itens mais antigos no refill global
+- posts de guardrail que excederem a fatia protegida tambem podem receber slots
+  no refill global
 - por isso, a distribuicao final do batch pode diferir da cota nominal por banda
 
 Este comportamento esta implementado de forma intencional no SQL atual e deve ser acompanhado em producao antes de qualquer ajuste.

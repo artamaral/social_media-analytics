@@ -248,7 +248,8 @@ A politica de acao deve ser unica:
 
 - reservar uma fatia fixa do lote para posts com `total_checagens < 3`
 - usar `total_checagens asc` como primeira prioridade
-- usar `created_at asc` como segunda prioridade
+- usar `next_check asc` como segunda prioridade para drenar vencidos
+- usar `created_at asc` como terceira prioridade
 - usar `priority_score desc` apenas como desempate
 
 Configuracao inicial recomendada:
@@ -256,6 +257,7 @@ Configuracao inicial recomendada:
 - lote total do worker: `50`
 - fatia guardrail: `6`
 - fatia normal por bandas: `44`
+- guardrail excedente pode disputar o refill global quando continuar vencido
 
 Motivo:
 
@@ -272,8 +274,10 @@ Motivo:
 
 ## Cleanup temporario da divida de guardrail
 
-A politica permanente de `4` slots por execucao e suficiente para operacao
-normal, mas nao e adequada para limpar rapidamente uma divida acumulada grande.
+A politica permanente de `6` slots protegidos por execucao e suficiente para
+operacao normal, mas nao e adequada para limpar rapidamente uma divida acumulada
+grande sozinha. Por isso, guardrail excedente tambem pode disputar o refill
+global quando continuar vencido.
 
 Quando houver muitos posts antigos com `total_checagens < 3`, deve ser usada
 uma rotina offline temporaria de cleanup. A rotina nao precisa levar todos os
@@ -743,9 +747,11 @@ Implementado:
 - regra operacional `total_checagens < 3`
 - ordenacao da fatia guardrail por:
   - `total_checagens asc`
+  - `next_check asc`
   - `created_at asc`
   - `priority_score desc`
-- preenchimento do restante do lote com a fila normal por bandas
+- preenchimento do restante do lote com a fila normal por bandas e refill
+  global, incluindo guardrail excedente vencido
 
 Ainda falta implementar:
 

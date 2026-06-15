@@ -29,9 +29,9 @@ quotas as (
       (6, 8),
       (5, 8),
       (4, 8),
-      (3, 6),
-      (2, 6),
-      (1, 4)
+      (3, 7),
+      (2, 7),
+      (1, 6)
   ) as t(priority_band_v2, quota)
 ),
 ranked as (
@@ -90,7 +90,7 @@ final_batch as (
     band_rank
   from remaining
   where refill_rank <= greatest(
-    40 - (select count(*) from primary_slice),
+    50 - (select count(*) from primary_slice),
     0
   )
 )
@@ -113,4 +113,4 @@ order by
   next_check asc,
   last_checked asc nulls first,
   post_id
-limit 40;
+limit 50;

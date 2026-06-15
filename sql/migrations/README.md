@@ -39,3 +39,7 @@ YYYY-MM-DD_NNN_descricao_down.sql
   - Converte `post_update_queue.next_check` para `timestamp with time zone`, preservando valores existentes como UTC e recriando views dependentes.
 - `2026-06-15_006_post_update_queue_next_check_timestamptz_down.sql`
   - Rollback bloqueado por seguranca; a reversao exige recriar views dependentes manualmente.
+- `2026-06-15_007_queue_batch_50_guardrail_overflow_up.sql`
+  - Alinha a fila operacional ao lote de 50, amplia guardrail protegido para 6 e inclui guardrail excedente no refill global.
+- `2026-06-15_007_queue_batch_50_guardrail_overflow_down.sql`
+  - Reverte a fila para o contrato anterior de lote 40 sem overflow de guardrail.

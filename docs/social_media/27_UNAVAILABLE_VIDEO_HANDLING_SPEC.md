@@ -16,10 +16,15 @@ Casos observados:
 
 Evidencia operacional:
 
-- lote esperado: `40`
+- lote esperado na epoca: `40`
 - itens processados: `38`
 - os dois videos foram conferidos manualmente e estavam indisponiveis no
   YouTube
+
+Observacao atual:
+
+- o lote operacional da fila ativa foi posteriormente alinhado para ate `50`
+  itens por execucao, ainda dentro de uma unica chamada `videos.list`
 
 ---
 
