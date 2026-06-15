@@ -18,10 +18,10 @@ select
   b.last_checked as last_checked_utc,
   b.last_checked at time zone 'America/Sao_Paulo' as last_checked_br,
   b.next_check as next_check_utc,
-  (b.next_check at time zone 'UTC') at time zone 'America/Sao_Paulo' as next_check_br,
-  (b.next_check at time zone 'UTC') <= now() as vencido_pela_regra_atual,
+  b.next_check at time zone 'America/Sao_Paulo' as next_check_br,
+  b.next_check <= now() as vencido_pela_regra_atual,
   floor(
-    extract(epoch from (now() - (b.next_check at time zone 'UTC'))) / 60
+    extract(epoch from (now() - b.next_check)) / 60
   )::integer as atraso_minutos
 from public.v_post_update_queue_batch b;
 

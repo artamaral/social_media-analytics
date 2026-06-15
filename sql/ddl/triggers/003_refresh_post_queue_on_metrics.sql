@@ -35,13 +35,13 @@ begin
   values (
     new.post_id,
     v_priority_score,
-    v_checked_at,
+    v_checked_at at time zone 'UTC',
     public.calculate_next_check(
       v_priority_score,
       v_checked_at,
       v_post_date,
       v_total_checagens
-    ),
+    ) at time zone 'UTC',
     true
   )
   on conflict (post_id) do update

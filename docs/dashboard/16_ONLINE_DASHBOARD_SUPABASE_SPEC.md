@@ -433,8 +433,9 @@ de dashboard abaixo, e nao a view operacional bruta:
 Motivo:
 
 - `public.v_post_update_queue_batch` e fonte operacional do worker
-- `post_update_queue.next_check` esta armazenado como `timestamp without time zone`
-  em referencia UTC
+- `post_update_queue.next_check` deve ser tratado como instante UTC; a migration
+  `2026-06-15_006_post_update_queue_next_check_timestamptz_up.sql` converte a
+  coluna para `timestamp with time zone`
 - na tela, esse campo pode parecer futuro quando lido como horario local
 - a view de dashboard explicita `next_check_utc`, `next_check_br` e
   `vencido_pela_regra_atual`

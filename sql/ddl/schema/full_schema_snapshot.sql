@@ -47,7 +47,7 @@ CREATE TABLE public.post_update_queue (
   post_id text NOT NULL,
   priority_score double precision,
   last_checked timestamp with time zone,
-  next_check timestamp without time zone,
+  next_check timestamp with time zone,
   needs_update boolean DEFAULT true,
   CONSTRAINT post_update_queue_pkey PRIMARY KEY (post_id)
 );

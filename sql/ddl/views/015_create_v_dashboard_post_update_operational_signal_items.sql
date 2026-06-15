@@ -50,7 +50,7 @@ select
     else to_char(last_checked - interval '3 hours', 'DD/MM/YYYY HH24:MI')
   end as last_checked_br,
   next_check,
-  to_char(next_check - interval '3 hours', 'DD/MM/YYYY HH24:MI') as next_check_br,
+  to_char(next_check at time zone 'America/Sao_Paulo', 'DD/MM/YYYY HH24:MI') as next_check_br,
   atraso_minutos,
   total_checagens,
   priority_band,

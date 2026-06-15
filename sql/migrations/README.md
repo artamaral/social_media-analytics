@@ -35,3 +35,7 @@ YYYY-MM-DD_NNN_descricao_down.sql
   - Cria `v_dashboard_post_update_queue_batch` com horarios da fila em UTC e America/Sao_Paulo, sem alterar a view operacional do worker.
 - `2026-06-15_005_dashboard_queue_batch_timezone_down.sql`
   - Remove a view de dashboard com conversao explicita de timezone da fila.
+- `2026-06-15_006_post_update_queue_next_check_timestamptz_up.sql`
+  - Converte `post_update_queue.next_check` para `timestamp with time zone`, preservando valores existentes como UTC e recriando views dependentes.
+- `2026-06-15_006_post_update_queue_next_check_timestamptz_down.sql`
+  - Rollback bloqueado por seguranca; a reversao exige recriar views dependentes manualmente.

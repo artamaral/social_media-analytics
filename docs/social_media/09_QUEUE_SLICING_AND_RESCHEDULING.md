@@ -553,6 +553,27 @@ from public.v_dashboard_post_update_queue_batch
 order by display_rank;
 ```
 
+### Tipo da coluna `next_check`
+
+Em `2026-06-15`, foi preparada a migration
+`sql/migrations/2026-06-15_006_post_update_queue_next_check_timestamptz_up.sql`
+para converter `public.post_update_queue.next_check` de
+`timestamp without time zone` para `timestamp with time zone`.
+
+Motivo:
+
+- `last_checked` ja era `timestamp with time zone`
+- `next_check` sem fuso gerava ambiguidade visual no Supabase e no Streamlit
+- os valores existentes devem ser interpretados como UTC
+- a conversao correta e de tipo, nao um `update` subtraindo horas
+
+Regra operacional:
+
+- nao subtrair `3 hours` diretamente de `post_update_queue.next_check`
+- a fila continua comparando `next_check <= now()`
+- a exibicao em horario Brasil deve usar `next_check at time zone
+  'America/Sao_Paulo'`
+
 Indicadores principais para o dashboard:
 
 - `posts_acima_3_2d`

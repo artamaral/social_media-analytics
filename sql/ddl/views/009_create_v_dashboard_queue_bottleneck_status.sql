@@ -31,7 +31,7 @@ classified as (
       else false
     end as in_current_batch,
     case
-      when q.next_check <= now()::timestamp then true
+      when q.next_check <= now() then true
       else false
     end as is_due_now,
     case
