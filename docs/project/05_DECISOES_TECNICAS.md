@@ -657,7 +657,7 @@ Diretriz:
   `calculate_next_check(...)`
 - documentar qualquer nova regra de agendamento com os criterios usados para
   separar `Ate 1h`, `Ate 6h` e `Ate 24h`
-- regra candidata aprovada para simulacao final:
+- regra aprovada e implementada em SQL:
   - `total_checagens < 3`: preservar politica atual e guardrail
   - `new_0_3d` e `recent_4_7d`: preservar politica atual
   - `warm_8_30d` com `total_checagens >= 3`:
@@ -669,9 +669,14 @@ Diretriz:
 - a implementacao nao deve ser feita apenas editando a funcao atual, pois
   `calculate_next_check(priority_score, checked_at)` nao recebe `post_date` nem
   `total_checagens`
-- a implementacao correta deve criar uma funcao nova ou expandida e ajustar o
-  trigger `refresh_post_queue_on_metrics()` para buscar `post_date` e
-  `total_checagens`
+- a implementacao foi feita com uma sobrecarga de `calculate_next_check(...)`
+  que recebe `post_date` e `total_checagens`
+- o trigger `refresh_post_queue_on_metrics()` passa a buscar `post_date` e
+  `total_checagens` antes de calcular o novo `next_check`
+- migration de aplicacao:
+  `sql/migrations/2026-06-15_004_queue_next_check_age_coverage_up.sql`
+- migration de rollback:
+  `sql/migrations/2026-06-15_004_queue_next_check_age_coverage_down.sql`
 - o Streamlit deve acompanhar a fila por banda com:
   - posts vencidos por banda
   - media de checagens por banda

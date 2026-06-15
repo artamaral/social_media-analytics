@@ -256,7 +256,7 @@ Motivo:
 - tornar o topo da fila mais responsivo
 - manter a regra simples e editavel no banco
 
-### Revisao proposta por idade e cobertura - 2026-06-15
+### Regra por idade e cobertura - 2026-06-15
 
 Analises operacionais posteriores mostraram que a regra acima ficou
 excessivamente sensivel ao volume acumulado. Como `priority_score` e calculado
@@ -274,7 +274,7 @@ Evidencias observadas:
 - `warm_8_30d` com menos de `3` checagens nao deve ser desacelerado por essa
   regra, pois ja pertence a politica de guardrail/cobertura minima
 
-Regra candidata:
+Regra implementada:
 
 ```text
 total_checagens < 3:
@@ -300,16 +300,20 @@ Interpretacao:
   de posts em janela inicial de crescimento
 - a regra continua simples o suficiente para operacao e auditoria
 
-Observacao de implementacao:
+Implementacao:
 
 - a funcao atual `calculate_next_check(priority_score, checked_at)` nao recebe
   `post_date` nem `total_checagens`
-- portanto, a implementacao correta exige uma funcao nova/expandida e ajuste
-  no trigger `refresh_post_queue_on_metrics()`
+- por isso, foi criada uma sobrecarga de `calculate_next_check(...)` que recebe
+  `post_date` e `total_checagens`
 - o trigger deve buscar `posts.post_date` e o total historico de checagens antes
   de calcular o novo `next_check`
-- apos a mudanca, pode ser necessario rodar um update controlado para recalcular
-  `next_check` de posts ja existentes em `post_update_queue`
+- a migration recalcula `next_check` de posts ja existentes em
+  `post_update_queue` com `last_checked` preenchido
+- migration de aplicacao:
+  `sql/migrations/2026-06-15_004_queue_next_check_age_coverage_up.sql`
+- migration de rollback:
+  `sql/migrations/2026-06-15_004_queue_next_check_age_coverage_down.sql`
 
 ### Como `next_check` e definido
 
@@ -322,7 +326,9 @@ Fluxo:
 3. apos cada nova coleta em `post_metrics_history`, o trigger `refresh_post_queue_on_metrics()`:
    - recalcula `priority_score`
    - usa `collected_at` da nova coleta como base temporal
-   - chama `calculate_next_check(priority_score, collected_at)`
+   - busca `post_date` em `posts`
+   - conta o total historico de checagens do post
+   - chama a sobrecarga `calculate_next_check(priority_score, collected_at, post_date, total_checagens)`
    - grava o novo `next_check` em `post_update_queue`
 
 Consequencia pratica:
@@ -372,7 +378,12 @@ Objetivo:
 - medir media de checagens por banda
 - identificar gargalo por idade, cobertura e atraso de `next_check`
 
-Query base:
+View recomendada:
+
+- `public.v_dashboard_queue_bottleneck_status`
+- DDL: `sql/ddl/views/009_create_v_dashboard_queue_bottleneck_status.sql`
+
+Query base da view:
 
 ```sql
 with checks as (
@@ -403,14 +414,14 @@ classified as (
       else false
     end as in_current_batch,
     case
-      when q.next_check <= now() then true
+      when q.next_check <= now()::timestamp then true
       else false
     end as is_due_now,
-    extract(epoch from (now() - q.next_check)) / 3600 as overdue_hours,
+    extract(epoch from (now()::timestamp - q.next_check)) / 3600 as overdue_hours,
     case
-      when p.post_date >= now() - interval '3 days' then 'new_0_3d'
-      when p.post_date >= now() - interval '7 days' then 'recent_4_7d'
-      when p.post_date >= now() - interval '30 days' then 'warm_8_30d'
+      when p.post_date >= now()::timestamp - interval '3 days' then 'new_0_3d'
+      when p.post_date >= now()::timestamp - interval '7 days' then 'recent_4_7d'
+      when p.post_date >= now()::timestamp - interval '30 days' then 'warm_8_30d'
       else 'old_30d_plus'
     end as video_age_bucket,
     case
@@ -441,8 +452,8 @@ select
   count(*) filter (where in_current_batch) as posts_no_batch_atual,
   round(avg(total_checagens)::numeric, 2) as media_checagens,
   max(total_checagens) as max_checagens,
-  round(avg(overdue_hours) filter (where is_due_now)::numeric, 2) as atraso_medio_horas,
-  round(max(overdue_hours) filter (where is_due_now)::numeric, 2) as maior_atraso_horas,
+  round((avg(overdue_hours) filter (where is_due_now))::numeric, 2) as atraso_medio_horas,
+  round((max(overdue_hours) filter (where is_due_now))::numeric, 2) as maior_atraso_horas,
   min(next_check) filter (where is_due_now) as next_check_mais_atrasado,
   max(last_snapshot_at) as ultimo_snapshot_do_grupo,
   round(
