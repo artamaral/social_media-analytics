@@ -493,13 +493,6 @@ def inject_theme() -> None:
             line-height: 1;
         }
 
-        .queue-overdue-detail {
-            font-size: 0.8rem;
-            font-weight: 700;
-            opacity: 0.95;
-            line-height: 1.05;
-        }
-
         .dq-detail {
             margin-top: 1rem;
         }
@@ -1048,10 +1041,6 @@ def queue_band_title(value: Any) -> str:
     return f"Banda {text}"
 
 
-def format_percent(value: float) -> str:
-    return f"{value:.1f}%".replace(".", ",")
-
-
 def queue_staleness_tone(value: float) -> str:
     if value < 3:
         return "ok-green"
@@ -1062,12 +1051,13 @@ def queue_staleness_tone(value: float) -> str:
 
 def queue_overdue_block_html(overdue_count: int, total_posts: int) -> str:
     pct = (overdue_count / total_posts * 100) if total_posts else 0.0
+    pct_label = f"{int(round(pct))}%"
     tone = "alert-yellow" if overdue_count > 0 else "neutral"
     return (
         f'<div class="queue-overdue {escape(tone)}">'
         f'<div class="queue-overdue-label">Vencidos</div>'
         f'<div class="queue-overdue-value">{escape(format_int(overdue_count))}</div>'
-        f'<div class="queue-overdue-detail">{escape(format_percent(pct))} do total</div>'
+        f'<div class="queue-overdue-detail">{escape(pct_label)}</div>'
         "</div>"
     )
 
