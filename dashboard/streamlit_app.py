@@ -1900,17 +1900,20 @@ def render_fenabrave_dashboard_page() -> None:
     st.write("")
     st.markdown("### Resultados mensais por categoria")
 
+    chart_df = df.sort_values(["reference_period", "segment_sort"])
+    category_colors = {
+        row["segment_label"]: row["color_hex"]
+        for _, row in df.drop_duplicates("segment_label").iterrows()
+    }
+
     fig = px.bar(
-        df.sort_values(["reference_period", "segment_sort"]),
+        chart_df,
         x="month_display",
         y="monthly_units",
         color="segment_label",
         barmode="group",
         category_orders={"month_display": month_order},
-        color_discrete_map={
-            row["segment_label"]: row["color_hex"]
-            for _, row in df.drop_duplicates("segment_label").iterrows()
-        },
+        color_discrete_map=category_colors,
         labels={
             "month_display": "Mes",
             "monthly_units": "Emplacamentos",
@@ -1919,6 +1922,27 @@ def render_fenabrave_dashboard_page() -> None:
     )
     apply_plotly_theme(fig)
     st.plotly_chart(fig, use_container_width=True)
+
+    st.write("")
+    st.markdown("### Evolucao mensal por categoria")
+
+    line_fig = px.line(
+        chart_df,
+        x="month_display",
+        y="monthly_units",
+        color="segment_label",
+        markers=True,
+        category_orders={"month_display": month_order},
+        color_discrete_map=category_colors,
+        labels={
+            "month_display": "Mes",
+            "monthly_units": "Emplacamentos",
+            "segment_label": "Categoria",
+        },
+    )
+    apply_plotly_theme(line_fig)
+    line_fig.update_traces(line_width=3, marker_size=8)
+    st.plotly_chart(line_fig, use_container_width=True)
 
 
 def render_collection_integrity_section() -> None:
