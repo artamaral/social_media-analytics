@@ -28,6 +28,30 @@ HEADERS = {
 }
 
 
+def request_with_retry(session, url, timeout, max_attempts=4, base_sleep=2.0):
+    """
+    Executa GET com retry para falhas transitórias de conexao.
+    """
+    last_error = None
+
+    for attempt in range(1, max_attempts + 1):
+        try:
+            return session.get(url, timeout=timeout)
+        except requests.exceptions.RequestException as exc:
+            last_error = exc
+            print(
+                f"[HTTP RETRY] tentativa {attempt}/{max_attempts} falhou para {url}: {exc}"
+            )
+            if attempt >= max_attempts:
+                break
+
+            sleep_seconds = base_sleep * attempt + uniform(0.5, 1.5)
+            print(f"[HTTP RETRY] aguardando {sleep_seconds:.1f}s antes de tentar novamente.")
+            time.sleep(sleep_seconds)
+
+    raise last_error
+
+
 def create_session():
     """
     Cria uma sessao HTTP persistente e faz warm-up em paginas publicas.
@@ -37,7 +61,13 @@ def create_session():
 
     print("Aquecendo sessao...")
     for path in ("/default.asp", "/avancada.asp"):
-        response = session.get(f"{BASE_URL}{path}", timeout=20)
+        response = request_with_retry(
+            session,
+            f"{BASE_URL}{path}",
+            timeout=20,
+            max_attempts=4,
+            base_sleep=2.0,
+        )
         print(
             f"[SESSION] warm-up {path} "
             f"status={response.status_code} size={len(response.text)}"
@@ -53,7 +83,13 @@ def safe_get(session, url, timeout=30, delay_min=1.5, delay_max=3.0):
     Executa GET com logging simples e delay apos a chamada.
     """
     print(f"[DEBUG] URL acessada: {url}")
-    response = session.get(url, timeout=timeout)
+    response = request_with_retry(
+        session,
+        url,
+        timeout=timeout,
+        max_attempts=4,
+        base_sleep=2.0,
+    )
     print(f"[DEBUG] Status HTTP: {response.status_code}")
     print(f"[DEBUG] Tamanho HTML: {len(response.text)}")
     print(f"[DEBUG] URL final: {response.url}")
