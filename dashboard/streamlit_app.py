@@ -378,33 +378,33 @@ def inject_theme() -> None:
             border-radius: 8px;
             border: 1px solid rgba(255, 255, 255, 0.06);
             border-top: 4px solid var(--accent);
-            padding: 1rem 1.05rem 1.05rem;
-            min-height: 250px;
+            padding: 0.85rem 0.9rem 0.9rem;
+            min-height: 220px;
             overflow: hidden;
         }
 
         .dq-kpi-title {
-            font-size: 1.425rem;
+            font-size: 1.28rem;
             font-weight: 900;
             text-transform: uppercase;
             letter-spacing: 0;
             line-height: 1.1;
             white-space: normal;
             overflow-wrap: anywhere;
-            min-height: 3.15rem;
+            min-height: 2.55rem;
         }
 
         .dq-kpi-value {
-            font-size: 2.35rem;
+            font-size: 2.1rem;
             line-height: 1.05;
             font-weight: 900;
             margin-top: 0.35rem;
         }
 
         .dq-kpi-subtitle {
-            margin-top: 0.45rem;
+            margin-top: 0.3rem;
             color: var(--muted);
-            font-size: 0.95rem;
+            font-size: 0.88rem;
             font-weight: 700;
             line-height: 1.2;
             overflow-wrap: anywhere;
@@ -414,7 +414,7 @@ def inject_theme() -> None:
             display: flex;
             flex-wrap: wrap;
             gap: 0.45rem;
-            margin-top: 0.9rem;
+            margin-top: 0.7rem;
         }
 
         .dq-chip {
@@ -454,6 +454,50 @@ def inject_theme() -> None:
             font-size: inherit;
             line-height: 1;
             color: var(--text);
+        }
+
+        .queue-overdue {
+            margin-top: 0.5rem;
+            padding: 0.5rem 0.6rem 0.45rem;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: #252733;
+            display: flex;
+            flex-direction: column;
+            gap: 0.18rem;
+        }
+
+        .queue-overdue.alert-red {
+            background: #7a2323;
+        }
+
+        .queue-overdue.alert-yellow {
+            background: #8b6b10;
+            color: #fff7d6;
+        }
+
+        .queue-overdue.ok-green {
+            background: #214d37;
+        }
+
+        .queue-overdue-label {
+            font-size: 0.72rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0;
+        }
+
+        .queue-overdue-value {
+            font-size: 1.3rem;
+            font-weight: 900;
+            line-height: 1;
+        }
+
+        .queue-overdue-detail {
+            font-size: 0.8rem;
+            font-weight: 700;
+            opacity: 0.95;
+            line-height: 1.05;
         }
 
         .dq-detail {
@@ -987,6 +1031,45 @@ def humanize_queue_band(value: Any) -> str:
     if not text or text == "--":
         return "--"
     return text.replace("_", " ").title()
+
+
+def queue_band_sort_value(value: Any) -> tuple[int, str]:
+    text = str(value or "").strip()
+    try:
+        return (0, f"{int(text):04d}")
+    except ValueError:
+        return (1, text.lower())
+
+
+def queue_band_title(value: Any) -> str:
+    text = str(value or "--").strip()
+    if not text or text == "--":
+        return "Banda --"
+    return f"Banda {text}"
+
+
+def format_percent(value: float) -> str:
+    return f"{value:.1f}%".replace(".", ",")
+
+
+def queue_staleness_tone(value: float) -> str:
+    if value < 3:
+        return "ok-green"
+    if value < 4:
+        return "alert-yellow"
+    return "alert-red"
+
+
+def queue_overdue_block_html(overdue_count: int, total_posts: int) -> str:
+    pct = (overdue_count / total_posts * 100) if total_posts else 0.0
+    tone = "alert-yellow" if overdue_count > 0 else "neutral"
+    return (
+        f'<div class="queue-overdue {escape(tone)}">'
+        f'<div class="queue-overdue-label">Vencidos</div>'
+        f'<div class="queue-overdue-value">{escape(format_int(overdue_count))}</div>'
+        f'<div class="queue-overdue-detail">{escape(format_percent(pct))} do total</div>'
+        "</div>"
+    )
 
 
 def review_state_chip(review_ready: bool | None, pending_review: int, confirmed: int, candidates: int) -> str:
@@ -1538,14 +1621,6 @@ def render_data_quality_cards(
 
 def aggregate_queue_bottleneck_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     grouped: dict[str, dict[str, Any]] = {}
-    priority_order = {
-        "critical": 0,
-        "urgent": 1,
-        "high": 2,
-        "medium": 3,
-        "low": 4,
-        "long_tail": 5,
-    }
 
     for row in rows:
         check_band = str(row.get("check_band") or "").strip().lower()
@@ -1593,13 +1668,13 @@ def aggregate_queue_bottleneck_rows(rows: list[dict[str, Any]]) -> list[dict[str
             }
         )
 
-    return sorted(
-        aggregated_rows,
-        key=lambda row: (
-            priority_order.get(str(row.get("priority_band") or "").lower(), 99),
-            str(row.get("priority_band") or ""),
-        ),
-    )
+    def sort_key(row: dict[str, Any]) -> tuple[int, int, str]:
+        is_text, normalized = queue_band_sort_value(row.get("priority_band"))
+        if is_text == 0:
+            return (0, -int(normalized), normalized)
+        return (1, 0, normalized)
+
+    return sorted(aggregated_rows, key=sort_key)
 
 
 def render_queue_bottleneck_section(queue_rows: list[dict[str, Any]], queue_error: str | None) -> None:
@@ -1612,7 +1687,7 @@ def render_queue_bottleneck_section(queue_rows: list[dict[str, Any]], queue_erro
     aggregated_rows = aggregate_queue_bottleneck_rows(queue_rows)
     if not aggregated_rows:
         st.markdown(
-            '<div class="dq-kpi-grid">'
+            '<div class="dq-kpi-grid dq-kpi-grid-third">'
             + dq_kpi_card(
                 "Sem dados da fila",
                 "--",
@@ -1637,19 +1712,20 @@ def render_queue_bottleneck_section(queue_rows: list[dict[str, Any]], queue_erro
         max_staleness_days = float(row.get("max_staleness_days") or 0)
         overdue_count = int(row.get("posts_vencidos") or 0)
         next_batch_count = int(row.get("posts_no_batch_atual") or 0)
+        staleness_tone = queue_staleness_tone(max_staleness_days)
         cards.append(
             dq_kpi_card(
-                humanize_queue_band(row.get("priority_band")),
+                queue_band_title(row.get("priority_band")),
                 format_int(row.get("total_posts")),
                 "Posts monitorados na banda",
                 "#ff8069",
                 [
                     dq_chip("Média checagens", f"{avg_checks:.1f}".replace(".", ",")),
-                    dq_chip("Pior atraso", f"{int(round(max_staleness_days))}d", "alert-yellow" if max_staleness_days > 0 else "neutral"),
-                    dq_chip("Vencidos", format_int(overdue_count), "alert-yellow" if overdue_count > 0 else "neutral"),
+                    dq_chip("Pior atraso", f"{max_staleness_days:.1f}d".replace(".", ","), staleness_tone),
                     dq_chip("Próximo batch", format_int(next_batch_count), "ok-green" if next_batch_count > 0 else "neutral"),
                 ],
             )
+            + queue_overdue_block_html(overdue_count, int(row.get("total_posts") or 0))
         )
 
     st.markdown(

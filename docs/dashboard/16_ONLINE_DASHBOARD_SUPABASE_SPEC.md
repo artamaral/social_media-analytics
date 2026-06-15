@@ -411,6 +411,8 @@ Regra de consolidacao visual no Streamlit:
 - abaixo dos 2 KPIs principais de `Data Quality`, o dashboard deve exibir um
   bloco complementar por `priority_band`
 - cada bloco deve agregar todas as linhas da banda
+- a ordem visual das bandas deve ir da maior para a menor prioridade exibida
+  no contrato da view, ou seja, `Banda 6` primeiro e `Banda 1` por ultimo
 - excecao: quando `check_band = needs_coverage`, os buckets `new_0_3d` e
   `recent_4_7d` ficam fora dessa consolidacao, porque ja pertencem ao KPI
   `Monitoramento de posts sem checagem`

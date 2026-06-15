@@ -424,6 +424,8 @@ Regra de renderizacao complementar validada para `Data quality`:
   `Posts mortos e validacao humana` uma leitura agregada de
   `v_dashboard_queue_bottleneck_status`
 - renderizar um card por `priority_band`
+- ordenar os cards da maior banda para a menor, exibindo `Banda 6` antes de
+  `Banda 1`
 - excluir da consolidacao as linhas onde:
   - `check_band = needs_coverage`
   - e `video_age_bucket` esteja em `new_0_3d` ou `recent_4_7d`
