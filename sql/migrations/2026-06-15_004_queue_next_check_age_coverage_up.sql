@@ -151,6 +151,8 @@ left join checks c
 where p.post_id = q.post_id
   and q.last_checked is not null;
 
+drop view if exists public.v_dashboard_queue_bottleneck_status;
+
 create or replace view public.v_dashboard_queue_bottleneck_status as
 with checks as (
   select
