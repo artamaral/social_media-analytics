@@ -388,6 +388,296 @@ Documento de referencia:
 
 ---
 
+## Monitoramento operacional do worker horario por fluxo e risco de cobertura
+
+Data:
+
+- 2026-05-21
+
+Decisao:
+
+- o bloco de sinais operacionais do worker horario nao deve usar
+  `fila_itens_prontos` como KPI principal
+- o bloco de sinais operacionais do worker horario nao deve usar
+  `falhas_recentes_24h` como KPI principal
+- os tres KPIs iniciais priorizados passam a ser:
+  - `itens_atrasados`
+  - `at_risk_bootstrap`
+  - `recovery_low`
+
+Contexto:
+
+- a `v_post_update_queue_batch` continua sendo desenhada para devolver um lote
+  completo por execucao
+- por isso, `fila_itens_prontos` pode permanecer aparentemente saudavel mesmo
+  quando o lote esta mascarando itens pouco uteis, atraso real ou baixa
+  rotacao entre bandas
+- `falhas_recentes_24h` sobrepoe o problema ja acompanhado na camada de posts
+  mortos e validacao humana
+- os problemas historicos observados no projeto foram mais proximos de
+  capacidade, atraso e cobertura do que de volume bruto da fila:
+  - starvation em bandas intermediarias
+  - posts recentes presos com `1` coleta
+  - crescimento de passivo com menos de `3` checagens
+  - envelhecimento de posts para `recovery_low`
+
+Motivo:
+
+- medir o fluxo real do worker e nao apenas o volume aparente da view de lote
+- detectar cedo quando a capacidade horaria deixa de sustentar a cobertura
+  minima
+- separar causa operacional de efeito acumulado na camada de Data Quality
+
+Diretriz:
+
+- `Monitoramento de posts sem checagem` continua sendo KPI de estoque e
+  cobertura acumulada
+- `Sinais operacionais` deve medir fluxo, atraso e risco de degradacao
+- leitura recomendada:
+  - `itens_atrasados` responde se o worker esta respeitando `next_check`
+  - `at_risk_bootstrap` antecipa posts novos que podem falhar na cobertura
+    minima
+  - `recovery_low` mostra falha de cobertura ja consumada
+
+Impacto esperado:
+
+- leitura mais fiel da capacidade real do worker horario
+- melhor capacidade de avaliar se o bucket atual esta dimensionado
+- menor duplicacao de KPI entre fluxo operacional e posts mortos
+
+---
+
+## Revisao de `next_check` orientada por sinais operacionais
+
+Data:
+
+- 2026-05-21
+- Atualizacao: 2026-06-15
+
+Decisao:
+
+- abrir revisao de prioridade alta sobre a regra de geracao de `next_check`
+- nao alterar a funcao ainda sem analisar a distribuicao por banda, idade do
+  post e cobertura minima
+- adotar como direcao de regra revisada a desaceleracao de posts ja cobertos em
+  `warm_8_30d` e `old_30d_plus`
+- manter a politica atual/guardrail para posts com menos de `3` checagens
+
+Contexto:
+
+- os sinais operacionais do dashboard passaram a mostrar concentracao relevante
+  em faixas de atraso maiores do que a janela desejada
+- observacao atual dos sinais:
+  - `Ate 1h = 48`
+  - `Ate 6h = 199`
+  - `Ate 24h = 430`
+- esses numeros sugerem que o agendamento atual merece reavaliacao, mas ainda
+  nao fecham sozinhos a regra ideal
+- analise de 2026-06-15 mostrou que posts `old_30d_plus` com centenas de
+  checagens continuavam voltando muito rapido por causa de `priority_score`
+  alto
+- exemplos observados:
+  - posts `old_30d_plus`, `priority_band = 6`, com `777` a `940` checagens
+    eram reagendados em `30 minutes`
+  - simulacao com `old_30d_plus`, bandas `5` e `6` a cada `12h`, e demais
+    bandas a cada `24h`, removeu `289` posts do `due_now`
+  - simulacao em `warm_8_30d` apenas para posts ja cobertos (`3+`
+    checagens), com bandas `5` e `6` a cada `12h`, e demais bandas a cada
+    `24h`, removeu `130` posts do `due_now`
+
+Motivo:
+
+- o problema nao e apenas atraso pontual; e preciso entender se a funcao de
+  `next_check` esta calibrada para a rotacao real da fila
+- uma mudanca precipitada pode piorar cobertura ou deslocar o backlog para uma
+  faixa errada
+- a leitura precisa continuar conectada ao guardrail, ao tamanho do bucket e a
+  idade dos posts
+- a frequencia alta deve capturar mudanca recente e janela de crescimento, nao
+  apenas volume acumulado de views/likes/comments
+- posts antigos ja cobertos continuam relevantes para rankings historicos, mas
+  nao devem consumir a mesma cadencia de posts novos ou em bootstrap
+
+Diretriz:
+
+- tratar essa revisao como prioridade alta na `main`
+- manter os sinais operacionais como base de analise antes de mexer em
+  `calculate_next_check(...)`
+- documentar qualquer nova regra de agendamento com os criterios usados para
+  separar `Ate 1h`, `Ate 6h` e `Ate 24h`
+- regra candidata aprovada para simulacao final:
+  - `total_checagens < 3`: preservar politica atual e guardrail
+  - `new_0_3d` e `recent_4_7d`: preservar politica atual
+  - `warm_8_30d` com `total_checagens >= 3`:
+    - bandas `5` e `6`: minimo `12h`
+    - bandas `1` a `4`: minimo `24h`
+  - `old_30d_plus` com `total_checagens >= 3`:
+    - bandas `5` e `6`: minimo `12h`
+    - bandas `1` a `4`: minimo `24h`
+- a implementacao nao deve ser feita apenas editando a funcao atual, pois
+  `calculate_next_check(priority_score, checked_at)` nao recebe `post_date` nem
+  `total_checagens`
+- a implementacao correta deve criar uma funcao nova ou expandida e ajustar o
+  trigger `refresh_post_queue_on_metrics()` para buscar `post_date` e
+  `total_checagens`
+- o Streamlit deve acompanhar a fila por banda com:
+  - posts vencidos por banda
+  - media de checagens por banda
+  - backlog atrasado por idade/check band
+  - concentracao do batch atual por idade e saturacao
+
+---
+
+## Views de cadastro no Streamlit como camada operacional guiada
+
+Data:
+
+- 2026-05-21
+
+Decisao:
+
+- implementar no Streamlit views de cadastro para processos operacionais do
+  projeto
+- iniciar com duas views:
+  - `Cadastro de Criadores`
+  - `Cadastro Fenabrave`
+- tratar essas views como camadas guiadas de operacao, e nao como substitutas
+  dos processos manuais e das regras de governanca ja documentadas
+
+Contexto:
+
+- o dashboard passou a ter mockups operacionais para validar metodo, texto,
+  ordem das etapas e pontos de controle antes de ligar o app ao SQL
+- no caso de criadores, o fluxo depende de `entity_intake`, revisao, publish e
+  validacao antes do cadastro final em `creators`
+- no caso de Fenabrave, a rotina depende de confirmacao da fonte, preservacao
+  do PDF, registro de `market_source_files`, preview, validacao e aprovacao do
+  periodo
+
+Motivo:
+
+- reduzir erro operacional
+- tornar a governanca visivel dentro do app
+- validar o processo com baixo custo antes de implementar RPCs, grants e
+  ligacoes SQL reais
+- evitar que o Streamlit vire uma porta de escrita direta em tabelas finais
+
+Diretriz:
+
+- a UI deve espelhar o processo manual existente, nao reinventar a rotina
+- qualquer escrita futura no banco deve ser controlada e rastreavel
+- a ligacao SQL dessas views deve ser implementada em etapas, com foco primeiro
+  na leitura e no bloqueio de erros operacionais
+
+Impacto esperado:
+
+- melhor validacao de UX e governanca antes da integracao real
+- backlog mais claro para ligacao SQL das views de cadastro
+- menor risco de misturar app operacional com bypass de processo
+
+---
+
+## PDF Fenabrave via Streamlit apenas como apoio operacional
+
+Data:
+
+- 2026-05-21
+
+Decisao:
+
+- considerar viavel o carregamento do PDF mensal da Fenabrave via Streamlit
+  apenas como apoio operacional
+- nao tratar o Streamlit como destino final de armazenamento do arquivo
+- manter o bucket privado `market-source-files` como armazenamento oficial
+
+Contexto:
+
+- a rotina mensal da Fenabrave continua manual nesta fase
+- o mockup da view `Cadastro Fenabrave` mostrou que o upload na UI pode ajudar
+  a conferencia do arquivo e o preenchimento inicial dos metadados
+- ao mesmo tempo, o processo documentado exige preservacao do PDF, rastreio por
+  `storage_path` e protecao contra exposicao de credenciais privilegiadas
+
+Motivo:
+
+- melhorar a ergonomia operacional sem quebrar a seguranca
+- permitir avaliacao futura de upload guiado no app
+- preservar o papel do Storage privado e dos metadados em
+  `market_source_files`
+
+Diretriz:
+
+- o upload pelo app, se implementado, deve usar fluxo seguro
+- o app nao deve expor `SUPABASE_SERVICE_ROLE_KEY`
+- a versao oficial do PDF precisa continuar no bucket privado
+- a liberacao do periodo segue dependente de preview, validacao e aprovacao
+  humana
+
+Impacto esperado:
+
+- caminho claro para evoluir a rotina mensal sem perder governanca
+- separacao objetiva entre apoio operacional na UI e persistencia oficial no
+  backend
+
+---
+
+## Historico de followers de creators por snapshot
+
+Data:
+
+- 2026-05-21
+
+Decisao:
+
+- tratar `creators.followers` como valor corrente, nao como historico analitico
+- criar uma camada de snapshots para metricas dinamicas de creator, iniciando por followers do YouTube
+- usar a YouTube Data API `channels.list` com `part=statistics` para coletar `statistics.subscriberCount`
+- gravar cada coleta na tabela `creator_metrics_history`
+- manter `creators.followers` sincronizado com o snapshot mais recente para consumo rapido no dashboard
+
+Contexto:
+
+- followers de creator sao metricas dinamicas, assim como views, likes e comments dos posts
+- a tabela `creators` ja possui o campo `followers`, mas ele representa apenas o estado atual
+- sem snapshots, nao sera possivel medir crescimento de canal, aceleracao ou tendencia de audiencia
+- a API oficial do YouTube expoe `statistics.subscriberCount`, `statistics.hiddenSubscriberCount`, `statistics.viewCount` e `statistics.videoCount` no recurso de canal
+- o `subscriberCount` retornado pela API pode ser arredondado para tres algarismos significativos
+
+Motivo:
+
+- preservar historico de crescimento de canais
+- evitar analises baseadas apenas no volume atual de seguidores
+- permitir ranking de creators emergentes por crescimento relativo
+- alinhar metricas de creators ao mesmo principio ja usado em `post_metrics_history`
+- manter o dashboard rapido sem perder rastreabilidade historica
+
+Diretriz de implementacao:
+
+- avaliar implementacao inicial no `youtube_main_scraper`, pois ele ja percorre creators e chama `channels.list` para buscar a playlist de uploads
+- aproveitar a chamada de canal adicionando `statistics` ao `part` quando fizer sentido operacional
+- inserir snapshot em `creator_metrics_history` a cada coleta bem-sucedida
+- atualizar `creators.followers` com o `subscriberCount` mais recente
+- salvar tambem sinais auxiliares como `hidden_subscriber_count`, `channel_views` e `video_count`
+- nao acoplar essa coleta ao `postMetrics` neste momento, pois esse worker opera por video e deve continuar focado em metricas de posts
+
+Campos sugeridos para snapshot:
+
+- `creator_id`
+- `followers`
+- `channel_views`
+- `video_count`
+- `hidden_subscriber_count`
+- `collected_at`
+
+Impacto esperado:
+
+- base para crescimento temporal de canais
+- melhor leitura de creators emergentes no setor automotivo
+- possibilidade futura de comparar crescimento de audiencia com performance de videos
+- menor risco de misturar metricas correntes com metricas historicas
+
+---
+
 ## Score hibrido v2 em espera e foco em analise temporal
 
 Data:
