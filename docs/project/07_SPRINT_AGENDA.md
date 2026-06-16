@@ -1303,6 +1303,10 @@ Ideia do algoritmo:
 Metricas de saida recomendadas:
 
 - total de posts vencidos por hora
+- composicao do batch por hora, com contagem por:
+  - `video_age_bucket`
+  - `check_band`
+  - `priority_band`
 - total de posts vencidos por:
   - `video_age_bucket`
   - `check_band`
@@ -1339,6 +1343,8 @@ Decisao recomendada neste momento:
   - fatia guardrail
   - cotas por banda
   - politica de refill
+- exportar tambem a composicao do batch por iteracao em:
+  - `hourly_batch_mix.csv`
 - usar o script para avaliar qualquer proposta futura antes de alterar o SQL
   de producao.
 

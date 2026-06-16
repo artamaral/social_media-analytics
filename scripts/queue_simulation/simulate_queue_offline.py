@@ -528,13 +528,19 @@ def run_simulation(
     posts: List[QueuePost],
     start_time: datetime,
     config: SimulationConfig,
-) -> Tuple[List[Dict[str, str]], List[Dict[str, str]], Dict[str, object]]:
+) -> Tuple[
+    List[Dict[str, str]],
+    List[Dict[str, str]],
+    List[Dict[str, str]],
+    Dict[str, object],
+]:
     current_time = start_time
     end_time = start_time + timedelta(hours=config.duration_hours)
     next_arrival_time = start_time + timedelta(hours=config.new_post_interval_hours)
     next_synthetic_index = 1
     profile = build_new_post_band_profile(posts, start_time)
     hourly_rows: List[Dict[str, str]] = []
+    hourly_batch_mix_rows: List[Dict[str, str]] = []
 
     while current_time <= end_time:
         while current_time >= next_arrival_time:
@@ -556,6 +562,36 @@ def run_simulation(
 
         batch = select_batch(posts=posts, now=current_time, config=config)
         guardrail_executed = sum(1 for post in batch if post.total_checks < 3)
+
+        batch_mix: Dict[Tuple[str, str, int], int] = {}
+        for post in batch:
+            key = (
+                post.video_age_bucket(current_time),
+                post.check_band(),
+                post.priority_band(),
+            )
+            batch_mix[key] = batch_mix.get(key, 0) + 1
+
+        for (video_age_bucket, check_band, priority_band), selected_count in sorted(
+            batch_mix.items(),
+            key=lambda item: (
+                item[0][0],
+                item[0][1],
+                item[0][2],
+            ),
+        ):
+            hourly_batch_mix_rows.append(
+                {
+                    "simulation_hour": str(
+                        int((current_time - start_time).total_seconds() // 3600)
+                    ),
+                    "timestamp_utc": format_dt(current_time),
+                    "video_age_bucket": video_age_bucket,
+                    "check_band": check_band,
+                    "priority_band": str(priority_band),
+                    "selected_count": str(selected_count),
+                }
+            )
 
         hourly_rows.append(
             {
@@ -592,7 +628,7 @@ def run_simulation(
         "synthetic_posts_created": sum(1 for post in posts if post.is_synthetic),
         "total_posts_final": len(posts),
     }
-    return hourly_rows, final_summary, overall
+    return hourly_rows, hourly_batch_mix_rows, final_summary, overall
 
 
 def build_argument_parser() -> argparse.ArgumentParser:
@@ -703,7 +739,7 @@ def main() -> None:
     if start_time is None:
         start_time = infer_start_time(posts)
 
-    hourly_rows, final_summary, overall = run_simulation(
+    hourly_rows, hourly_batch_mix_rows, final_summary, overall = run_simulation(
         posts=posts,
         start_time=start_time,
         config=config,
@@ -711,6 +747,7 @@ def main() -> None:
 
     output_dir.mkdir(parents=True, exist_ok=True)
     write_csv(output_dir / "hourly_metrics.csv", hourly_rows)
+    write_csv(output_dir / "hourly_batch_mix.csv", hourly_batch_mix_rows)
     write_csv(output_dir / "final_queue_summary.csv", final_summary)
 
     final_queue_rows = [post.to_row(start_time + timedelta(hours=config.duration_hours)) for post in posts]
