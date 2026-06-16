@@ -4,6 +4,7 @@ import unicodedata
 
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import requests
 import streamlit as st
 
@@ -1745,6 +1746,7 @@ def render_overview() -> None:
     errors = [error for error in [creator_error, weekly_error, fenabrave_error] if error]
     base_summary = summarize_overview_creator_base(creator_rows)
     recent_summary = summarize_overview_recent_activity(creator_rows, weekly_rows)
+    recent_chart_df = build_overview_recent_activity_frame(weekly_rows)
     fenabrave_summary = summarize_overview_fenabrave(fenabrave_rows)
 
     page_header(
@@ -1789,22 +1791,30 @@ def render_overview() -> None:
         )
 
     st.markdown("### Atividade recente")
-    recent_cols = st.columns(3)
-    with recent_cols[0]:
+    st.caption("Posts publicados em barras e creators com atividade em linha, sempre usando a base monitorada e semanas fechadas.")
+    recent_left, recent_right = st.columns([1.8, 1])
+    with recent_left:
+        recent_fig = build_overview_recent_activity_chart(recent_chart_df)
+        if recent_fig is not None:
+            st.plotly_chart(recent_fig, use_container_width=True, config={"displayModeBar": False})
+        else:
+            placeholder_card(
+                "Atividade recente",
+                "Aguardando semanas fechadas com dados suficientes para montar a serie macro da base.",
+            )
+    with recent_right:
         metric_card(
             "Creators com atividade",
             format_int(recent_summary["creators_ativos_semana"]),
             recent_summary["semana_legenda"],
             "CR",
         )
-    with recent_cols[1]:
         metric_card(
             "Posts na ultima semana",
             format_int(recent_summary["posts_publicados_semana"]),
             "Videos publicados na janela fechada mais recente",
             "VD",
         )
-    with recent_cols[2]:
         metric_card(
             "Coleta recente",
             format_int(recent_summary["creators_coleta_recente"]),
@@ -2015,6 +2025,87 @@ def summarize_overview_recent_activity(
         "semana_legenda_curta": week_label,
         "creators_coleta_recente": recent_collectors,
     }
+
+
+def build_overview_recent_activity_frame(weekly_rows: list[dict[str, Any]]) -> pd.DataFrame:
+    if not weekly_rows:
+        return pd.DataFrame()
+
+    weekly_df = pd.DataFrame(weekly_rows).copy()
+    if weekly_df.empty:
+        return pd.DataFrame()
+
+    weekly_df["week_end"] = pd.to_datetime(weekly_df.get("week_end"), errors="coerce", utc=True)
+    weekly_df["week_start"] = pd.to_datetime(weekly_df.get("week_start"), errors="coerce", utc=True)
+    weekly_df["videos_publicados"] = pd.to_numeric(weekly_df.get("videos_publicados"), errors="coerce").fillna(0)
+
+    grouped = (
+        weekly_df.groupby(["week_start", "week_end", "week_label"], dropna=False)
+        .agg(
+            posts_publicados=("videos_publicados", "sum"),
+            creators_ativos=("creator_id", lambda values: pd.Series(values)[pd.Series(values).notna()].nunique()),
+        )
+        .reset_index()
+        .sort_values("week_end")
+    )
+
+    if grouped.empty:
+        return grouped
+
+    grouped = grouped.tail(6).copy()
+    grouped["week_label_short"] = grouped["week_end"].apply(
+        lambda value: format_month_label(pd.Timestamp(value)) if pd.notna(value) else "--"
+    )
+    grouped["creators_ativos"] = grouped["creators_ativos"].astype(int)
+    grouped["posts_publicados"] = grouped["posts_publicados"].astype(int)
+    return grouped
+
+
+def build_overview_recent_activity_chart(chart_df: pd.DataFrame) -> Any:
+    if chart_df is None or chart_df.empty:
+        return None
+
+    fig = go.Figure()
+    fig.add_bar(
+        x=chart_df["week_label_short"],
+        y=chart_df["posts_publicados"],
+        name="Posts publicados",
+        marker_color="#ff8069",
+        border_radius=6,
+        hovertemplate="Semana %{x}<br>Posts publicados: %{y}<extra></extra>",
+    )
+    fig.add_scatter(
+        x=chart_df["week_label_short"],
+        y=chart_df["creators_ativos"],
+        name="Creators com atividade",
+        mode="lines+markers",
+        line=dict(color="#f5f7fa", width=3),
+        marker=dict(color="#f5f7fa", size=8),
+        yaxis="y2",
+        hovertemplate="Semana %{x}<br>Creators com atividade: %{y}<extra></extra>",
+    )
+    fig.update_layout(
+        barmode="group",
+        xaxis_title=None,
+        yaxis_title="Posts",
+        yaxis2=dict(
+            title="Creators",
+            overlaying="y",
+            side="right",
+            showgrid=False,
+        ),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="left",
+            x=0,
+        ),
+        margin=dict(l=16, r=48, t=24, b=16),
+        hovermode="x unified",
+    )
+    apply_plotly_theme(fig, legend_title="Serie")
+    return fig
 
 
 def summarize_overview_fenabrave(rows: list[dict[str, Any]]) -> dict[str, str]:
