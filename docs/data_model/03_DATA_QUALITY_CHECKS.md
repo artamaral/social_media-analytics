@@ -63,6 +63,18 @@ GROUP BY post_id
 HAVING MAX(collected_at) < NOW() - INTERVAL '24 hours';
 ```
 
+Auditoria detalhada para Sprint 1:
+
+- `sql/dml/audit_post_collection_gaps.sql`
+
+Objetivo:
+
+- detectar gaps de coleta por post
+- separar atraso por `next_check` de frescor bruto do ultimo snapshot
+- classificar posts novos/recentes por janela de `24h`
+- classificar posts warm/old por janela conservadora de `72h`
+- excluir `unavailable` da leitura principal e manter esses casos como auditoria separada
+
 ## Checks obrigatorios para o dashboard
 
 Antes de usar rankings ou graficos como sinal de negocio, consultar:

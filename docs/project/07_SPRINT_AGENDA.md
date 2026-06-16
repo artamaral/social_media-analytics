@@ -98,7 +98,7 @@ Validar se os dados historicos permitem analise sem risco operacional relevante.
 
 - [x] Validar posts sem historico em `post_metrics_history`.
 - [x] Validar `collected_at` nulo ou defasado.
-- Detectar gaps de coleta por post.
+- [x] Detectar gaps de coleta por post.
 - Confirmar creators sem posts ou posts sem creator.
 - Checar se videos `unavailable` estao isolados corretamente.
 
@@ -198,6 +198,55 @@ Leitura:
   para a base ativa
 - os unicos casos sem `collected_at` continuam sendo videos `unavailable`,
   coerentes com a Atividade 1
+
+#### Atividade 3 - Detectar gaps de coleta por post
+
+Status: concluida em 2026-06-16.
+
+Objetivo:
+
+- identificar posts ativos com possivel gap de coleta
+- separar frescor bruto do ultimo snapshot de atraso real por `next_check`
+- manter videos `unavailable` fora da leitura principal da base ativa
+
+Query criada:
+
+- `sql/dml/audit_post_collection_gaps.sql`
+
+Resultado observado:
+
+- `overdue_by_next_check` em posts ativos:
+  - `new_0_3d / needs_coverage`: `22`
+  - `recent_4_7d / needs_coverage`: `123`
+  - `recent_4_7d / covered_3_49`: `24`
+  - `warm_8_30d / needs_coverage`: `5`
+  - `warm_8_30d / covered_3_49`: `664`
+  - `warm_8_30d / overchecked_50_199`: `3`
+  - `old_30d_plus / covered_3_49`: `1944`
+  - `old_30d_plus / overchecked_50_199`: `53`
+  - `old_30d_plus / overchecked_200_499`: `2`
+  - `old_30d_plus / overchecked_500_plus`: `3`
+- casos `unavailable` fora da leitura principal:
+  - `no_snapshot`: `4`
+  - `non_active_failure_status`: `16`
+- posts ativos com status `ok`:
+  - `new_0_3d / needs_coverage`: `21`
+  - `recent_4_7d`: `21`
+  - `warm_8_30d`: `145`
+  - `old_30d_plus`: `804`
+
+Leitura:
+
+- a base ativa nao apresenta problema de snapshots inexistentes ou
+  `collected_at` dessincronizado, mas apresenta volume alto de posts vencidos
+  pela regra de `next_check`
+- o maior volume esta em `old_30d_plus / covered_3_49`, com `1944` posts
+  vencidos, o que reforca a necessidade do Sprint 2 sobre fila, `next_check`
+  e guardrail
+- os `22` posts novos e os `123` recentes em `needs_coverage` merecem atencao
+  operacional por impacto direto na cobertura minima
+- os casos `unavailable` seguem segregados e nao devem contaminar a leitura
+  principal de qualidade da base ativa
 
 ### Documentacao relacionada
 
