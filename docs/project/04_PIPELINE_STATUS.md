@@ -53,6 +53,11 @@ O objetivo e manter uma leitura simples de:
   - `Integridade da coleta`
   - `Evidencia de processamento`
   - `Sinais operacionais`
+- isolamento de videos `unavailable` validado na fila operacional em
+  2026-06-16:
+  - `v_post_update_queue_batch`: `0` posts `unavailable`, status `ok`
+  - `v_dashboard_post_update_queue_batch`: `0` posts `unavailable`, status
+    `ok`
 
 #### Leitura atual do monitoramento
 
@@ -210,8 +215,9 @@ Leitura atual:
 Proxima avaliacao:
 
 - auditar os `9` posts residuais antes de retomar o scheduler
-- revisar views e metricas operacionais para excluir confirmados como
-  `unavailable` quando a analise nao for uma auditoria de indisponibilidade
+- revisar views analiticas de rankings, crescimento e cobertura geral para
+  excluir confirmados como `unavailable` quando a analise nao for uma
+  auditoria de indisponibilidade
 
 #### Guarda de cobertura minima
 
@@ -453,6 +459,19 @@ Proxima avaliacao:
 - evolucao do dashboard depende de app inicial e integracao segura com as views
 
 ### 4.4 Ultima verificacao manual consolidada
+
+- Data de referencia deste status: `2026-06-16`
+- Resultado:
+  - Sprint 1 validou que videos `unavailable` nao aparecem na fila operacional
+    do worker nem na view de dashboard da fila
+  - auditoria usada:
+    `sql/dml/audit_unavailable_posts_in_queue.sql`
+  - resultado consolidado:
+    - `v_dashboard_post_update_queue_batch`: `0` posts `unavailable`, status
+      `ok`
+    - `v_post_update_queue_batch`: `0` posts `unavailable`, status `ok`
+  - permanece como proximo cuidado separar a auditoria de views analiticas de
+    ranking, crescimento e cobertura geral
 
 - Data de referencia deste status: `2026-05-19`
 - Resultado:

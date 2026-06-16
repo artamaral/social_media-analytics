@@ -100,7 +100,7 @@ Validar se os dados historicos permitem analise sem risco operacional relevante.
 - [x] Validar `collected_at` nulo ou defasado.
 - [x] Detectar gaps de coleta por post.
 - [x] Confirmar creators sem posts ou posts sem creator.
-- Checar se videos `unavailable` estao isolados corretamente.
+- [x] Checar se videos `unavailable` estao isolados corretamente na fila operacional.
 
 ### Progresso
 
@@ -283,6 +283,36 @@ Leitura:
 - esses 2 creators devem ser tratados como candidatos para revisao de discovery:
   pode ser canal sem publicacao recente, canal realmente inativo ou falha do
   scraper em incorporar videos novos
+
+#### Atividade 5 - Checar isolamento de videos `unavailable` na fila operacional
+
+Status: concluida em 2026-06-16 para fila operacional.
+
+Objetivo:
+
+- confirmar que videos `unavailable` aparecem apenas em contextos de auditoria
+- confirmar que videos `unavailable` nao entram na fila operacional
+- manter a validacao de views analiticas de rankings, crescimento e cobertura
+  geral como tarefa futura separada
+
+Subcheck 1 - Fila operacional:
+
+Query criada:
+
+- `sql/dml/audit_unavailable_posts_in_queue.sql`
+
+Resultado observado:
+
+- `v_dashboard_post_update_queue_batch`: `0` posts `unavailable`, status `ok`
+- `v_post_update_queue_batch`: `0` posts `unavailable`, status `ok`
+
+Leitura:
+
+- nao ha vazamento de videos `unavailable` na fila operacional
+- a exclusao de `status = unavailable` esta funcionando para a view de lote do
+  worker e para a view de dashboard da fila
+- essa conclusao nao cobre rankings, crescimento ou cobertura geral; essas
+  views devem ser auditadas em uma atividade propria antes de uso executivo
 
 ### Documentacao relacionada
 

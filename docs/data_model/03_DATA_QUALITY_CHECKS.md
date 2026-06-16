@@ -101,3 +101,28 @@ Regra:
 - se `is_analytics_ready = false`, o dashboard pode abrir, mas deve mostrar alerta de confiabilidade
 - rankings devem ser interpretados como exploratorios ate os problemas serem corrigidos
 - nenhuma decisao de marketing deve ser tomada sem validar os indicadores de qualidade
+
+## Videos unavailable
+
+Auditoria detalhada para Sprint 1:
+
+- `sql/dml/audit_unavailable_posts_in_queue.sql`
+
+Objetivo:
+
+- confirmar que `status = unavailable` nao aparece em `v_post_update_queue_batch`
+- confirmar que `status = unavailable` nao aparece em `v_dashboard_post_update_queue_batch`
+- garantir que videos indisponiveis fiquem fora da fila ativa e aparecam apenas em contextos de auditoria
+
+Resultado validado em 2026-06-16:
+
+| checked_view | total_unavailable_in_queue | audit_status |
+| --- | ---: | --- |
+| `v_dashboard_post_update_queue_batch` | 0 | `ok` |
+| `v_post_update_queue_batch` | 0 | `ok` |
+
+Leitura:
+
+- nao ha evidencia de vazamento de videos `unavailable` na fila operacional
+- a fila do worker e a fila exibida no dashboard estao coerentes com a regra de isolamento
+- a validacao de views analiticas de ranking, crescimento e cobertura deve continuar separada desta auditoria operacional
