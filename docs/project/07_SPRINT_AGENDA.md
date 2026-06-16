@@ -340,9 +340,9 @@ Confirmar se a regra atual de atualizacao dos videos esta bem calibrada para a b
 
 ### Atividades
 
-- [ ] Analisar `v_dashboard_queue_bottleneck_status`.
-- [ ] Validar atraso por banda, idade do video e numero de checagens.
-- [ ] Confirmar impacto da migration nova de `next_check`.
+- [x] Analisar `v_dashboard_queue_bottleneck_status`.
+- [x] Validar atraso por banda, idade do video e numero de checagens.
+- [x] Confirmar impacto da migration nova de `next_check`.
 - [ ] Verificar se lote `50` com guardrail `6` esta suficiente.
 - [ ] Decidir se a regra de frequencia deve ser mantida ou ajustada.
 
@@ -359,10 +359,10 @@ Objetivo:
 
 Atividades da fase:
 
-- [ ] Atividade 1: analisar `v_dashboard_queue_bottleneck_status`.
-- [ ] Atividade 2: validar atraso por banda, idade do video e numero de
+- [x] Atividade 1: analisar `v_dashboard_queue_bottleneck_status`.
+- [x] Atividade 2: validar atraso por banda, idade do video e numero de
   checagens.
-- [ ] Atividade 3: confirmar impacto da migration nova de `next_check`.
+- [x] Atividade 3: confirmar impacto da migration nova de `next_check`.
 
 Criterio de saida da fase:
 
@@ -919,6 +919,267 @@ Saida da Fase 1:
   - revisar refill/cotas por banda
   - decidir se o ajuste deve ser de capacidade, distribuicao ou combinacao dos
     dois
+
+#### Fase 2 - Capacidade do batch e distribuicao operacional
+
+Objetivo:
+
+- confirmar se o lote atual do worker consegue sustentar a cobertura minima e a
+  fila normal ao mesmo tempo;
+- medir se a fatia guardrail de `6` slots e suficiente para `needs_coverage`;
+- decidir se o gargalo principal deve ser tratado com aumento de capacidade,
+  ajuste de refill/cotas por banda ou combinacao dos dois.
+
+Atividades da fase:
+
+- [ ] Atividade 4: verificar se lote `50` com guardrail `6` esta suficiente.
+- [ ] Atividade 5: decidir se o ajuste deve atacar capacidade, distribuicao ou
+  ambos.
+
+Criterio de saida da fase:
+
+- leitura objetiva sobre suficiência ou insuficiência do lote atual;
+- leitura objetiva sobre suficiência ou insuficiência do guardrail atual;
+- decisao documentada sobre o proximo ajuste operacional antes de qualquer
+  mudanca em SQL.
+
+#### Atividade 4 - Verificar se lote `50` com guardrail `6` esta suficiente
+
+Status: concluida em 2026-06-16.
+
+Objetivo:
+
+- testar a hipótese central deixada pela Fase 1:
+  a regra de `next_check` parece saudavel, mas a capacidade pratica do batch
+  pode nao estar chegando bem aos grupos criticos;
+- medir se `50` slots totais, com `6` reservados ao guardrail, sustentam:
+  - `recent_4_7d / needs_coverage`;
+  - backlog normal de `warm_8_30d` e `old_30d_plus / covered_3_49`;
+  - distribuicao minima entre bandas `1` e `2`.
+
+Perguntas de analise:
+
+- os `6` slots de guardrail estao absorvendo os grupos `needs_coverage`
+  vencidos sem deixar acumulacao relevante?
+- o lote restante de `44` slots esta chegando de forma suficiente aos grupos
+  `covered_3_49` de bandas `1` e `2`?
+- a fila parece curta demais para a base atual ou apenas mal distribuida?
+- o refill global esta compensando bem a sobra de cotas ou esta deixando grupos
+  criticos de fora?
+
+Etapas:
+
+1. Somar os grupos `needs_coverage` e medir:
+   - `total_posts`
+   - `posts_vencidos`
+   - `posts_no_batch_atual`
+   - `p95_staleness_days`
+2. Comparar a pressao de `needs_coverage` com a fatia protegida de `6` slots.
+3. Somar os grupos `covered_3_49` de bandas `1` e `2` em `warm_8_30d` e
+   `old_30d_plus` para medir a fila normal de maior pressao.
+4. Comparar o volume vencido desses grupos com sua presenca no batch atual.
+5. Classificar o comportamento em uma das leituras:
+   - capacidade suficiente e distribuicao ruim;
+   - capacidade insuficiente com distribuicao razoavel;
+   - capacidade e distribuicao insuficientes ao mesmo tempo.
+6. Registrar se o gargalo principal parece estar:
+   - no tamanho total do lote;
+   - na fatia guardrail;
+   - nas cotas/refill;
+   - ou em combinacao desses fatores.
+
+Query sugerida - guardrail:
+
+```sql
+select
+  video_age_bucket,
+  priority_band,
+  sum(total_posts) as total_posts,
+  sum(posts_vencidos) as posts_vencidos,
+  sum(posts_no_batch_atual) as posts_no_batch_atual,
+  max(pior_p95_staleness_days) as pior_p95_staleness_days
+from (
+  select
+    video_age_bucket,
+    priority_band,
+    total_posts,
+    posts_vencidos,
+    posts_no_batch_atual,
+    p95_staleness_days as pior_p95_staleness_days
+  from public.v_dashboard_queue_bottleneck_status
+  where check_band = 'needs_coverage'
+) q
+group by
+  video_age_bucket,
+  priority_band
+order by
+  posts_vencidos desc,
+  pior_p95_staleness_days desc,
+  total_posts desc;
+```
+
+Query sugerida - fila normal mais pressionada:
+
+```sql
+select
+  video_age_bucket,
+  priority_band,
+  sum(total_posts) as total_posts,
+  sum(posts_vencidos) as posts_vencidos,
+  sum(posts_no_batch_atual) as posts_no_batch_atual,
+  max(p95_staleness_days) as pior_p95_staleness_days
+from public.v_dashboard_queue_bottleneck_status
+where
+  check_band = 'covered_3_49'
+  and video_age_bucket in ('warm_8_30d', 'old_30d_plus')
+  and priority_band in (1, 2)
+group by
+  video_age_bucket,
+  priority_band
+order by
+  posts_vencidos desc,
+  pior_p95_staleness_days desc,
+  total_posts desc;
+```
+
+Criterios de conclusao:
+
+- se `needs_coverage` continuar acumulando vencidos com baixa presenca no
+  batch, a fatia guardrail `6` pode estar insuficiente;
+- se `covered_3_49` de bandas `1` e `2` continuar com centenas de vencidos e
+  presenca residual no batch, a fila normal pode estar subdimensionada ou mal
+  distribuida;
+- se ambos ocorrerem ao mesmo tempo, o problema passa a ser de capacidade total
+  mais distribuicao.
+
+Resultado esperado:
+
+- leitura objetiva sobre o lote `50`;
+- leitura objetiva sobre o guardrail `6`;
+- base numerica para a Atividade 5.
+
+Resultado observado:
+
+- leitura consolidada do guardrail `needs_coverage`:
+  - total de grupos relevantes: `12`
+  - `total_posts = 174`
+  - `posts_vencidos = 146`
+  - `posts_no_batch_atual = 6`
+  - principal concentracao:
+    - `recent_4_7d | priority_band = 1`: `68` posts, `61` vencidos, `1` no batch
+    - `recent_4_7d | priority_band = 2`: `39` posts, `39` vencidos, `3` no batch
+    - `recent_4_7d | priority_band = 3`: `17` posts, `17` vencidos, `1` no batch
+- leitura consolidada da fila normal mais pressionada:
+  - grupos avaliados:
+    - `old_30d_plus | priority_band = 2`
+    - `old_30d_plus | priority_band = 1`
+    - `warm_8_30d | priority_band = 2`
+    - `warm_8_30d | priority_band = 1`
+  - `total_posts = 2615`
+  - `posts_vencidos = 2147`
+  - `posts_no_batch_atual = 13`
+  - principais casos:
+    - `old_30d_plus | priority_band = 2`: `1021` posts, `824` vencidos, `7` no batch
+    - `old_30d_plus | priority_band = 1`: `1002` posts, `778` vencidos, `5` no batch
+    - `warm_8_30d | priority_band = 2`: `324` posts, `313` vencidos, `0` no batch
+    - `warm_8_30d | priority_band = 1`: `268` posts, `232` vencidos, `1` no batch
+
+Leitura:
+
+- a fatia guardrail de `6` slots esta sendo totalmente ocupada, mas nao esta
+  conseguindo drenar a acumulacao de `needs_coverage`
+- o foco mais sensivel do guardrail esta em `recent_4_7d`, justamente a janela
+  que ainda deveria receber cobertura rapida
+- a fila normal de maior pressao esta muito maior do que a capacidade pratica
+  do batch atual consegue absorver
+- o caso de `warm_8_30d | priority_band = 2` com `313` vencidos e `0` itens no
+  batch reforca que nao e apenas um problema de volume; ha tambem problema de
+  distribuicao/refill
+
+Classificacao da suficiência atual:
+
+- guardrail `6`: insuficiente para a pressao atual
+- lote `50`: insuficiente para a fila normal mais pressionada
+- distribuicao do batch: insuficiente nos grupos criticos de bandas `1` e `2`
+
+Diagnostico:
+
+- o problema atual parece ser de capacidade total e distribuicao ao mesmo tempo
+- o guardrail esta no limite e mesmo assim deixa acumulacao relevante de
+  `recent_4_7d / needs_coverage`
+- a fila normal segue com backlog muito alto em `covered_3_49` de bandas
+  baixas, com presenca pequena no batch
+- o refill/cotas atuais nao parecem estar levando slots suficientes aos grupos
+  mais pressionados
+
+Conclusao:
+
+- `lote 50 + guardrail 6` nao parece suficiente para a base atual
+- aumentar apenas o guardrail provavelmente ajudaria a cobertura minima, mas
+  deixaria a fila normal ainda mais pressionada se o lote total nao crescer
+- revisar apenas o refill/cotas ajudaria a distribuicao, mas nao resolve
+  sozinho o volume acumulado atual
+
+Decisao para a Atividade 5:
+
+- comparar caminhos que combinem:
+  - aumento moderado de capacidade total
+  - aumento moderado da fatia guardrail
+  - revisao de refill/cotas para bandas `1` e `2`
+
+#### Atividade 5 - Decidir se o ajuste deve atacar capacidade, distribuicao ou ambos
+
+Status: planejada.
+
+Objetivo:
+
+- transformar os achados da Sprint 2 em uma decisao operacional clara;
+- definir a proxima mudanca com o menor risco possivel para cobertura minima e
+  backlog normal;
+- evitar nova mudanca prematura em `next_check` quando o problema parece estar
+  no lote ou no refill.
+
+Opcoes a comparar:
+
+- manter lote `50` e aumentar apenas a fatia guardrail;
+- manter lote `50` e revisar cotas/refill por banda;
+- aumentar lote total e manter a logica atual;
+- combinar aumento moderado de lote com ajuste de guardrail e refill.
+
+Etapas:
+
+1. Revisar a conclusao da Atividade 4.
+2. Classificar a causa dominante:
+   - guardrail insuficiente;
+   - fila normal insuficiente;
+   - refill/cotas insuficientes;
+   - causa mista.
+3. Escolher a menor mudanca que responda ao gargalo dominante.
+4. Registrar risco esperado de cada caminho:
+   - impacto em cobertura minima;
+   - impacto em backlog de bandas `1` e `2`;
+   - impacto potencial em custo e volume de writes.
+5. Definir recomendacao final da Sprint 2:
+   - manter como esta por mais observacao;
+   - ajustar capacidade;
+   - ajustar distribuicao;
+   - ajustar ambos.
+
+Criterios de conclusao:
+
+- a decisao final precisa apontar primeiro o alvo da mudanca, nao apenas o
+  sintoma observado;
+- se houver proposta de ajuste, ela deve vir antes de qualquer SQL com:
+  - objetivo;
+  - grupo que se pretende melhorar;
+  - risco aceito;
+  - criterio de validacao.
+
+Resultado esperado:
+
+- decisao operacional documentada;
+- proposta curta do proximo ajuste;
+- ponte clara entre Sprint 2 e eventual mudanca SQL ou teste operacional.
 
 ### Documentacao relacionada
 
