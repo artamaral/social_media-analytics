@@ -14,6 +14,18 @@
 - Nenhum creator deve ficar sem posts.
 - Nenhum post deve ficar sem creator.
 
+Auditoria detalhada para Sprint 1:
+
+- `sql/dml/audit_creator_post_integrity.sql`
+- `sql/dml/audit_creator_post_integrity_summary.sql`
+
+Objetivo:
+
+- listar creators ativos sem posts
+- listar posts sem `creator_id`
+- listar posts apontando para creator inexistente ou inativo
+- sinalizar creators ativos sem posts inseridos nos ultimos `30` dias como possivel alerta de discovery
+
 ## Queries de validacao
 
 ### Posts sem historico

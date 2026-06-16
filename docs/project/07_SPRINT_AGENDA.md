@@ -99,7 +99,7 @@ Validar se os dados historicos permitem analise sem risco operacional relevante.
 - [x] Validar posts sem historico em `post_metrics_history`.
 - [x] Validar `collected_at` nulo ou defasado.
 - [x] Detectar gaps de coleta por post.
-- Confirmar creators sem posts ou posts sem creator.
+- [x] Confirmar creators sem posts ou posts sem creator.
 - Checar se videos `unavailable` estao isolados corretamente.
 
 ### Progresso
@@ -247,6 +247,42 @@ Leitura:
   operacional por impacto direto na cobertura minima
 - os casos `unavailable` seguem segregados e nao devem contaminar a leitura
   principal de qualidade da base ativa
+
+#### Atividade 4 - Confirmar creators sem posts ou posts sem creator
+
+Status: concluida em 2026-06-16.
+
+Objetivo:
+
+- validar se creators ativos possuem posts
+- validar se posts estao ligados a creators validos
+- identificar sinais de discovery sem insercao recente
+
+Queries criadas:
+
+- `sql/dml/audit_creator_post_integrity.sql`
+- `sql/dml/audit_creator_post_integrity_summary.sql`
+
+Resultado observado:
+
+- `post_without_creator_id`: `0`
+- `post_with_missing_creator`: `0`
+- `active_creator_without_posts`: `0`
+- `post_with_inactive_creator`: `0`
+- `creator_without_recent_discovery`: `2`
+- creators `ok`: `36`
+- posts `ok`: `3854`
+
+Leitura:
+
+- nao ha quebra de integridade entre `posts` e `creators`
+- nao ha creator ativo sem nenhum post
+- os `2` casos de `creator_without_recent_discovery` nao provam canal morto;
+  indicam apenas creators ativos com posts historicos, mas sem posts inseridos
+  nos ultimos `30` dias
+- esses 2 creators devem ser tratados como candidatos para revisao de discovery:
+  pode ser canal sem publicacao recente, canal realmente inativo ou falha do
+  scraper em incorporar videos novos
 
 ### Documentacao relacionada
 
