@@ -332,6 +332,42 @@ def inject_theme() -> None:
             min-height: 140px;
         }
 
+        .overview-fenabrave-grid {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.75rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .overview-fenabrave-grid .metric-card {
+            min-height: 126px;
+        }
+
+        .overview-fenabrave-grid .metric-card-header {
+            font-size: 0.74rem;
+            padding: 0.65rem 0.75rem;
+        }
+
+        .overview-fenabrave-grid .metric-card-body {
+            padding: 0.85rem 0.9rem;
+        }
+
+        .overview-fenabrave-grid .metric-value {
+            font-size: clamp(1.45rem, 1.55vw, 2rem);
+            gap: 0.5rem;
+        }
+
+        .overview-fenabrave-grid .metric-picto {
+            width: 40px;
+            height: 40px;
+        }
+
+        .overview-fenabrave-grid .metric-caption {
+            font-size: 0.68rem;
+            margin-top: 0.45rem;
+        }
+
         @media (max-width: 1320px) {
             .creator-kpi-grid {
                 grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -339,6 +375,10 @@ def inject_theme() -> None:
 
             .dq-kpi-grid.dq-kpi-grid-third {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .overview-fenabrave-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
             }
         }
 
@@ -354,6 +394,10 @@ def inject_theme() -> None:
 
             .overview-recent-head {
                 display: block;
+            }
+
+            .overview-fenabrave-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
         }
 
@@ -1885,7 +1929,7 @@ def render_overview() -> None:
         )
 
     st.write("")
-    left, right = st.columns([1.6, 1])
+    left, right = st.columns([1.6, 0.45])
     with left:
         process_banner(
             "Estado macro da base",
@@ -1896,17 +1940,23 @@ def render_overview() -> None:
             ),
         )
     with right:
-        placeholder_card(
-            "Fenabrave em resumo",
-            (
-                f"{fenabrave_summary['periodo']}. "
-                f"{fenabrave_summary['lider']}. "
-                f"{fenabrave_summary['total']}"
-            ),
-        )
         if st.button("Ver Data Quality", use_container_width=True):
             st.session_state["nav_page"] = "Data quality"
             st.rerun()
+
+    st.write("")
+    st.markdown("### Fenabrave")
+    st.caption(fenabrave_summary["periodo"])
+    if fenabrave_summary["cards"]:
+        metric_card_grid(
+            fenabrave_summary["cards"],
+            class_name="overview-fenabrave-grid",
+        )
+    else:
+        placeholder_card(
+            "Fenabrave",
+            "Aguardando a view v_dashboard_fenabrave_monthly_segments retornar dados validos.",
+        )
 
     st.caption(
         "Os numeros desta tela descrevem a base monitorada e o estado geral do monitoramento, nao o universo completo de videos de cada creator."
@@ -2129,9 +2179,7 @@ def build_overview_recent_activity_frame(weekly_rows: list[dict[str, Any]]) -> p
     if grouped.empty:
         return grouped
 
-    grouped["week_label_short"] = grouped["week_end"].apply(
-        lambda value: pd.Timestamp(value).strftime("%d/%m") if pd.notna(value) else "--"
-    )
+    grouped["week_label_short"] = grouped["week_label"].fillna("--")
     grouped["creators_ativos"] = grouped["creators_ativos"].astype(int)
     grouped["posts_publicados"] = grouped["posts_publicados"].astype(int)
     grouped["interacoes"] = grouped["interacoes"].astype(int)
@@ -2242,39 +2290,61 @@ def build_overview_recent_activity_chart(chart_df: pd.DataFrame) -> Any:
         ),
         margin=dict(l=16, r=64, t=24, b=16),
         hovermode="x unified",
+        xaxis=dict(tickangle=0),
     )
     apply_plotly_theme(fig, legend_title="Serie")
     return fig
 
 
-def summarize_overview_fenabrave(rows: list[dict[str, Any]]) -> dict[str, str]:
+def summarize_overview_fenabrave(rows: list[dict[str, Any]]) -> dict[str, Any]:
     if not rows:
         return {
             "periodo": "Fenabrave sem dados carregados",
-            "lider": "Categoria lider indisponivel",
-            "total": "Mercado mensal indisponivel",
+            "cards": [],
         }
 
     df = pd.DataFrame(rows)
     df["reference_period"] = pd.to_datetime(df.get("reference_period"), errors="coerce")
+    if "segment_code" in df.columns:
+        df["segment_code"] = df["segment_code"].astype(str)
+    else:
+        df["segment_code"] = ""
     latest_period = df["reference_period"].max()
-    latest_df = df[df["reference_period"] == latest_period].copy()
+    latest_df = df[
+        (df["reference_period"] == latest_period)
+        & (df["segment_code"].str.lower() != "implementos_rodoviarios")
+    ].copy()
 
     if latest_df.empty or pd.isna(latest_period):
         return {
             "periodo": "Fenabrave sem periodo valido",
-            "lider": "Categoria lider indisponivel",
-            "total": "Mercado mensal indisponivel",
+            "cards": [],
         }
 
     latest_df["monthly_units"] = pd.to_numeric(latest_df.get("monthly_units"), errors="coerce").fillna(0)
-    leader_row = latest_df.sort_values("monthly_units", ascending=False).iloc[0]
-    total_units = int(latest_df["monthly_units"].sum())
+    latest_df["current_year_accumulated_units"] = pd.to_numeric(
+        latest_df.get("current_year_accumulated_units"),
+        errors="coerce",
+    ).fillna(0)
+    latest_df["segment_sort"] = pd.to_numeric(latest_df.get("segment_sort"), errors="coerce").fillna(999).astype(int)
+    latest_df = latest_df.sort_values(["segment_sort", "segment_label"]).copy()
+
+    cards = []
+    for _, row in latest_df.iterrows():
+        picto = FENABRAVE_PICTOS.get(str(row.get("picto_code") or ""), str(row.get("picto_code") or "AV"))
+        cards.append(
+            metric_card_html(
+                str(row.get("segment_short_label") or row.get("segment_label") or "--"),
+                format_int(row.get("monthly_units") or 0),
+                f"Acumulado ano: {format_int(row.get('current_year_accumulated_units') or 0)}",
+                picto,
+                str(row.get("color_hex") or "#ff8069"),
+            )
+        )
 
     return {
         "periodo": f"Referencia {format_month_label(pd.Timestamp(latest_period))}",
-        "lider": f"Lideranca em {leader_row['segment_label']}: {format_int(leader_row['monthly_units'])}",
-        "total": f"Mercado do mes: {format_int(total_units)} unidades",
+        "cards": cards,
     }
 
 
