@@ -757,3 +757,43 @@ Documentos relacionados:
 
 - `docs/social_media/26_HYBRID_SCORE_V2_BASELINE_2026-05-17.md`
 - `docs/social_media/25_MINIMUM_HISTORY_COVERAGE_GUARDRAIL_SPEC.md`
+
+---
+
+## Execucao controlada por sprint ativo
+
+Data:
+
+- 2026-06-16
+
+Decisao:
+
+- criar uma agenda formal de sprints em `docs/project/07_SPRINT_AGENDA.md`
+- tratar o sprint ativo como filtro obrigatorio de execucao do projeto
+- executar automaticamente apenas atividades relacionadas ao sprint ativo
+- quando uma demanda nao tiver relacao clara com o sprint ativo, o GPT deve
+  perguntar ao usuario antes de prosseguir
+- sem confirmacao explicita do usuario, demandas fora do sprint ativo devem ser
+  tratadas como ideias para backlog/roadmap, nao como execucao
+
+Motivo:
+
+- evitar execucao desorganizada
+- impedir que novas ideias interrompam estabilidade de pipeline, data quality e
+  dashboard
+- preservar foco operacional enquanto o projeto evolui para uma plataforma de
+  analytics automotivo
+- manter rastreabilidade entre prioridade, execucao e decisao tecnica
+
+Pergunta padrao:
+
+```text
+Esta atividade nao esta relacionada ao sprint ativo. Deseja prosseguir mesmo assim ou prefere registrar no backlog/roadmap?
+```
+
+Impacto esperado:
+
+- maior controle sobre escopo de cada ciclo de trabalho
+- menor risco de misturar backlog com execucao
+- maior clareza para decidir datas conforme disponibilidade do usuario
+- melhor alinhamento entre roadmap, data quality, pipeline e dashboard

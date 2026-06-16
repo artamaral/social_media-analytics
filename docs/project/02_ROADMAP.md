@@ -1,5 +1,18 @@
 # ROADMAP
 
+## Regra de execucao por sprint
+
+O roadmap define as prioridades gerais, mas a execucao deve seguir o sprint ativo
+registrado em `07_SPRINT_AGENDA.md`.
+
+Regra obrigatoria:
+
+- apenas atividades relacionadas ao sprint ativo devem ser executadas;
+- se uma demanda nao tiver relacao clara com o sprint ativo, o GPT deve
+  perguntar antes de prosseguir;
+- sem confirmacao explicita do usuario, demandas fora do sprint ativo devem ser
+  registradas como ideias ou sugestoes, nao executadas.
+
 O projeto esta organizado em 3 frentes principais:
 
 1. Dados social media
