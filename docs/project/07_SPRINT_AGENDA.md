@@ -1129,7 +1129,7 @@ Decisao para a Atividade 5:
 
 #### Atividade 5 - Decidir se o ajuste deve atacar capacidade, distribuicao ou ambos
 
-Status: planejada.
+Status: proposta em elaboracao.
 
 Objetivo:
 
@@ -1180,6 +1180,156 @@ Resultado esperado:
 - decisao operacional documentada;
 - proposta curta do proximo ajuste;
 - ponte clara entre Sprint 2 e eventual mudanca SQL ou teste operacional.
+
+Proposta inicial:
+
+- manter a revisao recente como base conceitual: `next_check` precisa continuar
+  favorecendo posts novos/recentes e desacelerando posts antigos ja cobertos;
+- ajustar a regra temporal para refletir melhor o ciclo horario real do worker
+  e o baixo valor analitico de `old_30d_plus`;
+- tratar a proxima iteracao como mudanca combinada de:
+  - regra de `next_check`;
+  - capacidade total do batch;
+  - fatia guardrail;
+  - distribuicao/refill por banda.
+
+Regra proposta para simulacao:
+
+- regra base por banda para grupos sensiveis:
+  - banda `6`: `1h`
+  - banda `5`: `2h`
+  - banda `4`: `3h`
+  - banda `3`: `4h`
+  - banda `2`: `8h`
+  - banda `1`: `12h`
+- `total_checagens < 3`:
+  - manter guardrail e politica de cobertura minima
+- `new_0_3d` e `recent_4_7d`:
+  - usar a regra base por banda
+- `warm_8_30d` com `total_checagens >= 3`:
+  - bandas `5` e `6`: `12h`
+  - bandas `1` a `4`: `24h`
+- `old_30d_plus` com `total_checagens >= 3`:
+  - todas as bandas: `24h`
+
+Leitura critica da proposta:
+
+- ponto forte:
+  - reduz a recorrencia desnecessaria de `old_30d_plus`, liberando capacidade
+    para cobertura minima e backlog mais relevante
+- ponto forte:
+  - alinha a banda `6` ao ciclo real do worker horario, removendo a assimetria
+    de uma banda `6` mais rapida que a propria frequencia operacional
+- risco:
+  - posts `warm_8_30d` ainda podem carregar alguma tracao residual; desacelerar
+    demais esse grupo pode reduzir sensibilidade analitica
+- risco:
+  - se a mudanca ocorrer sem ajuste de lote, guardrail e refill, a melhora pode
+    ser real mas insuficiente, como ocorreu na rodada anterior
+
+Hipotese operacional:
+
+- a nova regra deve reduzir demanda recorrente de `old_30d_plus` e bandas
+  altas ja cobertas;
+- essa reducao por si so ajuda, mas nao deve resolver completamente o backlog
+  atual se `lote 50 + guardrail 6` permanecerem iguais;
+- a melhora sustentavel exige validar a combinacao:
+  - `next_check` mais aderente
+  - capacidade total maior
+  - fatia guardrail maior
+  - distribuicao melhor nas bandas `1` e `2`
+
+Algoritmo de simulacao proposto:
+
+Objetivo:
+
+- prever matematicamente se a mudanca melhora a fila antes de alterar o SQL de
+  producao;
+- permitir avaliacao offline do andamento da fila sobre o mesmo snapshot da
+  base;
+- estimar reducao de:
+  - posts vencidos
+  - `p95_staleness_days`
+  - pressao no guardrail
+  - pressao em `warm/old covered_3_49`
+
+Entradas minimas:
+
+- snapshot atual de `post_update_queue`
+- `post_id`
+- `priority_score`
+- `priority_band`
+- `last_checked`
+- `next_check`
+- `post_date`
+- `needs_update`
+- `total_checagens`
+- `failure_status`
+- pertencimento ao batch atual
+
+Ideia do algoritmo:
+
+1. Construir uma tabela base por post elegivel.
+2. Recalcular `priority_band` e `video_age_bucket` conforme a regra atual do
+   sistema.
+3. Calcular `next_check_simulado` conforme uma configuracao de entrada da
+   simulacao.
+4. Fixar uma grade de tempo de simulacao:
+   - por exemplo `72h`, em passos de `1h`, coerentes com o worker.
+5. Para cada hora simulada:
+   - marcar quais posts ficariam `due_now` segundo a configuracao escolhida;
+   - montar o batch usando as mesmas regras de:
+     - guardrail
+     - cotas por banda
+     - refill global
+6. Ao "executar" um post no batch:
+   - atualizar `last_checked` simulado para a hora corrente;
+   - incrementar `total_checagens` simulado;
+   - recalcular o proximo `next_check` pela mesma configuracao.
+7. Repetir o processo ate o final da janela.
+8. Ao final, consolidar as metricas da fila simulada.
+
+Metricas de saida recomendadas:
+
+- total de posts vencidos por hora
+- total de posts vencidos por:
+  - `video_age_bucket`
+  - `check_band`
+  - `priority_band`
+- media e `p95` de atraso simulado
+- total de execucoes consumidas por:
+  - guardrail
+  - bandas `1` a `6`
+- tempo medio para um post sair de `needs_coverage`
+- backlog residual em:
+  - `recent_4_7d / needs_coverage`
+  - `warm_8_30d / covered_3_49`
+  - `old_30d_plus / covered_3_49`
+
+Criterio matematico de melhora:
+
+- melhora minima esperada para aprovar a proposta:
+  - queda material de vencidos em `recent_4_7d / needs_coverage`
+  - queda material de backlog em bandas `1` e `2`
+  - nenhuma piora relevante no `p95` dos grupos sensiveis
+- melhora ideal:
+- reduzir carga recorrente de `old_30d_plus`
+- liberar execucoes para cobertura minima
+- aumentar a participacao real de `warm/old covered_3_49` criticos no batch
+
+Decisao recomendada neste momento:
+
+- nao promover a nova regra apenas por intuicao;
+- criar um script offline para simular o andamento da fila a partir do
+  snapshot atual;
+- fazer a configuracao da simulacao receber como parametros:
+  - regra de `next_check`
+  - lote total
+  - fatia guardrail
+  - cotas por banda
+  - politica de refill
+- usar o script para avaliar qualquer proposta futura antes de alterar o SQL
+  de producao.
 
 ### Documentacao relacionada
 
