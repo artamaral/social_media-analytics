@@ -376,7 +376,7 @@ Criterio de saida da fase:
 
 #### Atividade 1 - Analisar `v_dashboard_queue_bottleneck_status`
 
-Status: planejada.
+Status: concluida em 2026-06-16.
 
 Objetivo:
 
@@ -524,13 +524,82 @@ Saidas obrigatorias antes de concluir a atividade:
   - `baixo`: atraso concentrado em grupos ja cobertos e sem cauda acima de
     `7d`;
   - `medio`: atraso relevante, mas sem acumulacao em `needs_coverage`;
-  - `alto`: acumulacao em `needs_coverage`, posts novos/recentes vencidos ou
+- `alto`: acumulacao em `needs_coverage`, posts novos/recentes vencidos ou
     cauda acima de `7d` em grupos sensiveis;
 - recomendacao objetiva para a Atividade 2.
 
+Resultado observado:
+
+- total de grupos retornados: `39`
+- top 5 grupos criticos:
+  - `priority_band = 2 | old_30d_plus | covered_3_49`
+    - `total_posts = 1020`
+    - `posts_vencidos = 823`
+    - `posts_no_batch_atual = 7`
+    - `p95_staleness_days = 5.99`
+    - `posts_acima_7d = 0`
+  - `priority_band = 1 | old_30d_plus | covered_3_49`
+    - `total_posts = 1002`
+    - `posts_vencidos = 778`
+    - `posts_no_batch_atual = 5`
+    - `p95_staleness_days = 5.90`
+    - `posts_acima_7d = 0`
+  - `priority_band = 2 | warm_8_30d | covered_3_49`
+    - `total_posts = 324`
+    - `posts_vencidos = 314`
+    - `posts_no_batch_atual = 0`
+    - `p95_staleness_days = 4.01`
+    - `posts_acima_7d = 0`
+  - `priority_band = 1 | warm_8_30d | covered_3_49`
+    - `total_posts = 268`
+    - `posts_vencidos = 232`
+    - `posts_no_batch_atual = 1`
+    - `p95_staleness_days = 5.82`
+    - `posts_acima_7d = 0`
+  - `priority_band = 1 | recent_4_7d | needs_coverage`
+    - `total_posts = 68`
+    - `posts_vencidos = 61`
+    - `posts_no_batch_atual = 1`
+    - `p95_staleness_days = 3.81`
+    - `posts_acima_7d = 0`
+
+Leitura:
+
+- gargalo principal: o maior atraso esta concentrado em `old_30d_plus` e
+  `warm_8_30d` com `covered_3_49`, principalmente nas bandas `1` e `2`
+- risco para guardrail: existe risco real em `recent_4_7d / needs_coverage`,
+  com acumulacao relevante nas bandas `1`, `2` e `3`
+- risco para posts novos/recentes: `new_0_3d` segue relativamente controlado,
+  mas `recent_4_7d` abaixo da cobertura minima ja mostra pressao operacional
+- risco de excesso em posts antigos: os grupos `overchecked_*` e bandas altas
+  aparecem mais controlados, sugerindo que a desaceleracao recente ajudou
+
+Classificacao do risco operacional:
+
+- `alto`
+
+Conclusao:
+
+- a migration nova de `next_check` parece ter reduzido bem a pressao em posts
+  muito checados e bandas altas
+- o problema atual nao parece mais ser dominado por posts antigos superfortes
+  voltando cedo demais
+- o foco operacional passa a ser:
+  - bandas `1` e `2` com `covered_3_49`
+  - `recent_4_7d / needs_coverage`
+  - avaliacao de capacidade real do lote e do refill global
+
+Decisao para a Atividade 2:
+
+- validar atraso por `priority_band`, `video_age_bucket` e `check_band` com
+  foco explicito em:
+  - bandas `1` e `2`
+  - `recent_4_7d / needs_coverage`
+  - `warm_8_30d` e `old_30d_plus / covered_3_49`
+
 #### Atividade 2 - Validar atraso por banda, idade do video e checagens
 
-Status: planejada.
+Status: concluida em 2026-06-16.
 
 Objetivo:
 
@@ -570,6 +639,14 @@ Etapas:
    - cota/refill por banda;
    - regra de `next_check`;
    - ou passivo residual de guardrail.
+
+Foco desta execucao:
+
+- medir o peso relativo das bandas `1` e `2` no atraso total;
+- comparar `recent_4_7d / needs_coverage` contra `warm_8_30d` e
+  `old_30d_plus / covered_3_49`;
+- verificar se a fila esta falhando mais por capacidade total insuficiente ou
+  por distribuicao insuficiente do batch atual.
 
 Query sugerida:
 
@@ -613,6 +690,86 @@ Resultado esperado:
 - mapa de gargalo por banda, idade e cobertura;
 - leitura objetiva do risco para analytics automotivo;
 - recomendacao de foco para a Atividade 3.
+
+Resultado observado:
+
+- o atraso total esta fortemente concentrado nas bandas `1` e `2`
+- principais grupos observados:
+  - `old_30d_plus | covered_3_49 | priority_band = 2`
+    - `total_posts = 1020`
+    - `posts_vencidos = 823`
+    - `posts_no_batch_atual = 7`
+    - `pior_p95_staleness_days = 5.99`
+  - `old_30d_plus | covered_3_49 | priority_band = 1`
+    - `total_posts = 1002`
+    - `posts_vencidos = 778`
+    - `posts_no_batch_atual = 5`
+    - `pior_p95_staleness_days = 5.91`
+  - `warm_8_30d | covered_3_49 | priority_band = 2`
+    - `total_posts = 325`
+    - `posts_vencidos = 314`
+    - `posts_no_batch_atual = 0`
+    - `pior_p95_staleness_days = 4.02`
+  - `warm_8_30d | covered_3_49 | priority_band = 1`
+    - `total_posts = 268`
+    - `posts_vencidos = 232`
+    - `posts_no_batch_atual = 1`
+    - `pior_p95_staleness_days = 5.83`
+  - `recent_4_7d | needs_coverage | priority_band = 1`
+    - `total_posts = 68`
+    - `posts_vencidos = 61`
+    - `posts_no_batch_atual = 1`
+    - `pior_p95_staleness_days = 3.82`
+  - `recent_4_7d | needs_coverage | priority_band = 2`
+    - `total_posts = 39`
+    - `posts_vencidos = 39`
+    - `posts_no_batch_atual = 3`
+    - `pior_p95_staleness_days = 4.08`
+
+Leitura:
+
+- o peso do atraso esta concentrado nas bandas baixas `1` e `2`, nao nas
+  bandas altas
+- `old_30d_plus` e `warm_8_30d` com `covered_3_49` dominam o volume de
+  vencidos, indicando fila longa de rechecagem normal
+- `recent_4_7d / needs_coverage` aparece com volume menor, mas com severidade
+  operacional maior por risco direto ao guardrail e a cobertura minima
+- `new_0_3d / needs_coverage` continua relativamente controlado e nao e o
+  principal problema desta leitura
+- os grupos `overchecked_*` nao dominam atraso nem cauda, reforcando que a
+  desaceleracao recente parece estar funcionando para posts muito checados
+
+Diagnostico:
+
+- o problema atual parece ser mais de distribuicao insuficiente do batch e
+  capacidade efetiva sobre bandas `1` e `2` do que de regra agressiva para
+  posts superchecados
+- o caso mais chamativo e `warm_8_30d | covered_3_49 | priority_band = 2`,
+  com `314` vencidos e `0` itens no batch atual, o que sugere refill/cota
+  pouco aderente ao grupo
+- como `recent_4_7d / needs_coverage` segue acumulando vencidos, o guardrail
+  atual ainda nao esta absorvendo toda a pressao relevante
+
+Conclusao:
+
+- bandas `1` e `2` concentram o principal backlog operacional da fila
+- o atraso em `warm` e `old` cobertos pode ser parcialmente aceitavel pela nova
+  regra, mas o volume atual indica que a capacidade pratica nao esta chegando
+  de forma suficiente nesses grupos
+- o atraso em `recent_4_7d / needs_coverage` indica que o problema nao e apenas
+  "backlog toleravel"; ha risco real para cobertura minima
+
+Decisao para a Atividade 3:
+
+- confirmar que a migration nova de `next_check` de fato melhorou os grupos
+  `overchecked_*` e bandas altas
+- separar o que e efeito saudavel da desaceleracao de `warm/old` do que ja
+  virou falta de capacidade ou distribuicao inadequada
+- usar esta leitura para decidir se o proximo ajuste deve atacar:
+  - lote total do worker;
+  - fatia guardrail;
+  - refill/cotas por banda;
+  - ou combinacao desses pontos antes de nova mudanca de `next_check`
 
 #### Atividade 3 - Confirmar impacto da migration nova de `next_check`
 
