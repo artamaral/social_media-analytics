@@ -1,3 +1,81 @@
+-- Migration: 2026-06-16_008_queue_next_check_84h_rebucket_down
+-- Objetivo:
+-- Reverter a regra de 84h para warm/old acima de 20 checagens e restaurar o
+-- breakdown anterior de cobertura.
+
+begin;
+
+create or replace function public.calculate_next_check(
+  p_priority_score double precision,
+  p_checked_at timestamp without time zone,
+  p_post_date timestamp without time zone,
+  p_total_checagens integer
+)
+returns timestamp without time zone
+language sql
+immutable
+as $$
+  with base as (
+    select
+      coalesce(p_checked_at, timestamp '1970-01-01 00:00:00') as checked_at,
+      public.calculate_priority_band(p_priority_score) as priority_band,
+      coalesce(p_total_checagens, 0) as total_checagens,
+      public.calculate_next_check(
+        p_priority_score,
+        coalesce(p_checked_at, timestamp '1970-01-01 00:00:00')
+      ) as base_next_check,
+      case
+        when p_post_date is null then 'unknown'
+        when p_post_date >= coalesce(p_checked_at, timestamp '1970-01-01 00:00:00') - interval '3 days'
+          then 'new_0_3d'
+        when p_post_date >= coalesce(p_checked_at, timestamp '1970-01-01 00:00:00') - interval '7 days'
+          then 'recent_4_7d'
+        when p_post_date >= coalesce(p_checked_at, timestamp '1970-01-01 00:00:00') - interval '30 days'
+          then 'warm_8_30d'
+        else 'old_30d_plus'
+      end as video_age_bucket
+  )
+  select case
+    when total_checagens < 3 then base_next_check
+    when video_age_bucket in ('new_0_3d', 'recent_4_7d', 'unknown') then base_next_check
+    when video_age_bucket in ('warm_8_30d', 'old_30d_plus')
+      and priority_band in (5, 6)
+      then greatest(base_next_check, checked_at + interval '12 hours')
+    when video_age_bucket in ('warm_8_30d', 'old_30d_plus')
+      then greatest(base_next_check, checked_at + interval '24 hours')
+    else base_next_check
+  end
+  from base
+$$;
+
+comment on function public.calculate_next_check(
+  double precision,
+  timestamp without time zone,
+  timestamp without time zone,
+  integer
+) is 'Define next_check considerando prioridade, idade do post e cobertura historica minima.';
+
+with checks as (
+  select
+    post_id,
+    count(*)::integer as total_checagens
+  from public.post_metrics_history
+  group by post_id
+)
+update public.post_update_queue q
+set
+  next_check = public.calculate_next_check(
+    q.priority_score,
+    q.last_checked::timestamp without time zone,
+    p.post_date,
+    coalesce(c.total_checagens, 0)
+  ) at time zone 'UTC'
+from public.posts p
+left join checks c
+  on c.post_id = p.post_id
+where p.post_id = q.post_id
+  and q.last_checked is not null;
+
 create or replace view public.v_dashboard_queue_bottleneck_status as
 with checks as (
   select
@@ -42,9 +120,10 @@ classified as (
     end as video_age_bucket,
     case
       when coalesce(c.total_checagens, 0) < 3 then 'needs_coverage'
-      when coalesce(c.total_checagens, 0) between 3 and 20 then 'covered_3_20'
-      when coalesce(c.total_checagens, 0) between 21 and 100 then 'overchecked_21_100'
-      else 'overchecked_101_plus'
+      when coalesce(c.total_checagens, 0) between 3 and 49 then 'covered_3_49'
+      when coalesce(c.total_checagens, 0) between 50 and 199 then 'overchecked_50_199'
+      when coalesce(c.total_checagens, 0) between 200 and 499 then 'overchecked_200_499'
+      else 'overchecked_500_plus'
     end as check_band
   from public.post_update_queue q
   join public.posts p
@@ -104,3 +183,5 @@ group by
   priority_band,
   video_age_bucket,
   check_band;
+
+commit;

@@ -115,6 +115,63 @@ Resultado observado:
 
 ---
 
+## Regra final de next_check da Sprint 2
+
+Data:
+
+- 2026-06-16
+
+Decisao:
+
+- manter o batch do worker em `50` posts por hora com guardrail de `6`
+- adotar novo breakdown operacional de cobertura:
+  - `needs_coverage`: `< 3`
+  - `covered_3_20`: `3..20`
+  - `overchecked_21_100`: `21..100`
+  - `overchecked_101_plus`: `101+`
+- aplicar desaceleracao forte de `next_check` para posts com historico amplo:
+  - `warm_8_30d` com `total_checagens >= 21`: minimo `84h`
+  - `old_30d_plus` com `total_checagens >= 21`: minimo `84h`
+- manter para `warm_8_30d` abaixo desse limiar:
+  - bandas `5` e `6`: minimo `12h`
+  - bandas `1` a `4`: minimo `24h`
+- manter para `old_30d_plus` com `3..20` checagens:
+  - minimo `24h`
+- manter `new_0_3d`, `recent_4_7d` e `needs_coverage` na regra base por banda
+
+Motivo:
+
+- o maior represamento da fila estava concentrado em `warm_8_30d` e `old_30d_plus`
+  com cobertura ampla
+- a simulacao offline mostrou que espacamento de `84h` nesses grupos libera
+  capacidade real do batch sem pressionar o guardrail
+- o recorte `3..20 / 21..100 / 101+` melhora a leitura operacional e alinha a
+  classificacao com o ponto em que o valor marginal de nova checagem cai
+
+Evidencia:
+
+- simulacao `260h` com `old_30d_plus >= 21 -> 84h`: fim em `2624`
+- simulacao `260h` com `warm_8_30d >= 21 -> 84h` e `old_30d_plus >= 21 -> 84h`:
+  fim em `2558`
+- ignorando as primeiras `36h`, o cenario com `warm + old` terminou `66` posts
+  melhor e com media `26,48` posts menor do que o cenario com `old` apenas
+
+Implementacao:
+
+- migration `2026-06-16_008_queue_next_check_84h_rebucket_up.sql`
+- atualizacao da funcao `calculate_next_check(...)`
+- recalc da fila existente em `post_update_queue`
+- atualizacao do breakdown em `v_dashboard_queue_bottleneck_status` e queries
+  operacionais
+
+Impacto esperado:
+
+- menor reentrada prematura de posts warm/old superchecados
+- mais espaco util do batch para backlog vencido e cobertura minima
+- leitura mais aderente da fila em dashboards e auditorias
+
+---
+
 ## Resumo de videos gerado por IA pelo YouTube
 
 Data:

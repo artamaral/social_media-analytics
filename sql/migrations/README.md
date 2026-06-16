@@ -43,3 +43,7 @@ YYYY-MM-DD_NNN_descricao_down.sql
   - Alinha a fila operacional ao lote de 50, amplia guardrail protegido para 6 e inclui guardrail excedente no refill global.
 - `2026-06-15_007_queue_batch_50_guardrail_overflow_down.sql`
   - Reverte a fila para o contrato anterior de lote 40 sem overflow de guardrail.
+- `2026-06-16_008_queue_next_check_84h_rebucket_up.sql`
+  - Aplica a regra final da Sprint 2: `84h` para warm/old com `21+` checagens, recalcula a fila existente e estreita o breakdown operacional de cobertura.
+- `2026-06-16_008_queue_next_check_84h_rebucket_down.sql`
+  - Restaura a regra anterior de `12h/24h` para warm/old cobertos e o breakdown antigo de cobertura.

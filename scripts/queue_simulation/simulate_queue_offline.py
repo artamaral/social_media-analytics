@@ -125,13 +125,11 @@ def calculate_priority_band(priority_score: float) -> int:
 def calculate_check_band(total_checks: int) -> str:
     if total_checks < 3:
         return "needs_coverage"
-    if total_checks <= 49:
-        return "covered_3_49"
-    if total_checks <= 199:
-        return "overchecked_50_199"
-    if total_checks <= 499:
-        return "overchecked_200_499"
-    return "overchecked_500_plus"
+    if total_checks <= 20:
+        return "covered_3_20"
+    if total_checks <= 100:
+        return "overchecked_21_100"
+    return "overchecked_101_plus"
 
 
 def calculate_video_age_bucket(post_date: Optional[datetime], now: datetime) -> str:
@@ -159,7 +157,11 @@ class SimulationConfig:
     normal_quotas: Dict[int, int]
     warm_high_hours: int
     warm_low_hours: int
+    warm_overchecked_threshold: int
+    warm_overchecked_min_hours: int
     old_all_hours: int
+    old_overchecked_threshold: int
+    old_overchecked_min_hours: int
 
 
 @dataclass
@@ -222,6 +224,11 @@ def calculate_next_check(
         return base_next_check
 
     if video_age_bucket == "warm_8_30d":
+        if post.total_checks >= config.warm_overchecked_threshold:
+            return max_datetime(
+                base_next_check,
+                checked_at + timedelta(hours=config.warm_overchecked_min_hours),
+            )
         if band in {5, 6}:
             return max_datetime(
                 base_next_check,
@@ -233,6 +240,11 @@ def calculate_next_check(
         )
 
     if video_age_bucket == "old_30d_plus":
+        if post.total_checks >= config.old_overchecked_threshold:
+            return max_datetime(
+                base_next_check,
+                checked_at + timedelta(hours=config.old_overchecked_min_hours),
+            )
         return max_datetime(
             base_next_check,
             checked_at + timedelta(hours=config.old_all_hours),
@@ -699,10 +711,34 @@ def build_argument_parser() -> argparse.ArgumentParser:
         help="Minimo em horas para warm_8_30d coberto nas bandas 1 a 4.",
     )
     parser.add_argument(
+        "--warm-overchecked-threshold",
+        type=int,
+        default=21,
+        help="Total de checagens a partir do qual warm_8_30d recebe minimo proprio.",
+    )
+    parser.add_argument(
+        "--warm-overchecked-min-hours",
+        type=int,
+        default=84,
+        help="Minimo em horas para warm_8_30d com muitas checagens.",
+    )
+    parser.add_argument(
         "--old-all-hours",
         type=int,
         default=24,
         help="Minimo em horas para old_30d_plus coberto em todas as bandas.",
+    )
+    parser.add_argument(
+        "--old-overchecked-threshold",
+        type=int,
+        default=21,
+        help="Total de checagens a partir do qual old_30d_plus recebe minimo proprio.",
+    )
+    parser.add_argument(
+        "--old-overchecked-min-hours",
+        type=int,
+        default=84,
+        help="Minimo em horas para old_30d_plus com muitas checagens.",
     )
     parser.add_argument(
         "--start-time",
@@ -731,7 +767,11 @@ def main() -> None:
         normal_quotas=parse_band_map(args.normal_quotas, "normal-quotas"),
         warm_high_hours=args.warm_high_hours,
         warm_low_hours=args.warm_low_hours,
+        warm_overchecked_threshold=args.warm_overchecked_threshold,
+        warm_overchecked_min_hours=args.warm_overchecked_min_hours,
         old_all_hours=args.old_all_hours,
+        old_overchecked_threshold=args.old_overchecked_threshold,
+        old_overchecked_min_hours=args.old_overchecked_min_hours,
     )
 
     posts = load_posts(snapshot_path)
@@ -763,7 +803,11 @@ def main() -> None:
             "normal_quotas": config.normal_quotas,
             "warm_high_hours": config.warm_high_hours,
             "warm_low_hours": config.warm_low_hours,
+            "warm_overchecked_threshold": config.warm_overchecked_threshold,
+            "warm_overchecked_min_hours": config.warm_overchecked_min_hours,
             "old_all_hours": config.old_all_hours,
+            "old_overchecked_threshold": config.old_overchecked_threshold,
+            "old_overchecked_min_hours": config.old_overchecked_min_hours,
         },
         "overall": overall,
     }

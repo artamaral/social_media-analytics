@@ -1348,6 +1348,44 @@ Decisao recomendada neste momento:
 - usar o script para avaliar qualquer proposta futura antes de alterar o SQL
   de producao.
 
+### Fechamento da Sprint 2 - regra aprovada para producao
+
+Regra aprovada apos simulacao offline:
+
+- manter `batch_size = 50` e `guardrail_slots = 6`
+- adotar o breakdown operacional:
+  - `needs_coverage`: `< 3`
+  - `covered_3_20`: `3..20`
+  - `overchecked_21_100`: `21..100`
+  - `overchecked_101_plus`: `101+`
+- aplicar `next_check` minimo de `84h` para:
+  - `warm_8_30d` com `total_checagens >= 21`
+  - `old_30d_plus` com `total_checagens >= 21`
+- manter:
+  - `new_0_3d` e `recent_4_7d` na regra base por banda
+  - `warm_8_30d` com `3..20` checagens em:
+    - `12h` para bandas `5` e `6`
+    - `24h` para bandas `1` a `4`
+  - `old_30d_plus` com `3..20` checagens em `24h`
+
+Evidencia que sustentou a decisao:
+
+- simulacao de `260h` com `old_30d_plus >= 21 -> 84h` terminou com `2624`
+  posts vencidos
+- simulacao de `260h` com `warm_8_30d >= 21 -> 84h` e
+  `old_30d_plus >= 21 -> 84h` terminou com `2558`
+- ao desconsiderar as primeiras `36h`, o cenario final ainda permaneceu melhor:
+  - fim `66` posts abaixo do cenario com `old` apenas
+  - media da janela `36h..260h` `26,48` posts menor
+
+Decisao operacional:
+
+- promover a regra final para SQL
+- recalcular `next_check` da fila existente na migration
+- atualizar queries e dashboards para o novo breakdown de `check_band`
+- manter o simulador offline como etapa obrigatoria antes de novas mudancas de
+  fila ou rechecagem
+
 ### Documentacao relacionada
 
 - [25_MINIMUM_HISTORY_COVERAGE_GUARDRAIL_SPEC.md](../social_media/25_MINIMUM_HISTORY_COVERAGE_GUARDRAIL_SPEC.md)

@@ -94,10 +94,9 @@ audited as (
     end as gap_status,
     case
       when snapshot_count < 3 then 'needs_coverage'
-      when snapshot_count between 3 and 49 then 'covered_3_49'
-      when snapshot_count between 50 and 199 then 'overchecked_50_199'
-      when snapshot_count between 200 and 499 then 'overchecked_200_499'
-      else 'overchecked_500_plus'
+      when snapshot_count between 3 and 20 then 'covered_3_20'
+      when snapshot_count between 21 and 100 then 'overchecked_21_100'
+      else 'overchecked_101_plus'
     end as check_band
   from classified_posts
 )
@@ -171,10 +170,9 @@ audited as (
     end as video_age_bucket,
     case
       when coalesce(s.snapshot_count, 0) < 3 then 'needs_coverage'
-      when coalesce(s.snapshot_count, 0) between 3 and 49 then 'covered_3_49'
-      when coalesce(s.snapshot_count, 0) between 50 and 199 then 'overchecked_50_199'
-      when coalesce(s.snapshot_count, 0) between 200 and 499 then 'overchecked_200_499'
-      else 'overchecked_500_plus'
+      when coalesce(s.snapshot_count, 0) between 3 and 20 then 'covered_3_20'
+      when coalesce(s.snapshot_count, 0) between 21 and 100 then 'overchecked_21_100'
+      else 'overchecked_101_plus'
     end as check_band,
     case
       when coalesce(s.snapshot_count, 0) = 0 then 'no_snapshot'

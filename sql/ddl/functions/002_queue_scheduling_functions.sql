@@ -81,10 +81,18 @@ as $$
   select case
     when total_checagens < 3 then base_next_check
     when video_age_bucket in ('new_0_3d', 'recent_4_7d', 'unknown') then base_next_check
-    when video_age_bucket in ('warm_8_30d', 'old_30d_plus')
+    when video_age_bucket = 'warm_8_30d'
+      and total_checagens >= 21
+      then greatest(base_next_check, checked_at + interval '84 hours')
+    when video_age_bucket = 'warm_8_30d'
       and priority_band in (5, 6)
       then greatest(base_next_check, checked_at + interval '12 hours')
-    when video_age_bucket in ('warm_8_30d', 'old_30d_plus')
+    when video_age_bucket = 'warm_8_30d'
+      then greatest(base_next_check, checked_at + interval '24 hours')
+    when video_age_bucket = 'old_30d_plus'
+      and total_checagens >= 21
+      then greatest(base_next_check, checked_at + interval '84 hours')
+    when video_age_bucket = 'old_30d_plus'
       then greatest(base_next_check, checked_at + interval '24 hours')
     else base_next_check
   end

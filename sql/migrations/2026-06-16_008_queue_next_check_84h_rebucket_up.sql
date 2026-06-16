@@ -1,0 +1,211 @@
+-- Migration: 2026-06-16_008_queue_next_check_84h_rebucket_up
+-- Objetivo:
+-- - aplicar a regra validada na simulacao offline da Sprint 2;
+-- - reduzir rechecagem recorrente de posts warm/old com historico amplo;
+-- - estreitar o breakdown de cobertura para leitura operacional.
+--
+-- Regra aprovada:
+-- - total_checagens < 3: manter guardrail e regra base por banda
+-- - new_0_3d e recent_4_7d: manter regra base por banda
+-- - warm_8_30d com total_checagens >= 21: minimo 84h
+-- - warm_8_30d com total_checagens entre 3 e 20:
+--   - priority_band 5/6: minimo 12h
+--   - priority_band 1/2/3/4: minimo 24h
+-- - old_30d_plus com total_checagens >= 21: minimo 84h
+-- - old_30d_plus com total_checagens entre 3 e 20: minimo 24h
+--
+-- Breakdown operacional de cobertura:
+-- - needs_coverage: < 3
+-- - covered_3_20: 3..20
+-- - overchecked_21_100: 21..100
+-- - overchecked_101_plus: 101+
+
+begin;
+
+create or replace function public.calculate_next_check(
+  p_priority_score double precision,
+  p_checked_at timestamp without time zone,
+  p_post_date timestamp without time zone,
+  p_total_checagens integer
+)
+returns timestamp without time zone
+language sql
+immutable
+as $$
+  with base as (
+    select
+      coalesce(p_checked_at, timestamp '1970-01-01 00:00:00') as checked_at,
+      public.calculate_priority_band(p_priority_score) as priority_band,
+      coalesce(p_total_checagens, 0) as total_checagens,
+      public.calculate_next_check(
+        p_priority_score,
+        coalesce(p_checked_at, timestamp '1970-01-01 00:00:00')
+      ) as base_next_check,
+      case
+        when p_post_date is null then 'unknown'
+        when p_post_date >= coalesce(p_checked_at, timestamp '1970-01-01 00:00:00') - interval '3 days'
+          then 'new_0_3d'
+        when p_post_date >= coalesce(p_checked_at, timestamp '1970-01-01 00:00:00') - interval '7 days'
+          then 'recent_4_7d'
+        when p_post_date >= coalesce(p_checked_at, timestamp '1970-01-01 00:00:00') - interval '30 days'
+          then 'warm_8_30d'
+        else 'old_30d_plus'
+      end as video_age_bucket
+  )
+  select case
+    when total_checagens < 3 then base_next_check
+    when video_age_bucket in ('new_0_3d', 'recent_4_7d', 'unknown') then base_next_check
+    when video_age_bucket = 'warm_8_30d'
+      and total_checagens >= 21
+      then greatest(base_next_check, checked_at + interval '84 hours')
+    when video_age_bucket = 'warm_8_30d'
+      and priority_band in (5, 6)
+      then greatest(base_next_check, checked_at + interval '12 hours')
+    when video_age_bucket = 'warm_8_30d'
+      then greatest(base_next_check, checked_at + interval '24 hours')
+    when video_age_bucket = 'old_30d_plus'
+      and total_checagens >= 21
+      then greatest(base_next_check, checked_at + interval '84 hours')
+    when video_age_bucket = 'old_30d_plus'
+      then greatest(base_next_check, checked_at + interval '24 hours')
+    else base_next_check
+  end
+  from base
+$$;
+
+comment on function public.calculate_next_check(
+  double precision,
+  timestamp without time zone,
+  timestamp without time zone,
+  integer
+) is 'Define next_check considerando prioridade, idade do post e cobertura historica minima com desaceleracao de 84h para warm/old acima de 20 checagens.';
+
+with checks as (
+  select
+    post_id,
+    count(*)::integer as total_checagens
+  from public.post_metrics_history
+  group by post_id
+)
+update public.post_update_queue q
+set
+  next_check = public.calculate_next_check(
+    q.priority_score,
+    q.last_checked::timestamp without time zone,
+    p.post_date,
+    coalesce(c.total_checagens, 0)
+  ) at time zone 'UTC'
+from public.posts p
+left join checks c
+  on c.post_id = p.post_id
+where p.post_id = q.post_id
+  and q.last_checked is not null;
+
+create or replace view public.v_dashboard_queue_bottleneck_status as
+with checks as (
+  select
+    post_id,
+    count(*) as total_checagens,
+    max(collected_at) as last_snapshot_at
+  from public.post_metrics_history
+  group by post_id
+),
+current_batch as (
+  select post_id
+  from public.v_post_update_queue_batch
+),
+classified as (
+  select
+    p.post_id,
+    p.post_date,
+    q.priority_score,
+    public.calculate_priority_band(q.priority_score) as priority_band,
+    q.last_checked,
+    q.next_check,
+    coalesce(c.total_checagens, 0) as total_checagens,
+    coalesce(c.last_snapshot_at, q.last_checked::timestamp, p.created_at) as effective_last_check,
+    extract(
+      epoch from (
+        now()::timestamp - coalesce(c.last_snapshot_at, q.last_checked::timestamp, p.created_at)
+      )
+    ) / 86400 as staleness_days,
+    case
+      when b.post_id is not null then true
+      else false
+    end as in_current_batch,
+    case
+      when q.next_check <= now() then true
+      else false
+    end as is_due_now,
+    case
+      when p.post_date >= now()::timestamp - interval '3 days' then 'new_0_3d'
+      when p.post_date >= now()::timestamp - interval '7 days' then 'recent_4_7d'
+      when p.post_date >= now()::timestamp - interval '30 days' then 'warm_8_30d'
+      else 'old_30d_plus'
+    end as video_age_bucket,
+    case
+      when coalesce(c.total_checagens, 0) < 3 then 'needs_coverage'
+      when coalesce(c.total_checagens, 0) between 3 and 20 then 'covered_3_20'
+      when coalesce(c.total_checagens, 0) between 21 and 100 then 'overchecked_21_100'
+      else 'overchecked_101_plus'
+    end as check_band
+  from public.post_update_queue q
+  join public.posts p
+    on p.post_id = q.post_id
+  left join checks c
+    on c.post_id = q.post_id
+  left join current_batch b
+    on b.post_id = q.post_id
+  left join public.post_collection_failures f
+    on f.post_id = q.post_id
+  where q.needs_update = true
+    and coalesce(f.status, 'active') <> 'unavailable'
+)
+select
+  priority_band,
+  video_age_bucket,
+  check_band,
+  count(*) as total_posts,
+  round(avg(total_checagens)::numeric, 2) as media_checagens,
+  max(total_checagens) as max_checagens,
+  round(avg(staleness_days)::numeric, 2) as avg_staleness_days,
+  round(
+    (percentile_cont(0.5) within group (order by staleness_days))::numeric,
+    2
+  ) as p50_staleness_days,
+  round(
+    (percentile_cont(0.9) within group (order by staleness_days))::numeric,
+    2
+  ) as p90_staleness_days,
+  round(
+    (percentile_cont(0.95) within group (order by staleness_days))::numeric,
+    2
+  ) as p95_staleness_days,
+  round(max(staleness_days)::numeric, 2) as max_staleness_days,
+  count(*) filter (
+    where staleness_days > 3.2
+  ) as posts_acima_3_2d,
+  count(*) filter (
+    where staleness_days > 5
+  ) as posts_acima_5d,
+  count(*) filter (
+    where staleness_days > 7
+  ) as posts_acima_7d,
+  count(*) filter (
+    where is_due_now
+  ) as posts_vencidos,
+  count(*) filter (
+    where in_current_batch
+  ) as posts_no_batch_atual,
+  min(effective_last_check) as oldest_effective_last_check,
+  max(effective_last_check) as newest_effective_last_check,
+  min(next_check) filter (
+    where is_due_now
+  ) as next_check_mais_atrasado
+from classified
+group by
+  priority_band,
+  video_age_bucket,
+  check_band;
+
+commit;
