@@ -25,6 +25,16 @@ LEFT JOIN public.post_metrics_history h ON p.post_id = h.post_id
 WHERE h.post_id IS NULL;
 ```
 
+Auditoria detalhada para Sprint 1:
+
+- `sql/dml/audit_posts_without_snapshots.sql`
+
+Objetivo:
+
+- listar apenas posts com `0` snapshots em `post_metrics_history`
+- separar posts ativos de `unavailable_candidate` e `unavailable`
+- trazer contexto de creator, idade do video, fila e revisao humana
+
 ### Ultima coleta por post
 
 ```sql
