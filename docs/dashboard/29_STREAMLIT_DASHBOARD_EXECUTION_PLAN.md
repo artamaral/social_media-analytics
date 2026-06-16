@@ -22,6 +22,42 @@ Objetivo:
 
 - garantir que a base local esta organizada para iniciar o app sem misturar pipeline, SQL e UI.
 
+Status do pre-flight em 2026-06-16:
+
+- estrutura encontrada em `dashboard/`:
+  - `streamlit_app.py`
+  - `requirements.txt`
+  - `README.md`
+- estrutura recomendada ainda incompleta:
+  - `.streamlit/config.toml` nao existe
+  - `.streamlit/secrets.toml.example` nao existe
+- o app ja deixou de ser placeholder puro:
+  - `Overview` existe, mas ainda combina KPIs reais de Data Quality com blocos placeholder
+  - `Creators` tem navegacao e layout reais, mas a visao geral ainda usa mock local
+  - `Criador individual` ja consome `v_dashboard_creator_summary` e `v_dashboard_creator_weekly_activity`
+  - `Videos em crescimento` continua placeholder, embora a view `v_dashboard_post_growth_7d` exista no repositorio
+- views encontradas no repositorio para o MVP:
+  - `v_dashboard_guardrail_coverage_status`
+  - `v_dashboard_dead_post_validation_status`
+  - `v_dashboard_creator_summary`
+  - `v_dashboard_post_growth_7d`
+  - `v_dashboard_unavailable_video_review`
+  - `v_dashboard_fenabrave_monthly_segments`
+  - apoio adicional ja disponivel para creators:
+    - `v_dashboard_creator_weekly_timeseries`
+    - `v_dashboard_creator_weekly_activity`
+    - `v_dashboard_creator_weekly_audience`
+
+Leitura do pre-flight:
+
+- o repositorio esta apto para iniciar o Sprint 3 sem nova reorganizacao de pastas
+- a principal lacuna nao e estrutural; e de consolidacao do app para trocar mocks/placeholders por views reais
+- a ordem mais segura para o MVP continua:
+  1. validar as views no Supabase
+  2. fechar `Overview`
+  3. trocar `Creators` para dados reais em toda a visao geral
+  4. implementar `Videos em crescimento`
+
 Tarefas:
 
 - revisar `docs/dashboard/16_ONLINE_DASHBOARD_SUPABASE_SPEC.md`

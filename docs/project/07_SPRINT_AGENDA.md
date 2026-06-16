@@ -29,14 +29,14 @@ Sem confirmacao explicita do usuario, a atividade deve ser tratada como ideia ou
 Status atual:
 
 ```text
-Sprint ativo: Sprint 2 - Fila, next_check e guardrail
+Sprint ativo: Sprint 3 - Dashboard MVP analitico
 Datas: a definir conforme disponibilidade do usuario
 ```
 
-Enquanto o Sprint 2 estiver ativo, apenas tarefas relacionadas a fila,
-`next_check`, guardrail e capacidade do worker de metricas devem ser executadas
-automaticamente. Implementacoes, alteracoes de pipeline, SQL ou dashboard fora
-deste escopo devem aguardar confirmacao.
+Enquanto o Sprint 3 estiver ativo, apenas tarefas relacionadas ao dashboard
+analitico, validacao das views do Supabase, Data Quality antes dos rankings e
+entregas de `Overview`, `Creators` e crescimento semanal devem ser executadas
+automaticamente. Alteracoes fora deste escopo devem aguardar confirmacao.
 
 ## Visao geral
 
@@ -1443,6 +1443,28 @@ Transformar o Streamlit em ferramenta interna util para leitura executiva e estu
 - Dashboard interno navegavel com dados reais.
 - Leitura basica de qualidade, creators e crescimento.
 - Confirmacao de que rankings aparecem depois dos sinais de confiabilidade.
+
+### Pre-flight
+
+Status: concluido em 2026-06-16.
+
+Resultado observado:
+
+- `dashboard/streamlit_app.py` ja concentra uma base funcional real do app
+- `Overview` existe, mas ainda depende de placeholders para a area analitica principal
+- `Creators` ja tem navegacao e estrutura visual, mas a visao geral ainda usa
+  dados mockados
+- `Criador individual` ja conversa com views reais de creator
+- `Videos em crescimento` ainda esta em placeholder
+- as views principais do MVP existem no repositorio SQL
+- a pasta `dashboard/.streamlit/` ainda nao foi criada, entao faltam os
+  arquivos auxiliares de configuracao e exemplo de secrets
+
+Decisao para seguir no Sprint 3:
+
+- nao e necessario reorganizar a estrutura do dashboard antes de continuar
+- a frente correta agora e validar as views no Supabase e substituir mocks e
+  placeholders por leituras reais nas paginas do MVP
 
 ### Estimativa
 
