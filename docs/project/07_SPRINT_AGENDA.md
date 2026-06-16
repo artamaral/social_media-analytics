@@ -1466,6 +1466,20 @@ Decisao para seguir no Sprint 3:
 - a frente correta agora e validar as views no Supabase e substituir mocks e
   placeholders por leituras reais nas paginas do MVP
 
+### Ambiente online
+
+Status: concluido em 2026-06-16.
+
+Resultado observado:
+
+- Streamlit e Supabase estao conectados e funcionando
+- branch e arquivo principal do app estao operacionais para o MVP atual
+- o Sprint 3 deixa de ter bloqueio de ambiente e passa a focar:
+  - validacao das views reais
+  - fechamento de `Overview`
+  - substituicao dos mocks em `Creators`
+  - implementacao de `Videos em crescimento`
+
 ### Estimativa
 
 `2` a `4` dias.

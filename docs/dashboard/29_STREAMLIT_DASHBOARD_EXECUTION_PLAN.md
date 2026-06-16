@@ -91,7 +91,11 @@ Status:
 
 - conta Streamlit Community Cloud ja esta linkada ao GitHub
 - branch de trabalho criada: `codex/dashboard-streamlit-mvp`
-- placeholder inicial criado em `dashboard/streamlit_app.py`
+- app principal ativo em `dashboard/streamlit_app.py`
+- Streamlit e Supabase ja foram confirmados como conectados e funcionando
+- branch e caminho do app passaram a ser tratados como definidos para o MVP atual:
+  - branch: `codex/dashboard-streamlit-mvp`
+  - main file path: `dashboard/streamlit_app.py`
 
 Tarefas:
 
@@ -104,14 +108,20 @@ Tarefas:
 Criterio de pronto:
 
 - Streamlit Community Cloud conectado ao repositorio
-- app vazio ou placeholder pronto para deploy
+- branch de deploy definida
 - caminho do app definido
+- app online abrindo com sucesso
+
+Resultado observado:
+
+- etapa considerada concluida
+- ambiente online do dashboard esta operacional
+- o proximo gargalo deixou de ser deploy e passou a ser consolidacao do MVP com views reais
 
 Pendencias:
 
-- confirmar branch de deploy
-- confirmar caminho do arquivo principal
-- executar primeiro deploy vazio ou quase vazio
+- nenhuma pendencia estrutural bloqueante nesta etapa
+- manter apenas verificacao eventual de ambiente se houver troca futura de branch de deploy
 
 ## Etapa 2 - Ligacao segura com Supabase
 
@@ -129,6 +139,7 @@ Status:
 - cache inicial configurado com TTL de 300 segundos
 - conexao online validada no Streamlit Cloud
 - `v_dashboard_data_quality_status` foi validada, mas deixou de ser a view alvo do Data Quality do dashboard
+- Streamlit e Supabase confirmados como conectados e funcionando no estado atual do app
 
 Tarefas:
 
@@ -159,12 +170,16 @@ Criterio de pronto:
 - Streamlit Cloud possui secrets configurados
 - nenhuma credencial real esta versionada
 
+Resultado observado:
+
+- etapa considerada funcionalmente concluida
+- a conexao segura basica com Supabase esta resolvida para o MVP
+- o foco agora deve migrar para validacao das views reais e substituicao de mocks/placeholders
+
 Pendencias:
 
-- aplicar as novas views de Data Quality no Supabase
-- validar grants/RLS para `v_dashboard_guardrail_coverage_status`
-- validar grants/RLS para `v_dashboard_dead_post_validation_status`
-- testar retorno real das duas views no app online
+- validar retorno real das views principais do MVP no app online, nao mais a conexao em si
+- revisar grants/RLS apenas se alguma view especifica falhar durante a consolidacao do MVP
 
 ## Etapa 3 - Analise de seguranca e permissao
 
