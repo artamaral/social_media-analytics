@@ -933,7 +933,7 @@ Objetivo:
 Atividades da fase:
 
 - [ ] Atividade 4: verificar se lote `50` com guardrail `6` esta suficiente.
-- [ ] Atividade 5: decidir se o ajuste deve atacar capacidade, distribuicao ou
+- [x] Atividade 5: decidir se o ajuste deve atacar capacidade, distribuicao ou
   ambos.
 
 Criterio de saida da fase:
@@ -1385,6 +1385,17 @@ Decisao operacional:
 - atualizar queries e dashboards para o novo breakdown de `check_band`
 - manter o simulador offline como etapa obrigatoria antes de novas mudancas de
   fila ou rechecagem
+
+Status da Atividade 5:
+
+- concluida
+- decisao final: atacar principalmente distribuicao temporal da fila via
+  `next_check`, mantendo a capacidade atual (`batch 50` e `guardrail 6`)
+- implementacao concluida na migration:
+  - `sql/migrations/2026-06-16_008_queue_next_check_84h_rebucket_up.sql`
+- validacao informada:
+  - SQL atualizado
+  - fila recalculada corretamente no ambiente
 
 ### Documentacao relacionada
 

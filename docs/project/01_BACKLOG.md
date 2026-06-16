@@ -26,6 +26,7 @@
 - [ ] Monitorar semanalmente videos indisponiveis em `v_dashboard_unavailable_video_review` e confirmar manualmente candidatos quando necessario.
 - [ ] Auditar os `9` posts residuais do cleanup temporario do guardrail antes de retomar o scheduler; `4` deles ja constam como possiveis dead posts.
 - [ ] Monitorar o cleanup temporario do guardrail ate `warm_8_30d` e `old_30d_plus` chegarem a `3` checagens, e `new_0_3d` e `recent_4_7d` chegarem a `2`.
+- [ ] Revisar periodicamente a regra de `next_check` e a capacidade diaria da fila, porque o volume total de checagens tende a crescer junto com a base de posts; a melhora atual reduz represamento, mas nao elimina a necessidade de reavaliar frequencias, batch e distribuicao conforme a base aumenta.
 
 ## Visualizacao / Estudos de mercado
 
