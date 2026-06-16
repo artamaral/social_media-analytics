@@ -300,6 +300,38 @@ def inject_theme() -> None:
             margin-top: 0.25rem;
         }
 
+        .overview-recent-head {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-top: 0.9rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .overview-recent-copy {
+            min-width: 0;
+        }
+
+        .overview-recent-subtitle {
+            color: var(--muted);
+            font-size: 0.9rem;
+            font-weight: 700;
+            line-height: 1.25;
+            margin-bottom: 0.55rem;
+        }
+
+        .overview-recent-kpi-grid {
+            grid-template-columns: 1fr;
+            gap: 0.85rem;
+            margin-top: 0;
+            margin-bottom: 0;
+        }
+
+        .overview-recent-kpi-grid .metric-card {
+            min-height: 140px;
+        }
+
         @media (max-width: 1320px) {
             .creator-kpi-grid {
                 grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -318,6 +350,10 @@ def inject_theme() -> None:
             .dq-kpi-grid,
             .dq-kpi-grid.dq-kpi-grid-third {
                 grid-template-columns: repeat(1, minmax(0, 1fr));
+            }
+
+            .overview-recent-head {
+                display: block;
             }
         }
 
@@ -1791,8 +1827,13 @@ def render_overview() -> None:
         )
 
     st.markdown("### Atividade recente")
-    period_col, _ = st.columns([0.28, 0.72])
-    with period_col:
+    head_left, head_right = st.columns([0.78, 0.22])
+    with head_left:
+        st.markdown(
+            '<div class="overview-recent-subtitle">Serie macro da base monitorada por semanas fechadas. O grafico resume novos posts, interacoes e creators ativos.</div>',
+            unsafe_allow_html=True,
+        )
+    with head_right:
         period_option = st.selectbox(
             "Periodo",
             options=[4, 8, 12],
@@ -1805,7 +1846,6 @@ def render_overview() -> None:
         period_weeks=period_option,
     )
     recent_focus = summarize_overview_recent_focus(recent_chart_filtered, recent_summary)
-    st.caption("Serie macro da base monitorada por semanas fechadas. O grafico resume novos posts, interacoes e creators ativos.")
     recent_left, recent_right = st.columns([1.8, 1])
     with recent_left:
         recent_fig = build_overview_recent_activity_chart(recent_chart_filtered)
@@ -1817,23 +1857,31 @@ def render_overview() -> None:
                 "Aguardando semanas fechadas com dados suficientes para montar a serie macro da base.",
             )
     with recent_right:
-        metric_card(
-            "Novos posts",
-            format_int(recent_focus["posts_publicados_semana"]),
-            recent_focus["semana_legenda"],
-            "VD",
-        )
-        metric_card(
-            "Interacoes",
-            format_int(recent_focus["interacoes_semana"]),
-            "Views + likes + comentarios na semana mais recente",
-            "VW",
-        )
-        metric_card(
-            "Criadores ativos",
-            format_int(recent_focus["creators_ativos_semana"]),
-            "Creators com publicacao na semana mais recente",
-            "CR",
+        metric_card_grid(
+            [
+                metric_card_html(
+                    "Novos posts",
+                    format_int(recent_focus["posts_publicados_semana"]),
+                    recent_focus["posts_caption"],
+                    "VD",
+                    caption_color=recent_focus["posts_caption_color"],
+                ),
+                metric_card_html(
+                    "Interacoes",
+                    format_int(recent_focus["interacoes_semana"]),
+                    recent_focus["interacoes_caption"],
+                    "VW",
+                    caption_color=recent_focus["interacoes_caption_color"],
+                ),
+                metric_card_html(
+                    "Criadores ativos",
+                    format_int(recent_focus["creators_ativos_semana"]),
+                    recent_focus["creators_caption"],
+                    "CR",
+                    caption_color=recent_focus["creators_caption_color"],
+                ),
+            ],
+            class_name="creator-kpi-grid weekly-grid overview-recent-kpi-grid",
         )
 
     st.write("")
@@ -2081,9 +2129,8 @@ def build_overview_recent_activity_frame(weekly_rows: list[dict[str, Any]]) -> p
     if grouped.empty:
         return grouped
 
-    grouped = grouped.tail(6).copy()
     grouped["week_label_short"] = grouped["week_end"].apply(
-        lambda value: format_month_label(pd.Timestamp(value)) if pd.notna(value) else "--"
+        lambda value: pd.Timestamp(value).strftime("%d/%m") if pd.notna(value) else "--"
     )
     grouped["creators_ativos"] = grouped["creators_ativos"].astype(int)
     grouped["posts_publicados"] = grouped["posts_publicados"].astype(int)
@@ -2107,14 +2154,39 @@ def summarize_overview_recent_focus(
             "interacoes_semana": int(fallback_summary.get("interacoes_semana") or 0),
             "creators_ativos_semana": int(fallback_summary.get("creators_ativos_semana") or 0),
             "semana_legenda": str(fallback_summary.get("semana_legenda") or "Sem semana fechada"),
+            "posts_caption": "Sem semana anterior",
+            "posts_caption_color": "#aeb4bf",
+            "interacoes_caption": "Sem semana anterior",
+            "interacoes_caption_color": "#aeb4bf",
+            "creators_caption": "Sem semana anterior",
+            "creators_caption_color": "#aeb4bf",
         }
 
-    latest_row = chart_df.sort_values("week_end").iloc[-1]
+    ordered = chart_df.sort_values("week_end").reset_index(drop=True)
+    latest_row = ordered.iloc[-1]
+    previous_row = ordered.iloc[-2] if len(ordered.index) > 1 else None
+
+    latest_posts = int(latest_row.get("posts_publicados") or 0)
+    latest_interacoes = int(latest_row.get("interacoes") or 0)
+    latest_creators = int(latest_row.get("creators_ativos") or 0)
+    previous_posts = int(previous_row.get("posts_publicados") or 0) if previous_row is not None else None
+    previous_interacoes = int(previous_row.get("interacoes") or 0) if previous_row is not None else None
+    previous_creators = int(previous_row.get("creators_ativos") or 0) if previous_row is not None else None
+
+    posts_caption, posts_caption_color = growth_caption_from_values(latest_posts, previous_posts)
+    interacoes_caption, interacoes_caption_color = weekly_growth_caption(latest_interacoes, previous_interacoes)
+    creators_caption, creators_caption_color = growth_caption_from_values(latest_creators, previous_creators)
     return {
-        "posts_publicados_semana": int(latest_row.get("posts_publicados") or 0),
-        "interacoes_semana": int(latest_row.get("interacoes") or 0),
-        "creators_ativos_semana": int(latest_row.get("creators_ativos") or 0),
+        "posts_publicados_semana": latest_posts,
+        "interacoes_semana": latest_interacoes,
+        "creators_ativos_semana": latest_creators,
         "semana_legenda": f"Janela fechada: {latest_row.get('week_label') or '--'}",
+        "posts_caption": posts_caption,
+        "posts_caption_color": posts_caption_color,
+        "interacoes_caption": interacoes_caption,
+        "interacoes_caption_color": interacoes_caption_color,
+        "creators_caption": creators_caption,
+        "creators_caption_color": creators_caption_color,
     }
 
 
