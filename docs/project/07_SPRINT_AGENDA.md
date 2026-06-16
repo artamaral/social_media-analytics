@@ -1267,6 +1267,17 @@ Entradas minimas:
 - `failure_status`
 - pertencimento ao batch atual
 
+Query de entrada recomendada:
+
+- `sql/dml/export_queue_simulation_snapshot.sql`
+
+Uso operacional da query:
+
+1. rodar `sql/dml/export_queue_simulation_snapshot.sql` no banco;
+2. exportar o resultado em CSV;
+3. usar o CSV como entrada do script:
+   - `scripts/queue_simulation/simulate_queue_offline.py`
+
 Ideia do algoritmo:
 
 1. Construir uma tabela base por post elegivel.
