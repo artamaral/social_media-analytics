@@ -1791,10 +1791,24 @@ def render_overview() -> None:
         )
 
     st.markdown("### Atividade recente")
-    st.caption("Posts publicados em barras e creators com atividade em linha, sempre usando a base monitorada e semanas fechadas.")
+    period_col, _ = st.columns([0.28, 0.72])
+    with period_col:
+        period_option = st.selectbox(
+            "Periodo",
+            options=[4, 8, 12],
+            index=1,
+            format_func=lambda value: f"Ultimas {value} semanas",
+            key="overview_recent_period_weeks",
+        )
+    recent_chart_filtered = filter_overview_recent_activity_frame(
+        recent_chart_df,
+        period_weeks=period_option,
+    )
+    recent_focus = summarize_overview_recent_focus(recent_chart_filtered, recent_summary)
+    st.caption("Serie macro da base monitorada por semanas fechadas. O grafico resume novos posts, interacoes e creators ativos.")
     recent_left, recent_right = st.columns([1.8, 1])
     with recent_left:
-        recent_fig = build_overview_recent_activity_chart(recent_chart_df)
+        recent_fig = build_overview_recent_activity_chart(recent_chart_filtered)
         if recent_fig is not None:
             st.plotly_chart(recent_fig, use_container_width=True, config={"displayModeBar": False})
         else:
@@ -1804,22 +1818,22 @@ def render_overview() -> None:
             )
     with recent_right:
         metric_card(
-            "Creators com atividade",
-            format_int(recent_summary["creators_ativos_semana"]),
-            recent_summary["semana_legenda"],
-            "CR",
-        )
-        metric_card(
-            "Posts na ultima semana",
-            format_int(recent_summary["posts_publicados_semana"]),
-            "Videos publicados na janela fechada mais recente",
+            "Novos posts",
+            format_int(recent_focus["posts_publicados_semana"]),
+            recent_focus["semana_legenda"],
             "VD",
         )
         metric_card(
-            "Coleta recente",
-            format_int(recent_summary["creators_coleta_recente"]),
-            "Creators com coleta observada nos ultimos 7 dias",
+            "Interacoes",
+            format_int(recent_focus["interacoes_semana"]),
+            "Views + likes + comentarios na semana mais recente",
             "VW",
+        )
+        metric_card(
+            "Criadores ativos",
+            format_int(recent_focus["creators_ativos_semana"]),
+            "Creators com publicacao na semana mais recente",
+            "CR",
         )
 
     st.write("")
@@ -1997,6 +2011,7 @@ def summarize_overview_recent_activity(
         return {
             "creators_ativos_semana": 0,
             "posts_publicados_semana": 0,
+            "interacoes_semana": 0,
             "semana_legenda": "Sem janela semanal carregada",
             "semana_legenda_curta": "--",
             "creators_coleta_recente": recent_collectors,
@@ -2004,6 +2019,9 @@ def summarize_overview_recent_activity(
 
     weekly_df = pd.DataFrame(weekly_rows)
     weekly_df["week_end"] = pd.to_datetime(weekly_df.get("week_end"), errors="coerce", utc=True)
+    weekly_df["views_novas"] = pd.to_numeric(weekly_df.get("views_novas"), errors="coerce").fillna(0)
+    weekly_df["likes_novos"] = pd.to_numeric(weekly_df.get("likes_novos"), errors="coerce").fillna(0)
+    weekly_df["comentarios_novos"] = pd.to_numeric(weekly_df.get("comentarios_novos"), errors="coerce").fillna(0)
     latest_week_end = weekly_df["week_end"].max()
     latest_week_rows = weekly_df[weekly_df["week_end"] == latest_week_end].copy()
 
@@ -2016,11 +2034,15 @@ def summarize_overview_recent_activity(
     posts_publicados = int(
         pd.to_numeric(latest_week_rows.get("videos_publicados"), errors="coerce").fillna(0).sum()
     )
+    interacoes_semana = int(
+        (latest_week_rows["views_novas"] + latest_week_rows["likes_novos"] + latest_week_rows["comentarios_novos"]).sum()
+    )
     week_label = str(latest_week_rows["week_label"].dropna().iloc[0]) if not latest_week_rows.empty else "Sem semana fechada"
 
     return {
         "creators_ativos_semana": creators_ativos,
         "posts_publicados_semana": posts_publicados,
+        "interacoes_semana": interacoes_semana,
         "semana_legenda": f"Janela fechada: {week_label}",
         "semana_legenda_curta": week_label,
         "creators_coleta_recente": recent_collectors,
@@ -2038,11 +2060,18 @@ def build_overview_recent_activity_frame(weekly_rows: list[dict[str, Any]]) -> p
     weekly_df["week_end"] = pd.to_datetime(weekly_df.get("week_end"), errors="coerce", utc=True)
     weekly_df["week_start"] = pd.to_datetime(weekly_df.get("week_start"), errors="coerce", utc=True)
     weekly_df["videos_publicados"] = pd.to_numeric(weekly_df.get("videos_publicados"), errors="coerce").fillna(0)
+    weekly_df["views_novas"] = pd.to_numeric(weekly_df.get("views_novas"), errors="coerce").fillna(0)
+    weekly_df["likes_novos"] = pd.to_numeric(weekly_df.get("likes_novos"), errors="coerce").fillna(0)
+    weekly_df["comentarios_novos"] = pd.to_numeric(weekly_df.get("comentarios_novos"), errors="coerce").fillna(0)
+    weekly_df["interacoes"] = (
+        weekly_df["views_novas"] + weekly_df["likes_novos"] + weekly_df["comentarios_novos"]
+    )
 
     grouped = (
         weekly_df.groupby(["week_start", "week_end", "week_label"], dropna=False)
         .agg(
             posts_publicados=("videos_publicados", "sum"),
+            interacoes=("interacoes", "sum"),
             creators_ativos=("creator_id", lambda values: pd.Series(values)[pd.Series(values).notna()].nunique()),
         )
         .reset_index()
@@ -2058,7 +2087,35 @@ def build_overview_recent_activity_frame(weekly_rows: list[dict[str, Any]]) -> p
     )
     grouped["creators_ativos"] = grouped["creators_ativos"].astype(int)
     grouped["posts_publicados"] = grouped["posts_publicados"].astype(int)
+    grouped["interacoes"] = grouped["interacoes"].astype(int)
     return grouped
+
+
+def filter_overview_recent_activity_frame(chart_df: pd.DataFrame, period_weeks: int) -> pd.DataFrame:
+    if chart_df is None or chart_df.empty:
+        return pd.DataFrame()
+    return chart_df.tail(period_weeks).copy()
+
+
+def summarize_overview_recent_focus(
+    chart_df: pd.DataFrame,
+    fallback_summary: dict[str, Any],
+) -> dict[str, Any]:
+    if chart_df is None or chart_df.empty:
+        return {
+            "posts_publicados_semana": int(fallback_summary.get("posts_publicados_semana") or 0),
+            "interacoes_semana": int(fallback_summary.get("interacoes_semana") or 0),
+            "creators_ativos_semana": int(fallback_summary.get("creators_ativos_semana") or 0),
+            "semana_legenda": str(fallback_summary.get("semana_legenda") or "Sem semana fechada"),
+        }
+
+    latest_row = chart_df.sort_values("week_end").iloc[-1]
+    return {
+        "posts_publicados_semana": int(latest_row.get("posts_publicados") or 0),
+        "interacoes_semana": int(latest_row.get("interacoes") or 0),
+        "creators_ativos_semana": int(latest_row.get("creators_ativos") or 0),
+        "semana_legenda": f"Janela fechada: {latest_row.get('week_label') or '--'}",
+    }
 
 
 def build_overview_recent_activity_chart(chart_df: pd.DataFrame) -> Any:
@@ -2066,29 +2123,40 @@ def build_overview_recent_activity_chart(chart_df: pd.DataFrame) -> Any:
         return None
 
     fig = go.Figure()
-    fig.add_bar(
+    fig.add_scatter(
+        x=chart_df["week_label_short"],
+        y=chart_df["interacoes"],
+        name="Interacoes",
+        mode="lines+markers",
+        line=dict(color="#ff8069", width=3),
+        marker=dict(color="#ff8069", size=8),
+        hovertemplate="Semana %{x}<br>Interacoes: %{y}<extra></extra>",
+    )
+    fig.add_scatter(
         x=chart_df["week_label_short"],
         y=chart_df["posts_publicados"],
-        name="Posts publicados",
-        marker_color="#ff8069",
-        hovertemplate="Semana %{x}<br>Posts publicados: %{y}<extra></extra>",
+        name="Novos posts",
+        mode="lines+markers",
+        line=dict(color="#f2c14e", width=3),
+        marker=dict(color="#f2c14e", size=7),
+        yaxis="y2",
+        hovertemplate="Semana %{x}<br>Novos posts: %{y}<extra></extra>",
     )
     fig.add_scatter(
         x=chart_df["week_label_short"],
         y=chart_df["creators_ativos"],
-        name="Creators com atividade",
+        name="Criadores ativos",
         mode="lines+markers",
-        line=dict(color="#f5f7fa", width=3),
-        marker=dict(color="#f5f7fa", size=8),
+        line=dict(color="#f5f7fa", width=3, dash="dot"),
+        marker=dict(color="#f5f7fa", size=7),
         yaxis="y2",
-        hovertemplate="Semana %{x}<br>Creators com atividade: %{y}<extra></extra>",
+        hovertemplate="Semana %{x}<br>Criadores ativos: %{y}<extra></extra>",
     )
     fig.update_layout(
-        barmode="group",
         xaxis_title=None,
-        yaxis_title="Posts",
+        yaxis_title="Interacoes",
         yaxis2=dict(
-            title="Creators",
+            title="Posts / Criadores",
             overlaying="y",
             side="right",
             showgrid=False,
@@ -2100,7 +2168,7 @@ def build_overview_recent_activity_chart(chart_df: pd.DataFrame) -> Any:
             xanchor="left",
             x=0,
         ),
-        margin=dict(l=16, r=48, t=24, b=16),
+        margin=dict(l=16, r=64, t=24, b=16),
         hovermode="x unified",
     )
     apply_plotly_theme(fig, legend_title="Serie")
