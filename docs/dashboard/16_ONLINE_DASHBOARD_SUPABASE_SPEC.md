@@ -114,16 +114,27 @@ Para estudos mais exploratorios, o Streamlit pode complementar as views com Pand
 
 Objetivo:
 
-- mostrar se o sistema esta confiavel para analise
-- resumir volume total de creators, posts, views e engajamento
+- apresentar do que se trata a base monitorada
+- mostrar cobertura geral e estado macro do sistema com pouco aprofundamento
+- evitar leituras que sugiram completude dos dados quando nem todos os videos de cada creator sao monitorados
 
 Componentes:
 
-- status de qualidade dos dados
-- total de creators ativos
-- total de posts monitorados
-- total de views atuais
-- media de engagement rate
+- creators monitorados
+- posts monitorados na base
+- plataformas cobertas
+- nichos cobertos
+- sinais simples de atividade recente em janela curta
+- estado macro da operacao
+- acesso secundario para `Data Quality`
+
+Diretrizes:
+
+- evitar totais capciosos como headline quando puderem sugerir cobertura total do creator
+- preferir contagens da base monitorada, nao promessas de universo completo
+- manter a home enxuta, com grandes numeros e leitura geral
+- deixar aprofundamento operacional e administrativo para a pagina `Data quality`
+- se houver chamada de `Data Quality` na `Overview`, ela deve aparecer como botao, link ou alerta discreto, nao como protagonista da tela
 
 ### 2. Creators
 

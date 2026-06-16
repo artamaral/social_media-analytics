@@ -279,6 +279,16 @@ Critério de pronto:
 - carregamento usa cache com TTL documentado
 - não há escrita no Supabase
 
+Direcionamento atualizado para `Overview`:
+
+- a home nao deve abrir com `Data Quality` como mensagem principal
+- `Overview` deve priorizar grandes numeros da base monitorada, cobertura geral,
+  atividade recente em janela curta e estado macro da operacao
+- `Data Quality` continua importante, mas deve entrar como contexto secundario,
+  CTA ou pagina dedicada
+- evitar totais que possam sugerir cobertura integral de todos os videos de cada
+  creator quando a base monitorada nao representa o universo completo
+
 ## Fase 2 - Analytics Social Media
 
 Objetivo:
