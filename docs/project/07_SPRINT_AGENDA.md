@@ -489,6 +489,45 @@ Resultado esperado:
 - decisao de leitura: manter observacao, investigar regra de `next_check` ou
   preparar ajuste controlado.
 
+Modelo de registro do resultado:
+
+```text
+Data da leitura:
+View consultada:
+Total de grupos retornados:
+Grupos com maior risco:
+- grupo:
+  prioridade:
+  idade:
+  checagens:
+  total_posts:
+  posts_vencidos:
+  posts_no_batch_atual:
+  p95_staleness_days:
+  posts_acima_7d:
+
+Leitura:
+- gargalo principal:
+- risco para guardrail:
+- risco para posts novos/recentes:
+- risco de excesso em posts antigos:
+
+Decisao para proxima atividade:
+- seguir para Atividade 2 com foco em:
+```
+
+Saidas obrigatorias antes de concluir a atividade:
+
+- uma tabela resumida com os `5` grupos mais criticos;
+- uma leitura executiva em texto curto;
+- uma classificacao do risco operacional:
+  - `baixo`: atraso concentrado em grupos ja cobertos e sem cauda acima de
+    `7d`;
+  - `medio`: atraso relevante, mas sem acumulacao em `needs_coverage`;
+  - `alto`: acumulacao em `needs_coverage`, posts novos/recentes vencidos ou
+    cauda acima de `7d` em grupos sensiveis;
+- recomendacao objetiva para a Atividade 2.
+
 #### Atividade 2 - Validar atraso por banda, idade do video e checagens
 
 Status: planejada.
