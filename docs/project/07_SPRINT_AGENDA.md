@@ -29,14 +29,14 @@ Sem confirmacao explicita do usuario, a atividade deve ser tratada como ideia ou
 Status atual:
 
 ```text
-Sprint ativo: Sprint 1 - Confiabilidade da coleta social media
+Sprint ativo: Sprint 2 - Fila, next_check e guardrail
 Datas: a definir conforme disponibilidade do usuario
 ```
 
-Enquanto o Sprint 1 estiver ativo, apenas tarefas relacionadas a confiabilidade
-da coleta social media devem ser executadas automaticamente. Implementacoes,
-alteracoes de pipeline, SQL ou dashboard fora deste escopo devem aguardar
-confirmacao.
+Enquanto o Sprint 2 estiver ativo, apenas tarefas relacionadas a fila,
+`next_check`, guardrail e capacidade do worker de metricas devem ser executadas
+automaticamente. Implementacoes, alteracoes de pipeline, SQL ou dashboard fora
+deste escopo devem aguardar confirmacao.
 
 ## Visao geral
 
@@ -340,11 +340,320 @@ Confirmar se a regra atual de atualizacao dos videos esta bem calibrada para a b
 
 ### Atividades
 
-- Analisar `v_dashboard_queue_bottleneck_status`.
-- Validar atraso por banda, idade do video e numero de checagens.
-- Confirmar impacto da migration nova de `next_check`.
-- Verificar se lote `50` com guardrail `6` esta suficiente.
-- Decidir se a regra de frequencia deve ser mantida ou ajustada.
+- [ ] Analisar `v_dashboard_queue_bottleneck_status`.
+- [ ] Validar atraso por banda, idade do video e numero de checagens.
+- [ ] Confirmar impacto da migration nova de `next_check`.
+- [ ] Verificar se lote `50` com guardrail `6` esta suficiente.
+- [ ] Decidir se a regra de frequencia deve ser mantida ou ajustada.
+
+### Planejamento
+
+#### Fase 1 - Diagnostico da fila e do `next_check`
+
+Objetivo:
+
+- montar o baseline operacional da Sprint 2;
+- entender onde o atraso esta concentrado;
+- confirmar se a migration nova de `next_check` esta produzindo o efeito
+  esperado antes de discutir ajuste de capacidade ou regra.
+
+Atividades da fase:
+
+- [ ] Atividade 1: analisar `v_dashboard_queue_bottleneck_status`.
+- [ ] Atividade 2: validar atraso por banda, idade do video e numero de
+  checagens.
+- [ ] Atividade 3: confirmar impacto da migration nova de `next_check`.
+
+Criterio de saida da fase:
+
+- gargalos principais identificados com numeros da view;
+- leitura separada entre `needs_coverage`, posts novos/recentes e posts
+  `warm`/`old` ja cobertos;
+- conclusao inicial sobre a migration:
+  - efeito saudavel;
+  - efeito insuficiente;
+  - ou efeito inconclusivo, exigindo mais uma janela de observacao.
+
+#### Atividade 1 - Analisar `v_dashboard_queue_bottleneck_status`
+
+Status: planejada.
+
+Objetivo:
+
+- transformar a leitura do dashboard em evidencia objetiva sobre gargalos da
+  fila;
+- separar atraso real de efeito esperado da regra de desaceleracao por idade e
+  cobertura;
+- identificar quais grupos disputam capacidade do worker antes de qualquer
+  mudanca em SQL.
+
+Pergunta principal:
+
+```text
+A fila atual esta atrasada porque a capacidade e insuficiente, porque a regra
+de next_check ainda esta agressiva, ou porque o atraso esta concentrado em
+grupos que ja deveriam ser desacelerados?
+```
+
+Fonte principal:
+
+- `public.v_dashboard_queue_bottleneck_status`
+
+Campos-chave para leitura:
+
+- `priority_band`
+- `video_age_bucket`
+- `check_band`
+- `total_posts`
+- `media_checagens`
+- `p50_staleness_days`
+- `p90_staleness_days`
+- `p95_staleness_days`
+- `max_staleness_days`
+- `posts_acima_3_2d`
+- `posts_acima_5d`
+- `posts_acima_7d`
+- `posts_vencidos`
+- `posts_no_batch_atual`
+- `next_check_mais_atrasado`
+
+Etapas:
+
+1. Consultar a view completa e ordenar por risco operacional:
+   - `posts_acima_7d desc`
+   - `p95_staleness_days desc`
+   - `posts_vencidos desc`
+   - `total_posts desc`
+2. Separar a leitura por `video_age_bucket`:
+   - `new_0_3d`: precisa ser responsivo, pois captura tracao inicial;
+   - `recent_4_7d`: ainda e janela sensivel para crescimento;
+   - `warm_8_30d`: deve ser avaliado junto com cobertura;
+   - `old_30d_plus`: nao deve consumir cadencia curta se ja estiver coberto.
+3. Separar a leitura por `check_band`:
+   - `needs_coverage`: prioridade operacional por guardrail;
+   - `covered_3_49`: fluxo normal;
+   - `overchecked_50_199`, `overchecked_200_499` e `overchecked_500_plus`:
+     possivel excesso de recorrencia, especialmente em posts antigos.
+4. Comparar `posts_vencidos` com `posts_no_batch_atual`:
+   - se ha muitos vencidos e poucos no batch, ha disputa de capacidade;
+   - se o batch esta concentrado em grupos menos urgentes, revisar cotas/refill;
+   - se o batch cobre os grupos criticos, acompanhar evolucao antes de ajustar.
+5. Classificar cada grupo em uma das leituras:
+   - saudavel: baixo atraso e baixa cauda de staleness;
+   - observar: atraso moderado, mas sem risco em `needs_coverage`;
+   - alerta: `needs_coverage` vencido ou `p95` crescendo;
+   - ajuste provavel: posts `warm`/`old` ja cobertos dominando vencidos.
+6. Registrar conclusao antes da Atividade 2, usando numeros da view como
+   baseline da Sprint 2.
+
+Query sugerida:
+
+```sql
+select
+  priority_band,
+  video_age_bucket,
+  check_band,
+  total_posts,
+  media_checagens,
+  p50_staleness_days,
+  p90_staleness_days,
+  p95_staleness_days,
+  max_staleness_days,
+  posts_acima_3_2d,
+  posts_acima_5d,
+  posts_acima_7d,
+  posts_vencidos,
+  posts_no_batch_atual,
+  next_check_mais_atrasado
+from public.v_dashboard_queue_bottleneck_status
+order by
+  posts_acima_7d desc,
+  p95_staleness_days desc,
+  posts_vencidos desc,
+  total_posts desc;
+```
+
+Criterios de conclusao:
+
+- identificar os grupos com maior gargalo operacional;
+- confirmar se `needs_coverage` esta protegido ou acumulando atraso;
+- confirmar se posts `warm_8_30d` e `old_30d_plus` ja cobertos ainda competem
+  demais com posts novos/recentes;
+- decidir se a Atividade 2 deve focar em capacidade, regra de frequencia,
+  refill por banda ou guardrail.
+
+Resultado esperado:
+
+- baseline numerico da Sprint 2;
+- lista curta de grupos criticos;
+- decisao de leitura: manter observacao, investigar regra de `next_check` ou
+  preparar ajuste controlado.
+
+#### Atividade 2 - Validar atraso por banda, idade do video e checagens
+
+Status: planejada.
+
+Objetivo:
+
+- explicar o atraso observado na Atividade 1;
+- evitar leitura superficial baseada apenas em volume total vencido;
+- separar o que e atraso critico do que e efeito esperado da desaceleracao de
+  posts ja cobertos.
+
+Perguntas de analise:
+
+- quais `priority_band` concentram mais `posts_vencidos`?
+- o atraso esta em `new_0_3d` e `recent_4_7d`, que exigem resposta rapida?
+- o atraso esta em `warm_8_30d` e `old_30d_plus` ja cobertos, onde a cadencia
+  pode ser mais lenta?
+- existe acumulacao em `needs_coverage`, indicando risco para o guardrail?
+- os posts com muitas checagens continuam ocupando espaco demais na leitura
+  operacional?
+
+Etapas:
+
+1. Agrupar a view por `priority_band` para ver a pressao por faixa de score.
+2. Agrupar por `video_age_bucket` para separar janela inicial de crescimento
+   de posts antigos.
+3. Agrupar por `check_band` para separar cobertura minima de recorrencia
+   normal ou excesso de checagens.
+4. Cruzar os tres eixos:
+   - banda;
+   - idade;
+   - checagens.
+5. Destacar grupos com:
+   - `needs_coverage` vencido;
+   - `posts_acima_7d` maior que zero;
+   - `p95_staleness_days` alto;
+   - muitos `posts_vencidos` e poucos `posts_no_batch_atual`.
+6. Registrar se o problema parece ser:
+   - capacidade total;
+   - cota/refill por banda;
+   - regra de `next_check`;
+   - ou passivo residual de guardrail.
+
+Query sugerida:
+
+```sql
+select
+  video_age_bucket,
+  check_band,
+  priority_band,
+  sum(total_posts) as total_posts,
+  sum(posts_vencidos) as posts_vencidos,
+  sum(posts_no_batch_atual) as posts_no_batch_atual,
+  max(p95_staleness_days) as pior_p95_staleness_days,
+  max(max_staleness_days) as pior_staleness_days,
+  sum(posts_acima_3_2d) as posts_acima_3_2d,
+  sum(posts_acima_5d) as posts_acima_5d,
+  sum(posts_acima_7d) as posts_acima_7d
+from public.v_dashboard_queue_bottleneck_status
+group by
+  video_age_bucket,
+  check_band,
+  priority_band
+order by
+  posts_acima_7d desc,
+  pior_p95_staleness_days desc,
+  posts_vencidos desc,
+  total_posts desc;
+```
+
+Criterios de conclusao:
+
+- se `needs_coverage` acumular atraso, priorizar guardrail na fase seguinte;
+- se `new_0_3d` ou `recent_4_7d` acumular atraso, revisar capacidade e
+  responsividade;
+- se o atraso estiver concentrado em `warm`/`old` ja cobertos, validar se isso
+  e aceitavel pela nova regra antes de ajustar;
+- se posts com `overchecked_*` dominarem os vencidos, investigar excesso de
+  recorrencia em posts antigos.
+
+Resultado esperado:
+
+- mapa de gargalo por banda, idade e cobertura;
+- leitura objetiva do risco para analytics automotivo;
+- recomendacao de foco para a Atividade 3.
+
+#### Atividade 3 - Confirmar impacto da migration nova de `next_check`
+
+Status: planejada.
+
+Objetivo:
+
+- validar se a regra por idade e cobertura reduziu pressao indevida de posts
+  `warm` e `old` ja cobertos;
+- confirmar que posts novos, recentes e com menos de `3` checagens continuam
+  protegidos;
+- decidir se a migration deve ser mantida em observacao ou se exige ajuste.
+
+Contexto tecnico:
+
+- migration de aplicacao:
+  `sql/migrations/2026-06-15_004_queue_next_check_age_coverage_up.sql`;
+- migration de conversao de timezone:
+  `sql/migrations/2026-06-15_006_post_update_queue_next_check_timestamptz_up.sql`;
+- regra esperada:
+  - `total_checagens < 3`: preservar politica atual e guardrail;
+  - `new_0_3d` e `recent_4_7d`: preservar politica atual;
+  - `warm_8_30d` e `old_30d_plus` com `3+` checagens:
+    - bandas `5` e `6`: minimo `12h`;
+    - bandas `1` a `4`: minimo `24h`.
+
+Etapas:
+
+1. Confirmar que a fila atual mostra menos pressao em `warm` e `old` ja
+   cobertos do que o baseline anterior da revisao de `next_check`.
+2. Confirmar que `needs_coverage` continua aparecendo no batch quando vencido.
+3. Confirmar que `new_0_3d` e `recent_4_7d` nao foram desacelerados
+   indevidamente.
+4. Verificar se posts antigos com muitas checagens ainda aparecem como
+   gargalo relevante.
+5. Registrar uma das tres conclusoes:
+   - manter regra e observar;
+   - ajustar regra de frequencia;
+   - revisar capacidade/cotas antes de mexer em `next_check`.
+
+Query sugerida:
+
+```sql
+select
+  video_age_bucket,
+  check_band,
+  priority_band,
+  sum(total_posts) as total_posts,
+  sum(posts_vencidos) as posts_vencidos,
+  sum(posts_no_batch_atual) as posts_no_batch_atual,
+  max(p95_staleness_days) as p95_staleness_days,
+  max(max_staleness_days) as max_staleness_days
+from public.v_dashboard_queue_bottleneck_status
+where
+  video_age_bucket in ('warm_8_30d', 'old_30d_plus')
+  and check_band <> 'needs_coverage'
+group by
+  video_age_bucket,
+  check_band,
+  priority_band
+order by
+  posts_vencidos desc,
+  p95_staleness_days desc,
+  total_posts desc;
+```
+
+Criterios de conclusao:
+
+- impacto saudavel: queda da pressao em posts `warm`/`old` ja cobertos, sem
+  aumento de risco em `needs_coverage`;
+- impacto insuficiente: posts antigos ja cobertos continuam dominando atraso e
+  batch;
+- impacto inconclusivo: dados ainda sem janela suficiente para comparar,
+  exigindo nova checagem antes da decisao.
+
+Resultado esperado:
+
+- decisao documentada sobre a migration de `next_check`;
+- insumo para a Fase 2 da Sprint 2, focada em lote `50`, guardrail `6` e
+  decisao final de manter ou ajustar a regra.
 
 ### Documentacao relacionada
 
