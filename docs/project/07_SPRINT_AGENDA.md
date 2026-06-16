@@ -97,7 +97,7 @@ Validar se os dados historicos permitem analise sem risco operacional relevante.
 ### Atividades
 
 - [x] Validar posts sem historico em `post_metrics_history`.
-- [ ] Validar `collected_at` nulo ou defasado.
+- [x] Validar `collected_at` nulo ou defasado.
 - Detectar gaps de coleta por post.
 - Confirmar creators sem posts ou posts sem creator.
 - Checar se videos `unavailable` estao isolados corretamente.
@@ -126,6 +126,8 @@ Leitura:
   falha comum de coleta ou guardrail
 
 #### Atividade 2 - Validar `collected_at` nulo ou defasado
+
+Status: concluida em 2026-06-16.
 
 Objetivo:
 
@@ -169,6 +171,33 @@ Criterio de conclusao:
 - divergencias entre `posts.collected_at` e ultimo snapshot: `0`, ou lista
   classificada por severidade
 - videos `unavailable` separados da leitura principal de qualidade
+
+Query criada:
+
+- `sql/dml/audit_posts_collected_at_sync.sql`
+
+Resultado observado:
+
+- inconsistencias em posts ativos: `0`
+- `active` com status `ok`:
+  - `new_0_3d`: `43`
+  - `recent_4_7d`: `169`
+  - `warm_8_30d`: `816`
+  - `old_30d_plus`: `2806`
+- `unavailable` com status `ok`:
+  - `recent_4_7d`: `3`
+  - `old_30d_plus`: `13`
+- `zero_snapshots_and_post_collected_at_null` em `unavailable`:
+  - `warm_8_30d`: `2`
+  - `old_30d_plus`: `2`
+
+Leitura:
+
+- nao ha evidencia de `collected_at` nulo ou defasado em posts ativos
+- a sincronizacao entre `posts.collected_at` e o ultimo snapshot esta saudavel
+  para a base ativa
+- os unicos casos sem `collected_at` continuam sendo videos `unavailable`,
+  coerentes com a Atividade 1
 
 ### Documentacao relacionada
 

@@ -43,6 +43,17 @@ FROM public.posts
 WHERE collected_at IS NULL;
 ```
 
+Auditoria detalhada para Sprint 1:
+
+- `sql/dml/audit_posts_collected_at_sync.sql`
+
+Objetivo:
+
+- listar posts com `posts.collected_at` nulo
+- comparar `posts.collected_at` com o ultimo snapshot em `post_metrics_history`
+- separar inconsistencias por `failure_status` e idade do video
+- identificar casos em que ha snapshot, mas o campo corrente em `posts` nao foi sincronizado
+
 ### Gaps de coleta nas ultimas 24h
 
 ```sql
