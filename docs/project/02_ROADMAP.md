@@ -35,6 +35,7 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 - [ ] Verificar se a prioridade embutida em `next_check` esta coerente com banda, idade do post, cobertura minima esperada e urgencia operacional. A avaliacao nao deve olhar apenas tempo e contagem bruta, porque esses numeros tendem a crescer junto com a base.
 - [ ] Executar teste pendente descrito em `08_QUEUE_CAPACITY_TEST.md` e `09_QUEUE_SLICING_AND_RESCHEDULING.md`.
 - [ ] Garantir que scraper percorre todos creators.
+- [ ] Definir metodo para identificar creators/canais mortos, diferenciando canal realmente inativo de falha de discovery ou ausencia temporaria de publicacao.
 - [ ] Validar integridade de `post_metrics_history`.
 - [ ] Criar query de auditoria de coleta.
 - [ ] Detectar gaps de coleta por post.
