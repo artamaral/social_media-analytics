@@ -29,11 +29,14 @@ Sem confirmacao explicita do usuario, a atividade deve ser tratada como ideia ou
 Status atual:
 
 ```text
-Sprint ativo: a definir
+Sprint ativo: Sprint 1 - Confiabilidade da coleta social media
 Datas: a definir conforme disponibilidade do usuario
 ```
 
-Enquanto nao houver sprint ativo definido, somente atividades de planejamento, documentacao de agenda, triagem e priorizacao devem ser executadas automaticamente. Implementacoes, alteracoes de pipeline, SQL ou dashboard devem aguardar confirmacao.
+Enquanto o Sprint 1 estiver ativo, apenas tarefas relacionadas a confiabilidade
+da coleta social media devem ser executadas automaticamente. Implementacoes,
+alteracoes de pipeline, SQL ou dashboard fora deste escopo devem aguardar
+confirmacao.
 
 ## Visao geral
 
@@ -93,11 +96,79 @@ Validar se os dados historicos permitem analise sem risco operacional relevante.
 
 ### Atividades
 
-- Validar posts sem historico em `post_metrics_history`.
-- Validar `collected_at` nulo ou defasado.
+- [x] Validar posts sem historico em `post_metrics_history`.
+- [ ] Validar `collected_at` nulo ou defasado.
 - Detectar gaps de coleta por post.
 - Confirmar creators sem posts ou posts sem creator.
 - Checar se videos `unavailable` estao isolados corretamente.
+
+### Progresso
+
+#### Atividade 1 - Posts sem historico
+
+Status: concluida em 2026-06-16.
+
+Query criada:
+
+- `sql/dml/audit_posts_without_snapshots.sql`
+
+Resultado observado:
+
+- posts ativos sem snapshot: `0`
+- posts sem snapshot por indisponibilidade confirmada: `4`
+- todos os casos retornados tinham `failure_status = unavailable` e
+  `human_review_status = confirmed_unavailable`
+
+Leitura:
+
+- nao ha evidencia de post ativo perdido sem snapshot
+- os casos sem historico pertencem ao fluxo de indisponibilidade, nao a uma
+  falha comum de coleta ou guardrail
+
+#### Atividade 2 - Validar `collected_at` nulo ou defasado
+
+Objetivo:
+
+- confirmar se `posts.collected_at` esta preenchido para posts ativos
+- confirmar se `posts.collected_at` acompanha o ultimo snapshot de
+  `post_metrics_history`
+- separar diferenca operacional aceitavel de inconsistencia real
+
+Etapas:
+
+1. Listar posts ativos com `posts.collected_at is null`.
+2. Separar o resultado por `failure_status` para nao misturar videos
+   indisponiveis com falha ativa de coleta.
+3. Comparar `posts.collected_at` com `max(post_metrics_history.collected_at)`
+   por `post_id`.
+4. Identificar posts em que existe snapshot mais recente que
+   `posts.collected_at`.
+5. Identificar posts em que `posts.collected_at` existe, mas nao ha snapshot
+   correspondente em `post_metrics_history`.
+6. Agrupar inconsistencias por idade do video:
+   - `new_0_3d`
+   - `recent_4_7d`
+   - `warm_8_30d`
+   - `old_30d_plus`
+7. Classificar achados:
+   - bloqueador: post ativo com historico, mas `collected_at` nulo ou muito
+     atrasado sem justificativa
+   - atencao: diferenca pequena entre ultimo snapshot e `posts.collected_at`
+   - esperado: videos `unavailable` confirmados ou candidatos em auditoria
+8. Registrar a conclusao antes de avancar para gaps de coleta.
+
+Queries esperadas:
+
+- auditoria de `collected_at is null`
+- comparacao entre `posts.collected_at` e ultimo snapshot
+- resumo agregado por `failure_status` e `video_age_bucket`
+
+Criterio de conclusao:
+
+- posts ativos com `collected_at` nulo: `0`, ou lista justificada
+- divergencias entre `posts.collected_at` e ultimo snapshot: `0`, ou lista
+  classificada por severidade
+- videos `unavailable` separados da leitura principal de qualidade
 
 ### Documentacao relacionada
 
