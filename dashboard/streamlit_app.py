@@ -2071,7 +2071,6 @@ def build_overview_recent_activity_chart(chart_df: pd.DataFrame) -> Any:
         y=chart_df["posts_publicados"],
         name="Posts publicados",
         marker_color="#ff8069",
-        border_radius=6,
         hovertemplate="Semana %{x}<br>Posts publicados: %{y}<extra></extra>",
     )
     fig.add_scatter(
