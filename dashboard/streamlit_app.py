@@ -1736,28 +1736,109 @@ def render_data_quality_raw_tables(
 
 
 def render_overview() -> None:
-    guardrail_rows, dead_posts, _queue_rows, _queue_error, errors = load_data_quality_context()
+    creator_rows, creator_error = get_view_rows("v_dashboard_creator_summary")
+    weekly_rows, weekly_error = get_filtered_rows(
+        "v_dashboard_creator_weekly_activity",
+        filters=(("video_type", "todos"),),
+    )
+    fenabrave_rows, fenabrave_error = get_view_rows("v_dashboard_fenabrave_monthly_segments")
+    errors = [error for error in [creator_error, weekly_error, fenabrave_error] if error]
+    base_summary = summarize_overview_creator_base(creator_rows)
+    recent_summary = summarize_overview_recent_activity(creator_rows, weekly_rows)
+    fenabrave_summary = summarize_overview_fenabrave(fenabrave_rows)
+
     page_header(
         "Social Media Analytics",
         "Dashboard interno para estudos de mercado automotivo",
-        "Setup inicial",
+        "Overview",
     )
+    page_subtitle("Leitura macro da base monitorada, sem aprofundamento analitico pesado.")
 
-    render_connection_notice(errors[0] if errors else None)
-    render_data_quality_cards(guardrail_rows, dead_posts, errors)
+    if errors:
+        st.warning(" | ".join(errors))
 
     st.write("")
-    left, right = st.columns([1, 2])
+    overview_cols = st.columns(4)
+    with overview_cols[0]:
+        metric_card(
+            "Creators monitorados",
+            format_int(base_summary["creators_monitorados"]),
+            "Base ativa acompanhada pelo dashboard",
+            "CR",
+        )
+    with overview_cols[1]:
+        metric_card(
+            "Posts monitorados",
+            format_int(base_summary["posts_monitorados"]),
+            "Volume atual dentro da base observada",
+            "VD",
+        )
+    with overview_cols[2]:
+        metric_card(
+            "Plataformas cobertas",
+            format_int(base_summary["plataformas_cobertas"]),
+            base_summary["plataformas_legenda"],
+            "SH",
+        )
+    with overview_cols[3]:
+        metric_card(
+            "Nichos cobertos",
+            format_int(base_summary["nichos_cobertos"]),
+            base_summary["nichos_legenda"],
+            "RK",
+        )
+
+    st.markdown("### Atividade recente")
+    recent_cols = st.columns(3)
+    with recent_cols[0]:
+        metric_card(
+            "Creators com atividade",
+            format_int(recent_summary["creators_ativos_semana"]),
+            recent_summary["semana_legenda"],
+            "CR",
+        )
+    with recent_cols[1]:
+        metric_card(
+            "Posts na ultima semana",
+            format_int(recent_summary["posts_publicados_semana"]),
+            "Videos publicados na janela fechada mais recente",
+            "VD",
+        )
+    with recent_cols[2]:
+        metric_card(
+            "Coleta recente",
+            format_int(recent_summary["creators_coleta_recente"]),
+            "Creators com coleta observada nos ultimos 7 dias",
+            "VW",
+        )
+
+    st.write("")
+    left, right = st.columns([1.6, 1])
     with left:
-        placeholder_card(
-            "Proximo passo",
-            "Validar grants/RLS das views e depois liberar ranking de criadores e crescimento semanal.",
+        process_banner(
+            "Estado macro da base",
+            (
+                f"Ultima coleta observada em {base_summary['ultima_coleta_legenda']}. "
+                f"Ultimo post observado em {base_summary['ultimo_post_legenda']}. "
+                f"A janela semanal mais recente fechada e {recent_summary['semana_legenda_curta']}."
+            ),
         )
     with right:
         placeholder_card(
-            "Area de analise",
-            "Este bloco recebera graficos e tabelas depois da validacao das views existentes no Supabase.",
+            "Fenabrave em resumo",
+            (
+                f"{fenabrave_summary['periodo']}. "
+                f"{fenabrave_summary['lider']}. "
+                f"{fenabrave_summary['total']}"
+            ),
         )
+        if st.button("Ver Data Quality", use_container_width=True):
+            st.session_state["nav_page"] = "Data quality"
+            st.rerun()
+
+    st.caption(
+        "Os numeros desta tela descrevem a base monitorada e o estado geral do monitoramento, nao o universo completo de videos de cada creator."
+    )
 
 
 def render_placeholder_page(title: str, description: str) -> None:
@@ -1839,6 +1920,151 @@ def format_month_label(period: pd.Timestamp) -> str:
         12: "dez",
     }
     return f"{month_names[int(period.month)]}/{int(period.year)}"
+
+
+def summarize_overview_creator_base(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    if not rows:
+        return {
+            "creators_monitorados": 0,
+            "posts_monitorados": 0,
+            "plataformas_cobertas": 0,
+            "nichos_cobertos": 0,
+            "plataformas_legenda": "Sem plataformas carregadas",
+            "nichos_legenda": "Sem nichos carregados",
+            "ultima_coleta_legenda": "--",
+            "ultimo_post_legenda": "--",
+        }
+
+    df = pd.DataFrame(rows)
+    posts_monitorados = int(pd.to_numeric(df.get("post_count"), errors="coerce").fillna(0).sum())
+
+    platforms = sorted(
+        {
+            str(value).strip()
+            for value in df.get("platform", pd.Series(dtype="object")).tolist()
+            if str(value).strip() and str(value).strip().lower() != "nan"
+        }
+    )
+    niches = sorted(
+        {
+            str(value).strip()
+            for value in df.get("niche", pd.Series(dtype="object")).tolist()
+            if str(value).strip() and str(value).strip().lower() != "nan"
+        }
+    )
+
+    latest_collected = pd.to_datetime(df.get("latest_collected_at"), errors="coerce", utc=True)
+    latest_post = pd.to_datetime(df.get("latest_post_date"), errors="coerce", utc=True)
+
+    return {
+        "creators_monitorados": int(len(df)),
+        "posts_monitorados": posts_monitorados,
+        "plataformas_cobertas": len(platforms),
+        "nichos_cobertos": len(niches),
+        "plataformas_legenda": humanize_overview_list(platforms, "plataforma"),
+        "nichos_legenda": humanize_overview_list(niches, "nicho"),
+        "ultima_coleta_legenda": format_overview_date(latest_collected.max()),
+        "ultimo_post_legenda": format_overview_date(latest_post.max()),
+    }
+
+
+def summarize_overview_recent_activity(
+    creator_rows: list[dict[str, Any]],
+    weekly_rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    recent_collectors = 0
+    if creator_rows:
+        creator_df = pd.DataFrame(creator_rows)
+        latest_collected = pd.to_datetime(
+            creator_df.get("latest_collected_at"),
+            errors="coerce",
+            utc=True,
+        )
+        cutoff = pd.Timestamp.now(tz="UTC") - pd.Timedelta(days=7)
+        recent_collectors = int((latest_collected >= cutoff).fillna(False).sum())
+
+    if not weekly_rows:
+        return {
+            "creators_ativos_semana": 0,
+            "posts_publicados_semana": 0,
+            "semana_legenda": "Sem janela semanal carregada",
+            "semana_legenda_curta": "--",
+            "creators_coleta_recente": recent_collectors,
+        }
+
+    weekly_df = pd.DataFrame(weekly_rows)
+    weekly_df["week_end"] = pd.to_datetime(weekly_df.get("week_end"), errors="coerce", utc=True)
+    latest_week_end = weekly_df["week_end"].max()
+    latest_week_rows = weekly_df[weekly_df["week_end"] == latest_week_end].copy()
+
+    creators_ativos = int(
+        latest_week_rows.loc[
+            pd.to_numeric(latest_week_rows.get("videos_publicados"), errors="coerce").fillna(0) > 0,
+            "creator_id",
+        ].nunique()
+    )
+    posts_publicados = int(
+        pd.to_numeric(latest_week_rows.get("videos_publicados"), errors="coerce").fillna(0).sum()
+    )
+    week_label = str(latest_week_rows["week_label"].dropna().iloc[0]) if not latest_week_rows.empty else "Sem semana fechada"
+
+    return {
+        "creators_ativos_semana": creators_ativos,
+        "posts_publicados_semana": posts_publicados,
+        "semana_legenda": f"Janela fechada: {week_label}",
+        "semana_legenda_curta": week_label,
+        "creators_coleta_recente": recent_collectors,
+    }
+
+
+def summarize_overview_fenabrave(rows: list[dict[str, Any]]) -> dict[str, str]:
+    if not rows:
+        return {
+            "periodo": "Fenabrave sem dados carregados",
+            "lider": "Categoria lider indisponivel",
+            "total": "Mercado mensal indisponivel",
+        }
+
+    df = pd.DataFrame(rows)
+    df["reference_period"] = pd.to_datetime(df.get("reference_period"), errors="coerce")
+    latest_period = df["reference_period"].max()
+    latest_df = df[df["reference_period"] == latest_period].copy()
+
+    if latest_df.empty or pd.isna(latest_period):
+        return {
+            "periodo": "Fenabrave sem periodo valido",
+            "lider": "Categoria lider indisponivel",
+            "total": "Mercado mensal indisponivel",
+        }
+
+    latest_df["monthly_units"] = pd.to_numeric(latest_df.get("monthly_units"), errors="coerce").fillna(0)
+    leader_row = latest_df.sort_values("monthly_units", ascending=False).iloc[0]
+    total_units = int(latest_df["monthly_units"].sum())
+
+    return {
+        "periodo": f"Referencia {format_month_label(pd.Timestamp(latest_period))}",
+        "lider": f"Lideranca em {leader_row['segment_label']}: {format_int(leader_row['monthly_units'])}",
+        "total": f"Mercado do mes: {format_int(total_units)} unidades",
+    }
+
+
+def humanize_overview_list(values: list[str], singular_label: str) -> str:
+    if not values:
+        return f"Sem {singular_label}s carregados"
+    if len(values) == 1:
+        return values[0].title()
+    if len(values) == 2:
+        return f"{values[0].title()} e {values[1].title()}"
+    return f"{values[0].title()} + {len(values) - 1} outros"
+
+
+def format_overview_date(value: Any) -> str:
+    if value is None or value == "" or pd.isna(value):
+        return "--"
+    timestamp = pd.Timestamp(value)
+    if timestamp.tzinfo is None:
+        timestamp = timestamp.tz_localize("UTC")
+    return timestamp.tz_convert("America/Sao_Paulo").strftime("%d/%m/%Y")
 
 
 def render_fenabrave_dashboard_page() -> None:
