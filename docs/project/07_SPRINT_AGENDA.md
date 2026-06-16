@@ -773,7 +773,7 @@ Decisao para a Atividade 3:
 
 #### Atividade 3 - Confirmar impacto da migration nova de `next_check`
 
-Status: planejada.
+Status: concluida em 2026-06-16.
 
 Objetivo:
 
@@ -850,6 +850,75 @@ Resultado esperado:
 - decisao documentada sobre a migration de `next_check`;
 - insumo para a Fase 2 da Sprint 2, focada em lote `50`, guardrail `6` e
   decisao final de manter ou ajustar a regra.
+
+Resultado observado:
+
+- `old_30d_plus | covered_3_49 | priority_band = 2`
+  - `total_posts = 1021`
+  - `posts_vencidos = 824`
+  - `posts_no_batch_atual = 7`
+  - `p95_staleness_days = 6.00`
+- `old_30d_plus | covered_3_49 | priority_band = 1`
+  - `total_posts = 1002`
+  - `posts_vencidos = 778`
+  - `posts_no_batch_atual = 5`
+  - `p95_staleness_days = 5.91`
+- `old_30d_plus | covered_3_49 | priority_band = 3`
+  - `total_posts = 485`
+  - `posts_vencidos = 338`
+  - `posts_no_batch_atual = 6`
+  - `p95_staleness_days = 3.00`
+- `warm_8_30d | covered_3_49 | priority_band = 2`
+  - `total_posts = 324`
+  - `posts_vencidos = 313`
+  - `posts_no_batch_atual = 0`
+  - `p95_staleness_days = 4.02`
+- `warm_8_30d | covered_3_49 | priority_band = 1`
+  - `total_posts = 268`
+  - `posts_vencidos = 232`
+  - `posts_no_batch_atual = 1`
+  - `p95_staleness_days = 5.83`
+
+Leitura:
+
+- os grupos `overchecked_*` e bandas `5` e `6` aparecem com `p95` muito baixo,
+  em geral entre `0.20` e `0.70` dias, sem dominar o atraso total
+- isso indica que a desaceleracao de posts muito checados e bandas altas
+  parece estar funcionando como esperado
+- o backlog pesado continua concentrado em `covered_3_49`, sobretudo em
+  `old_30d_plus` e `warm_8_30d` das bandas `1` e `2`
+- o grupo `warm_8_30d | covered_3_49 | priority_band = 2` continua como sinal
+  forte de baixa aderencia do batch atual, com `313` vencidos e `0` itens no
+  batch
+
+Interpretacao:
+
+- houve impacto saudavel da migration sobre os grupos que ela pretendia
+  desacelerar
+- nao ha evidência nesta leitura de que posts superchecados ou bandas altas
+  estejam pressionando indevidamente a fila
+- o problema remanescente parece ser operacional:
+  - capacidade pratica insuficiente para o volume das bandas baixas e medias
+  - distribuicao insuficiente do batch atual
+  - possivel necessidade de revisar refill/cotas antes de nova mudanca de
+    `next_check`
+
+Conclusao:
+
+- decisao recomendada: manter a regra atual de `next_check` em observacao
+- nao ha sinal forte para ajustar novamente a frequencia neste momento
+- o proximo ajuste deve priorizar capacidade e distribuicao da fila, nao uma
+  nova mudanca na logica temporal
+
+Saida da Fase 1:
+
+- a migration nova de `next_check` pode ser considerada funcional do ponto de
+  vista de desaceleracao de `warm/old` muito checados
+- a principal frente aberta passa a ser a Fase 2 da Sprint 2:
+  - verificar se lote `50` com guardrail `6` esta suficiente
+  - revisar refill/cotas por banda
+  - decidir se o ajuste deve ser de capacidade, distribuicao ou combinacao dos
+    dois
 
 ### Documentacao relacionada
 
