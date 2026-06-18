@@ -34,6 +34,7 @@
 - [ ] Tela inicial com status de qualidade dos dados
 - [ ] Ranking de creators por views, engajamento e frequencia
 - [ ] Ranking semanal de crescimento de videos
+- [ ] Rechecar a regra fina de desempate do ranking `YouTube > Melhores videos 7d` apos avaliacao visual da tela em uso real, antes de consolidar a ordenacao como contrato definitivo.
 - [ ] Filtros por plataforma, creator, nicho e subnicho
 - [ ] Exportacao CSV dos rankings principais
 
