@@ -95,6 +95,42 @@
       font-weight: 700;
       border: 1px solid rgba(255,255,255,0.07);
     }
+    .toolbar {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 14px;
+    }
+    .selector {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      padding: 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .selector-label {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 0 6px 0 4px;
+    }
+    .selector-button {
+      border: 0;
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .selector-button.active {
+      background: var(--accent);
+      color: white;
+    }
     .hero-side {
       padding: 18px;
       display: grid;
@@ -118,60 +154,6 @@
       font-size: 14px;
       line-height: 1.5;
       color: var(--text);
-    }
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 12px;
-      margin-bottom: 18px;
-    }
-    .kpi {
-      background: var(--surface-3);
-      color: var(--text-dark);
-      border-radius: 16px;
-      overflow: hidden;
-      border: 1px solid rgba(255,255,255,0.06);
-      min-height: 132px;
-    }
-    .kpi-head {
-      padding: 12px 14px;
-      background: var(--surface-2);
-      color: var(--text);
-      font-size: 12px;
-      font-weight: 800;
-      text-transform: uppercase;
-    }
-    .kpi-body {
-      padding: 16px;
-    }
-    .kpi-value {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      font-size: 30px;
-      font-weight: 800;
-      line-height: 1.05;
-    }
-    .kpi-icon {
-      width: 42px;
-      height: 42px;
-      border-radius: 8px;
-      background: var(--accent);
-      color: white;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 13px;
-      font-weight: 800;
-      flex: 0 0 auto;
-    }
-    .kpi-caption {
-      margin-top: 10px;
-      font-size: 12px;
-      font-weight: 700;
-      color: #606774;
-      text-transform: uppercase;
     }
     .panel {
       background: linear-gradient(180deg, rgba(31, 36, 45, 0.96), rgba(20, 24, 31, 0.96));
@@ -223,7 +205,7 @@
     tbody td {
       padding: 16px 20px;
       border-bottom: 1px solid rgba(255,255,255,0.06);
-      vertical-align: top;
+      vertical-align: middle;
     }
     tbody tr:hover {
       background: rgba(255,255,255,0.03);
@@ -234,11 +216,78 @@
       color: var(--accent);
       line-height: 1;
     }
+    .thumb-shell {
+      width: 112px;
+      height: 64px;
+      border-radius: 12px;
+      border: 1px dashed rgba(255,255,255,0.18);
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02)),
+        rgba(255,255,255,0.02);
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+    }
+    .thumb-placeholder {
+      display: grid;
+      gap: 6px;
+      justify-items: center;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-size: 10px;
+      font-weight: 800;
+    }
+    .thumb-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.12);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: var(--text);
+      background: rgba(255,255,255,0.04);
+    }
+    .channel-name {
+      display: inline-flex;
+      align-items: center;
+      margin-bottom: 8px;
+      padding: 4px 0;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
     .video-title {
       font-size: 15px;
       font-weight: 700;
       line-height: 1.45;
       margin-bottom: 8px;
+    }
+    .video-support {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .video-support-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.05);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .video-support-label {
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #8991a0;
     }
     .video-meta {
       display: flex;
@@ -255,18 +304,10 @@
       font-size: 11px;
       font-weight: 700;
     }
-    .metric-stack {
-      display: grid;
-      gap: 4px;
-    }
-    .metric-label {
-      font-size: 11px;
-      color: var(--muted);
-      text-transform: uppercase;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-    }
     .metric-number {
+      display: flex;
+      align-items: center;
+      min-height: 64px;
       font-size: 16px;
       font-weight: 800;
       color: var(--text);
@@ -279,17 +320,14 @@
     }
     @media (max-width: 1080px) {
       .hero { grid-template-columns: 1fr; }
-      .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
     @media (max-width: 760px) {
       body { padding: 16px; }
-      .kpi-grid { grid-template-columns: 1fr; }
       .panel-head { display: grid; }
       thead { display: none; }
       table, tbody, tr, td { display: block; width: 100%; }
       tbody td { padding: 12px 18px; }
       tbody tr { padding: 6px 0; }
-      .metric-stack { gap: 2px; }
     }
   </style>
 </head>
@@ -311,11 +349,15 @@
       <div class="hero-side">
         <div class="hero-note">
           <div class="hero-note-title">Janela usada</div>
-          <div class="hero-note-copy">10/06/2026 ate 15/06/2026</div>
+          <div class="hero-note-copy">06/06/2026 ate 15/06/2026</div>
+        </div>
+        <div class="hero-note">
+          <div class="hero-note-title">Semantica de 7d</div>
+          <div class="hero-note-copy">Ultimos 7 dias completos fechados, excluindo o dia atual parcial.</div>
         </div>
         <div class="hero-note">
           <div class="hero-note-title">Dados usados</div>
-          <div class="hero-note-copy">`post_date`, `title`, `views`, `likes`, `comments`</div>
+          <div class="hero-note-copy">`video_type`, `channel_name`, `post_date`, `title`, `views`, `likes`, `comments`, `latest_collected_at`, `snapshot_count`</div>
         </div>
         <div class="hero-note">
           <div class="hero-note-title">Dado faltante assumido</div>
@@ -324,49 +366,28 @@
       </div>
     </section>
 
-    <section class="kpi-grid">
-      <article class="kpi">
-        <div class="kpi-head">Videos no ranking</div>
-        <div class="kpi-body">
-          <div class="kpi-value"><span>6</span><span class="kpi-icon">VD</span></div>
-          <div class="kpi-caption">janela atual do mockup</div>
-        </div>
-      </article>
-      <article class="kpi">
-        <div class="kpi-head">Views somadas</div>
-        <div class="kpi-body">
-          <div class="kpi-value"><span>2.096.390</span><span class="kpi-icon">VW</span></div>
-          <div class="kpi-caption">volume observado nos videos listados</div>
-        </div>
-      </article>
-      <article class="kpi">
-        <div class="kpi-head">Likes somados</div>
-        <div class="kpi-body">
-          <div class="kpi-value"><span>128.780</span><span class="kpi-icon">LK</span></div>
-          <div class="kpi-caption">apoio social agregado</div>
-        </div>
-      </article>
-      <article class="kpi">
-        <div class="kpi-head">Comentarios somados</div>
-        <div class="kpi-body">
-          <div class="kpi-value"><span>9.184</span><span class="kpi-icon">CM</span></div>
-          <div class="kpi-caption">sinal conversacional agregado</div>
-        </div>
-      </article>
-    </section>
+    <div class="toolbar">
+      <div class="selector">
+        <span class="selector-label">Tipo de video</span>
+        <button class="selector-button active" data-filter="todos">Todos</button>
+        <button class="selector-button" data-filter="long">Long</button>
+        <button class="selector-button" data-filter="short">Short</button>
+      </div>
+    </div>
 
     <section class="panel">
       <div class="panel-head">
         <div>
           <div class="panel-title">Ranking editorial dos videos</div>
-          <div class="panel-copy">Conceito inspirado na pagina de video stats do template da Windsor, adaptado para a base atual do projeto e sem thumbnail.</div>
+          <div class="panel-copy">Conceito inspirado na pagina de video stats do template da Windsor, adaptado para a base atual do projeto e sem thumbnail. Cada filtro sempre mostra os 10 melhores videos dentro do universo selecionado.</div>
         </div>
-        <div class="legend-pill">ordenado por views no mockup</div>
+        <div class="legend-pill">top 10 por filtro | ordenado por views no mockup</div>
       </div>
       <table>
         <thead>
           <tr>
             <th>#</th>
+            <th>Thumbnail</th>
             <th>Video</th>
             <th>Data da publicacao</th>
             <th>Views</th>
@@ -375,89 +396,285 @@
           </tr>
         </thead>
         <tbody>
-          <tr>
+          <tr data-video-type="long">
               <td><div class="rank">1</div></td>
               <td>
+                <div class="thumb-shell">
+                  <div class="thumb-placeholder">
+                    <span class="thumb-icon">IMG</span>
+                    <span>thumbnail</span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="channel-name">Auto Mercado Brasil</div>
                 <div class="video-title">Tracker diesel 2026: consumo real e o que mudou na pratica</div>
+                <div class="video-support">
+                  <span class="video-support-item"><span class="video-support-label">tipo</span><span>LONG</span></span>
+                  <span class="video-support-item"><span class="video-support-label">ultimo snapshot</span><span>18/06 09:20</span></span>
+                  <span class="video-support-item"><span class="video-support-label">snapshots</span><span>14</span></span>
+                </div>
                 <div class="video-meta">
                   <span class="video-badge">sem thumbnail</span>
                   <span class="video-badge">mockup conceitual</span>
                 </div>
               </td>
-              <td><div class="metric-stack"><div class="metric-label">publicado em</div><div class="metric-number">15/06/2026</div></div></td>
-              <td><div class="metric-stack"><div class="metric-label">views</div><div class="metric-number">418.200</div></div></td>
-              <td><div class="metric-stack"><div class="metric-label">likes</div><div class="metric-number">28.400</div></div></td>
-              <td><div class="metric-stack"><div class="metric-label">comentarios</div><div class="metric-number">1.860</div></div></td>
+              <td><div class="metric-number">15/06/2026</div></td>
+              <td><div class="metric-number">418.200</div></td>
+              <td><div class="metric-number">28.400</div></td>
+              <td><div class="metric-number">1.860</div></td>
             </tr>
-<tr>
+<tr data-video-type="short">
               <td><div class="rank">2</div></td>
               <td>
+                <div class="thumb-shell">
+                  <div class="thumb-placeholder">
+                    <span class="thumb-icon">IMG</span>
+                    <span>thumbnail</span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="channel-name">Carro Chefe</div>
                 <div class="video-title">BYD Dolphin Mini vs Kwid E-Tech: qual faz mais sentido hoje</div>
+                <div class="video-support">
+                  <span class="video-support-item"><span class="video-support-label">tipo</span><span>SHORT</span></span>
+                  <span class="video-support-item"><span class="video-support-label">ultimo snapshot</span><span>18/06 08:45</span></span>
+                  <span class="video-support-item"><span class="video-support-label">snapshots</span><span>12</span></span>
+                </div>
                 <div class="video-meta">
                   <span class="video-badge">sem thumbnail</span>
                   <span class="video-badge">mockup conceitual</span>
                 </div>
               </td>
-              <td><div class="metric-stack"><div class="metric-label">publicado em</div><div class="metric-number">14/06/2026</div></div></td>
-              <td><div class="metric-stack"><div class="metric-label">views</div><div class="metric-number">392.150</div></div></td>
-              <td><div class="metric-stack"><div class="metric-label">likes</div><div class="metric-number">25.340</div></div></td>
-              <td><div class="metric-stack"><div class="metric-label">comentarios</div><div class="metric-number">2.195</div></div></td>
+              <td><div class="metric-number">14/06/2026</div></td>
+              <td><div class="metric-number">392.150</div></td>
+              <td><div class="metric-number">25.340</div></td>
+              <td><div class="metric-number">2.195</div></td>
             </tr>
-<tr>
+<tr data-video-type="long">
               <td><div class="rank">3</div></td>
               <td>
+                <div class="thumb-shell">
+                  <div class="thumb-placeholder">
+                    <span class="thumb-icon">IMG</span>
+                    <span>thumbnail</span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="channel-name">Guia dos Usados</div>
                 <div class="video-title">10 SUVs usados ate 90 mil que ainda valem a compra</div>
+                <div class="video-support">
+                  <span class="video-support-item"><span class="video-support-label">tipo</span><span>LONG</span></span>
+                  <span class="video-support-item"><span class="video-support-label">ultimo snapshot</span><span>18/06 08:10</span></span>
+                  <span class="video-support-item"><span class="video-support-label">snapshots</span><span>11</span></span>
+                </div>
                 <div class="video-meta">
                   <span class="video-badge">sem thumbnail</span>
                   <span class="video-badge">mockup conceitual</span>
                 </div>
               </td>
-              <td><div class="metric-stack"><div class="metric-label">publicado em</div><div class="metric-number">13/06/2026</div></div></td>
-              <td><div class="metric-stack"><div class="metric-label">views</div><div class="metric-number">355.980</div></div></td>
-              <td><div class="metric-stack"><div class="metric-label">likes</div><div class="metric-number">21.110</div></div></td>
-              <td><div class="metric-stack"><div class="metric-label">comentarios</div><div class="metric-number">1.498</div></div></td>
+              <td><div class="metric-number">13/06/2026</div></td>
+              <td><div class="metric-number">355.980</div></td>
+              <td><div class="metric-number">21.110</div></td>
+              <td><div class="metric-number">1.498</div></td>
             </tr>
-<tr>
+<tr data-video-type="long">
               <td><div class="rank">4</div></td>
               <td>
+                <div class="thumb-shell">
+                  <div class="thumb-placeholder">
+                    <span class="thumb-icon">IMG</span>
+                    <span>thumbnail</span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="channel-name">Pista e Mercado</div>
                 <div class="video-title">Nivus GTS: primeiras impressoes, acertos e exageros</div>
+                <div class="video-support">
+                  <span class="video-support-item"><span class="video-support-label">tipo</span><span>LONG</span></span>
+                  <span class="video-support-item"><span class="video-support-label">ultimo snapshot</span><span>18/06 07:30</span></span>
+                  <span class="video-support-item"><span class="video-support-label">snapshots</span><span>10</span></span>
+                </div>
                 <div class="video-meta">
                   <span class="video-badge">sem thumbnail</span>
                   <span class="video-badge">mockup conceitual</span>
                 </div>
               </td>
-              <td><div class="metric-stack"><div class="metric-label">publicado em</div><div class="metric-number">12/06/2026</div></div></td>
-              <td><div class="metric-stack"><div class="metric-label">views</div><div class="metric-number">332.440</div></div></td>
-              <td><div class="metric-stack"><div class="metric-label">likes</div><div class="metric-number">19.480</div></div></td>
-              <td><div class="metric-stack"><div class="metric-label">comentarios</div><div class="metric-number">1.331</div></div></td>
+              <td><div class="metric-number">12/06/2026</div></td>
+              <td><div class="metric-number">332.440</div></td>
+              <td><div class="metric-number">19.480</div></td>
+              <td><div class="metric-number">1.331</div></td>
             </tr>
-<tr>
+<tr data-video-type="short">
               <td><div class="rank">5</div></td>
               <td>
+                <div class="thumb-shell">
+                  <div class="thumb-placeholder">
+                    <span class="thumb-icon">IMG</span>
+                    <span>thumbnail</span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="channel-name">Analise Automotiva</div>
                 <div class="video-title">Corolla Cross 2026: onde ele melhorou e onde ainda decepciona</div>
+                <div class="video-support">
+                  <span class="video-support-item"><span class="video-support-label">tipo</span><span>SHORT</span></span>
+                  <span class="video-support-item"><span class="video-support-label">ultimo snapshot</span><span>18/06 06:55</span></span>
+                  <span class="video-support-item"><span class="video-support-label">snapshots</span><span>9</span></span>
+                </div>
                 <div class="video-meta">
                   <span class="video-badge">sem thumbnail</span>
                   <span class="video-badge">mockup conceitual</span>
                 </div>
               </td>
-              <td><div class="metric-stack"><div class="metric-label">publicado em</div><div class="metric-number">11/06/2026</div></div></td>
-              <td><div class="metric-stack"><div class="metric-label">views</div><div class="metric-number">309.700</div></div></td>
-              <td><div class="metric-stack"><div class="metric-label">likes</div><div class="metric-number">17.860</div></div></td>
-              <td><div class="metric-stack"><div class="metric-label">comentarios</div><div class="metric-number">1.204</div></div></td>
+              <td><div class="metric-number">11/06/2026</div></td>
+              <td><div class="metric-number">309.700</div></td>
+              <td><div class="metric-number">17.860</div></td>
+              <td><div class="metric-number">1.204</div></td>
             </tr>
-<tr>
+<tr data-video-type="long">
               <td><div class="rank">6</div></td>
               <td>
+                <div class="thumb-shell">
+                  <div class="thumb-placeholder">
+                    <span class="thumb-icon">IMG</span>
+                    <span>thumbnail</span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="channel-name">Radar dos Carros</div>
                 <div class="video-title">Mercado de usados aqueceu? sinais reais nas lojas e nos anuncios</div>
+                <div class="video-support">
+                  <span class="video-support-item"><span class="video-support-label">tipo</span><span>LONG</span></span>
+                  <span class="video-support-item"><span class="video-support-label">ultimo snapshot</span><span>18/06 06:20</span></span>
+                  <span class="video-support-item"><span class="video-support-label">snapshots</span><span>8</span></span>
+                </div>
                 <div class="video-meta">
                   <span class="video-badge">sem thumbnail</span>
                   <span class="video-badge">mockup conceitual</span>
                 </div>
               </td>
-              <td><div class="metric-stack"><div class="metric-label">publicado em</div><div class="metric-number">10/06/2026</div></div></td>
-              <td><div class="metric-stack"><div class="metric-label">views</div><div class="metric-number">287.920</div></div></td>
-              <td><div class="metric-stack"><div class="metric-label">likes</div><div class="metric-number">16.590</div></div></td>
-              <td><div class="metric-stack"><div class="metric-label">comentarios</div><div class="metric-number">1.096</div></div></td>
+              <td><div class="metric-number">10/06/2026</div></td>
+              <td><div class="metric-number">287.920</div></td>
+              <td><div class="metric-number">16.590</div></td>
+              <td><div class="metric-number">1.096</div></td>
+            </tr>
+<tr data-video-type="short">
+              <td><div class="rank">7</div></td>
+              <td>
+                <div class="thumb-shell">
+                  <div class="thumb-placeholder">
+                    <span class="thumb-icon">IMG</span>
+                    <span>thumbnail</span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="channel-name">Giro Curto Auto</div>
+                <div class="video-title">3 hatches usados que ainda fazem sentido em 2026</div>
+                <div class="video-support">
+                  <span class="video-support-item"><span class="video-support-label">tipo</span><span>SHORT</span></span>
+                  <span class="video-support-item"><span class="video-support-label">ultimo snapshot</span><span>17/06 22:45</span></span>
+                  <span class="video-support-item"><span class="video-support-label">snapshots</span><span>7</span></span>
+                </div>
+                <div class="video-meta">
+                  <span class="video-badge">sem thumbnail</span>
+                  <span class="video-badge">mockup conceitual</span>
+                </div>
+              </td>
+              <td><div class="metric-number">09/06/2026</div></td>
+              <td><div class="metric-number">245.300</div></td>
+              <td><div class="metric-number">14.990</div></td>
+              <td><div class="metric-number">980</div></td>
+            </tr>
+<tr data-video-type="long">
+              <td><div class="rank">8</div></td>
+              <td>
+                <div class="thumb-shell">
+                  <div class="thumb-placeholder">
+                    <span class="thumb-icon">IMG</span>
+                    <span>thumbnail</span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="channel-name">Compara Motor</div>
+                <div class="video-title">Sentra, Corolla ou Civic: comparativo real de uso</div>
+                <div class="video-support">
+                  <span class="video-support-item"><span class="video-support-label">tipo</span><span>LONG</span></span>
+                  <span class="video-support-item"><span class="video-support-label">ultimo snapshot</span><span>17/06 21:30</span></span>
+                  <span class="video-support-item"><span class="video-support-label">snapshots</span><span>7</span></span>
+                </div>
+                <div class="video-meta">
+                  <span class="video-badge">sem thumbnail</span>
+                  <span class="video-badge">mockup conceitual</span>
+                </div>
+              </td>
+              <td><div class="metric-number">08/06/2026</div></td>
+              <td><div class="metric-number">233.880</div></td>
+              <td><div class="metric-number">14.120</div></td>
+              <td><div class="metric-number">944</div></td>
+            </tr>
+<tr data-video-type="short">
+              <td><div class="rank">9</div></td>
+              <td>
+                <div class="thumb-shell">
+                  <div class="thumb-placeholder">
+                    <span class="thumb-icon">IMG</span>
+                    <span>thumbnail</span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="channel-name">Auto em 1 Minuto</div>
+                <div class="video-title">SUV turbo ou aspirado: qual bebe menos?</div>
+                <div class="video-support">
+                  <span class="video-support-item"><span class="video-support-label">tipo</span><span>SHORT</span></span>
+                  <span class="video-support-item"><span class="video-support-label">ultimo snapshot</span><span>17/06 20:50</span></span>
+                  <span class="video-support-item"><span class="video-support-label">snapshots</span><span>6</span></span>
+                </div>
+                <div class="video-meta">
+                  <span class="video-badge">sem thumbnail</span>
+                  <span class="video-badge">mockup conceitual</span>
+                </div>
+              </td>
+              <td><div class="metric-number">07/06/2026</div></td>
+              <td><div class="metric-number">221.740</div></td>
+              <td><div class="metric-number">13.680</div></td>
+              <td><div class="metric-number">901</div></td>
+            </tr>
+<tr data-video-type="long">
+              <td><div class="rank">10</div></td>
+              <td>
+                <div class="thumb-shell">
+                  <div class="thumb-placeholder">
+                    <span class="thumb-icon">IMG</span>
+                    <span>thumbnail</span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="channel-name">Planilha Automotiva</div>
+                <div class="video-title">Os sedans medios com melhor custo de propriedade hoje</div>
+                <div class="video-support">
+                  <span class="video-support-item"><span class="video-support-label">tipo</span><span>LONG</span></span>
+                  <span class="video-support-item"><span class="video-support-label">ultimo snapshot</span><span>17/06 20:05</span></span>
+                  <span class="video-support-item"><span class="video-support-label">snapshots</span><span>6</span></span>
+                </div>
+                <div class="video-meta">
+                  <span class="video-badge">sem thumbnail</span>
+                  <span class="video-badge">mockup conceitual</span>
+                </div>
+              </td>
+              <td><div class="metric-number">06/06/2026</div></td>
+              <td><div class="metric-number">214.560</div></td>
+              <td><div class="metric-number">12.940</div></td>
+              <td><div class="metric-number">855</div></td>
             </tr>
         </tbody>
       </table>
@@ -466,5 +683,30 @@
       Preview local gerado para iterar conceito e hierarquia visual antes da implementacao da pagina real no Streamlit.
     </div>
   </div>
+  <script>
+    const filterButtons = Array.from(document.querySelectorAll('.selector-button'));
+    const tableRows = Array.from(document.querySelectorAll('tbody tr[data-video-type]'));
+
+    function applyFilter(filterValue) {
+      let visibleCount = 0;
+      filterButtons.forEach((button) => {
+        button.classList.toggle('active', button.dataset.filter === filterValue);
+      });
+      tableRows.forEach((row) => {
+        const rowType = (row.getAttribute('data-video-type') || '').toLowerCase();
+        const matchesFilter = filterValue === 'todos' || rowType === filterValue;
+        const show = matchesFilter && visibleCount < 10;
+        row.style.display = show ? '' : 'none';
+        if (show) {
+          visibleCount += 1;
+        }
+      });
+    }
+
+    filterButtons.forEach((button) => {
+      button.addEventListener('click', () => applyFilter(button.dataset.filter || 'todos'));
+    });
+    applyFilter('todos');
+  </script>
 </body>
 </html>

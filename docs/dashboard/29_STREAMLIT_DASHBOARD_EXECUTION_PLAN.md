@@ -58,6 +58,15 @@ Leitura do pre-flight:
   3. trocar `Creators` para dados reais em toda a visao geral
   4. implementar `YouTube > Melhores 7d`
 
+Definicoes atuais para `YouTube > Melhores 7d`:
+
+- `Todos` mostra os `10` melhores videos no ranking geral
+- `Long` mostra os `10` melhores videos `long`
+- `Short` mostra os `10` melhores videos `short`
+- a janela nao deve incluir o dia atual parcial
+- a leitura oficial da tela deve usar `7` dias completos fechados
+- a janela precisa aparecer claramente na interface
+
 Tarefas:
 
 - revisar `docs/dashboard/16_ONLINE_DASHBOARD_SUPABASE_SPEC.md`

@@ -1978,6 +1978,16 @@ Escopo minimo:
 - filtros minimos que nao compliquem o MVP
 - mensagens de Data Quality antes da leitura do ranking
 
+Definicoes aprovadas para a tela:
+
+- o filtro `Todos` deve mostrar sempre os `10` melhores videos no ranking geral
+- o filtro `Long` deve mostrar sempre os `10` melhores videos `long`
+- o filtro `Short` deve mostrar sempre os `10` melhores videos `short`
+- `Melhores 7d` deve usar `7` dias completos fechados, excluindo o dia atual
+  parcial
+- a janela precisa aparecer explicitamente na tela, para evitar leitura
+  ambigua de periodo
+
 Etapas:
 
 1. Confirmar contrato da `v_dashboard_post_growth_7d`.
@@ -1987,9 +1997,16 @@ Etapas:
    - views novas
    - crescimento percentual ou delta equivalente disponivel
    - periodo de referencia
-3. Desenhar a tela com foco em leitura rapida, nao em exploracao pesada.
-4. Tratar base vazia, erro de permissao e dado parcial.
-5. Garantir que a tela nao concorra semanticamente com `Hot now`.
+3. Aplicar o comportamento fixo de `top 10` por filtro:
+   - `Todos`
+   - `Long`
+   - `Short`
+4. Explicitar na UI a semantica da janela:
+   - `7` dias completos fechados
+   - dia atual parcial fora da leitura
+5. Desenhar a tela com foco em leitura rapida, nao em exploracao pesada.
+6. Tratar base vazia, erro de permissao e dado parcial.
+7. Garantir que a tela nao concorra semanticamente com `Hot now`.
 
 Criterio de conclusao:
 
@@ -2007,6 +2024,8 @@ Saida esperada:
 
 - nova pagina real de ranking semanal
 - leitura objetiva do que cresceu na janela de 7 dias
+- top `10` consistente por filtro
+- janela sem ambiguidade temporal na UI
 - separacao semantica clara entre crescimento semanal e futuro `Hot now`
 
 Evidencia de conclusao:

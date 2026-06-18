@@ -8,46 +8,114 @@ from pathlib import Path
 
 SAMPLE_ROWS = [
     {
+        "video_type": "long",
         "post_date": "2026-06-15",
+        "channel_name": "Auto Mercado Brasil",
         "title": "Tracker diesel 2026: consumo real e o que mudou na pratica",
         "views": 418200,
         "likes": 28400,
         "comments": 1860,
+        "latest_collected_at": "2026-06-18 09:20",
+        "snapshot_count": 14,
     },
     {
+        "video_type": "short",
         "post_date": "2026-06-14",
+        "channel_name": "Carro Chefe",
         "title": "BYD Dolphin Mini vs Kwid E-Tech: qual faz mais sentido hoje",
         "views": 392150,
         "likes": 25340,
         "comments": 2195,
+        "latest_collected_at": "2026-06-18 08:45",
+        "snapshot_count": 12,
     },
     {
+        "video_type": "long",
         "post_date": "2026-06-13",
+        "channel_name": "Guia dos Usados",
         "title": "10 SUVs usados ate 90 mil que ainda valem a compra",
         "views": 355980,
         "likes": 21110,
         "comments": 1498,
+        "latest_collected_at": "2026-06-18 08:10",
+        "snapshot_count": 11,
     },
     {
+        "video_type": "long",
         "post_date": "2026-06-12",
+        "channel_name": "Pista e Mercado",
         "title": "Nivus GTS: primeiras impressoes, acertos e exageros",
         "views": 332440,
         "likes": 19480,
         "comments": 1331,
+        "latest_collected_at": "2026-06-18 07:30",
+        "snapshot_count": 10,
     },
     {
+        "video_type": "short",
         "post_date": "2026-06-11",
+        "channel_name": "Analise Automotiva",
         "title": "Corolla Cross 2026: onde ele melhorou e onde ainda decepciona",
         "views": 309700,
         "likes": 17860,
         "comments": 1204,
+        "latest_collected_at": "2026-06-18 06:55",
+        "snapshot_count": 9,
     },
     {
+        "video_type": "long",
         "post_date": "2026-06-10",
+        "channel_name": "Radar dos Carros",
         "title": "Mercado de usados aqueceu? sinais reais nas lojas e nos anuncios",
         "views": 287920,
         "likes": 16590,
         "comments": 1096,
+        "latest_collected_at": "2026-06-18 06:20",
+        "snapshot_count": 8,
+    },
+    {
+        "video_type": "short",
+        "post_date": "2026-06-09",
+        "channel_name": "Giro Curto Auto",
+        "title": "3 hatches usados que ainda fazem sentido em 2026",
+        "views": 245300,
+        "likes": 14990,
+        "comments": 980,
+        "latest_collected_at": "2026-06-17 22:45",
+        "snapshot_count": 7,
+    },
+    {
+        "video_type": "long",
+        "post_date": "2026-06-08",
+        "channel_name": "Compara Motor",
+        "title": "Sentra, Corolla ou Civic: comparativo real de uso",
+        "views": 233880,
+        "likes": 14120,
+        "comments": 944,
+        "latest_collected_at": "2026-06-17 21:30",
+        "snapshot_count": 7,
+    },
+    {
+        "video_type": "short",
+        "post_date": "2026-06-07",
+        "channel_name": "Auto em 1 Minuto",
+        "title": "SUV turbo ou aspirado: qual bebe menos?",
+        "views": 221740,
+        "likes": 13680,
+        "comments": 901,
+        "latest_collected_at": "2026-06-17 20:50",
+        "snapshot_count": 6,
+    },
+    {
+        "video_type": "long",
+        "post_date": "2026-06-06",
+        "channel_name": "Planilha Automotiva",
+        "title": "Os sedans medios com melhor custo de propriedade hoje",
+        "views": 214560,
+        "likes": 12940,
+        "comments": 855,
+        "latest_collected_at": "2026-06-17 20:05",
+        "snapshot_count": 6,
     },
 ]
 
@@ -149,6 +217,42 @@ HTML_TEMPLATE = """<!doctype html>
       font-weight: 700;
       border: 1px solid rgba(255,255,255,0.07);
     }}
+    .toolbar {{
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 14px;
+    }}
+    .selector {{
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      padding: 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+    }}
+    .selector-label {{
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 0 6px 0 4px;
+    }}
+    .selector-button {{
+      border: 0;
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }}
+    .selector-button.active {{
+      background: var(--accent);
+      color: white;
+    }}
     .hero-side {{
       padding: 18px;
       display: grid;
@@ -172,60 +276,6 @@ HTML_TEMPLATE = """<!doctype html>
       font-size: 14px;
       line-height: 1.5;
       color: var(--text);
-    }}
-    .kpi-grid {{
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 12px;
-      margin-bottom: 18px;
-    }}
-    .kpi {{
-      background: var(--surface-3);
-      color: var(--text-dark);
-      border-radius: 16px;
-      overflow: hidden;
-      border: 1px solid rgba(255,255,255,0.06);
-      min-height: 132px;
-    }}
-    .kpi-head {{
-      padding: 12px 14px;
-      background: var(--surface-2);
-      color: var(--text);
-      font-size: 12px;
-      font-weight: 800;
-      text-transform: uppercase;
-    }}
-    .kpi-body {{
-      padding: 16px;
-    }}
-    .kpi-value {{
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      font-size: 30px;
-      font-weight: 800;
-      line-height: 1.05;
-    }}
-    .kpi-icon {{
-      width: 42px;
-      height: 42px;
-      border-radius: 8px;
-      background: var(--accent);
-      color: white;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 13px;
-      font-weight: 800;
-      flex: 0 0 auto;
-    }}
-    .kpi-caption {{
-      margin-top: 10px;
-      font-size: 12px;
-      font-weight: 700;
-      color: #606774;
-      text-transform: uppercase;
     }}
     .panel {{
       background: linear-gradient(180deg, rgba(31, 36, 45, 0.96), rgba(20, 24, 31, 0.96));
@@ -277,7 +327,7 @@ HTML_TEMPLATE = """<!doctype html>
     tbody td {{
       padding: 16px 20px;
       border-bottom: 1px solid rgba(255,255,255,0.06);
-      vertical-align: top;
+      vertical-align: middle;
     }}
     tbody tr:hover {{
       background: rgba(255,255,255,0.03);
@@ -288,11 +338,78 @@ HTML_TEMPLATE = """<!doctype html>
       color: var(--accent);
       line-height: 1;
     }}
+    .thumb-shell {{
+      width: 112px;
+      height: 64px;
+      border-radius: 12px;
+      border: 1px dashed rgba(255,255,255,0.18);
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02)),
+        rgba(255,255,255,0.02);
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+    }}
+    .thumb-placeholder {{
+      display: grid;
+      gap: 6px;
+      justify-items: center;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-size: 10px;
+      font-weight: 800;
+    }}
+    .thumb-icon {{
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.12);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: var(--text);
+      background: rgba(255,255,255,0.04);
+    }}
+    .channel-name {{
+      display: inline-flex;
+      align-items: center;
+      margin-bottom: 8px;
+      padding: 4px 0;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }}
     .video-title {{
       font-size: 15px;
       font-weight: 700;
       line-height: 1.45;
       margin-bottom: 8px;
+    }}
+    .video-support {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }}
+    .video-support-item {{
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.05);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+    }}
+    .video-support-label {{
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #8991a0;
     }}
     .video-meta {{
       display: flex;
@@ -309,18 +426,10 @@ HTML_TEMPLATE = """<!doctype html>
       font-size: 11px;
       font-weight: 700;
     }}
-    .metric-stack {{
-      display: grid;
-      gap: 4px;
-    }}
-    .metric-label {{
-      font-size: 11px;
-      color: var(--muted);
-      text-transform: uppercase;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-    }}
     .metric-number {{
+      display: flex;
+      align-items: center;
+      min-height: 64px;
       font-size: 16px;
       font-weight: 800;
       color: var(--text);
@@ -333,17 +442,14 @@ HTML_TEMPLATE = """<!doctype html>
     }}
     @media (max-width: 1080px) {{
       .hero {{ grid-template-columns: 1fr; }}
-      .kpi-grid {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
     }}
     @media (max-width: 760px) {{
       body {{ padding: 16px; }}
-      .kpi-grid {{ grid-template-columns: 1fr; }}
       .panel-head {{ display: grid; }}
       thead {{ display: none; }}
       table, tbody, tr, td {{ display: block; width: 100%; }}
       tbody td {{ padding: 12px 18px; }}
       tbody tr {{ padding: 6px 0; }}
-      .metric-stack {{ gap: 2px; }}
     }}
   </style>
 </head>
@@ -368,8 +474,12 @@ HTML_TEMPLATE = """<!doctype html>
           <div class="hero-note-copy">{window_label}</div>
         </div>
         <div class="hero-note">
+          <div class="hero-note-title">Semantica de 7d</div>
+          <div class="hero-note-copy">Ultimos 7 dias completos fechados, excluindo o dia atual parcial.</div>
+        </div>
+        <div class="hero-note">
           <div class="hero-note-title">Dados usados</div>
-          <div class="hero-note-copy">`post_date`, `title`, `views`, `likes`, `comments`</div>
+          <div class="hero-note-copy">`video_type`, `channel_name`, `post_date`, `title`, `views`, `likes`, `comments`, `latest_collected_at`, `snapshot_count`</div>
         </div>
         <div class="hero-note">
           <div class="hero-note-title">Dado faltante assumido</div>
@@ -378,49 +488,28 @@ HTML_TEMPLATE = """<!doctype html>
       </div>
     </section>
 
-    <section class="kpi-grid">
-      <article class="kpi">
-        <div class="kpi-head">Videos no ranking</div>
-        <div class="kpi-body">
-          <div class="kpi-value"><span>{videos_total}</span><span class="kpi-icon">VD</span></div>
-          <div class="kpi-caption">janela atual do mockup</div>
-        </div>
-      </article>
-      <article class="kpi">
-        <div class="kpi-head">Views somadas</div>
-        <div class="kpi-body">
-          <div class="kpi-value"><span>{views_total}</span><span class="kpi-icon">VW</span></div>
-          <div class="kpi-caption">volume observado nos videos listados</div>
-        </div>
-      </article>
-      <article class="kpi">
-        <div class="kpi-head">Likes somados</div>
-        <div class="kpi-body">
-          <div class="kpi-value"><span>{likes_total}</span><span class="kpi-icon">LK</span></div>
-          <div class="kpi-caption">apoio social agregado</div>
-        </div>
-      </article>
-      <article class="kpi">
-        <div class="kpi-head">Comentarios somados</div>
-        <div class="kpi-body">
-          <div class="kpi-value"><span>{comments_total}</span><span class="kpi-icon">CM</span></div>
-          <div class="kpi-caption">sinal conversacional agregado</div>
-        </div>
-      </article>
-    </section>
+    <div class="toolbar">
+      <div class="selector">
+        <span class="selector-label">Tipo de video</span>
+        <button class="selector-button active" data-filter="todos">Todos</button>
+        <button class="selector-button" data-filter="long">Long</button>
+        <button class="selector-button" data-filter="short">Short</button>
+      </div>
+    </div>
 
     <section class="panel">
       <div class="panel-head">
         <div>
           <div class="panel-title">Ranking editorial dos videos</div>
-          <div class="panel-copy">Conceito inspirado na pagina de video stats do template da Windsor, adaptado para a base atual do projeto e sem thumbnail.</div>
+          <div class="panel-copy">Conceito inspirado na pagina de video stats do template da Windsor, adaptado para a base atual do projeto e sem thumbnail. Cada filtro sempre mostra os 10 melhores videos dentro do universo selecionado.</div>
         </div>
-        <div class="legend-pill">ordenado por views no mockup</div>
+        <div class="legend-pill">top 10 por filtro | ordenado por views no mockup</div>
       </div>
       <table>
         <thead>
           <tr>
             <th>#</th>
+            <th>Thumbnail</th>
             <th>Video</th>
             <th>Data da publicacao</th>
             <th>Views</th>
@@ -437,6 +526,31 @@ HTML_TEMPLATE = """<!doctype html>
       Preview local gerado para iterar conceito e hierarquia visual antes da implementacao da pagina real no Streamlit.
     </div>
   </div>
+  <script>
+    const filterButtons = Array.from(document.querySelectorAll('.selector-button'));
+    const tableRows = Array.from(document.querySelectorAll('tbody tr[data-video-type]'));
+
+    function applyFilter(filterValue) {{
+      let visibleCount = 0;
+      filterButtons.forEach((button) => {{
+        button.classList.toggle('active', button.dataset.filter === filterValue);
+      }});
+      tableRows.forEach((row) => {{
+        const rowType = (row.getAttribute('data-video-type') || '').toLowerCase();
+        const matchesFilter = filterValue === 'todos' || rowType === filterValue;
+        const show = matchesFilter && visibleCount < 10;
+        row.style.display = show ? '' : 'none';
+        if (show) {{
+          visibleCount += 1;
+        }}
+      }});
+    }}
+
+    filterButtons.forEach((button) => {{
+      button.addEventListener('click', () => applyFilter(button.dataset.filter || 'todos'));
+    }});
+    applyFilter('todos');
+  </script>
 </body>
 </html>
 """
@@ -449,7 +563,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--input",
         type=Path,
-        help="CSV opcional com colunas: post_date,title,views,likes,comments",
+        help="CSV opcional com colunas: video_type,channel_name,post_date,title,views,likes,comments,latest_collected_at,snapshot_count",
     )
     parser.add_argument(
         "--output",
@@ -471,6 +585,18 @@ def format_date(value: str) -> str:
         return value
 
 
+def format_timestamp(value: str) -> str:
+    if not value:
+        return "--"
+    normalized = value.replace("T", " ")
+    for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%d %H:%M:%S"):
+        try:
+            return datetime.strptime(normalized, fmt).strftime("%d/%m %H:%M")
+        except ValueError:
+            continue
+    return value
+
+
 def load_rows(path: Path | None) -> list[dict[str, object]]:
     if path is None:
         return SAMPLE_ROWS
@@ -480,11 +606,15 @@ def load_rows(path: Path | None) -> list[dict[str, object]]:
         for row in reader:
             rows.append(
                 {
+                    "video_type": str(row.get("video_type") or "long").strip().lower(),
+                    "channel_name": str(row.get("channel_name") or "").strip(),
                     "post_date": str(row.get("post_date") or "").strip(),
                     "title": str(row.get("title") or "").strip(),
                     "views": int(float(row.get("views") or 0)),
                     "likes": int(float(row.get("likes") or 0)),
                     "comments": int(float(row.get("comments") or 0)),
+                    "latest_collected_at": str(row.get("latest_collected_at") or "").strip(),
+                    "snapshot_count": int(float(row.get("snapshot_count") or 0)),
                 }
             )
         return rows
@@ -495,23 +625,42 @@ def build_table_rows(rows: list[dict[str, object]]) -> str:
     for index, row in enumerate(sorted(rows, key=lambda item: int(item["views"]), reverse=True), start=1):
         html_rows.append(
             """
-            <tr>
+            <tr data-video-type="{video_type}">
               <td><div class="rank">{rank}</div></td>
               <td>
+                <div class="thumb-shell">
+                  <div class="thumb-placeholder">
+                    <span class="thumb-icon">IMG</span>
+                    <span>thumbnail</span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="channel-name">{channel_name}</div>
                 <div class="video-title">{title}</div>
+                <div class="video-support">
+                  <span class="video-support-item"><span class="video-support-label">tipo</span><span>{video_type_badge}</span></span>
+                  <span class="video-support-item"><span class="video-support-label">ultimo snapshot</span><span>{latest_collected_at}</span></span>
+                  <span class="video-support-item"><span class="video-support-label">snapshots</span><span>{snapshot_count}</span></span>
+                </div>
                 <div class="video-meta">
                   <span class="video-badge">sem thumbnail</span>
                   <span class="video-badge">mockup conceitual</span>
                 </div>
               </td>
-              <td><div class="metric-stack"><div class="metric-label">publicado em</div><div class="metric-number">{post_date}</div></div></td>
-              <td><div class="metric-stack"><div class="metric-label">views</div><div class="metric-number">{views}</div></div></td>
-              <td><div class="metric-stack"><div class="metric-label">likes</div><div class="metric-number">{likes}</div></div></td>
-              <td><div class="metric-stack"><div class="metric-label">comentarios</div><div class="metric-number">{comments}</div></div></td>
+              <td><div class="metric-number">{post_date}</div></td>
+              <td><div class="metric-number">{views}</div></td>
+              <td><div class="metric-number">{likes}</div></td>
+              <td><div class="metric-number">{comments}</div></td>
             </tr>
             """.format(
                 rank=index,
+                video_type=escape(str(row.get("video_type") or "long").lower()),
+                video_type_badge=escape(str(row.get("video_type") or "long").upper()),
+                channel_name=escape(str(row.get("channel_name") or "Canal sem nome")),
                 title=escape(str(row["title"])),
+                latest_collected_at=escape(format_timestamp(str(row.get("latest_collected_at") or ""))),
+                snapshot_count=escape(format_int(int(row.get("snapshot_count") or 0))),
                 post_date=escape(format_date(str(row["post_date"]))),
                 views=escape(format_int(int(row["views"]))),
                 likes=escape(format_int(int(row["likes"]))),
@@ -523,18 +672,10 @@ def build_table_rows(rows: list[dict[str, object]]) -> str:
 
 def render_html(rows: list[dict[str, object]]) -> str:
     rows_sorted = sorted(rows, key=lambda item: int(item["views"]), reverse=True)
-    videos_total = format_int(len(rows_sorted))
-    views_total = format_int(sum(int(row["views"]) for row in rows_sorted))
-    likes_total = format_int(sum(int(row["likes"]) for row in rows_sorted))
-    comments_total = format_int(sum(int(row["comments"]) for row in rows_sorted))
     dates = [str(row["post_date"]) for row in rows_sorted if row.get("post_date")]
     window_label = f"{format_date(min(dates))} ate {format_date(max(dates))}" if dates else "Janela sem data"
     return HTML_TEMPLATE.format(
         window_label=escape(window_label),
-        videos_total=escape(videos_total),
-        views_total=escape(views_total),
-        likes_total=escape(likes_total),
-        comments_total=escape(comments_total),
         table_rows=build_table_rows(rows_sorted),
     )
 
