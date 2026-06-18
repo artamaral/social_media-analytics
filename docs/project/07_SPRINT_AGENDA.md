@@ -1422,14 +1422,407 @@ Status da Atividade 5:
 
 Transformar o Streamlit em ferramenta interna util para leitura executiva e estudos de mercado automotivo.
 
-### Atividades
+### Escopo fechado do sprint
 
-- Fechar pagina `Overview`.
-- Fechar pagina `Creators`.
-- Fechar leitura de crescimento semanal.
-- Garantir Data Quality antes dos rankings.
-- Validar views principais com Supabase.
-- Ajustar textos executivos, estados vazios e mensagens de erro.
+Este sprint deve fechar apenas o MVP analitico do dashboard com dados reais,
+sem abrir uma nova frente de produto.
+
+Inclui:
+
+- validar contratos das views minimas do dashboard no Supabase
+- fechar `Overview` como leitura macro da base monitorada
+- substituir mock da `Visao geral` de `Creators` por dados reais
+- implementar `Videos em crescimento` com `v_dashboard_post_growth_7d`
+- garantir leitura de Data Quality antes de qualquer ranking
+- ajustar estados vazios, mensagens de erro e textos executivos do MVP
+
+Nao inclui:
+
+- implementar `Hot now`
+- abrir nova modelagem SQL fora das views necessarias ao MVP
+- adicionar cadastro operacional novo como escopo principal do sprint
+- evoluir enrichment, classificacao ou modulos de IA
+
+### Estado atual observado
+
+Status observado no repositorio em 2026-06-18:
+
+- `Overview` ja consome views reais de creators, atividade semanal e Fenabrave
+- `Data quality` ja possui leitura real e bloco operacional proprio
+- `Criador individual` ja consome `v_dashboard_creator_summary`,
+  `v_dashboard_creator_weekly_activity` e `v_dashboard_creator_weekly_audience`
+- `Visao geral` de `Creators` ainda usa `get_creator_mock_rows()`
+- `Videos em crescimento` ainda esta em placeholder
+- `Hot now` continua explicitamente fora do MVP atual
+
+Leitura:
+
+- o bloqueio principal do Sprint 3 nao e mais infraestrutura
+- o trabalho agora e consolidacao de produto sobre views reais
+- a lacuna mais visivel do MVP esta em fechar ranking semanal e remover mocks
+
+### Atividades detalhadas
+
+#### Atividade 1 - Validar views minimas do MVP no Supabase
+
+Status: aberta.
+
+Objetivo:
+
+- confirmar que todas as views do Sprint 3 respondem com schema esperado,
+  leitura segura e dados suficientes para o app online
+
+Views minimas:
+
+- `public.v_dashboard_guardrail_coverage_status`
+- `public.v_dashboard_dead_post_validation_status`
+- `public.v_dashboard_creator_summary`
+- `public.v_dashboard_creator_weekly_activity`
+- `public.v_dashboard_creator_weekly_audience`
+- `public.v_dashboard_post_growth_7d`
+- `public.v_dashboard_fenabrave_monthly_segments`
+
+Etapas:
+
+1. Confirmar se cada view existe no repositorio SQL e no ambiente alvo.
+2. Validar leitura com a credencial segura usada pelo Streamlit.
+3. Confirmar nomes de colunas, tipos esperados e presenca de linhas reais.
+4. Registrar qualquer lacuna como:
+   - falha de permissao
+   - view nao aplicada
+   - coluna divergente
+   - base vazia
+5. Corrigir primeiro o contrato de dados antes de ajustar UI.
+
+Criterio de conclusao:
+
+- todas as views minimas respondem com leitura valida no app
+- qualquer divergencia de schema entre SQL e Streamlit esta resolvida
+- o app nao depende de dado mock para telas do escopo do sprint
+
+Dependencias:
+
+- views aplicadas no ambiente alvo
+- credencial de leitura do Streamlit funcionando
+- contrato esperado das colunas revisado no app
+
+Saida esperada:
+
+- checklist unico de validacao das views do Sprint 3
+- lista de gaps por view, quando houver
+- decisao objetiva sobre o que ja pode seguir para UI e o que precisa ajuste
+
+Evidencia de conclusao:
+
+- consultas funcionando no app ou no ambiente alvo
+- nomes de colunas confirmados contra o uso em `dashboard/streamlit_app.py`
+- registro dos gaps resolvidos ou classificados
+
+Execucao pratica:
+
+1. Revisar as views uma a uma.
+2. Comparar retorno real com os campos usados pelo Streamlit.
+3. Corrigir primeiro qualquer mismatch de contrato.
+4. Liberar somente depois a frente visual dependente da view.
+
+#### Atividade 2 - Fechar a pagina `Overview`
+
+Status: em andamento.
+
+Objetivo:
+
+- consolidar a `Overview` como leitura macro confiavel da base monitorada, com
+  foco em contexto executivo e nao em profundidade de ranking
+
+Escopo da tela:
+
+- KPIs de base monitorada
+- serie semanal de atividade recente
+- bloco macro de Fenabrave
+- ponte explicita para `Data quality`
+
+Etapas:
+
+1. Confirmar que os KPIs resumem a base monitorada e nao sugerem universo total
+   do mercado.
+2. Validar o comportamento do slider de semana fechada e seus estados vazios.
+3. Revisar legendas, titulos e captions para leitura executiva curta.
+4. Garantir que erros de view nao quebrem a tela inteira.
+5. Confirmar coerencia visual entre overview, cards e grafico recente.
+
+Criterio de conclusao:
+
+- `Overview` abre com dados reais sem depender de placeholder estrutural
+- estados sem dados ficam explicitos e honestos
+- a tela comunica base monitorada, janela temporal e limite analitico da leitura
+
+Dependencias:
+
+- Atividade 1 concluida para `v_dashboard_creator_summary`
+- Atividade 1 concluida para `v_dashboard_creator_weekly_activity`
+- Atividade 1 concluida para `v_dashboard_fenabrave_monthly_segments`
+
+Saida esperada:
+
+- `Overview` funcional com texto executivo consolidado
+- grafico semanal e cards coerentes com a leitura macro da base
+- navegacao clara para `Data quality`
+
+Evidencia de conclusao:
+
+- tela abrindo com dados reais
+- slider semanal funcionando com base preenchida e tambem em vazio controlado
+- ausencia de placeholder estrutural no fluxo principal da overview
+
+Execucao pratica:
+
+1. Validar a leitura dos KPIs macro.
+2. Ajustar a serie de atividade recente e o comportamento do slider.
+3. Revisar textos, captions e limite de interpretacao da tela.
+4. Confirmar fallback honesto quando alguma view vier vazia.
+
+#### Atividade 3 - Trocar `Creators > Visao geral` para dados reais
+
+Status: aberta.
+
+Objetivo:
+
+- substituir a carteira mockada por leitura real de `v_dashboard_creator_summary`
+  para transformar a tela em comparativo util da base monitorada
+
+Estado atual:
+
+- a tela ainda usa `get_creator_mock_rows()`
+- o criador individual ja esta ligado a views reais
+
+Etapas:
+
+1. Trocar a fonte principal da tela para `v_dashboard_creator_summary`.
+2. Manter filtros coerentes com as colunas realmente disponiveis.
+3. Recalcular KPIs agregados sobre a base filtrada real.
+4. Ajustar ranking comparativo para nao depender de campos inexistentes.
+5. Exibir mensagens claras quando a view vier vazia ou parcial.
+6. Garantir consistencia entre `Visao geral` e `Criador individual`.
+
+Criterio de conclusao:
+
+- a visao geral de creators nao usa mais mock
+- ranking, cards e filtros refletem dados reais da base
+- a navegacao entre visao geral e criador individual permanece coerente
+
+Dependencias:
+
+- Atividade 1 concluida para `v_dashboard_creator_summary`
+- alinhamento minimo com os campos do criador individual ja existente
+
+Saida esperada:
+
+- pagina comparativa de creators baseada apenas em leitura real
+- KPIs agregados e ranking coerentes com a carteira monitorada
+- remocao do uso de `get_creator_mock_rows()` na visao geral
+
+Evidencia de conclusao:
+
+- codigo da tela apontando para view real
+- cards e ranking refletindo a base filtrada real
+- tela funcionando mesmo com base parcial ou vazia
+
+Execucao pratica:
+
+1. Trocar a fonte dos dados.
+2. Recalcular agregacoes com a base real filtrada.
+3. Ajustar ranking e textos para os campos realmente disponiveis.
+4. Validar consistencia com a tela de criador individual.
+
+#### Atividade 4 - Implementar `Videos em crescimento`
+
+Status: aberta.
+
+Objetivo:
+
+- transformar o placeholder em uma tela funcional de crescimento semanal usando
+  `v_dashboard_post_growth_7d`
+
+Escopo minimo:
+
+- ranking semanal de videos em crescimento
+- contexto temporal claro
+- filtros minimos que nao compliquem o MVP
+- mensagens de Data Quality antes da leitura do ranking
+
+Etapas:
+
+1. Confirmar contrato da `v_dashboard_post_growth_7d`.
+2. Definir campos minimos do ranking:
+   - video
+   - creator
+   - views novas
+   - crescimento percentual ou delta equivalente disponivel
+   - periodo de referencia
+3. Desenhar a tela com foco em leitura rapida, nao em exploracao pesada.
+4. Tratar base vazia, erro de permissao e dado parcial.
+5. Garantir que a tela nao concorra semanticamente com `Hot now`.
+
+Criterio de conclusao:
+
+- a pagina `Videos em crescimento` deixa de ser placeholder
+- o ranking semanal e alimentado por view real
+- a leitura deixa claro que se trata de crescimento semanal, nao de tracao em
+  tempo quase real
+
+Dependencias:
+
+- Atividade 1 concluida para `v_dashboard_post_growth_7d`
+- decisao minima de layout para ranking semanal
+
+Saida esperada:
+
+- nova pagina real de ranking semanal
+- leitura objetiva do que cresceu na janela de 7 dias
+- separacao semantica clara entre crescimento semanal e futuro `Hot now`
+
+Evidencia de conclusao:
+
+- rota do menu deixa de chamar `render_placeholder_page`
+- tela exibe ranking real usando `v_dashboard_post_growth_7d`
+- estados de erro e vazio ficam controlados
+
+Execucao pratica:
+
+1. Confirmar colunas e significado da view.
+2. Montar cards e tabela ou ranking com foco em leitura rapida.
+3. Incluir contexto temporal da janela analisada.
+4. Validar fallback para view vazia ou indisponivel.
+
+#### Atividade 5 - Garantir `Data Quality` antes dos rankings
+
+Status: aberta.
+
+Objetivo:
+
+- manter a regra do projeto de que nenhuma leitura analitica relevante deve
+  aparecer sem contexto minimo de confiabilidade operacional
+
+Etapas:
+
+1. Definir onde a sinalizacao de qualidade aparece antes dos rankings.
+2. Reusar views ja consolidadas:
+   - `v_dashboard_guardrail_coverage_status`
+   - `v_dashboard_dead_post_validation_status`
+3. Decidir o formato minimo:
+   - banner
+   - cards
+   - aviso contextual
+4. Garantir que a sinalizacao seja visivel sem poluir a navegacao.
+5. Evitar que uma falha de Data Quality derrube toda a tela analitica.
+
+Criterio de conclusao:
+
+- rankings e comparativos aparecem acompanhados de contexto de confiabilidade
+- o dashboard nao incentiva leitura cega de ranking sem sinal operacional
+
+Dependencias:
+
+- Atividade 1 concluida para as views de Data Quality
+- definicao das telas que exibem ranking ou comparativo
+
+Saida esperada:
+
+- padrao unico de sinalizacao de confiabilidade antes de leitura analitica
+- reaproveitamento consistente dos dois KPIs principais de qualidade
+
+Evidencia de conclusao:
+
+- ranking semanal e comparativos acompanhados por contexto de qualidade
+- comportamento resiliente quando a leitura de qualidade falhar
+
+Execucao pratica:
+
+1. Definir o componente de contexto de qualidade.
+2. Aplicar esse componente nas telas comparativas do sprint.
+3. Verificar se a leitura de qualidade informa sem bloquear a navegacao.
+4. Ajustar o texto para orientar interpretacao e nao apenas mostrar alerta.
+
+#### Atividade 6 - Fechamento de UX e robustez do MVP
+
+Status: aberta.
+
+Objetivo:
+
+- fechar o MVP com acabamento suficiente para uso interno recorrente
+
+Etapas:
+
+1. Revisar textos de ajuda, captions e titulos das paginas do sprint.
+2. Ajustar estados vazios para cada tela principal.
+3. Revisar mensagens de erro para diferenciar:
+   - indisponibilidade de view
+   - falta de permissao
+   - ausencia real de dados
+4. Validar navegacao lateral do fluxo:
+   - `Overview`
+   - `Creators`
+   - `Videos em crescimento`
+   - `Data quality`
+5. Fazer smoke test local do app apos as trocas do sprint.
+
+Criterio de conclusao:
+
+- o app pode ser usado internamente sem ambiguidade forte de leitura
+- falhas comuns aparecem de forma clara e controlada
+- a navegacao do MVP fica consistente entre paginas reais
+
+Dependencias:
+
+- Atividades 2 a 5 implementadas ou suficientemente estabilizadas
+
+Saida esperada:
+
+- acabamento final do sprint
+- experiencia consistente entre telas reais do MVP
+- smoke test local documentado como ultimo passo de fechamento
+
+Evidencia de conclusao:
+
+- navegacao lateral funcionando nas paginas do escopo
+- mensagens de erro e vazio revisadas
+- validacao final local sem quebra evidente de fluxo
+
+Execucao pratica:
+
+1. Fazer uma passada completa no fluxo do MVP.
+2. Revisar textos, captions, erros e estados vazios.
+3. Ajustar consistencia visual e de navegacao.
+4. Rodar smoke test local antes de encerrar o sprint.
+
+### Ordem recomendada de execucao
+
+1. Validar views reais e contratos no Supabase.
+2. Fechar `Overview` com leitura macro confiavel.
+3. Remover mock da `Visao geral` de `Creators`.
+4. Implementar `Videos em crescimento`.
+5. Aplicar o gate de `Data Quality` antes dos rankings.
+6. Fazer acabamento final de UX, estados vazios e smoke test.
+
+### Plano de execucao por atividades
+
+| Ordem | Atividade | Objetivo operacional | Dependencia principal | Saida esperada | Evidencia de pronto |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Validar views minimas | garantir contrato de dados antes da UI | views aplicadas + leitura segura | checklist de validacao por view | consultas e colunas confirmadas |
+| 2 | Fechar `Overview` | consolidar a leitura macro da base | creators + weekly activity + Fenabrave validados | overview real e sem placeholder estrutural | tela com dados reais e fallback honesto |
+| 3 | Trocar `Creators > Visao geral` | remover mock e ligar carteira real | `v_dashboard_creator_summary` validada | comparativo de creators com base real | ausencia de `get_creator_mock_rows()` na visao geral |
+| 4 | Implementar `Videos em crescimento` | entregar ranking semanal funcional | `v_dashboard_post_growth_7d` validada | nova pagina real de crescimento | tela deixa de ser placeholder |
+| 5 | Garantir `Data Quality` antes dos rankings | reforcar a confiabilidade da leitura | views de Data Quality validadas | padrao unico de contexto de qualidade | ranking com sinal operacional visivel |
+| 6 | Fechamento de UX e robustez | preparar o sprint para uso interno recorrente | atividades anteriores estabilizadas | acabamento final e smoke test | fluxo do MVP navegavel e consistente |
+
+### Checklist de acompanhamento
+
+- [ ] Atividade 1 concluida
+- [ ] Atividade 2 concluida
+- [ ] Atividade 3 concluida
+- [ ] Atividade 4 concluida
+- [ ] Atividade 5 concluida
+- [ ] Atividade 6 concluida
 
 ### Documentacao relacionada
 
@@ -1440,9 +1833,12 @@ Transformar o Streamlit em ferramenta interna util para leitura executiva e estu
 
 ### Entregas
 
-- Dashboard interno navegavel com dados reais.
-- Leitura basica de qualidade, creators e crescimento.
+- Dashboard interno navegavel com telas principais do MVP ligadas a dados reais.
+- `Overview` fechada como leitura macro da base monitorada.
+- `Creators > Visao geral` sem mock e coerente com `Criador individual`.
+- `Videos em crescimento` implementada com ranking semanal real.
 - Confirmacao de que rankings aparecem depois dos sinais de confiabilidade.
+- Evidencia de que o MVP ficou pronto para uso interno recorrente.
 
 ### Pre-flight
 
