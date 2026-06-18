@@ -1877,15 +1877,16 @@ def render_overview() -> None:
         unsafe_allow_html=True,
     )
     available_weeks = len(recent_chart_df.index) if recent_chart_df is not None and not recent_chart_df.empty else 0
-    if available_weeks > 0:
-        min_window = 2 if available_weeks >= 2 else 1
-        default_window = min(OVERVIEW_RECENT_ACTIVITY_WINDOW_WEEKS, available_weeks)
-        selected_window_weeks = max(default_window, min_window)
-    else:
-        selected_window_weeks = OVERVIEW_RECENT_ACTIVITY_WINDOW_WEEKS
+    default_window_weeks = (
+        max(min(OVERVIEW_RECENT_ACTIVITY_WINDOW_WEEKS, available_weeks), 2 if available_weeks >= 2 else 1)
+        if available_weeks > 0
+        else OVERVIEW_RECENT_ACTIVITY_WINDOW_WEEKS
+    )
+    selected_week_label = None
     recent_chart_filtered = filter_overview_recent_activity_frame(
         recent_chart_df,
-        period_weeks=selected_window_weeks,
+        selected_week_label=selected_week_label,
+        trailing_weeks=default_window_weeks,
     )
     recent_focus = summarize_overview_recent_focus(recent_chart_filtered, recent_summary)
     recent_left, recent_right = st.columns([1.8, 1])
@@ -1893,26 +1894,25 @@ def render_overview() -> None:
         slider_col, _ = st.columns([0.55, 0.45])
         with slider_col:
             if available_weeks > 0:
-                selected_window_weeks = st.slider(
-                    "Janela semanal",
-                    min_value=min_window,
-                    max_value=available_weeks,
-                    value=max(default_window, min_window),
-                    step=1,
-                    key="overview_recent_window_weeks",
+                week_options = recent_chart_df.sort_values("week_end")["week_label"].dropna().astype(str).tolist()
+                selected_week_label = st.select_slider(
+                    "Semana fechada",
+                    options=week_options,
+                    value=week_options[-1],
+                    key="overview_recent_week_slider",
                 )
             else:
-                st.slider(
-                    "Janela semanal",
-                    min_value=1,
-                    max_value=1,
-                    value=1,
-                    key="overview_recent_window_weeks_empty",
+                st.select_slider(
+                    "Semana fechada",
+                    options=["Sem semana fechada"],
+                    value="Sem semana fechada",
+                    key="overview_recent_week_slider_empty",
                     disabled=True,
                 )
         recent_chart_filtered = filter_overview_recent_activity_frame(
             recent_chart_df,
-            period_weeks=selected_window_weeks,
+            selected_week_label=selected_week_label,
+            trailing_weeks=default_window_weeks,
         )
         recent_focus = summarize_overview_recent_focus(recent_chart_filtered, recent_summary)
         recent_fig = build_overview_recent_activity_chart(recent_chart_filtered)
@@ -2214,11 +2214,19 @@ def build_overview_recent_activity_frame(weekly_rows: list[dict[str, Any]]) -> p
     return grouped
 
 
-def filter_overview_recent_activity_frame(chart_df: pd.DataFrame, period_weeks: int) -> pd.DataFrame:
+def filter_overview_recent_activity_frame(
+    chart_df: pd.DataFrame,
+    selected_week_label: str | None,
+    trailing_weeks: int = OVERVIEW_RECENT_ACTIVITY_WINDOW_WEEKS,
+) -> pd.DataFrame:
     if chart_df is None or chart_df.empty:
         return pd.DataFrame()
     ordered = chart_df.sort_values("week_end").reset_index(drop=True)
-    return ordered.tail(period_weeks).copy()
+    if selected_week_label:
+        matched = ordered.index[ordered["week_label"].astype(str) == str(selected_week_label)].tolist()
+        if matched:
+            return ordered.iloc[: matched[-1] + 1].tail(trailing_weeks).copy()
+    return ordered.tail(trailing_weeks).copy()
 
 
 def summarize_overview_recent_focus(
