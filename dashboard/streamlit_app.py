@@ -1997,8 +1997,7 @@ def render_placeholder_page(title: str, description: str) -> None:
 
 
 def render_youtube_best_7d_page() -> None:
-    page_header("Melhores videos 7d", "Ranking semanal de crescimento no YouTube")
-    page_subtitle("Janela fixa de 7 dias completos fechados, sem incluir o dia atual parcial.")
+    page_header("Ranking semanal de crescimento")
 
     st.markdown(
         """
@@ -2008,12 +2007,7 @@ def render_youtube_best_7d_page() -> None:
             justify-content: space-between;
             align-items: center;
             gap: 1rem;
-            margin: 0.4rem 0 0.8rem;
-        }
-        .youtube-best-note {
-            color: var(--muted);
-            font-size: 0.84rem;
-            line-height: 1.35;
+            margin: 0.35rem 0 0.8rem;
         }
         .youtube-best-table {
             border: 1px solid rgba(255, 255, 255, 0.08);
@@ -2056,14 +2050,16 @@ def render_youtube_best_7d_page() -> None:
             display: grid;
             grid-template-columns: 48px 122px minmax(0, 1fr);
             gap: 0.9rem;
-            align-items: center;
+            align-items: start;
             padding: 1rem;
         }
         .youtube-best-rank {
-            font-size: 1.35rem;
+            font-size: 1.6rem;
             font-weight: 800;
             color: var(--text);
             text-align: center;
+            line-height: 1;
+            padding-top: 0.95rem;
         }
         .youtube-best-thumb {
             width: 122px;
@@ -2095,9 +2091,9 @@ def render_youtube_best_7d_page() -> None:
         }
         .youtube-best-title {
             color: var(--text);
-            font-size: 1rem;
+            font-size: 1.16rem;
             font-weight: 700;
-            line-height: 1.35;
+            line-height: 1.28;
             margin-bottom: 0.48rem;
             word-break: break-word;
         }
@@ -2178,14 +2174,8 @@ def render_youtube_best_7d_page() -> None:
         order_nulls_first=False,
         limit=10,
     )
-    render_connection_notice(error)
-
-    st.markdown(
-        '<div class="youtube-best-toolbar">'
-        '<div class="youtube-best-note">Top 10 por filtro. Ordenacao oficial vinda do Supabase por views_growth_pct_7d, com exibicao de crescimento 7d e dos numeros absolutos atuais do post.</div>'
-        "</div>",
-        unsafe_allow_html=True,
-    )
+    if error:
+        render_connection_notice(error)
 
     if error and not rows:
         placeholder_card(
@@ -2240,7 +2230,7 @@ def render_youtube_best_7d_page() -> None:
     st.markdown(
         '<div class="youtube-best-table">'
         '<div class="youtube-best-header">'
-        '<div class="youtube-best-head-cell video">Video</div>'
+        '<div class="youtube-best-head-cell video"># Video</div>'
         '<div class="youtube-best-head-cell">Data da publicacao</div>'
         '<div class="youtube-best-head-cell">%</div>'
         '<div class="youtube-best-head-cell">Views</div>'
