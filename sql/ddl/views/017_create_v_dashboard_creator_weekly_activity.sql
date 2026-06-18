@@ -47,7 +47,7 @@ published_by_type AS (
     cw.week_start,
     cw.week_end
 ),
-snapshot_history AS (
+snapshot_deltas AS (
   SELECT
     cp.creator_id,
     cp.entity_id,
@@ -85,7 +85,55 @@ snapshot_history AS (
     ROW_NUMBER() OVER (
       PARTITION BY cp.post_id, DATE_TRUNC('week', (pmh.collected_at - INTERVAL '3 hours'))::date
       ORDER BY pmh.collected_at DESC, pmh.id DESC
-    ) AS rn_week_last
+    ) AS rn_week_last,
+    CASE
+      WHEN LAG(pmh.collected_at) OVER (
+        PARTITION BY cp.post_id
+        ORDER BY pmh.collected_at ASC, pmh.id ASC
+      ) IS NULL THEN 0
+      ELSE GREATEST(
+        COALESCE(pmh.views, 0) - COALESCE(
+          LAG(COALESCE(pmh.views, 0)) OVER (
+            PARTITION BY cp.post_id
+            ORDER BY pmh.collected_at ASC, pmh.id ASC
+          ),
+          0
+        ),
+        0
+      )
+    END AS delta_views,
+    CASE
+      WHEN LAG(pmh.collected_at) OVER (
+        PARTITION BY cp.post_id
+        ORDER BY pmh.collected_at ASC, pmh.id ASC
+      ) IS NULL THEN 0
+      ELSE GREATEST(
+        COALESCE(pmh.likes, 0) - COALESCE(
+          LAG(COALESCE(pmh.likes, 0)) OVER (
+            PARTITION BY cp.post_id
+            ORDER BY pmh.collected_at ASC, pmh.id ASC
+          ),
+          0
+        ),
+        0
+      )
+    END AS delta_likes,
+    CASE
+      WHEN LAG(pmh.collected_at) OVER (
+        PARTITION BY cp.post_id
+        ORDER BY pmh.collected_at ASC, pmh.id ASC
+      ) IS NULL THEN 0
+      ELSE GREATEST(
+        COALESCE(pmh.comments, 0) - COALESCE(
+          LAG(COALESCE(pmh.comments, 0)) OVER (
+            PARTITION BY cp.post_id
+            ORDER BY pmh.collected_at ASC, pmh.id ASC
+          ),
+          0
+        ),
+        0
+      )
+    END AS delta_comments
   FROM public.post_metrics_history pmh
   JOIN creator_posts cp ON cp.post_id = pmh.post_id
   WHERE pmh.collected_at IS NOT NULL
@@ -101,19 +149,16 @@ metric_per_post_week AS (
     week_start,
     week_end,
     COUNT(*)::numeric AS snapshots_na_semana,
+    SUM(delta_views)::numeric AS views_novas,
+    SUM(delta_likes)::numeric AS likes_novos,
+    SUM(delta_comments)::numeric AS comentarios_novos,
     MAX(collected_at) FILTER (WHERE rn_week_first = 1) AS first_collected_at,
     MAX(collected_at) FILTER (WHERE rn_week_last = 1) AS last_collected_at,
-    MAX(views) FILTER (WHERE rn_week_first = 1) AS first_views,
-    MAX(views) FILTER (WHERE rn_week_last = 1) AS last_views,
-    MAX(likes) FILTER (WHERE rn_week_first = 1) AS first_likes,
-    MAX(likes) FILTER (WHERE rn_week_last = 1) AS last_likes,
-    MAX(comments) FILTER (WHERE rn_week_first = 1) AS first_comments,
-    MAX(comments) FILTER (WHERE rn_week_last = 1) AS last_comments,
-    MAX(prev_collected_at) FILTER (WHERE rn_week_first = 1) AS baseline_collected_at,
-    MAX(prev_views) FILTER (WHERE rn_week_first = 1) AS baseline_views,
-    MAX(prev_likes) FILTER (WHERE rn_week_first = 1) AS baseline_likes,
-    MAX(prev_comments) FILTER (WHERE rn_week_first = 1) AS baseline_comments
-  FROM snapshot_history
+    CASE
+      WHEN COUNT(*) FILTER (WHERE prev_collected_at IS NOT NULL) = 0 THEN 1
+      ELSE 0
+    END AS posts_sem_baseline_para_delta
+  FROM snapshot_deltas
   WHERE week_end < (TIMEZONE('America/Sao_Paulo', NOW()))::date
   GROUP BY
     creator_id,
@@ -134,21 +179,16 @@ metric_by_type AS (
     video_type,
     week_start,
     week_end,
-    SUM(
-      GREATEST(last_views - COALESCE(baseline_views, first_views), 0)
-    )::numeric AS views_novas,
-    SUM(
-      GREATEST(last_likes - COALESCE(baseline_likes, first_likes), 0)
-    )::numeric AS likes_novos,
-    SUM(
-      GREATEST(last_comments - COALESCE(baseline_comments, first_comments), 0)
-    )::numeric AS comentarios_novos,
+    SUM(views_novas)::numeric AS views_novas,
+    SUM(likes_novos)::numeric AS likes_novos,
+    SUM(comentarios_novos)::numeric AS comentarios_novos,
     COUNT(*)::numeric AS posts_com_snapshot_na_semana,
-    COUNT(*) FILTER (
-      WHERE baseline_collected_at IS NULL AND snapshots_na_semana < 2
-    )::numeric AS posts_sem_baseline_para_delta,
-    COUNT(*) FILTER (
-      WHERE baseline_collected_at IS NOT NULL OR snapshots_na_semana >= 2
+    SUM(posts_sem_baseline_para_delta)::numeric AS posts_sem_baseline_para_delta,
+    SUM(
+      CASE
+        WHEN posts_sem_baseline_para_delta = 0 THEN 1
+        ELSE 0
+      END
     )::numeric AS posts_com_base_para_delta,
     SUM(snapshots_na_semana)::numeric AS snapshots_na_semana
   FROM metric_per_post_week
@@ -192,9 +232,9 @@ typed_week_activity AS (
     k.week_start,
     k.week_end,
     COALESCE(p.videos_publicados, 0)::numeric AS videos_publicados,
-    m.views_novas,
-    m.likes_novos,
-    m.comentarios_novos,
+    COALESCE(m.views_novas, 0)::numeric AS views_novas,
+    COALESCE(m.likes_novos, 0)::numeric AS likes_novos,
+    COALESCE(m.comentarios_novos, 0)::numeric AS comentarios_novos,
     COALESCE(m.posts_com_snapshot_na_semana, 0)::numeric AS posts_com_snapshot_na_semana,
     COALESCE(m.posts_sem_baseline_para_delta, 0)::numeric AS posts_sem_baseline_para_delta,
     COALESCE(m.posts_com_base_para_delta, 0)::numeric AS posts_com_base_para_delta,
@@ -221,9 +261,9 @@ all_week_activity AS (
     week_start,
     week_end,
     SUM(videos_publicados)::numeric AS videos_publicados,
-    CASE WHEN SUM(posts_com_base_para_delta) > 0 THEN SUM(COALESCE(views_novas, 0))::numeric END AS views_novas,
-    CASE WHEN SUM(posts_com_base_para_delta) > 0 THEN SUM(COALESCE(likes_novos, 0))::numeric END AS likes_novos,
-    CASE WHEN SUM(posts_com_base_para_delta) > 0 THEN SUM(COALESCE(comentarios_novos, 0))::numeric END AS comentarios_novos,
+    SUM(views_novas)::numeric AS views_novas,
+    SUM(likes_novos)::numeric AS likes_novos,
+    SUM(comentarios_novos)::numeric AS comentarios_novos,
     SUM(posts_com_snapshot_na_semana)::numeric AS posts_com_snapshot_na_semana,
     SUM(posts_sem_baseline_para_delta)::numeric AS posts_sem_baseline_para_delta,
     SUM(posts_com_base_para_delta)::numeric AS posts_com_base_para_delta,
@@ -245,7 +285,10 @@ weekly_activity AS (
 weekly_with_previous AS (
   SELECT
     wa.*,
-    LAG(wa.views_novas) OVER (PARTITION BY wa.creator_id, wa.video_type ORDER BY wa.week_start) AS previous_views_novas
+    LAG(wa.views_novas) OVER (
+      PARTITION BY wa.creator_id, wa.video_type
+      ORDER BY wa.week_start
+    ) AS previous_views_novas
   FROM weekly_activity wa
 )
 SELECT

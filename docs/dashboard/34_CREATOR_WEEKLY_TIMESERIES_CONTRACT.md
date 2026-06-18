@@ -126,18 +126,16 @@ Semantica dos cards semanais:
 - os cards semanais devem consumir a linha do `video_type` selecionado no app:
   `todos`, `long` ou `short`
 - `videos_publicados` deve ser calculado por `public.posts.post_date`
-- `views_novas`, `likes_novos` e `comentarios_novos` devem somar o delta
-  efetivamente observado na semana, usando como base o ultimo snapshot
-  disponivel antes do inicio da semana; se nao houver snapshot anterior, a
-  propria semana usa o primeiro snapshot como base operacional
+- `views_novas`, `likes_novos` e `comentarios_novos` devem somar os deltas
+  snapshot-a-snapshot observados dentro da semana, alocando o delta na janela
+  do snapshot atual
 - apesar do sufixo `_novas` no contrato, esses campos representam ganhos
   observados na semana, nao valores atuais do post
 - como sao deltas de contador acumulado, valores negativos devem ser truncados
   para `0`
-- quando nao houver snapshot anterior e tambem nao houver pelo menos 2
-  snapshots na semana, `Views`, `Likes` e `Comentarios` devem ficar sem valor
-  executivo (`--` no Streamlit), mesmo que `Videos` tenha valor por
-  `post_date`
+- quando uma semana nao tiver nenhum snapshot util para delta, `Views`,
+  `Likes` e `Comentarios` podem ficar sem valor executivo (`--` no Streamlit),
+  mesmo que `Videos` tenha valor por `post_date`
 - para seguidores, a leitura semanal deve usar o ultimo snapshot da semana
   comparado ao ultimo snapshot da semana anterior; nao usar o delta entre o
   primeiro e o ultimo snapshot da mesma semana como leitura executiva
@@ -191,8 +189,8 @@ Regras de desenho:
 - derivar a semana de performance de `post_metrics_history.collected_at` para
   contar ganhos de views, likes e comentarios
 - gerar linhas por `video_type` e uma linha agregada `video_type = 'todos'`
-- comparar cada semana com a semana imediatamente anterior do mesmo criador e
-  tipo usando os ganhos observados por snapshot
+- comparar cada semana somando os deltas de snapshot do proprio periodo do
+  mesmo criador e tipo
 - para seguidores, comparar o ultimo snapshot da semana com o ultimo snapshot
   da semana anterior, ambos no mesmo fuso de exibicao do dashboard
 - data de corte inicial do dashboard: `2026-05-04`
@@ -228,10 +226,8 @@ Fluxo real de incorporacao:
 3. a mesma view agrupa snapshots por semana de `collected_at`
 4. semanas abertas sao excluidas da view executiva
 5. `Videos` vem da quantidade publicada naquela semana
-6. `Views`, `Likes` e `Comentarios` vem da diferenca entre o ultimo snapshot
-   antes da semana e o ultimo snapshot da semana por post; quando nao existir
-   snapshot anterior, a propria semana usa o primeiro snapshot disponivel como
-   base
+6. `Views`, `Likes` e `Comentarios` vem da soma dos deltas snapshot-a-snapshot
+   cujos snapshots caem dentro da semana do proprio snapshot atual
 7. depois agrega os posts por criador e `video_type`
 8. a linha `video_type = 'todos'` soma `long`, `short` e demais tipos existentes
 9. para seguidores, usa o fechamento semanal e compara contra o fechamento da
@@ -262,9 +258,8 @@ Regra SQL:
 - apenas semanas com `week_end < data_atual` podem aparecer
 - a comparacao semanal e calculada apenas entre semanas completas que entraram
   na view
-- a conta de delta semanal deve considerar o carry-in da semana: o ultimo
-  snapshot antes do `week_start` funciona como base; se nao existir snapshot
-  anterior, o primeiro snapshot da semana vira a base operacional
+- a conta semanal deve ser snapshot atual menos snapshot anterior, alocando o
+  delta na semana do snapshot atual
 
 Leitura pratica:
 
@@ -297,9 +292,8 @@ Decisao recomendada para o app:
   semanal contra a semana anterior, e nao da diferenca interna entre
   `followers_first` e `followers_last`
 - para `Views`, `Likes` e `Comentarios`, a comparacao semanal deve refletir o
-  portfolio inteiro do criador na semana: inclui o carry-in entre a ultima
-  coleta anterior ao inicio da semana e a primeira coleta da semana, quando
-  existir
+  portfolio inteiro do criador na semana pela soma dos deltas dos snapshots
+  dentro da janela
 - ao filtrar a tabela editorial pela semana selecionada, incluir o dia final
   inteiro com limite superior exclusivo: `post_date < week_end + 1 dia`
 
@@ -509,19 +503,19 @@ Checks:
   `short` e demais tipos para a mesma semana
 - os valores batem com uma query direta em `public.posts` usando o mesmo
   `creator_id` e intervalo de `post_date`
-- o delta semanal bate com a ultima coleta anterior ao `week_start` quando ela
-  existir; se nao existir, a semana usa o primeiro snapshot como base
-
+- o delta semanal bate com a soma dos deltas snapshot-a-snapshot da semana
+  fechada
 ## Query de auditoria
 
-Use esta consulta para validar o carry-in semanal de um post especifico:
+Use esta consulta para validar o delta snapshot-a-snapshot semanal de um post
+especifico:
 
 ```sql
 WITH params AS (
   SELECT
     15::bigint AS creator_id,
     'wzmuGKngTzc'::text AS post_id,
-    DATE '2026-06-15' AS week_start
+    DATE '2026-06-08' AS week_start
 ),
 snapshots AS (
   SELECT
@@ -530,7 +524,7 @@ snapshots AS (
     pmh.views,
     pmh.likes,
     pmh.comments,
-    DATE_TRUNC('week', (pmh.collected_at - INTERVAL '3 hours'))::date AS week_start,
+    DATE_TRUNC('week', (pmh.collected_at - INTERVAL '3 hours'))::date AS snapshot_week_start,
     LAG(pmh.collected_at) OVER (
       PARTITION BY pmh.post_id
       ORDER BY pmh.collected_at ASC, pmh.id ASC
@@ -547,14 +541,36 @@ snapshots AS (
       PARTITION BY pmh.post_id
       ORDER BY pmh.collected_at ASC, pmh.id ASC
     ) AS prev_comments,
-    ROW_NUMBER() OVER (
-      PARTITION BY pmh.post_id, DATE_TRUNC('week', (pmh.collected_at - INTERVAL '3 hours'))::date
-      ORDER BY pmh.collected_at ASC, pmh.id ASC
-    ) AS rn_first,
-    ROW_NUMBER() OVER (
-      PARTITION BY pmh.post_id, DATE_TRUNC('week', (pmh.collected_at - INTERVAL '3 hours'))::date
-      ORDER BY pmh.collected_at DESC, pmh.id DESC
-    ) AS rn_last
+    GREATEST(
+      COALESCE(pmh.views, 0) - COALESCE(
+        LAG(COALESCE(pmh.views, 0)) OVER (
+          PARTITION BY pmh.post_id
+          ORDER BY pmh.collected_at ASC, pmh.id ASC
+        ),
+        COALESCE(pmh.views, 0)
+      ),
+      0
+    ) AS delta_views_snapshot,
+    GREATEST(
+      COALESCE(pmh.likes, 0) - COALESCE(
+        LAG(COALESCE(pmh.likes, 0)) OVER (
+          PARTITION BY pmh.post_id
+          ORDER BY pmh.collected_at ASC, pmh.id ASC
+        ),
+        COALESCE(pmh.likes, 0)
+      ),
+      0
+    ) AS delta_likes_snapshot,
+    GREATEST(
+      COALESCE(pmh.comments, 0) - COALESCE(
+        LAG(COALESCE(pmh.comments, 0)) OVER (
+          PARTITION BY pmh.post_id
+          ORDER BY pmh.collected_at ASC, pmh.id ASC
+        ),
+        COALESCE(pmh.comments, 0)
+      ),
+      0
+    ) AS delta_comments_snapshot
   FROM public.post_metrics_history pmh
   JOIN public.posts p ON p.post_id = pmh.post_id
   JOIN params pr ON pr.post_id = pmh.post_id
@@ -562,37 +578,24 @@ snapshots AS (
 )
 SELECT
   s.post_id,
-  s.week_start,
-  MAX(s.prev_collected_at) FILTER (WHERE s.rn_first = 1) AS baseline_collected_at_before_week,
-  MAX(s.prev_views) FILTER (WHERE s.rn_first = 1) AS baseline_views_before_week,
-  MAX(s.prev_likes) FILTER (WHERE s.rn_first = 1) AS baseline_likes_before_week,
-  MAX(s.prev_comments) FILTER (WHERE s.rn_first = 1) AS baseline_comments_before_week,
-  MAX(s.collected_at) FILTER (WHERE s.rn_first = 1) AS first_collected_at_in_week,
-  MAX(s.views) FILTER (WHERE s.rn_first = 1) AS first_views_in_week,
-  MAX(s.collected_at) FILTER (WHERE s.rn_last = 1) AS last_collected_at_in_week,
-  MAX(s.views) FILTER (WHERE s.rn_last = 1) AS last_views_in_week,
-  GREATEST(
-    MAX(s.views) FILTER (WHERE s.rn_last = 1)
-    - COALESCE(
-        MAX(s.prev_views) FILTER (WHERE s.rn_first = 1),
-        MAX(s.views) FILTER (WHERE s.rn_first = 1)
-      ),
-    0
-  ) AS delta_views_carry_in
+  s.snapshot_week_start AS week_start,
+  MIN(s.collected_at) AS first_snapshot_in_week,
+  MAX(s.collected_at) AS last_snapshot_in_week,
+  COUNT(*) AS snapshots_na_semana,
+  SUM(s.delta_views_snapshot) AS views_novas_semana,
+  SUM(s.delta_likes_snapshot) AS likes_novas_semana,
+  SUM(s.delta_comments_snapshot) AS comentarios_novos_semana
 FROM snapshots s
 JOIN params pr ON TRUE
-WHERE s.week_start = pr.week_start
-GROUP BY s.post_id, s.week_start;
+WHERE s.snapshot_week_start = pr.week_start
+GROUP BY s.post_id, s.snapshot_week_start;
 ```
 
 Leitura esperada:
 
-- se houver snapshot anterior ao `week_start`, o delta semanal usa essa coleta
-  como base
-- se nao houver snapshot anterior, a semana usa o primeiro snapshot da propria
-  semana como base
-- o valor final deve refletir todo o movimento do post dentro da semana
-  fechada
+- cada linha de snapshot gera um delta contra o snapshot anterior
+- o delta entra na semana do snapshot atual
+- a soma da semana precisa bater com a view semanal do dashboard
 
 ### Etapa 5. Ligar no Streamlit
 
