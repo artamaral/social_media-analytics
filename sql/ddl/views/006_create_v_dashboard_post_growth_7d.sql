@@ -28,6 +28,13 @@ latest_snapshot AS (
     wh.comments AS latest_comments
   FROM windowed_history wh
   ORDER BY wh.post_id, wh.collected_at DESC
+),
+snapshot_counts AS (
+  SELECT
+    wh.post_id,
+    COUNT(*) AS snapshot_count
+  FROM windowed_history wh
+  GROUP BY wh.post_id
 )
 SELECT
   e.id AS entity_id,
@@ -42,8 +49,11 @@ SELECT
   p.post_date,
   fs.first_collected_at,
   ls.latest_collected_at,
+  sc.snapshot_count,
   fs.first_views,
   ls.latest_views,
+  ls.latest_likes,
+  ls.latest_comments,
   COALESCE(ls.latest_views, 0) - COALESCE(fs.first_views, 0) AS views_delta_7d,
   CASE
     WHEN COALESCE(fs.first_views, 0) > 0
@@ -54,6 +64,7 @@ SELECT
   COALESCE(ls.latest_comments, 0) - COALESCE(fs.first_comments, 0) AS comments_delta_7d
 FROM latest_snapshot ls
 JOIN first_snapshot fs ON fs.post_id = ls.post_id
+JOIN snapshot_counts sc ON sc.post_id = ls.post_id
 JOIN public.posts p ON p.post_id = ls.post_id
 JOIN public.creators c ON c.id = p.creator_id
 JOIN public.entities e ON e.id = c.entity_id

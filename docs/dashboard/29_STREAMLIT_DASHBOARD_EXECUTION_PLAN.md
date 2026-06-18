@@ -35,7 +35,7 @@ Status do pre-flight em 2026-06-16:
   - `Overview` existe, mas ainda combina KPIs reais de Data Quality com blocos placeholder
   - `Creators` tem navegacao e layout reais, mas a visao geral ainda usa mock local
   - `Criador individual` ja consome `v_dashboard_creator_summary` e `v_dashboard_creator_weekly_activity`
-  - `YouTube > Melhores 7d` continua placeholder, embora a view `v_dashboard_post_growth_7d` exista no repositorio
+  - `YouTube > Melhores videos 7d` deixa de ser placeholder e passa a consumir a `v_dashboard_post_growth_7d`
 - views encontradas no repositorio para o MVP:
   - `v_dashboard_guardrail_coverage_status`
   - `v_dashboard_dead_post_validation_status`
@@ -56,9 +56,9 @@ Leitura do pre-flight:
   1. validar as views no Supabase
   2. fechar `Overview`
   3. trocar `Creators` para dados reais em toda a visao geral
-  4. implementar `YouTube > Melhores 7d`
+  4. implementar `YouTube > Melhores videos 7d`
 
-Definicoes atuais para `YouTube > Melhores 7d`:
+Definicoes atuais para `YouTube > Melhores videos 7d`:
 
 - `Todos` mostra os `10` melhores videos no ranking geral
 - `Long` mostra os `10` melhores videos `long`
@@ -66,6 +66,10 @@ Definicoes atuais para `YouTube > Melhores 7d`:
 - a janela nao deve incluir o dia atual parcial
 - a leitura oficial da tela deve usar `7` dias completos fechados
 - a janela precisa aparecer claramente na interface
+- a ordenacao continua por crescimento de views em `7d`
+- a exibicao de `views`, `likes` e `comentarios` deve usar os valores absolutos do ultimo snapshot
+- a tela deve mostrar `ultimo snapshot` e `quantidade de snapshots` da janela
+- ponto em aberto: a regra fina de desempate do ranking permanece provisoria e deve ser rechecada apos avaliacao visual da tela em uso real
 
 Tarefas:
 
@@ -529,7 +533,7 @@ Tarefas:
 - criar navegacao inicial:
   - Overview
   - Creators
-  - YouTube > Melhores 7d
+  - YouTube > Melhores videos 7d
   - Hot now
   - Data quality
   - Fila / videos indisponiveis

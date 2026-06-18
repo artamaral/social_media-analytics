@@ -124,7 +124,7 @@ HTML_TEMPLATE = """<!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
-  <title>YouTube Melhores 7d Preview</title>
+  <title>YouTube Melhores videos 7d Preview</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     :root {{
@@ -458,7 +458,7 @@ HTML_TEMPLATE = """<!doctype html>
     <section class="hero">
       <div class="hero-main">
         <div class="eyebrow">Conceito inspirado no Windsor</div>
-        <h1>YouTube · Melhores 7d</h1>
+        <h1>YouTube · Melhores videos 7d</h1>
         <div class="subtitle">
           Mockup conceitual para a futura tela de ranking semanal. A estrutura prioriza leitura rapida de videos que mais performaram na janela recente, mas usa apenas os campos que ja temos hoje: data de publicacao, titulo, views, likes e comentarios.
         </div>
@@ -558,7 +558,7 @@ HTML_TEMPLATE = """<!doctype html>
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Gera um preview local em HTML para o mockup de YouTube > Melhores 7d."
+        description="Gera um preview local em HTML para o mockup de YouTube > Melhores videos 7d."
     )
     parser.add_argument(
         "--input",

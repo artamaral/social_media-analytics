@@ -1962,7 +1962,7 @@ Execucao pratica:
 3. Ajustar ranking e textos para os campos realmente disponiveis.
 4. Validar consistencia com a tela de criador individual.
 
-#### Atividade 4 - Implementar `YouTube > Melhores 7d`
+#### Atividade 4 - Implementar `YouTube > Melhores videos 7d`
 
 Status: aberta.
 
@@ -1983,7 +1983,7 @@ Definicoes aprovadas para a tela:
 - o filtro `Todos` deve mostrar sempre os `10` melhores videos no ranking geral
 - o filtro `Long` deve mostrar sempre os `10` melhores videos `long`
 - o filtro `Short` deve mostrar sempre os `10` melhores videos `short`
-- `Melhores 7d` deve usar `7` dias completos fechados, excluindo o dia atual
+- `Melhores videos 7d` deve usar `7` dias completos fechados, excluindo o dia atual
   parcial
 - a janela precisa aparecer explicitamente na tela, para evitar leitura
   ambigua de periodo
@@ -1994,9 +1994,11 @@ Etapas:
 2. Definir campos minimos do ranking:
    - video
    - creator
-   - views novas
-   - crescimento percentual ou delta equivalente disponivel
-   - periodo de referencia
+   - views, likes e comentarios absolutos do ultimo snapshot
+   - data do ultimo snapshot
+   - quantidade de snapshots na janela
+   - crescimento 7d como criterio de ordenacao
+   - registrar como ponto em aberto a rechecagem futura da regra fina de desempate apos avaliacao visual da tela
 3. Aplicar o comportamento fixo de `top 10` por filtro:
    - `Todos`
    - `Long`
@@ -2010,7 +2012,7 @@ Etapas:
 
 Criterio de conclusao:
 
-- a pagina `YouTube > Melhores 7d` deixa de ser placeholder
+- a pagina `YouTube > Melhores videos 7d` deixa de ser placeholder
 - o ranking semanal e alimentado por view real
 - a leitura deixa claro que se trata de crescimento semanal, nao de tracao em
   tempo quase real
@@ -2147,7 +2149,7 @@ Execucao pratica:
 1. Validar views reais e contratos no Supabase.
 2. Fechar `Overview` com leitura macro confiavel.
 3. Remover mock da `Visao geral` de `Creators`.
-4. Implementar `YouTube > Melhores 7d`.
+4. Implementar `YouTube > Melhores videos 7d`.
 5. Aplicar o gate de `Data Quality` antes dos rankings.
 6. Fazer acabamento final de UX, estados vazios e smoke test.
 
@@ -2158,7 +2160,7 @@ Execucao pratica:
 | 1 | Validar views minimas | garantir contrato de dados antes da UI | views aplicadas + leitura segura | checklist de validacao por view | consultas e colunas confirmadas |
 | 2 | Fechar `Overview` | consolidar a leitura macro da base | creators + weekly activity + Fenabrave validados | overview real e sem placeholder estrutural | tela com dados reais e fallback honesto |
 | 3 | Trocar `Creators > Visao geral` | remover mock e ligar carteira real | `v_dashboard_creator_summary` validada | comparativo de creators com base real | ausencia de `get_creator_mock_rows()` na visao geral |
-| 4 | Implementar `YouTube > Melhores 7d` | entregar ranking semanal funcional | `v_dashboard_post_growth_7d` validada | nova pagina real de crescimento | tela deixa de ser placeholder |
+| 4 | Implementar `YouTube > Melhores videos 7d` | entregar ranking semanal funcional | `v_dashboard_post_growth_7d` validada | nova pagina real de crescimento | tela deixa de ser placeholder |
 | 5 | Garantir `Data Quality` antes dos rankings | reforcar a confiabilidade da leitura | views de Data Quality validadas | padrao unico de contexto de qualidade | ranking com sinal operacional visivel |
 | 6 | Fechamento de UX e robustez | preparar o sprint para uso interno recorrente | atividades anteriores estabilizadas | acabamento final e smoke test | fluxo do MVP navegavel e consistente |
 
@@ -2183,7 +2185,7 @@ Execucao pratica:
 - Dashboard interno navegavel com telas principais do MVP ligadas a dados reais.
 - `Overview` fechada como leitura macro da base monitorada.
 - `Creators > Visao geral` sem mock e coerente com `Criador individual`.
-- `YouTube > Melhores 7d` implementada com ranking semanal real.
+- `YouTube > Melhores videos 7d` implementada com ranking semanal real.
 - Confirmacao de que rankings aparecem depois dos sinais de confiabilidade.
 - Evidencia de que o MVP ficou pronto para uso interno recorrente.
 

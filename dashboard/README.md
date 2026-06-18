@@ -40,7 +40,7 @@ Tambem e possivel usar um CSV proprio:
 python dashboard/preview_overview_recent_activity.py --input C:\caminho\overview_recent_activity.csv
 ```
 
-## Preview local do mockup YouTube > Melhores 7d
+## Preview local do mockup YouTube > Melhores videos 7d
 
 Para iterar no conceito visual da futura tela de ranking semanal com os campos
 ja disponiveis hoje:

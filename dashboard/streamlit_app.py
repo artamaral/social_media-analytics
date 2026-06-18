@@ -1991,6 +1991,286 @@ def render_placeholder_page(title: str, description: str) -> None:
     placeholder_card(title, description)
 
 
+def render_youtube_best_7d_page() -> None:
+    rows, error = get_view_rows("v_dashboard_post_growth_7d")
+    page_header("Melhores videos 7d", "Ranking semanal de crescimento no YouTube")
+    page_subtitle("Janela fixa de 7 dias completos fechados, sem incluir o dia atual parcial.")
+    render_connection_notice(error)
+
+    st.markdown(
+        """
+        <style>
+        .youtube-best-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            margin: 0.4rem 0 0.8rem;
+        }
+        .youtube-best-note {
+            color: var(--muted);
+            font-size: 0.84rem;
+            line-height: 1.35;
+        }
+        .youtube-best-table {
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 18px;
+            overflow: hidden;
+            background: linear-gradient(180deg, rgba(34, 39, 49, 0.96), rgba(20, 24, 31, 0.96));
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22);
+        }
+        .youtube-best-header,
+        .youtube-best-row {
+            display: grid;
+            grid-template-columns: minmax(420px, 2.6fr) 0.9fr 0.8fr 0.8fr 0.9fr;
+            gap: 0;
+        }
+        .youtube-best-header {
+            background: rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .youtube-best-head-cell {
+            min-height: 58px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.85rem 1rem;
+            color: var(--muted);
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            text-align: center;
+        }
+        .youtube-best-head-cell.video {
+            justify-content: flex-start;
+            text-align: left;
+        }
+        .youtube-best-row + .youtube-best-row {
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .youtube-best-main {
+            display: grid;
+            grid-template-columns: 48px 122px minmax(0, 1fr);
+            gap: 0.9rem;
+            align-items: center;
+            padding: 1rem;
+        }
+        .youtube-best-rank {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: var(--text);
+            text-align: center;
+        }
+        .youtube-best-thumb {
+            width: 122px;
+            aspect-ratio: 16 / 9;
+            border-radius: 14px;
+            border: 1px dashed rgba(255, 255, 255, 0.18);
+            background:
+                linear-gradient(135deg, rgba(255, 128, 105, 0.28), rgba(255, 255, 255, 0.02)),
+                rgba(255, 255, 255, 0.03);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--muted);
+            font-size: 0.74rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .youtube-best-copy {
+            min-width: 0;
+        }
+        .youtube-best-channel {
+            color: var(--accent);
+            font-size: 0.82rem;
+            font-weight: 700;
+            margin-bottom: 0.28rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .youtube-best-title {
+            color: var(--text);
+            font-size: 1rem;
+            font-weight: 700;
+            line-height: 1.35;
+            margin-bottom: 0.55rem;
+            word-break: break-word;
+        }
+        .youtube-best-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+        }
+        .youtube-best-chip {
+            border-radius: 999px;
+            padding: 0.3rem 0.65rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--muted);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .youtube-best-chip.type {
+            color: white;
+            background: rgba(255, 128, 105, 0.22);
+            border-color: rgba(255, 128, 105, 0.34);
+        }
+        .youtube-best-cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem 0.8rem;
+            color: var(--text);
+            font-size: 0.98rem;
+            font-weight: 700;
+            text-align: center;
+        }
+        @media (max-width: 1100px) {
+            .youtube-best-header {
+                display: none;
+            }
+            .youtube-best-row {
+                grid-template-columns: 1fr;
+            }
+            .youtube-best-main {
+                grid-template-columns: 40px 104px minmax(0, 1fr);
+            }
+            .youtube-best-thumb {
+                width: 104px;
+            }
+            .youtube-best-cell {
+                justify-content: space-between;
+                border-top: 1px solid rgba(255, 255, 255, 0.06);
+                padding: 0.85rem 1rem;
+            }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    selected_filter = st.radio(
+        "Tipo de video",
+        ["Todos", "Long", "Short"],
+        horizontal=True,
+        key="youtube_best_7d_filter",
+    )
+
+    st.markdown(
+        '<div class="youtube-best-toolbar">'
+        '<div class="youtube-best-note">Top 10 por filtro. Ordenacao principal por crescimento absoluto de views na janela fechada, com exibicao dos numeros absolutos do ultimo snapshot.</div>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+    if error and not rows:
+        placeholder_card(
+            "View indisponivel",
+            "A pagina esta pronta, mas a consulta a v_dashboard_post_growth_7d ainda nao retornou dados neste ambiente.",
+        )
+        return
+
+    if not rows:
+        placeholder_card(
+            "Sem dados para ranking semanal",
+            "Nenhum video com crescimento na janela atual de 7 dias completos fechados foi retornado.",
+        )
+        return
+
+    df = pd.DataFrame(rows)
+    df["views_delta_7d_num"] = pd.to_numeric(df.get("views_delta_7d"), errors="coerce").fillna(0)
+    df["likes_delta_7d_num"] = pd.to_numeric(df.get("likes_delta_7d"), errors="coerce").fillna(0)
+    df["comments_delta_7d_num"] = pd.to_numeric(df.get("comments_delta_7d"), errors="coerce").fillna(0)
+    df["latest_views_num"] = pd.to_numeric(df.get("latest_views"), errors="coerce").fillna(0)
+    df["latest_likes_num"] = pd.to_numeric(df.get("latest_likes"), errors="coerce").fillna(0)
+    df["latest_comments_num"] = pd.to_numeric(df.get("latest_comments"), errors="coerce").fillna(0)
+    df["snapshot_count_num"] = pd.to_numeric(df.get("snapshot_count"), errors="coerce").fillna(0)
+    df["post_date_dt"] = pd.to_datetime(df.get("post_date"), errors="coerce")
+    df["latest_collected_at_dt"] = pd.to_datetime(df.get("latest_collected_at"), errors="coerce", utc=True)
+    platform_series = df.get("platform", pd.Series(dtype="object")).fillna("").astype(str).str.strip().str.lower()
+    if not platform_series.empty:
+        df = df[platform_series == "youtube"].copy()
+
+    df["channel_name"] = df.get("username", pd.Series(dtype="object")).fillna("").astype(str).str.strip()
+    entity_series = df.get("entity_name", pd.Series(dtype="object")).fillna("").astype(str).str.strip()
+    df.loc[df["channel_name"] == "", "channel_name"] = entity_series[df["channel_name"] == ""]
+    df.loc[df["channel_name"] == "", "channel_name"] = "Canal sem nome"
+    df["title_display"] = df.get("title", pd.Series(dtype="object")).fillna("").astype(str).str.strip()
+    df.loc[df["title_display"] == "", "title_display"] = "Video sem titulo"
+    df["video_type_normalized"] = (
+        df.get("video_type", pd.Series(dtype="object")).fillna("outro").astype(str).str.strip().str.lower()
+    )
+    df["video_type_label"] = df["video_type_normalized"].map({"long": "Long", "short": "Short"}).fillna("Todos")
+
+    if df.empty:
+        placeholder_card(
+            "Sem videos do YouTube",
+            "A view nao retornou linhas da plataforma YouTube para a janela semanal atual.",
+        )
+        return
+
+    if selected_filter != "Todos":
+        df = df[df["video_type_label"] == selected_filter]
+
+    df = df.sort_values(
+        by=["views_delta_7d_num", "likes_delta_7d_num", "comments_delta_7d_num", "latest_collected_at_dt"],
+        ascending=[False, False, False, False],
+        na_position="last",
+    ).head(10)
+
+    if df.empty:
+        placeholder_card(
+            "Sem videos neste filtro",
+            f"Nao houve retorno para o filtro {selected_filter} dentro da janela de 7 dias completos fechados.",
+        )
+        return
+
+    st.markdown(
+        '<div class="youtube-best-table">'
+        '<div class="youtube-best-header">'
+        '<div class="youtube-best-head-cell video">Video</div>'
+        '<div class="youtube-best-head-cell">Data da publicacao</div>'
+        '<div class="youtube-best-head-cell">Views</div>'
+        '<div class="youtube-best-head-cell">Likes</div>'
+        '<div class="youtube-best-head-cell">Comentarios</div>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+    for rank, row in enumerate(df.to_dict("records"), start=1):
+        latest_snapshot = format_timestamp_br(row.get("latest_collected_at_dt"))
+        snapshot_count = row.get("snapshot_count_num")
+        snapshot_label = format_int(snapshot_count) if snapshot_count not in (None, "", 0) else "n/d"
+        post_date_label = pd.Timestamp(row["post_date_dt"]).strftime("%d/%m/%Y") if pd.notna(row.get("post_date_dt")) else "--"
+        row_html = (
+            '<div class="youtube-best-row">'
+            '<div class="youtube-best-main">'
+            f'<div class="youtube-best-rank">{rank}</div>'
+            '<div class="youtube-best-thumb">thumbnail</div>'
+            '<div class="youtube-best-copy">'
+            f'<div class="youtube-best-channel">{escape(str(row.get("channel_name") or "Canal sem nome"))}</div>'
+            f'<div class="youtube-best-title">{escape(str(row.get("title_display") or "Video sem titulo"))}</div>'
+            '<div class="youtube-best-meta">'
+            f'<span class="youtube-best-chip type">{escape(str(row.get("video_type_label") or "Todos"))}</span>'
+            f'<span class="youtube-best-chip">Ultimo snapshot {escape(latest_snapshot)}</span>'
+            f'<span class="youtube-best-chip">Snapshots {escape(snapshot_label)}</span>'
+            "</div>"
+            "</div>"
+            "</div>"
+            f'<div class="youtube-best-cell">{escape(post_date_label)}</div>'
+            f'<div class="youtube-best-cell">{escape(format_compact_number(row.get("latest_views_num")))}</div>'
+            f'<div class="youtube-best-cell">{escape(format_compact_number(row.get("latest_likes_num")))}</div>'
+            f'<div class="youtube-best-cell">{escape(format_compact_number(row.get("latest_comments_num")))}</div>'
+            "</div>"
+        )
+        st.markdown(row_html, unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.caption("Thumbnail continua como espaco reservado. Ranking ordenado por crescimento de views em 7 dias e exibicao baseada no ultimo snapshot absoluto.")
+
+
 def render_data_quality_page() -> None:
     guardrail_rows, dead_posts, queue_rows, queue_error, errors = load_data_quality_context()
     page_header("Data quality", "Confiabilidade operacional antes das análises")
@@ -4284,7 +4564,7 @@ with st.sidebar:
     if "nav_page" not in st.session_state:
         st.session_state["nav_page"] = "Overview"
     if "youtube_subpage" not in st.session_state:
-        st.session_state["youtube_subpage"] = "Melhores 7d"
+        st.session_state["youtube_subpage"] = "Melhores videos 7d"
     if "youtube_menu_open" not in st.session_state:
         st.session_state["youtube_menu_open"] = False
     if "creators_subpage" not in st.session_state:
@@ -4347,8 +4627,8 @@ with st.sidebar:
     ):
         st.session_state["youtube_menu_open"] = not youtube_open
         st.session_state["nav_page"] = "YouTube"
-        if st.session_state["youtube_menu_open"] and st.session_state["youtube_subpage"] not in {"Melhores 7d", "Hot now"}:
-            st.session_state["youtube_subpage"] = "Melhores 7d"
+        if st.session_state["youtube_menu_open"] and st.session_state["youtube_subpage"] not in {"Melhores videos 7d", "Hot now"}:
+            st.session_state["youtube_subpage"] = "Melhores videos 7d"
         st.rerun()
 
     if youtube_open:
@@ -4357,7 +4637,7 @@ with st.sidebar:
         with child_indent[0]:
             st.write("")
         with child_indent[1]:
-            sidebar_nav_button("Melhores 7d", "YouTube", "Melhores 7d")
+            sidebar_nav_button("Melhores videos 7d", "YouTube", "Melhores videos 7d")
         child_indent = st.columns([0.12, 0.88])
         with child_indent[0]:
             st.write("")
@@ -4421,7 +4701,7 @@ with st.sidebar:
     sidebar_nav_button("Sanitizacao operacional", "Sanitizacao operacional")
 
 page = st.session_state["nav_page"]
-youtube_subpage = st.session_state.get("youtube_subpage", "Melhores 7d")
+youtube_subpage = st.session_state.get("youtube_subpage", "Melhores videos 7d")
 creators_subpage = st.session_state.get("creators_subpage", "Visao geral")
 cadastro_subpage = st.session_state.get("cadastro_subpage", "Criadores")
 
@@ -4431,7 +4711,7 @@ elif page == "YouTube":
     if youtube_subpage == "Hot now":
         render_placeholder_page("Hot now", "View futura para velocidade recente, velocidade anterior e aceleracao.")
     else:
-        render_placeholder_page("Melhores 7d", "Ranking semanal de crescimento usando v_dashboard_post_growth_7d.")
+        render_youtube_best_7d_page()
 elif page == "Creators":
     if creators_subpage == "Criador individual":
         render_creator_detail_page()
