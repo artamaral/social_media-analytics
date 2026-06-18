@@ -1998,6 +1998,7 @@ Etapas:
    - data do ultimo snapshot
    - quantidade de snapshots na janela
    - crescimento 7d como criterio de ordenacao
+   - ordenacao oficial aplicada na consulta ao Supabase, sem reordenacao global no Streamlit
    - registrar como ponto em aberto a rechecagem futura da regra fina de desempate apos avaliacao visual da tela
 3. Aplicar o comportamento fixo de `top 10` por filtro:
    - `Todos`

@@ -1992,10 +1992,8 @@ def render_placeholder_page(title: str, description: str) -> None:
 
 
 def render_youtube_best_7d_page() -> None:
-    rows, error = get_view_rows("v_dashboard_post_growth_7d")
     page_header("Melhores videos 7d", "Ranking semanal de crescimento no YouTube")
     page_subtitle("Janela fixa de 7 dias completos fechados, sem incluir o dia atual parcial.")
-    render_connection_notice(error)
 
     st.markdown(
         """
@@ -2158,9 +2156,24 @@ def render_youtube_best_7d_page() -> None:
         key="youtube_best_7d_filter",
     )
 
+    filters: list[tuple[str, Any]] = [("platform", "youtube")]
+    if selected_filter == "Long":
+        filters.append(("video_type", "long"))
+    elif selected_filter == "Short":
+        filters.append(("video_type", "short"))
+
+    rows, error = get_filtered_rows(
+        "v_dashboard_post_growth_7d",
+        filters=tuple(filters),
+        order_by="views_growth_pct_7d",
+        order_desc=True,
+        limit=10,
+    )
+    render_connection_notice(error)
+
     st.markdown(
         '<div class="youtube-best-toolbar">'
-        '<div class="youtube-best-note">Top 10 por filtro. Ordenacao principal por crescimento absoluto de views na janela fechada, com exibicao de crescimento 7d e dos numeros absolutos atuais do post.</div>'
+        '<div class="youtube-best-note">Top 10 por filtro. Ordenacao oficial vinda do Supabase por views_growth_pct_7d, com exibicao de crescimento 7d e dos numeros absolutos atuais do post.</div>'
         "</div>",
         unsafe_allow_html=True,
     )
@@ -2196,9 +2209,6 @@ def render_youtube_best_7d_page() -> None:
     df["views_growth_pct_7d_num"] = pd.to_numeric(optional_series("views_growth_pct_7d"), errors="coerce")
     df["post_date_dt"] = pd.to_datetime(optional_series("post_date"), errors="coerce")
     df["latest_collected_at_dt"] = pd.to_datetime(optional_series("latest_collected_at"), errors="coerce", utc=True)
-    platform_series = df.get("platform", pd.Series(dtype="object")).fillna("").astype(str).str.strip().str.lower()
-    if not platform_series.empty:
-        df = df[platform_series == "youtube"].copy()
 
     df["channel_name"] = df.get("username", pd.Series(dtype="object")).fillna("").astype(str).str.strip()
     entity_series = df.get("entity_name", pd.Series(dtype="object")).fillna("").astype(str).str.strip()
@@ -2213,24 +2223,8 @@ def render_youtube_best_7d_page() -> None:
 
     if df.empty:
         placeholder_card(
-            "Sem videos do YouTube",
-            "A view nao retornou linhas da plataforma YouTube para a janela semanal atual.",
-        )
-        return
-
-    if selected_filter != "Todos":
-        df = df[df["video_type_label"] == selected_filter]
-
-    df = df.sort_values(
-        by=["views_delta_7d_num", "likes_delta_7d_num", "comments_delta_7d_num", "latest_collected_at_dt"],
-        ascending=[False, False, False, False],
-        na_position="last",
-    ).head(10)
-
-    if df.empty:
-        placeholder_card(
             "Sem videos neste filtro",
-            f"Nao houve retorno para o filtro {selected_filter} dentro da janela de 7 dias completos fechados.",
+            f"Nao houve retorno do Supabase para o filtro {selected_filter} dentro da janela de 7 dias completos fechados.",
         )
         return
 

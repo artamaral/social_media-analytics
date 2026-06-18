@@ -67,6 +67,8 @@ Definicoes atuais para `YouTube > Melhores videos 7d`:
 - a leitura oficial da tela deve usar `7` dias completos fechados
 - a janela precisa aparecer claramente na interface
 - a ordenacao continua por crescimento de views em `7d`
+- a ordenacao oficial deve vir da consulta no Supabase com `order by views_growth_pct_7d desc`
+- o Streamlit nao deve reordenar todas as linhas em memoria; ele deve apenas aplicar o filtro `Todos`, `Long` ou `Short` na consulta e pedir o `top 10`
 - a exibicao de `views`, `likes` e `comentarios` deve usar os valores absolutos do ultimo snapshot
 - a tela deve mostrar `ultimo snapshot` e `quantidade de snapshots` da janela
 - ponto em aberto: a regra fina de desempate do ranking permanece provisoria e deve ser rechecada apos avaliacao visual da tela em uso real
