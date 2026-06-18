@@ -40,6 +40,28 @@ Tambem e possivel usar um CSV proprio:
 python dashboard/preview_overview_recent_activity.py --input C:\caminho\overview_recent_activity.csv
 ```
 
+## Preview local do mockup YouTube > Melhores 7d
+
+Para iterar no conceito visual da futura tela de ranking semanal com os campos
+ja disponiveis hoje:
+
+```powershell
+python dashboard/preview_youtube_best_7d.py
+```
+
+Isso gera um HTML local em:
+
+```text
+dashboard/preview/youtube_best_7d_preview.html
+```
+
+Tambem e possivel usar um CSV proprio com colunas `post_date`, `title`,
+`views`, `likes` e `comments`:
+
+```powershell
+python dashboard/preview_youtube_best_7d.py --input C:\caminho\youtube_best_7d.csv
+```
+
 ## Seguranca
 
 - Nao versionar secrets reais.

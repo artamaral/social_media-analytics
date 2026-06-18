@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>YouTube Melhores 7d Preview</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --bg: #111318;
+      --surface: #1b1f27;
+      --surface-2: #232833;
+      --surface-3: #f4f6f7;
+      --text: #f5f7fa;
+      --muted: #aeb4bf;
+      --text-dark: #232833;
+      --accent: #ff8069;
+      --accent-soft: rgba(255, 128, 105, 0.16);
+      --line: rgba(255,255,255,0.08);
+      --shadow: 0 24px 60px rgba(0,0,0,0.26);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(255, 128, 105, 0.14), transparent 26%),
+        linear-gradient(180deg, #12151c 0%, #0d1016 100%);
+      color: var(--text);
+      padding: 24px;
+    }
+    .page {
+      max-width: 1320px;
+      margin: 0 auto;
+    }
+    .hero {
+      display: grid;
+      grid-template-columns: 1.3fr 0.9fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+    .hero-main, .hero-side {
+      background: linear-gradient(180deg, rgba(34, 39, 49, 0.96), rgba(20, 24, 31, 0.96));
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+    }
+    .hero-main {
+      padding: 22px 24px;
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .eyebrow::before {
+      content: "";
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 0 6px var(--accent-soft);
+    }
+    h1 {
+      margin: 0;
+      font-size: 34px;
+      line-height: 1.04;
+      letter-spacing: -0.03em;
+      max-width: 680px;
+    }
+    .subtitle {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.55;
+      max-width: 760px;
+    }
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+    .chip {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.05);
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 700;
+      border: 1px solid rgba(255,255,255,0.07);
+    }
+    .hero-side {
+      padding: 18px;
+      display: grid;
+      gap: 12px;
+      align-content: start;
+    }
+    .hero-note {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .hero-note-title {
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .hero-note-copy {
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--text);
+    }
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .kpi {
+      background: var(--surface-3);
+      color: var(--text-dark);
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.06);
+      min-height: 132px;
+    }
+    .kpi-head {
+      padding: 12px 14px;
+      background: var(--surface-2);
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    .kpi-body {
+      padding: 16px;
+    }
+    .kpi-value {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 30px;
+      font-weight: 800;
+      line-height: 1.05;
+    }
+    .kpi-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      background: var(--accent);
+      color: white;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 800;
+      flex: 0 0 auto;
+    }
+    .kpi-caption {
+      margin-top: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #606774;
+      text-transform: uppercase;
+    }
+    .panel {
+      background: linear-gradient(180deg, rgba(31, 36, 45, 0.96), rgba(20, 24, 31, 0.96));
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 18px 20px 14px;
+    }
+    .panel-title {
+      font-size: 18px;
+      font-weight: 800;
+    }
+    .panel-copy {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 4px;
+      line-height: 1.45;
+    }
+    .legend-pill {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    thead th {
+      text-align: left;
+      padding: 12px 20px;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+    tbody td {
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      vertical-align: top;
+    }
+    tbody tr:hover {
+      background: rgba(255,255,255,0.03);
+    }
+    .rank {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--accent);
+      line-height: 1;
+    }
+    .video-title {
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.45;
+      margin-bottom: 8px;
+    }
+    .video-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .video-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.05);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .metric-stack {
+      display: grid;
+      gap: 4px;
+    }
+    .metric-label {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .metric-number {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .footer-note {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    @media (max-width: 1080px) {
+      .hero { grid-template-columns: 1fr; }
+      .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 760px) {
+      body { padding: 16px; }
+      .kpi-grid { grid-template-columns: 1fr; }
+      .panel-head { display: grid; }
+      thead { display: none; }
+      table, tbody, tr, td { display: block; width: 100%; }
+      tbody td { padding: 12px 18px; }
+      tbody tr { padding: 6px 0; }
+      .metric-stack { gap: 2px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <div class="hero-main">
+        <div class="eyebrow">Conceito inspirado no Windsor</div>
+        <h1>YouTube · Melhores 7d</h1>
+        <div class="subtitle">
+          Mockup conceitual para a futura tela de ranking semanal. A estrutura prioriza leitura rapida de videos que mais performaram na janela recente, mas usa apenas os campos que ja temos hoje: data de publicacao, titulo, views, likes e comentarios.
+        </div>
+        <div class="chips">
+          <div class="chip">sem thumbnail por enquanto</div>
+          <div class="chip">ordenacao editorial por performance</div>
+          <div class="chip">foco em tabela forte e leitura executiva</div>
+        </div>
+      </div>
+      <div class="hero-side">
+        <div class="hero-note">
+          <div class="hero-note-title">Janela usada</div>
+          <div class="hero-note-copy">10/06/2026 ate 15/06/2026</div>
+        </div>
+        <div class="hero-note">
+          <div class="hero-note-title">Dados usados</div>
+          <div class="hero-note-copy">`post_date`, `title`, `views`, `likes`, `comments`</div>
+        </div>
+        <div class="hero-note">
+          <div class="hero-note-title">Dado faltante assumido</div>
+          <div class="hero-note-copy">Thumbnail ainda nao entra na tela. O mockup nao finge que esse campo ja existe.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="kpi-grid">
+      <article class="kpi">
+        <div class="kpi-head">Videos no ranking</div>
+        <div class="kpi-body">
+          <div class="kpi-value"><span>6</span><span class="kpi-icon">VD</span></div>
+          <div class="kpi-caption">janela atual do mockup</div>
+        </div>
+      </article>
+      <article class="kpi">
+        <div class="kpi-head">Views somadas</div>
+        <div class="kpi-body">
+          <div class="kpi-value"><span>2.096.390</span><span class="kpi-icon">VW</span></div>
+          <div class="kpi-caption">volume observado nos videos listados</div>
+        </div>
+      </article>
+      <article class="kpi">
+        <div class="kpi-head">Likes somados</div>
+        <div class="kpi-body">
+          <div class="kpi-value"><span>128.780</span><span class="kpi-icon">LK</span></div>
+          <div class="kpi-caption">apoio social agregado</div>
+        </div>
+      </article>
+      <article class="kpi">
+        <div class="kpi-head">Comentarios somados</div>
+        <div class="kpi-body">
+          <div class="kpi-value"><span>9.184</span><span class="kpi-icon">CM</span></div>
+          <div class="kpi-caption">sinal conversacional agregado</div>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">Ranking editorial dos videos</div>
+          <div class="panel-copy">Conceito inspirado na pagina de video stats do template da Windsor, adaptado para a base atual do projeto e sem thumbnail.</div>
+        </div>
+        <div class="legend-pill">ordenado por views no mockup</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Video</th>
+            <th>Data da publicacao</th>
+            <th>Views</th>
+            <th>Likes</th>
+            <th>Comentarios</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+              <td><div class="rank">1</div></td>
+              <td>
+                <div class="video-title">Tracker diesel 2026: consumo real e o que mudou na pratica</div>
+                <div class="video-meta">
+                  <span class="video-badge">sem thumbnail</span>
+                  <span class="video-badge">mockup conceitual</span>
+                </div>
+              </td>
+              <td><div class="metric-stack"><div class="metric-label">publicado em</div><div class="metric-number">15/06/2026</div></div></td>
+              <td><div class="metric-stack"><div class="metric-label">views</div><div class="metric-number">418.200</div></div></td>
+              <td><div class="metric-stack"><div class="metric-label">likes</div><div class="metric-number">28.400</div></div></td>
+              <td><div class="metric-stack"><div class="metric-label">comentarios</div><div class="metric-number">1.860</div></div></td>
+            </tr>
+<tr>
+              <td><div class="rank">2</div></td>
+              <td>
+                <div class="video-title">BYD Dolphin Mini vs Kwid E-Tech: qual faz mais sentido hoje</div>
+                <div class="video-meta">
+                  <span class="video-badge">sem thumbnail</span>
+                  <span class="video-badge">mockup conceitual</span>
+                </div>
+              </td>
+              <td><div class="metric-stack"><div class="metric-label">publicado em</div><div class="metric-number">14/06/2026</div></div></td>
+              <td><div class="metric-stack"><div class="metric-label">views</div><div class="metric-number">392.150</div></div></td>
+              <td><div class="metric-stack"><div class="metric-label">likes</div><div class="metric-number">25.340</div></div></td>
+              <td><div class="metric-stack"><div class="metric-label">comentarios</div><div class="metric-number">2.195</div></div></td>
+            </tr>
+<tr>
+              <td><div class="rank">3</div></td>
+              <td>
+                <div class="video-title">10 SUVs usados ate 90 mil que ainda valem a compra</div>
+                <div class="video-meta">
+                  <span class="video-badge">sem thumbnail</span>
+                  <span class="video-badge">mockup conceitual</span>
+                </div>
+              </td>
+              <td><div class="metric-stack"><div class="metric-label">publicado em</div><div class="metric-number">13/06/2026</div></div></td>
+              <td><div class="metric-stack"><div class="metric-label">views</div><div class="metric-number">355.980</div></div></td>
+              <td><div class="metric-stack"><div class="metric-label">likes</div><div class="metric-number">21.110</div></div></td>
+              <td><div class="metric-stack"><div class="metric-label">comentarios</div><div class="metric-number">1.498</div></div></td>
+            </tr>
+<tr>
+              <td><div class="rank">4</div></td>
+              <td>
+                <div class="video-title">Nivus GTS: primeiras impressoes, acertos e exageros</div>
+                <div class="video-meta">
+                  <span class="video-badge">sem thumbnail</span>
+                  <span class="video-badge">mockup conceitual</span>
+                </div>
+              </td>
+              <td><div class="metric-stack"><div class="metric-label">publicado em</div><div class="metric-number">12/06/2026</div></div></td>
+              <td><div class="metric-stack"><div class="metric-label">views</div><div class="metric-number">332.440</div></div></td>
+              <td><div class="metric-stack"><div class="metric-label">likes</div><div class="metric-number">19.480</div></div></td>
+              <td><div class="metric-stack"><div class="metric-label">comentarios</div><div class="metric-number">1.331</div></div></td>
+            </tr>
+<tr>
+              <td><div class="rank">5</div></td>
+              <td>
+                <div class="video-title">Corolla Cross 2026: onde ele melhorou e onde ainda decepciona</div>
+                <div class="video-meta">
+                  <span class="video-badge">sem thumbnail</span>
+                  <span class="video-badge">mockup conceitual</span>
+                </div>
+              </td>
+              <td><div class="metric-stack"><div class="metric-label">publicado em</div><div class="metric-number">11/06/2026</div></div></td>
+              <td><div class="metric-stack"><div class="metric-label">views</div><div class="metric-number">309.700</div></div></td>
+              <td><div class="metric-stack"><div class="metric-label">likes</div><div class="metric-number">17.860</div></div></td>
+              <td><div class="metric-stack"><div class="metric-label">comentarios</div><div class="metric-number">1.204</div></div></td>
+            </tr>
+<tr>
+              <td><div class="rank">6</div></td>
+              <td>
+                <div class="video-title">Mercado de usados aqueceu? sinais reais nas lojas e nos anuncios</div>
+                <div class="video-meta">
+                  <span class="video-badge">sem thumbnail</span>
+                  <span class="video-badge">mockup conceitual</span>
+                </div>
+              </td>
+              <td><div class="metric-stack"><div class="metric-label">publicado em</div><div class="metric-number">10/06/2026</div></div></td>
+              <td><div class="metric-stack"><div class="metric-label">views</div><div class="metric-number">287.920</div></div></td>
+              <td><div class="metric-stack"><div class="metric-label">likes</div><div class="metric-number">16.590</div></div></td>
+              <td><div class="metric-stack"><div class="metric-label">comentarios</div><div class="metric-number">1.096</div></div></td>
+            </tr>
+        </tbody>
+      </table>
+    </section>
+    <div class="footer-note">
+      Preview local gerado para iterar conceito e hierarquia visual antes da implementacao da pagina real no Streamlit.
+    </div>
+  </div>
+</body>
+</html>
