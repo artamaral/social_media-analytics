@@ -65,6 +65,7 @@ Definicoes atuais para `YouTube > Melhores videos 7d`:
 - `Short` mostra os `10` melhores videos `short`
 - a janela nao deve incluir o dia atual parcial
 - a leitura oficial da tela deve usar `7` dias completos fechados
+- a implementacao da `v_dashboard_post_growth_7d` deve usar a janela `>= date_trunc('day', now()) - interval '7 days'` e `< date_trunc('day', now())`, excluindo qualquer snapshot do dia atual
 - a janela precisa aparecer claramente na interface
 - a ordenacao continua por crescimento de views em `7d`
 - a ordenacao oficial deve vir da consulta no Supabase com `order by views_growth_pct_7d desc`
@@ -72,6 +73,7 @@ Definicoes atuais para `YouTube > Melhores videos 7d`:
 - a exibicao de `views`, `likes` e `comentarios` deve usar os valores absolutos do ultimo snapshot
 - a tela deve mostrar `ultimo snapshot` e `quantidade de snapshots` da janela
 - ponto em aberto: a regra fina de desempate do ranking permanece provisoria e deve ser rechecada apos avaliacao visual da tela em uso real
+- validacao observada: apos o ajuste da view para excluir o dia atual, posts de ontem puxados apenas por snapshot de hoje deixaram de aparecer na tela
 
 Tarefas:
 

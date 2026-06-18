@@ -7,7 +7,8 @@ WITH windowed_history AS (
     h.likes,
     h.comments
   FROM public.post_metrics_history h
-  WHERE h.collected_at >= NOW() - INTERVAL '7 days'
+  WHERE h.collected_at >= date_trunc('day', now()) - INTERVAL '7 days'
+    AND h.collected_at < date_trunc('day', now())
 ),
 first_snapshot AS (
   SELECT DISTINCT ON (wh.post_id)

@@ -1985,6 +1985,7 @@ Definicoes aprovadas para a tela:
 - o filtro `Short` deve mostrar sempre os `10` melhores videos `short`
 - `Melhores videos 7d` deve usar `7` dias completos fechados, excluindo o dia atual
   parcial
+- a `v_dashboard_post_growth_7d` deve materializar essa regra com janela iniciando em `date_trunc('day', now()) - interval '7 days'` e terminando antes de `date_trunc('day', now())`
 - a janela precisa aparecer explicitamente na tela, para evitar leitura
   ambigua de periodo
 
