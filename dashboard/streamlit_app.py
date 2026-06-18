@@ -2195,9 +2195,8 @@ def build_overview_recent_activity_frame(weekly_rows: list[dict[str, Any]]) -> p
     if grouped.empty:
         return grouped
 
-    grouped = grouped[
-        pd.to_datetime(grouped["week_start"], errors="coerce") >= CREATOR_WEEKLY_ACTIVITY_CUTOFF
-    ].copy()
+    grouped_week_start = pd.to_datetime(grouped["week_start"], errors="coerce", utc=True).dt.tz_localize(None)
+    grouped = grouped[grouped_week_start >= CREATOR_WEEKLY_ACTIVITY_CUTOFF].copy()
     if grouped.empty:
         return grouped
 
