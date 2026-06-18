@@ -47,9 +47,6 @@ SELECT
   p.title,
   p.video_type,
   p.post_date,
-  p.views,
-  p.likes,
-  p.comments,
   fs.first_collected_at,
   ls.latest_collected_at,
   sc.snapshot_count,
@@ -64,7 +61,10 @@ SELECT
     ELSE NULL
   END AS views_growth_pct_7d,
   COALESCE(ls.latest_likes, 0) - COALESCE(fs.first_likes, 0) AS likes_delta_7d,
-  COALESCE(ls.latest_comments, 0) - COALESCE(fs.first_comments, 0) AS comments_delta_7d
+  COALESCE(ls.latest_comments, 0) - COALESCE(fs.first_comments, 0) AS comments_delta_7d,
+  p.views,
+  p.likes,
+  p.comments
 FROM latest_snapshot ls
 JOIN first_snapshot fs ON fs.post_id = ls.post_id
 JOIN snapshot_counts sc ON sc.post_id = ls.post_id
