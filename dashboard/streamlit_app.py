@@ -10,7 +10,7 @@ import streamlit as st
 
 
 CREATOR_WEEKLY_ACTIVITY_CUTOFF = pd.Timestamp("2026-05-04")
-OVERVIEW_RECENT_ACTIVITY_WINDOW_WEEKS = 4
+OVERVIEW_RECENT_ACTIVITY_WINDOW_WEEKS = 8
 
 
 st.set_page_config(
@@ -1879,34 +1879,31 @@ def render_overview() -> None:
             unsafe_allow_html=True,
         )
     with head_right:
-        week_options = (
-            recent_chart_df.sort_values("week_end", ascending=False)["week_label"]
-            .dropna()
-            .astype(str)
-            .tolist()
-            if recent_chart_df is not None and not recent_chart_df.empty
-            else []
-        )
-        if week_options:
-            selected_week_label = st.selectbox(
-                "Semana fechada",
-                options=week_options,
-                index=0,
-                key="overview_recent_selected_week",
+        available_weeks = len(recent_chart_df.index) if recent_chart_df is not None and not recent_chart_df.empty else 0
+        if available_weeks > 0:
+            min_window = 2 if available_weeks >= 2 else 1
+            default_window = min(OVERVIEW_RECENT_ACTIVITY_WINDOW_WEEKS, available_weeks)
+            selected_window_weeks = st.slider(
+                "Janela semanal",
+                min_value=min_window,
+                max_value=available_weeks,
+                value=max(default_window, min_window),
+                step=1,
+                key="overview_recent_window_weeks",
             )
         else:
-            selected_week_label = None
-            st.selectbox(
-                "Semana fechada",
-                options=["Sem semana fechada"],
-                index=0,
-                key="overview_recent_selected_week_empty",
+            selected_window_weeks = OVERVIEW_RECENT_ACTIVITY_WINDOW_WEEKS
+            st.slider(
+                "Janela semanal",
+                min_value=1,
+                max_value=1,
+                value=1,
+                key="overview_recent_window_weeks_empty",
                 disabled=True,
             )
     recent_chart_filtered = filter_overview_recent_activity_frame(
         recent_chart_df,
-        selected_week_label=selected_week_label,
-        trailing_weeks=OVERVIEW_RECENT_ACTIVITY_WINDOW_WEEKS,
+        period_weeks=selected_window_weeks,
     )
     recent_focus = summarize_overview_recent_focus(recent_chart_filtered, recent_summary)
     recent_left, recent_right = st.columns([1.8, 1])
@@ -2198,6 +2195,12 @@ def build_overview_recent_activity_frame(weekly_rows: list[dict[str, Any]]) -> p
     if grouped.empty:
         return grouped
 
+    grouped = grouped[
+        pd.to_datetime(grouped["week_start"], errors="coerce") >= CREATOR_WEEKLY_ACTIVITY_CUTOFF
+    ].copy()
+    if grouped.empty:
+        return grouped
+
     grouped["week_label_short"] = grouped["week_label"].fillna("--")
     grouped["creators_ativos"] = grouped["creators_ativos"].astype(int)
     grouped["posts_publicados"] = grouped["posts_publicados"].astype(int)
@@ -2205,19 +2208,11 @@ def build_overview_recent_activity_frame(weekly_rows: list[dict[str, Any]]) -> p
     return grouped
 
 
-def filter_overview_recent_activity_frame(
-    chart_df: pd.DataFrame,
-    selected_week_label: str | None,
-    trailing_weeks: int = OVERVIEW_RECENT_ACTIVITY_WINDOW_WEEKS,
-) -> pd.DataFrame:
+def filter_overview_recent_activity_frame(chart_df: pd.DataFrame, period_weeks: int) -> pd.DataFrame:
     if chart_df is None or chart_df.empty:
         return pd.DataFrame()
     ordered = chart_df.sort_values("week_end").reset_index(drop=True)
-    if selected_week_label:
-        matched = ordered.index[ordered["week_label"].astype(str) == str(selected_week_label)].tolist()
-        if matched:
-            return ordered.iloc[: matched[-1] + 1].tail(trailing_weeks).copy()
-    return ordered.tail(trailing_weeks).copy()
+    return ordered.tail(period_weeks).copy()
 
 
 def summarize_overview_recent_focus(
