@@ -2022,7 +2022,7 @@ def render_youtube_best_7d_page() -> None:
         .youtube-best-header,
         .youtube-best-row {
             display: grid;
-            grid-template-columns: minmax(420px, 2.6fr) 0.9fr 0.8fr 0.8fr 0.9fr;
+            grid-template-columns: minmax(420px, 2.5fr) 0.9fr 0.8fr 0.8fr 0.8fr 0.9fr;
             gap: 0;
         }
         .youtube-best-header {
@@ -2160,7 +2160,7 @@ def render_youtube_best_7d_page() -> None:
 
     st.markdown(
         '<div class="youtube-best-toolbar">'
-        '<div class="youtube-best-note">Top 10 por filtro. Ordenacao principal por crescimento absoluto de views na janela fechada, com exibicao dos numeros absolutos do ultimo snapshot.</div>'
+        '<div class="youtube-best-note">Top 10 por filtro. Ordenacao principal por crescimento absoluto de views na janela fechada, com exibicao de crescimento 7d e dos numeros absolutos atuais do post.</div>'
         "</div>",
         unsafe_allow_html=True,
     )
@@ -2189,10 +2189,11 @@ def render_youtube_best_7d_page() -> None:
     df["views_delta_7d_num"] = pd.to_numeric(optional_series("views_delta_7d", 0), errors="coerce").fillna(0)
     df["likes_delta_7d_num"] = pd.to_numeric(optional_series("likes_delta_7d", 0), errors="coerce").fillna(0)
     df["comments_delta_7d_num"] = pd.to_numeric(optional_series("comments_delta_7d", 0), errors="coerce").fillna(0)
-    df["latest_views_num"] = pd.to_numeric(optional_series("latest_views", 0), errors="coerce").fillna(0)
-    df["latest_likes_num"] = pd.to_numeric(optional_series("latest_likes", 0), errors="coerce").fillna(0)
-    df["latest_comments_num"] = pd.to_numeric(optional_series("latest_comments", 0), errors="coerce").fillna(0)
+    df["views_num"] = pd.to_numeric(optional_series("views", 0), errors="coerce").fillna(0)
+    df["likes_num"] = pd.to_numeric(optional_series("likes", 0), errors="coerce").fillna(0)
+    df["comments_num"] = pd.to_numeric(optional_series("comments", 0), errors="coerce").fillna(0)
     df["snapshot_count_num"] = pd.to_numeric(optional_series("snapshot_count", 0), errors="coerce").fillna(0)
+    df["views_growth_pct_7d_num"] = pd.to_numeric(optional_series("views_growth_pct_7d"), errors="coerce")
     df["post_date_dt"] = pd.to_datetime(optional_series("post_date"), errors="coerce")
     df["latest_collected_at_dt"] = pd.to_datetime(optional_series("latest_collected_at"), errors="coerce", utc=True)
     platform_series = df.get("platform", pd.Series(dtype="object")).fillna("").astype(str).str.strip().str.lower()
@@ -2238,6 +2239,7 @@ def render_youtube_best_7d_page() -> None:
         '<div class="youtube-best-header">'
         '<div class="youtube-best-head-cell video">Video</div>'
         '<div class="youtube-best-head-cell">Data da publicacao</div>'
+        '<div class="youtube-best-head-cell">Crescimento</div>'
         '<div class="youtube-best-head-cell">Views</div>'
         '<div class="youtube-best-head-cell">Likes</div>'
         '<div class="youtube-best-head-cell">Comentarios</div>'
@@ -2250,6 +2252,7 @@ def render_youtube_best_7d_page() -> None:
         snapshot_count = row.get("snapshot_count_num")
         snapshot_label = format_int(snapshot_count) if snapshot_count not in (None, "", 0) else "n/d"
         post_date_label = pd.Timestamp(row["post_date_dt"]).strftime("%d/%m/%Y") if pd.notna(row.get("post_date_dt")) else "--"
+        growth_label = format_pct(row.get("views_growth_pct_7d_num"))
         row_html = (
             '<div class="youtube-best-row">'
             '<div class="youtube-best-main">'
@@ -2266,15 +2269,16 @@ def render_youtube_best_7d_page() -> None:
             "</div>"
             "</div>"
             f'<div class="youtube-best-cell">{escape(post_date_label)}</div>'
-            f'<div class="youtube-best-cell">{escape(format_compact_number(row.get("latest_views_num")))}</div>'
-            f'<div class="youtube-best-cell">{escape(format_compact_number(row.get("latest_likes_num")))}</div>'
-            f'<div class="youtube-best-cell">{escape(format_compact_number(row.get("latest_comments_num")))}</div>'
+            f'<div class="youtube-best-cell">{escape(growth_label)}</div>'
+            f'<div class="youtube-best-cell">{escape(format_compact_number(row.get("views_num")))}</div>'
+            f'<div class="youtube-best-cell">{escape(format_compact_number(row.get("likes_num")))}</div>'
+            f'<div class="youtube-best-cell">{escape(format_compact_number(row.get("comments_num")))}</div>'
             "</div>"
         )
         st.markdown(row_html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
-    st.caption("Thumbnail continua como espaco reservado. Ranking ordenado por crescimento de views em 7 dias e exibicao baseada no ultimo snapshot absoluto.")
+    st.caption("Thumbnail continua como espaco reservado. O video entra no ranking pelo crescimento de views em 7 dias, enquanto views, likes e comentarios mostram os totais atuais do post.")
 
 
 def render_data_quality_page() -> None:
