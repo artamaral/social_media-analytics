@@ -1341,6 +1341,7 @@ def load_filtered_rows(
     filters: tuple[tuple[str, Any], ...] = (),
     order_by: str | None = None,
     order_desc: bool = False,
+    order_nulls_first: bool | None = None,
     limit: int | None = None,
 ) -> list[dict[str, Any]]:
     client = get_supabase_client()
@@ -1351,7 +1352,10 @@ def load_filtered_rows(
     for column_name, column_value in filters:
         query = query.eq(column_name, column_value)
     if order_by:
-        query = query.order(order_by, desc=order_desc)
+        order_kwargs: dict[str, Any] = {"desc": order_desc}
+        if order_nulls_first is not None:
+            order_kwargs["nullsfirst"] = order_nulls_first
+        query = query.order(order_by, **order_kwargs)
     if limit is not None:
         query = query.limit(limit)
     response = query.execute()
@@ -1383,13 +1387,14 @@ def get_filtered_rows(
     filters: tuple[tuple[str, Any], ...] = (),
     order_by: str | None = None,
     order_desc: bool = False,
+    order_nulls_first: bool | None = None,
     limit: int | None = None,
 ) -> tuple[list[dict[str, Any]], str | None]:
     if not is_supabase_configured():
         return [], "Supabase ainda nao configurado. Adicione SUPABASE_URL e SUPABASE_ANON_KEY nos secrets."
 
     try:
-        return load_filtered_rows(source_name, filters, order_by, order_desc, limit), None
+        return load_filtered_rows(source_name, filters, order_by, order_desc, order_nulls_first, limit), None
     except Exception as exc:
         return [], f"Falha ao consultar {source_name}: {exc}"
 
@@ -2167,6 +2172,7 @@ def render_youtube_best_7d_page() -> None:
         filters=tuple(filters),
         order_by="views_growth_pct_7d",
         order_desc=True,
+        order_nulls_first=False,
         limit=10,
     )
     render_connection_notice(error)
@@ -2315,7 +2321,10 @@ def format_compact_number(value: Any) -> str:
 
 def format_pct(value: Any) -> str:
     try:
-        return f"{float(value):.2f}%".replace(".", ",")
+        numeric_value = float(value)
+        if pd.isna(numeric_value):
+            return "--"
+        return f"{numeric_value:.2f}%".replace(".", ",")
     except (TypeError, ValueError):
         return "--"
 
