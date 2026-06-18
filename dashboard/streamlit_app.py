@@ -4283,6 +4283,10 @@ with st.sidebar:
     st.caption("Automotivo Americas")
     if "nav_page" not in st.session_state:
         st.session_state["nav_page"] = "Overview"
+    if "youtube_subpage" not in st.session_state:
+        st.session_state["youtube_subpage"] = "Melhores 7d"
+    if "youtube_menu_open" not in st.session_state:
+        st.session_state["youtube_menu_open"] = False
     if "creators_subpage" not in st.session_state:
         st.session_state["creators_subpage"] = "Visao geral"
     if "creators_menu_open" not in st.session_state:
@@ -4295,6 +4299,8 @@ with st.sidebar:
     def sidebar_nav_button(label: str, page_value: str, selected_value: str | None = None) -> None:
         if selected_value is None:
             active = st.session_state["nav_page"] == page_value
+        elif page_value == "YouTube":
+            active = st.session_state["nav_page"] == "YouTube" and st.session_state["youtube_subpage"] == selected_value
         elif page_value == "Creators":
             active = st.session_state["nav_page"] == "Creators" and st.session_state["creators_subpage"] == selected_value
         else:
@@ -4312,9 +4318,14 @@ with st.sidebar:
                     st.session_state["cadastro_menu_open"] = False
                 if page_value != "Creators":
                     st.session_state["creators_menu_open"] = False
+                if page_value != "YouTube":
+                    st.session_state["youtube_menu_open"] = False
             else:
                 st.session_state["nav_page"] = page_value
-                if page_value == "Creators":
+                if page_value == "YouTube":
+                    st.session_state["youtube_subpage"] = selected_value
+                    st.session_state["youtube_menu_open"] = True
+                elif page_value == "Creators":
                     st.session_state["creators_subpage"] = selected_value
                     st.session_state["creators_menu_open"] = True
                 else:
@@ -4323,10 +4334,35 @@ with st.sidebar:
             st.rerun()
 
     sidebar_nav_button("Overview", "Overview")
-    sidebar_nav_button("Videos em crescimento", "Videos em crescimento")
-    sidebar_nav_button("Hot now", "Hot now")
     sidebar_nav_button("Data quality", "Data quality")
     sidebar_nav_button("Fenabrave", "Fenabrave")
+
+    youtube_active = st.session_state["nav_page"] == "YouTube"
+    youtube_open = st.session_state["youtube_menu_open"] or youtube_active
+    if st.button(
+        "YouTube",
+        use_container_width=True,
+        key="nav-youtube-toggle",
+        type="primary" if youtube_open else "secondary",
+    ):
+        st.session_state["youtube_menu_open"] = not youtube_open
+        st.session_state["nav_page"] = "YouTube"
+        if st.session_state["youtube_menu_open"] and st.session_state["youtube_subpage"] not in {"Melhores 7d", "Hot now"}:
+            st.session_state["youtube_subpage"] = "Melhores 7d"
+        st.rerun()
+
+    if youtube_open:
+        st.markdown('<div class="sidebar-nav-spacer"></div>', unsafe_allow_html=True)
+        child_indent = st.columns([0.12, 0.88])
+        with child_indent[0]:
+            st.write("")
+        with child_indent[1]:
+            sidebar_nav_button("Melhores 7d", "YouTube", "Melhores 7d")
+        child_indent = st.columns([0.12, 0.88])
+        with child_indent[0]:
+            st.write("")
+        with child_indent[1]:
+            sidebar_nav_button("Hot now", "YouTube", "Hot now")
 
     creators_active = st.session_state["nav_page"] == "Creators"
     creators_open = st.session_state["creators_menu_open"] or creators_active
@@ -4385,20 +4421,22 @@ with st.sidebar:
     sidebar_nav_button("Sanitizacao operacional", "Sanitizacao operacional")
 
 page = st.session_state["nav_page"]
+youtube_subpage = st.session_state.get("youtube_subpage", "Melhores 7d")
 creators_subpage = st.session_state.get("creators_subpage", "Visao geral")
 cadastro_subpage = st.session_state.get("cadastro_subpage", "Criadores")
 
 if page == "Overview":
     render_overview()
+elif page == "YouTube":
+    if youtube_subpage == "Hot now":
+        render_placeholder_page("Hot now", "View futura para velocidade recente, velocidade anterior e aceleracao.")
+    else:
+        render_placeholder_page("Melhores 7d", "Ranking semanal de crescimento usando v_dashboard_post_growth_7d.")
 elif page == "Creators":
     if creators_subpage == "Criador individual":
         render_creator_detail_page()
     else:
         render_creator_overview_page()
-elif page == "Videos em crescimento":
-    render_placeholder_page("Videos em crescimento", "Ranking semanal de crescimento usando v_dashboard_post_growth_7d.")
-elif page == "Hot now":
-    render_placeholder_page("Hot now", "View futura para velocidade recente, velocidade anterior e aceleracao.")
 elif page == "Data quality":
     render_data_quality_page()
 elif page == "Fenabrave":

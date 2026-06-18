@@ -1432,7 +1432,7 @@ Inclui:
 - validar contratos das views minimas do dashboard no Supabase
 - fechar `Overview` como leitura macro da base monitorada
 - substituir mock da `Visao geral` de `Creators` por dados reais
-- implementar `Videos em crescimento` com `v_dashboard_post_growth_7d`
+- implementar `YouTube > Melhores 7d` com `v_dashboard_post_growth_7d`
 - garantir leitura de Data Quality antes de qualquer ranking
 - ajustar estados vazios, mensagens de erro e textos executivos do MVP
 
@@ -1452,7 +1452,7 @@ Status observado no repositorio em 2026-06-18:
 - `Criador individual` ja consome `v_dashboard_creator_summary`,
   `v_dashboard_creator_weekly_activity` e `v_dashboard_creator_weekly_audience`
 - `Visao geral` de `Creators` ainda usa `get_creator_mock_rows()`
-- `Videos em crescimento` ainda esta em placeholder
+- `YouTube > Melhores 7d` ainda esta em placeholder
 - `Hot now` continua explicitamente fora do MVP atual
 
 Leitura:
@@ -1465,7 +1465,7 @@ Leitura:
 
 #### Atividade 1 - Validar views minimas do MVP no Supabase
 
-Status: aberta.
+Status: em andamento.
 
 Objetivo:
 
@@ -1524,6 +1524,334 @@ Execucao pratica:
 2. Comparar retorno real com os campos usados pelo Streamlit.
 3. Corrigir primeiro qualquer mismatch de contrato.
 4. Liberar somente depois a frente visual dependente da view.
+
+Resultado observado em 2026-06-18:
+
+- validacao executada no ambiente Supabase alvo com leitura real via REST
+- `6` das `7` views minimas responderam com `200`
+- `1` view minima retornou `404` no schema cache
+
+Status por view:
+
+- `public.v_dashboard_guardrail_coverage_status`: `ok_env`
+- `public.v_dashboard_dead_post_validation_status`: `ok_env`
+- `public.v_dashboard_creator_summary`: `ok_env`
+- `public.v_dashboard_creator_weekly_activity`: `ok_env`
+- `public.v_dashboard_creator_weekly_audience`: `ok_env`
+- `public.v_dashboard_fenabrave_monthly_segments`: `ok_env`
+- `public.v_dashboard_post_growth_7d`: `gap_env_missing`
+
+Contrato observado nas views criticas:
+
+- `v_dashboard_creator_summary` respondeu com colunas esperadas do app, incluindo:
+  - `entity_name`
+  - `platform`
+  - `username`
+  - `channel_id`
+  - `followers`
+  - `post_count`
+  - `total_views`
+  - `total_likes`
+  - `total_comments`
+  - `engagement_rate_pct`
+  - `latest_post_date`
+  - `latest_collected_at`
+- `v_dashboard_creator_weekly_activity` respondeu com colunas esperadas do app, incluindo:
+  - `week_start`
+  - `week_end`
+  - `week_label`
+  - `video_type`
+  - `videos_publicados`
+  - `views_novas`
+  - `views_growth_pct_vs_prev_week`
+  - `likes_novos`
+  - `comentarios_novos`
+- `v_dashboard_creator_weekly_audience` respondeu no ambiente com contrato
+  funcional para a UI atual:
+  - retornou `latest_collected_at`
+  - a aba `Criador individual` ja usa acompanhamento semanal de seguidores por
+    `followers_delta_vs_prev_week` e `followers_weekly_status`
+  - `followers_latest_collected_at` aparece apenas como expectativa antiga de
+    contrato, nao como campo efetivamente usado na UI
+
+Leitura:
+
+- o item `1` da Atividade `1` foi fechado para existencia no repositorio e quase
+  fechado para existencia no ambiente
+- o bloqueador objetivo restante e `public.v_dashboard_post_growth_7d`, ausente
+  no ambiente alvo
+- no repositorio, a definicao de `sql/ddl/views/006_create_v_dashboard_post_growth_7d.sql`
+  existe, mas nao segue o mesmo padrao explicito de `GRANT SELECT` visto nas
+  demais views do dashboard
+- o ponto de `latest_collected_at` versus `followers_latest_collected_at` nao e
+  bloqueador funcional: a decisao e manter o comportamento atual da UI e
+  atualizar apenas a documentacao do contrato esperado
+
+Decisao para seguir:
+
+- tratar `v_dashboard_post_growth_7d` como bloqueador da futura Atividade `4`
+- manter `latest_collected_at` como campo valido no contexto atual
+- remover da documentacao da atividade a expectativa de
+  `followers_latest_collected_at` como requisito funcional da UI atual
+
+### Passo a passo operacional da Atividade 1
+
+#### Etapa 1.1 - Preparar a validacao
+
+Objetivo:
+
+- iniciar a atividade com uma lista fechada de views, telas consumidoras e
+  campos esperados, evitando validacao solta ou parcial
+
+Passo a passo:
+
+1. Abrir `dashboard/streamlit_app.py` e listar onde cada view e consumida.
+2. Consolidar a lista das views minimas do sprint:
+   - `v_dashboard_guardrail_coverage_status`
+   - `v_dashboard_dead_post_validation_status`
+   - `v_dashboard_creator_summary`
+   - `v_dashboard_creator_weekly_activity`
+   - `v_dashboard_creator_weekly_audience`
+   - `v_dashboard_post_growth_7d`
+   - `v_dashboard_fenabrave_monthly_segments`
+3. Mapear para cada view:
+   - tela do app que depende dela
+   - funcao que a consome
+   - campos minimos esperados
+4. Definir uma planilha ou checklist unico da atividade com uma linha por view.
+
+Saida esperada:
+
+- inventario fechado das views do Sprint 3
+- mapa view -> tela -> funcao -> campos minimos
+
+#### Etapa 1.2 - Confirmar existencia da view no repositorio SQL
+
+Objetivo:
+
+- garantir que a definicao versionada da view existe no repositorio antes de
+  validar ambiente e UI
+
+Passo a passo:
+
+1. Localizar o arquivo SQL da view em `sql/ddl/views/`.
+2. Confirmar se a definicao da view esta versionada no repositorio.
+3. Verificar se o arquivo inclui `GRANT SELECT` para `anon` e
+   `authenticated` quando isso fizer parte do contrato atual do dashboard.
+4. Registrar o nome do arquivo SQL correspondente no checklist.
+
+Classificacao:
+
+- `ok_repo`: view encontrada e versionada
+- `gap_repo_missing`: view nao encontrada no repositorio
+- `gap_repo_grant`: view existe, mas falta grant esperado
+
+Saida esperada:
+
+- checklist preenchido com o arquivo SQL de cada view
+
+#### Etapa 1.3 - Confirmar existencia da view no ambiente alvo
+
+Objetivo:
+
+- validar se a view que existe no Git tambem esta aplicada no Supabase usado
+  pelo dashboard
+
+Passo a passo:
+
+1. Executar uma consulta simples na view no ambiente alvo.
+2. Verificar se a leitura retorna:
+   - linhas
+   - zero linhas sem erro
+   - erro de permissao
+   - erro de objeto inexistente
+3. Registrar o resultado bruto de cada consulta.
+4. Se a view nao existir no ambiente, classificar antes de tentar corrigir UI.
+
+Classificacao:
+
+- `ok_env`: view existe e responde
+- `gap_env_missing`: view nao aplicada no ambiente
+- `gap_env_permission`: view existe, mas a credencial nao consegue ler
+
+Saida esperada:
+
+- checklist com status de ambiente por view
+
+#### Etapa 1.4 - Validar leitura com a credencial real do Streamlit
+
+Objetivo:
+
+- confirmar que o problema nao esta apenas no banco, mas tambem nao aparece na
+  camada real usada pelo app
+
+Passo a passo:
+
+1. Reproduzir a leitura pelo mesmo caminho usado no app, preferencialmente via
+   `get_view_rows`, `get_single_row_view` ou `get_filtered_rows`.
+2. Observar se a consulta funciona com a credencial configurada para o
+   Streamlit.
+3. Registrar se o retorno falha por:
+   - RLS ou grant
+   - timeout
+   - coluna ausente
+   - filtro incompatível
+4. Confirmar se a falha acontece na view ou apenas no modo como o app chama a
+   view.
+
+Classificacao:
+
+- `ok_app_read`
+- `gap_app_permission`
+- `gap_app_filter`
+- `gap_app_timeout`
+
+Saida esperada:
+
+- validacao real do caminho de leitura do app
+
+#### Etapa 1.5 - Validar contrato de colunas contra o app
+
+Objetivo:
+
+- garantir que cada coluna esperada pelo Streamlit existe com nome e semantica
+  compativeis
+
+Passo a passo:
+
+1. Para cada view, listar as colunas retornadas.
+2. Comparar com os campos usados no `dashboard/streamlit_app.py`.
+3. Classificar cada coluna como:
+   - presente e compativel
+   - presente com nome divergente
+   - ausente
+   - presente, mas com semantica duvidosa
+4. Registrar os campos bloqueadores da UI.
+5. Priorizar correcoes de contrato antes de qualquer ajuste visual.
+
+Exemplos criticos do sprint:
+
+- `v_dashboard_creator_summary`:
+  - `entity_name`
+  - `platform`
+  - `followers`
+  - `post_count`
+  - `total_views`
+  - `engagement_rate_pct`
+- `v_dashboard_creator_weekly_activity`:
+  - `week_label`
+  - `week_end`
+  - `video_type`
+  - `videos_publicados`
+  - `views_novas`
+  - `likes_novos`
+  - `comentarios_novos`
+- `v_dashboard_creator_weekly_audience`:
+  - `followers_delta_vs_prev_week`
+  - `followers_weekly_status`
+  - `latest_collected_at`
+
+Classificacao:
+
+- `ok_schema`
+- `gap_schema_missing_column`
+- `gap_schema_renamed_column`
+- `gap_schema_semantic_mismatch`
+
+Saida esperada:
+
+- contrato de colunas validado por view
+
+#### Etapa 1.6 - Validar qualidade minima do retorno
+
+Objetivo:
+
+- separar view tecnicamente legivel de view realmente utilizavel no dashboard
+
+Passo a passo:
+
+1. Validar se a view retorna linhas reais quando deveria retornar base ativa.
+2. Verificar excesso de nulos em campos que sustentam cards ou ranking.
+3. Verificar se datas e periodos fazem sentido para a janela esperada da tela.
+4. Verificar se agregacoes zeradas ou vazias representam:
+   - falta real de dados
+   - falha de pipeline
+   - problema no SQL
+5. Marcar casos em que a UI precisa fallback honesto em vez de correcao SQL.
+
+Classificacao:
+
+- `ok_data`
+- `gap_data_empty`
+- `gap_data_high_nulls`
+- `gap_data_unexpected_period`
+- `gap_data_incoherent_aggregation`
+
+Saida esperada:
+
+- leitura minima de utilidade por view
+
+#### Etapa 1.7 - Registrar gaps e priorizar correcao
+
+Objetivo:
+
+- transformar a validacao em decisao executavel para o restante do sprint
+
+Passo a passo:
+
+1. Consolidar todos os gaps encontrados em uma lista unica.
+2. Classificar cada gap por severidade:
+   - bloqueador
+   - importante
+   - cosmetico
+3. Relacionar cada gap com a tela afetada:
+   - `Overview`
+   - `Creators`
+   - `YouTube > Melhores 7d`
+   - `Data quality`
+4. Corrigir primeiro gaps que impedem leitura real ou quebram o contrato.
+5. Deixar ajustes cosmeticos para a Atividade 6.
+
+Regra de prioridade:
+
+- primeiro: view ausente, falta de permissao, coluna ausente
+- depois: base vazia inesperada, semantica divergente, filtro quebrado
+- por ultimo: copy, ordenacao fina, acabamento visual
+
+Saida esperada:
+
+- backlog curto de gaps da Atividade 1 ja priorizado para execucao
+
+#### Etapa 1.8 - Emitir decisao de liberacao por tela
+
+Objetivo:
+
+- encerrar a Atividade 1 com uma resposta objetiva sobre o que ja pode avancar
+  no sprint
+
+Passo a passo:
+
+1. Marcar cada view como:
+   - liberada
+   - liberada com ressalvas
+   - bloqueada
+2. Consolidar por tela:
+   - `Overview`
+   - `Creators > Visao geral`
+   - `Criador individual`
+   - `YouTube > Melhores 7d`
+3. Registrar a proxima acao imediata por frente:
+   - seguir para UI
+   - corrigir SQL
+   - corrigir grants/permissoes
+   - revisar chamada do app
+4. Encerrar a atividade somente quando a sequencia do sprint estiver clara.
+
+Criterio de fechamento operacional:
+
+- todas as views do sprint estao classificadas
+- cada tela do MVP tem status de liberacao
+- o proximo passo do sprint esta definido sem ambiguidade
 
 #### Atividade 2 - Fechar a pagina `Overview`
 
@@ -1634,7 +1962,7 @@ Execucao pratica:
 3. Ajustar ranking e textos para os campos realmente disponiveis.
 4. Validar consistencia com a tela de criador individual.
 
-#### Atividade 4 - Implementar `Videos em crescimento`
+#### Atividade 4 - Implementar `YouTube > Melhores 7d`
 
 Status: aberta.
 
@@ -1665,7 +1993,7 @@ Etapas:
 
 Criterio de conclusao:
 
-- a pagina `Videos em crescimento` deixa de ser placeholder
+- a pagina `YouTube > Melhores 7d` deixa de ser placeholder
 - o ranking semanal e alimentado por view real
 - a leitura deixa claro que se trata de crescimento semanal, nao de tracao em
   tempo quase real
@@ -1762,7 +2090,7 @@ Etapas:
 4. Validar navegacao lateral do fluxo:
    - `Overview`
    - `Creators`
-   - `Videos em crescimento`
+   - `YouTube > Melhores 7d`
    - `Data quality`
 5. Fazer smoke test local do app apos as trocas do sprint.
 
@@ -1800,7 +2128,7 @@ Execucao pratica:
 1. Validar views reais e contratos no Supabase.
 2. Fechar `Overview` com leitura macro confiavel.
 3. Remover mock da `Visao geral` de `Creators`.
-4. Implementar `Videos em crescimento`.
+4. Implementar `YouTube > Melhores 7d`.
 5. Aplicar o gate de `Data Quality` antes dos rankings.
 6. Fazer acabamento final de UX, estados vazios e smoke test.
 
@@ -1811,7 +2139,7 @@ Execucao pratica:
 | 1 | Validar views minimas | garantir contrato de dados antes da UI | views aplicadas + leitura segura | checklist de validacao por view | consultas e colunas confirmadas |
 | 2 | Fechar `Overview` | consolidar a leitura macro da base | creators + weekly activity + Fenabrave validados | overview real e sem placeholder estrutural | tela com dados reais e fallback honesto |
 | 3 | Trocar `Creators > Visao geral` | remover mock e ligar carteira real | `v_dashboard_creator_summary` validada | comparativo de creators com base real | ausencia de `get_creator_mock_rows()` na visao geral |
-| 4 | Implementar `Videos em crescimento` | entregar ranking semanal funcional | `v_dashboard_post_growth_7d` validada | nova pagina real de crescimento | tela deixa de ser placeholder |
+| 4 | Implementar `YouTube > Melhores 7d` | entregar ranking semanal funcional | `v_dashboard_post_growth_7d` validada | nova pagina real de crescimento | tela deixa de ser placeholder |
 | 5 | Garantir `Data Quality` antes dos rankings | reforcar a confiabilidade da leitura | views de Data Quality validadas | padrao unico de contexto de qualidade | ranking com sinal operacional visivel |
 | 6 | Fechamento de UX e robustez | preparar o sprint para uso interno recorrente | atividades anteriores estabilizadas | acabamento final e smoke test | fluxo do MVP navegavel e consistente |
 
@@ -1836,7 +2164,7 @@ Execucao pratica:
 - Dashboard interno navegavel com telas principais do MVP ligadas a dados reais.
 - `Overview` fechada como leitura macro da base monitorada.
 - `Creators > Visao geral` sem mock e coerente com `Criador individual`.
-- `Videos em crescimento` implementada com ranking semanal real.
+- `YouTube > Melhores 7d` implementada com ranking semanal real.
 - Confirmacao de que rankings aparecem depois dos sinais de confiabilidade.
 - Evidencia de que o MVP ficou pronto para uso interno recorrente.
 
@@ -1851,7 +2179,7 @@ Resultado observado:
 - `Creators` ja tem navegacao e estrutura visual, mas a visao geral ainda usa
   dados mockados
 - `Criador individual` ja conversa com views reais de creator
-- `Videos em crescimento` ainda esta em placeholder
+- `YouTube > Melhores 7d` ainda esta em placeholder
 - as views principais do MVP existem no repositorio SQL
 - a pasta `dashboard/.streamlit/` ainda nao foi criada, entao faltam os
   arquivos auxiliares de configuracao e exemplo de secrets
@@ -1874,7 +2202,7 @@ Resultado observado:
   - validacao das views reais
   - fechamento de `Overview`
   - substituicao dos mocks em `Creators`
-  - implementacao de `Videos em crescimento`
+  - implementacao de `YouTube > Melhores 7d`
 
 ### Estimativa
 

@@ -35,7 +35,7 @@ Status do pre-flight em 2026-06-16:
   - `Overview` existe, mas ainda combina KPIs reais de Data Quality com blocos placeholder
   - `Creators` tem navegacao e layout reais, mas a visao geral ainda usa mock local
   - `Criador individual` ja consome `v_dashboard_creator_summary` e `v_dashboard_creator_weekly_activity`
-  - `Videos em crescimento` continua placeholder, embora a view `v_dashboard_post_growth_7d` exista no repositorio
+  - `YouTube > Melhores 7d` continua placeholder, embora a view `v_dashboard_post_growth_7d` exista no repositorio
 - views encontradas no repositorio para o MVP:
   - `v_dashboard_guardrail_coverage_status`
   - `v_dashboard_dead_post_validation_status`
@@ -56,7 +56,7 @@ Leitura do pre-flight:
   1. validar as views no Supabase
   2. fechar `Overview`
   3. trocar `Creators` para dados reais em toda a visao geral
-  4. implementar `Videos em crescimento`
+  4. implementar `YouTube > Melhores 7d`
 
 Tarefas:
 
@@ -520,7 +520,7 @@ Tarefas:
 - criar navegacao inicial:
   - Overview
   - Creators
-  - Videos em crescimento
+  - YouTube > Melhores 7d
   - Hot now
   - Data quality
   - Fila / videos indisponiveis
