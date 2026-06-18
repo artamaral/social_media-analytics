@@ -2311,9 +2311,9 @@ def build_overview_recent_activity_chart(chart_df: pd.DataFrame) -> Any:
     )
     fig.update_layout(
         xaxis_title=None,
-        yaxis_title="Interacoes",
+        yaxis_title=None,
         yaxis2=dict(
-            title="Novos posts",
+            title=None,
             overlaying="y",
             side="right",
             showgrid=False,
@@ -2335,6 +2335,10 @@ def build_overview_recent_activity_chart(chart_df: pd.DataFrame) -> Any:
         ),
     )
     apply_plotly_theme(fig, legend_title="Serie")
+    fig.update_layout(
+        paper_bgcolor="#15171c",
+        plot_bgcolor="#15171c",
+    )
     return fig
 
 
