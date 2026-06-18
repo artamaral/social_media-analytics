@@ -2004,10 +2004,16 @@ def render_youtube_best_7d_page() -> None:
         <style>
         .youtube-best-toolbar {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            gap: 1rem;
-            margin: 0.35rem 0 0.8rem;
+            gap: 1.1rem;
+            margin: 0.2rem 0 0.85rem;
+        }
+        .youtube-best-toolbar-label {
+            color: var(--text);
+            font-size: 1.7rem;
+            font-weight: 800;
+            line-height: 1;
+            white-space: nowrap;
         }
         .youtube-best-table {
             border: 1px solid rgba(255, 255, 255, 0.08);
@@ -2042,6 +2048,7 @@ def render_youtube_best_7d_page() -> None:
         .youtube-best-head-cell.video {
             justify-content: flex-start;
             text-align: left;
+            padding-left: 1.35rem;
         }
         .youtube-best-row + .youtube-best-row {
             border-top: 1px solid rgba(255, 255, 255, 0.08);
@@ -2049,7 +2056,7 @@ def render_youtube_best_7d_page() -> None:
         .youtube-best-main {
             display: grid;
             grid-template-columns: 48px 122px minmax(0, 1fr);
-            gap: 0.9rem;
+            gap: 0.95rem;
             align-items: start;
             padding: 1rem;
         }
@@ -2091,9 +2098,9 @@ def render_youtube_best_7d_page() -> None:
         }
         .youtube-best-title {
             color: var(--text);
-            font-size: 1.16rem;
+            font-size: 1.28rem;
             font-weight: 700;
-            line-height: 1.28;
+            line-height: 1.22;
             margin-bottom: 0.48rem;
             word-break: break-word;
         }
@@ -2153,11 +2160,13 @@ def render_youtube_best_7d_page() -> None:
         unsafe_allow_html=True,
     )
 
+    st.markdown('<div class="youtube-best-toolbar"><div class="youtube-best-toolbar-label">Tipo de video</div></div>', unsafe_allow_html=True)
     selected_filter = st.radio(
         "Tipo de video",
         ["Todos", "Long", "Short"],
         horizontal=True,
         key="youtube_best_7d_filter",
+        label_visibility="collapsed",
     )
 
     filters: list[tuple[str, Any]] = [("platform", "youtube")]
