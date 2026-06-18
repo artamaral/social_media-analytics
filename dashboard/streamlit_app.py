@@ -2180,15 +2180,21 @@ def render_youtube_best_7d_page() -> None:
         return
 
     df = pd.DataFrame(rows)
-    df["views_delta_7d_num"] = pd.to_numeric(df.get("views_delta_7d"), errors="coerce").fillna(0)
-    df["likes_delta_7d_num"] = pd.to_numeric(df.get("likes_delta_7d"), errors="coerce").fillna(0)
-    df["comments_delta_7d_num"] = pd.to_numeric(df.get("comments_delta_7d"), errors="coerce").fillna(0)
-    df["latest_views_num"] = pd.to_numeric(df.get("latest_views"), errors="coerce").fillna(0)
-    df["latest_likes_num"] = pd.to_numeric(df.get("latest_likes"), errors="coerce").fillna(0)
-    df["latest_comments_num"] = pd.to_numeric(df.get("latest_comments"), errors="coerce").fillna(0)
-    df["snapshot_count_num"] = pd.to_numeric(df.get("snapshot_count"), errors="coerce").fillna(0)
-    df["post_date_dt"] = pd.to_datetime(df.get("post_date"), errors="coerce")
-    df["latest_collected_at_dt"] = pd.to_datetime(df.get("latest_collected_at"), errors="coerce", utc=True)
+
+    def optional_series(column_name: str, default_value: Any = None) -> pd.Series:
+        if column_name in df.columns:
+            return df[column_name]
+        return pd.Series([default_value] * len(df), index=df.index)
+
+    df["views_delta_7d_num"] = pd.to_numeric(optional_series("views_delta_7d", 0), errors="coerce").fillna(0)
+    df["likes_delta_7d_num"] = pd.to_numeric(optional_series("likes_delta_7d", 0), errors="coerce").fillna(0)
+    df["comments_delta_7d_num"] = pd.to_numeric(optional_series("comments_delta_7d", 0), errors="coerce").fillna(0)
+    df["latest_views_num"] = pd.to_numeric(optional_series("latest_views", 0), errors="coerce").fillna(0)
+    df["latest_likes_num"] = pd.to_numeric(optional_series("latest_likes", 0), errors="coerce").fillna(0)
+    df["latest_comments_num"] = pd.to_numeric(optional_series("latest_comments", 0), errors="coerce").fillna(0)
+    df["snapshot_count_num"] = pd.to_numeric(optional_series("snapshot_count", 0), errors="coerce").fillna(0)
+    df["post_date_dt"] = pd.to_datetime(optional_series("post_date"), errors="coerce")
+    df["latest_collected_at_dt"] = pd.to_datetime(optional_series("latest_collected_at"), errors="coerce", utc=True)
     platform_series = df.get("platform", pd.Series(dtype="object")).fillna("").astype(str).str.strip().str.lower()
     if not platform_series.empty:
         df = df[platform_series == "youtube"].copy()
