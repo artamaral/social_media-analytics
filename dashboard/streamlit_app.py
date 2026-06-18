@@ -1872,35 +1872,17 @@ def render_overview() -> None:
         )
 
     st.markdown("### Atividade recente")
-    head_left, head_right = st.columns([0.78, 0.22])
-    with head_left:
-        st.markdown(
-            '<div class="overview-recent-subtitle">Serie macro da base monitorada por semanas fechadas. O grafico resume novos posts, interacoes e creators ativos.</div>',
-            unsafe_allow_html=True,
-        )
-    with head_right:
-        available_weeks = len(recent_chart_df.index) if recent_chart_df is not None and not recent_chart_df.empty else 0
-        if available_weeks > 0:
-            min_window = 2 if available_weeks >= 2 else 1
-            default_window = min(OVERVIEW_RECENT_ACTIVITY_WINDOW_WEEKS, available_weeks)
-            selected_window_weeks = st.slider(
-                "Janela semanal",
-                min_value=min_window,
-                max_value=available_weeks,
-                value=max(default_window, min_window),
-                step=1,
-                key="overview_recent_window_weeks",
-            )
-        else:
-            selected_window_weeks = OVERVIEW_RECENT_ACTIVITY_WINDOW_WEEKS
-            st.slider(
-                "Janela semanal",
-                min_value=1,
-                max_value=1,
-                value=1,
-                key="overview_recent_window_weeks_empty",
-                disabled=True,
-            )
+    st.markdown(
+        '<div class="overview-recent-subtitle">Serie macro da base monitorada por semanas fechadas. O grafico resume novos posts e interacoes.</div>',
+        unsafe_allow_html=True,
+    )
+    available_weeks = len(recent_chart_df.index) if recent_chart_df is not None and not recent_chart_df.empty else 0
+    if available_weeks > 0:
+        min_window = 2 if available_weeks >= 2 else 1
+        default_window = min(OVERVIEW_RECENT_ACTIVITY_WINDOW_WEEKS, available_weeks)
+        selected_window_weeks = max(default_window, min_window)
+    else:
+        selected_window_weeks = OVERVIEW_RECENT_ACTIVITY_WINDOW_WEEKS
     recent_chart_filtered = filter_overview_recent_activity_frame(
         recent_chart_df,
         period_weeks=selected_window_weeks,
@@ -1908,6 +1890,31 @@ def render_overview() -> None:
     recent_focus = summarize_overview_recent_focus(recent_chart_filtered, recent_summary)
     recent_left, recent_right = st.columns([1.8, 1])
     with recent_left:
+        slider_col, _ = st.columns([0.55, 0.45])
+        with slider_col:
+            if available_weeks > 0:
+                selected_window_weeks = st.slider(
+                    "Janela semanal",
+                    min_value=min_window,
+                    max_value=available_weeks,
+                    value=max(default_window, min_window),
+                    step=1,
+                    key="overview_recent_window_weeks",
+                )
+            else:
+                st.slider(
+                    "Janela semanal",
+                    min_value=1,
+                    max_value=1,
+                    value=1,
+                    key="overview_recent_window_weeks_empty",
+                    disabled=True,
+                )
+        recent_chart_filtered = filter_overview_recent_activity_frame(
+            recent_chart_df,
+            period_weeks=selected_window_weeks,
+        )
+        recent_focus = summarize_overview_recent_focus(recent_chart_filtered, recent_summary)
         recent_fig = build_overview_recent_activity_chart(recent_chart_filtered)
         if recent_fig is not None:
             st.plotly_chart(recent_fig, use_container_width=True, config={"displayModeBar": False})
@@ -2264,6 +2271,16 @@ def build_overview_recent_activity_chart(chart_df: pd.DataFrame) -> Any:
     if chart_df is None or chart_df.empty:
         return None
 
+    tick_values = []
+    tick_text = []
+    week_labels = chart_df["week_label_short"].tolist()
+    if week_labels:
+        tick_values = [week_labels[0]]
+        tick_text = [week_labels[0]]
+        if len(week_labels) > 1 and week_labels[-1] != week_labels[0]:
+            tick_values.append(week_labels[-1])
+            tick_text.append(week_labels[-1])
+
     fig = go.Figure()
     fig.add_scatter(
         x=chart_df["week_label_short"],
@@ -2284,21 +2301,11 @@ def build_overview_recent_activity_chart(chart_df: pd.DataFrame) -> Any:
         yaxis="y2",
         hovertemplate="Semana %{x}<br>Novos posts: %{y}<extra></extra>",
     )
-    fig.add_scatter(
-        x=chart_df["week_label_short"],
-        y=chart_df["creators_ativos"],
-        name="Criadores ativos",
-        mode="lines+markers",
-        line=dict(color="#f5f7fa", width=3, dash="dot"),
-        marker=dict(color="#f5f7fa", size=7),
-        yaxis="y2",
-        hovertemplate="Semana %{x}<br>Criadores ativos: %{y}<extra></extra>",
-    )
     fig.update_layout(
         xaxis_title=None,
         yaxis_title="Interacoes",
         yaxis2=dict(
-            title="Posts / Criadores",
+            title="Novos posts",
             overlaying="y",
             side="right",
             showgrid=False,
@@ -2312,7 +2319,12 @@ def build_overview_recent_activity_chart(chart_df: pd.DataFrame) -> Any:
         ),
         margin=dict(l=16, r=64, t=24, b=16),
         hovermode="x unified",
-        xaxis=dict(tickangle=0),
+        xaxis=dict(
+            tickmode="array" if tick_values else "auto",
+            tickvals=tick_values,
+            ticktext=tick_text,
+            tickangle=0,
+        ),
     )
     apply_plotly_theme(fig, legend_title="Serie")
     return fig
