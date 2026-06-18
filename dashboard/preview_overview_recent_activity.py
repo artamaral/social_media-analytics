@@ -1,0 +1,483 @@
+import argparse
+import csv
+import json
+from datetime import datetime
+from html import escape
+from pathlib import Path
+
+
+SAMPLE_ROWS = [
+    {"week_start": "2026-05-05", "week_end": "2026-05-11", "week_label": "05/05/2026-11/05/2026", "posts_publicados": 218, "interacoes": 3012450, "creators_ativos": 34},
+    {"week_start": "2026-05-12", "week_end": "2026-05-18", "week_label": "12/05/2026-18/05/2026", "posts_publicados": 236, "interacoes": 2984120, "creators_ativos": 35},
+    {"week_start": "2026-05-19", "week_end": "2026-05-25", "week_label": "19/05/2026-25/05/2026", "posts_publicados": 244, "interacoes": 2945775, "creators_ativos": 36},
+    {"week_start": "2026-05-26", "week_end": "2026-06-01", "week_label": "26/05/2026-01/06/2026", "posts_publicados": 252, "interacoes": 2879012, "creators_ativos": 37},
+    {"week_start": "2026-06-02", "week_end": "2026-06-08", "week_label": "02/06/2026-08/06/2026", "posts_publicados": 263, "interacoes": 2840048, "creators_ativos": 38},
+    {"week_start": "2026-06-09", "week_end": "2026-06-15", "week_label": "09/06/2026-15/06/2026", "posts_publicados": 271, "interacoes": 2890213, "creators_ativos": 39},
+]
+
+
+HTML_TEMPLATE = """<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Overview Recent Activity Preview</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {{
+      --bg: #15171c;
+      --surface: #24272f;
+      --text: #f5f7fa;
+      --muted: #aeb4bf;
+      --card: #f4f6f7;
+      --card-dark: #252733;
+      --text-dark: #252733;
+      --accent: #ff8069;
+      --warning: #f2c14e;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 24px;
+    }}
+    .page {{
+      max-width: 1280px;
+      margin: 0 auto;
+    }}
+    .subtitle {{
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }}
+    .controls {{
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }}
+    .control {{
+      background: var(--surface);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 8px;
+      padding: 12px;
+    }}
+    .control label {{
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 8px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }}
+    .control input[type="range"], .control select {{
+      width: 100%;
+    }}
+    .control .value {{
+      margin-top: 8px;
+      font-size: 14px;
+      font-weight: 700;
+    }}
+    .toggle-list {{
+      display: grid;
+      gap: 8px;
+    }}
+    .toggle-list label {{
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+      text-transform: none;
+      color: var(--text);
+      font-size: 13px;
+    }}
+    .layout {{
+      display: grid;
+      grid-template-columns: 1.8fr 1fr;
+      gap: 18px;
+      align-items: start;
+    }}
+    .chart-panel {{
+      background: transparent;
+    }}
+    .cards {{
+      display: grid;
+      gap: 12px;
+    }}
+    .metric-card {{
+      background: var(--card);
+      color: var(--text-dark);
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.06);
+      min-height: 138px;
+    }}
+    .metric-card-header {{
+      background: var(--card-dark);
+      color: var(--text);
+      padding: 11px 13px;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }}
+    .metric-card-body {{
+      padding: 16px;
+    }}
+    .metric-value {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      font-size: 28px;
+      font-weight: 800;
+      line-height: 1.1;
+    }}
+    .metric-icon {{
+      width: 42px;
+      height: 42px;
+      border-radius: 6px;
+      background: var(--accent);
+      color: white;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 14px;
+      flex: 0 0 auto;
+    }}
+    .metric-caption {{
+      margin-top: 10px;
+      color: #606774;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }}
+    #chart {{
+      min-height: 430px;
+    }}
+    @media (max-width: 980px) {{
+      .controls, .layout {{ grid-template-columns: 1fr; }}
+    }}
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h2>Preview local do bloco "Atividade recente"</h2>
+    <div class="subtitle">Use este arquivo para iterar no grafico e nos cards da overview sem depender de deploy no Streamlit Cloud.</div>
+
+    <div class="controls">
+      <div class="control">
+        <label for="weekIndex">Semana de referencia</label>
+        <input id="weekIndex" type="range" min="0" max="{max_index}" step="1" value="{default_index}">
+        <div class="value" id="weekIndexValue"></div>
+      </div>
+      <div class="control">
+        <label for="windowWeeks">Semanas no grafico</label>
+        <input id="windowWeeks" type="range" min="2" max="{max_window}" step="1" value="{default_window}">
+        <div class="value" id="windowWeeksValue"></div>
+      </div>
+      <div class="control">
+        <label>Opcoes visuais</label>
+        <div class="toggle-list">
+          <label><input id="showCreators" type="checkbox"> Mostrar criadores ativos no grafico</label>
+          <label><input id="showAxisTitles" type="checkbox"> Mostrar titulo dos eixos</label>
+          <label><input id="flatBackground" type="checkbox" checked> Fundo igual ao da pagina</label>
+          <label><input id="edgeTicksOnly" type="checkbox" checked> Mostrar apenas datas extremas no eixo X</label>
+        </div>
+      </div>
+      <div class="control">
+        <label>Dados carregados</label>
+        <div class="value">{data_label}</div>
+      </div>
+    </div>
+
+    <div class="layout">
+      <div class="chart-panel">
+        <div id="chart"></div>
+      </div>
+      <div class="cards">
+        <div class="metric-card">
+          <div class="metric-card-header">Novos posts</div>
+          <div class="metric-card-body">
+            <div class="metric-value"><span id="postsValue">--</span><span class="metric-icon">VD</span></div>
+            <div class="metric-caption" id="postsCaption">--</div>
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-card-header">Interacoes</div>
+          <div class="metric-card-body">
+            <div class="metric-value"><span id="interactionsValue">--</span><span class="metric-icon">VW</span></div>
+            <div class="metric-caption" id="interactionsCaption">--</div>
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-card-header">Criadores ativos</div>
+          <div class="metric-card-body">
+            <div class="metric-value"><span id="creatorsValue">--</span><span class="metric-icon">CR</span></div>
+            <div class="metric-caption" id="creatorsCaption">--</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <script>
+    const rows = {rows_json};
+    const weekIndex = document.getElementById("weekIndex");
+    const windowWeeks = document.getElementById("windowWeeks");
+    const weekIndexValue = document.getElementById("weekIndexValue");
+    const windowWeeksValue = document.getElementById("windowWeeksValue");
+    const showCreators = document.getElementById("showCreators");
+    const showAxisTitles = document.getElementById("showAxisTitles");
+    const flatBackground = document.getElementById("flatBackground");
+    const edgeTicksOnly = document.getElementById("edgeTicksOnly");
+
+    const postsValue = document.getElementById("postsValue");
+    const postsCaption = document.getElementById("postsCaption");
+    const interactionsValue = document.getElementById("interactionsValue");
+    const interactionsCaption = document.getElementById("interactionsCaption");
+    const creatorsValue = document.getElementById("creatorsValue");
+    const creatorsCaption = document.getElementById("creatorsCaption");
+
+    function formatInt(value) {{
+      return new Intl.NumberFormat("pt-BR").format(value || 0);
+    }}
+
+    function formatDeltaCaption(currentValue, previousValue) {{
+      if (previousValue === null || previousValue === undefined) {{
+        return {{ text: "Sem semana anterior", color: "#aeb4bf" }};
+      }}
+      const delta = currentValue - previousValue;
+      if (previousValue <= 0) {{
+        return {{ text: "Sem base anterior", color: delta > 0 ? "#2f9e62" : delta < 0 ? "#ff6f61" : "#f2c14e" }};
+      }}
+      const pct = ((delta / previousValue) * 100).toFixed(2).replace(".", ",");
+      return {{
+        text: `${{delta >= 0 ? "+" : ""}}${{pct}}% vs ultima semana`,
+        color: delta > 0 ? "#2f9e62" : delta < 0 ? "#ff6f61" : "#f2c14e"
+      }};
+    }}
+
+    function getWindowRows() {{
+      const index = Number(weekIndex.value);
+      const selected = rows[index];
+      const trailing = Number(windowWeeks.value);
+      const endIndex = index + 1;
+      const startIndex = Math.max(0, endIndex - trailing);
+      return {{
+        selected,
+        windowRows: rows.slice(startIndex, endIndex),
+        selectedIndex: index
+      }};
+    }}
+
+    function updateCards(selectedIndex) {{
+      const current = rows[selectedIndex];
+      const previous = selectedIndex > 0 ? rows[selectedIndex - 1] : null;
+      const postsDelta = formatDeltaCaption(current.posts_publicados, previous ? previous.posts_publicados : null);
+      const interactionsDelta = formatDeltaCaption(current.interacoes, previous ? previous.interacoes : null);
+      const creatorsDelta = formatDeltaCaption(current.creators_ativos, previous ? previous.creators_ativos : null);
+
+      postsValue.textContent = formatInt(current.posts_publicados);
+      postsCaption.textContent = postsDelta.text;
+      postsCaption.style.color = postsDelta.color;
+
+      interactionsValue.textContent = formatInt(current.interacoes);
+      interactionsCaption.textContent = interactionsDelta.text;
+      interactionsCaption.style.color = interactionsDelta.color;
+
+      creatorsValue.textContent = formatInt(current.creators_ativos);
+      creatorsCaption.textContent = creatorsDelta.text;
+      creatorsCaption.style.color = creatorsDelta.color;
+    }}
+
+    function updateLabels(selected, windowRows) {{
+      weekIndexValue.textContent = selected.week_label;
+      if (windowRows.length > 0) {{
+        windowWeeksValue.textContent = `${{windowRows[0].week_label}} -> ${{windowRows[windowRows.length - 1].week_label}}`;
+      }} else {{
+        windowWeeksValue.textContent = "--";
+      }}
+    }}
+
+    function renderChart() {{
+      const state = getWindowRows();
+      updateLabels(state.selected, state.windowRows);
+      updateCards(state.selectedIndex);
+
+      const xValues = state.windowRows.map((row) => row.week_label);
+      const interacoes = state.windowRows.map((row) => row.interacoes);
+      const posts = state.windowRows.map((row) => row.posts_publicados);
+      const creators = state.windowRows.map((row) => row.creators_ativos);
+      const traces = [
+        {{
+          x: xValues,
+          y: interacoes,
+          name: "Interacoes",
+          type: "scatter",
+          mode: "lines",
+          line: {{ color: "#ff8069", width: 3 }},
+          hovertemplate: "Semana %{{x}}<br>Interacoes: %{{y}}<extra></extra>"
+        }},
+        {{
+          x: xValues,
+          y: posts,
+          name: "Novos posts",
+          type: "scatter",
+          mode: "lines",
+          line: {{ color: "#f2c14e", width: 3 }},
+          fill: "tozeroy",
+          fillcolor: "rgba(242, 193, 78, 0.24)",
+          yaxis: "y2",
+          hovertemplate: "Semana %{{x}}<br>Novos posts: %{{y}}<extra></extra>"
+        }}
+      ];
+
+      if (showCreators.checked) {{
+        traces.push({{
+          x: xValues,
+          y: creators,
+          name: "Criadores ativos",
+          type: "scatter",
+          mode: "lines",
+          line: {{ color: "#f5f7fa", width: 3, dash: "dot" }},
+          yaxis: "y2",
+          hovertemplate: "Semana %{{x}}<br>Criadores ativos: %{{y}}<extra></extra>"
+        }});
+      }}
+
+      const tickVals = edgeTicksOnly.checked && xValues.length > 1 ? [xValues[0], xValues[xValues.length - 1]] : xValues;
+      const layout = {{
+        paper_bgcolor: flatBackground.checked ? "#15171c" : "#24272f",
+        plot_bgcolor: flatBackground.checked ? "#15171c" : "#24272f",
+        font: {{ color: "#f5f7fa" }},
+        xaxis: {{
+          type: "category",
+          tickmode: "array",
+          tickvals: tickVals,
+          ticktext: tickVals,
+          tickangle: 0,
+          showgrid: false,
+          zeroline: false,
+          title: showAxisTitles.checked ? "Semana fechada" : null
+        }},
+        yaxis: {{
+          showgrid: false,
+          zeroline: false,
+          title: showAxisTitles.checked ? "Interacoes" : null
+        }},
+        yaxis2: {{
+          overlaying: "y",
+          side: "right",
+          showgrid: false,
+          zeroline: false,
+          range: [0, 1000],
+          title: showAxisTitles.checked ? (showCreators.checked ? "Posts / Criadores" : "Novos posts") : null
+        }},
+        legend: {{
+          orientation: "h",
+          yanchor: "bottom",
+          y: 1.02,
+          xanchor: "left",
+          x: 0
+        }},
+        hovermode: "x unified",
+        margin: {{ l: 16, r: 64, t: 24, b: 16 }}
+      }};
+
+      Plotly.newPlot("chart", traces, layout, {{ displayModeBar: false, responsive: true }});
+    }}
+
+    [weekIndex, windowWeeks, showCreators, showAxisTitles, flatBackground, edgeTicksOnly].forEach((el) => {{
+      el.addEventListener("input", renderChart);
+      el.addEventListener("change", renderChart);
+    }});
+
+    renderChart();
+  </script>
+</body>
+</html>
+"""
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Gera um preview local em HTML do bloco de atividade recente da overview."
+    )
+    parser.add_argument(
+        "--input",
+        help="CSV com week_start, week_end, week_label, posts_publicados, interacoes e creators_ativos.",
+    )
+    parser.add_argument(
+        "--output",
+        default="dashboard/preview/overview_recent_activity_preview.html",
+        help="Arquivo HTML de saida.",
+    )
+    return parser.parse_args()
+
+
+def build_week_label(row: dict[str, str]) -> str:
+    week_start = row.get("week_start", "").strip()
+    week_end = row.get("week_end", "").strip()
+    if week_start and week_end:
+      start = datetime.fromisoformat(week_start).strftime("%d/%m/%Y")
+      end = datetime.fromisoformat(week_end).strftime("%d/%m/%Y")
+      return f"{start}-{end}"
+    return row.get("week_label", "").strip() or "--"
+
+
+def load_rows(input_path: str | None) -> list[dict[str, object]]:
+    if not input_path:
+        return SAMPLE_ROWS
+
+    path = Path(input_path)
+    with path.open("r", encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle)
+        rows: list[dict[str, object]] = []
+        for raw_row in reader:
+            row = {key.strip(): (value or "").strip() for key, value in raw_row.items() if key}
+            rows.append(
+                {
+                    "week_start": row.get("week_start") or row.get("week_start_date") or "",
+                    "week_end": row.get("week_end") or row.get("week_end_date") or "",
+                    "week_label": row.get("week_label") or build_week_label(row),
+                    "posts_publicados": int(float(row.get("posts_publicados") or row.get("videos_publicados") or 0)),
+                    "interacoes": int(float(row.get("interacoes") or 0)),
+                    "creators_ativos": int(float(row.get("creators_ativos") or row.get("active_creators") or 0)),
+                }
+            )
+    rows.sort(key=lambda item: str(item["week_end"]))
+    return rows or SAMPLE_ROWS
+
+
+def render_html(rows: list[dict[str, object]], output_path: str, input_label: str) -> Path:
+    output = Path(output_path)
+    output.parent.mkdir(parents=True, exist_ok=True)
+
+    max_index = max(len(rows) - 1, 0)
+    default_window = min(8, len(rows)) if len(rows) >= 2 else 2
+    html = HTML_TEMPLATE.format(
+        rows_json=json.dumps(rows, ensure_ascii=True),
+        max_index=max_index,
+        default_index=max_index,
+        max_window=max(len(rows), 2),
+        default_window=max(default_window, 2),
+        data_label=escape(input_label),
+    )
+    output.write_text(html, encoding="utf-8")
+    return output
+
+
+def main() -> None:
+    args = parse_args()
+    rows = load_rows(args.input)
+    input_label = args.input or "amostra embutida no script"
+    output = render_html(rows, args.output, input_label)
+    print(f"Preview gerado em: {output.resolve()}")
+
+
+if __name__ == "__main__":
+    main()

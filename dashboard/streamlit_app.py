@@ -2294,18 +2294,18 @@ def build_overview_recent_activity_chart(chart_df: pd.DataFrame) -> Any:
         x=chart_df["week_label_short"],
         y=chart_df["interacoes"],
         name="Interacoes",
-        mode="lines+markers",
+        mode="lines",
         line=dict(color="#ff8069", width=3),
-        marker=dict(color="#ff8069", size=8),
         hovertemplate="Semana %{x}<br>Interacoes: %{y}<extra></extra>",
     )
     fig.add_scatter(
         x=chart_df["week_label_short"],
         y=chart_df["posts_publicados"],
         name="Novos posts",
-        mode="lines+markers",
+        mode="lines",
         line=dict(color="#f2c14e", width=3),
-        marker=dict(color="#f2c14e", size=7),
+        fill="tozeroy",
+        fillcolor="rgba(242, 193, 78, 0.24)",
         yaxis="y2",
         hovertemplate="Semana %{x}<br>Novos posts: %{y}<extra></extra>",
     )
@@ -2317,6 +2317,8 @@ def build_overview_recent_activity_chart(chart_df: pd.DataFrame) -> Any:
             overlaying="y",
             side="right",
             showgrid=False,
+            zeroline=False,
+            range=[0, 1000],
         ),
         legend=dict(
             orientation="h",
@@ -2332,6 +2334,13 @@ def build_overview_recent_activity_chart(chart_df: pd.DataFrame) -> Any:
             tickvals=tick_values,
             ticktext=tick_text,
             tickangle=0,
+            showgrid=False,
+            zeroline=False,
+        ),
+        yaxis=dict(
+            title=None,
+            showgrid=False,
+            zeroline=False,
         ),
     )
     apply_plotly_theme(fig, legend_title="Serie")
@@ -2339,6 +2348,8 @@ def build_overview_recent_activity_chart(chart_df: pd.DataFrame) -> Any:
         paper_bgcolor="#15171c",
         plot_bgcolor="#15171c",
     )
+    fig.update_xaxes(showgrid=False, zeroline=False)
+    fig.update_yaxes(showgrid=False, zeroline=False)
     return fig
 
 

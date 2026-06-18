@@ -20,6 +20,26 @@ Executar a partir da raiz do repositorio:
 streamlit run dashboard/streamlit_app.py
 ```
 
+## Preview local do grafico da overview
+
+Para iterar no bloco de atividade recente sem depender de deploy no Streamlit:
+
+```powershell
+python dashboard/preview_overview_recent_activity.py
+```
+
+Isso gera um HTML local em:
+
+```text
+dashboard/preview/overview_recent_activity_preview.html
+```
+
+Tambem e possivel usar um CSV proprio:
+
+```powershell
+python dashboard/preview_overview_recent_activity.py --input C:\caminho\overview_recent_activity.csv
+```
+
 ## Seguranca
 
 - Nao versionar secrets reais.
