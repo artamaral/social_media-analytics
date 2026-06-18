@@ -2025,7 +2025,7 @@ def render_youtube_best_7d_page() -> None:
         .youtube-best-header,
         .youtube-best-row {
             display: grid;
-            grid-template-columns: minmax(420px, 2.5fr) 0.9fr 0.8fr 0.8fr 0.8fr 0.9fr;
+            grid-template-columns: minmax(460px, 3.35fr) 0.82fr 0.48fr 0.58fr 0.54fr 0.58fr;
             gap: 0;
         }
         .youtube-best-header {
@@ -2037,11 +2037,11 @@ def render_youtube_best_7d_page() -> None:
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 0.85rem 1rem;
+            padding: 0.8rem 0.55rem;
             color: var(--muted);
-            font-size: 0.78rem;
+            font-size: 0.74rem;
             font-weight: 800;
-            letter-spacing: 0.04em;
+            letter-spacing: 0.02em;
             text-transform: uppercase;
             text-align: center;
         }
@@ -2098,22 +2098,25 @@ def render_youtube_best_7d_page() -> None:
             font-size: 1rem;
             font-weight: 700;
             line-height: 1.35;
-            margin-bottom: 0.55rem;
+            margin-bottom: 0.48rem;
             word-break: break-word;
         }
         .youtube-best-meta {
             display: flex;
-            flex-wrap: wrap;
-            gap: 0.45rem;
+            flex-wrap: nowrap;
+            gap: 0.38rem;
+            align-items: center;
+            overflow: hidden;
         }
         .youtube-best-chip {
             border-radius: 999px;
-            padding: 0.3rem 0.65rem;
-            font-size: 0.72rem;
+            padding: 0.26rem 0.58rem;
+            font-size: 0.68rem;
             font-weight: 700;
             background: rgba(255, 255, 255, 0.06);
             color: var(--muted);
             border: 1px solid rgba(255, 255, 255, 0.08);
+            white-space: nowrap;
         }
         .youtube-best-chip.type {
             color: white;
@@ -2124,9 +2127,9 @@ def render_youtube_best_7d_page() -> None:
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 1rem 0.8rem;
+            padding: 1rem 0.45rem;
             color: var(--text);
-            font-size: 0.98rem;
+            font-size: 0.94rem;
             font-weight: 700;
             text-align: center;
         }
@@ -2239,7 +2242,7 @@ def render_youtube_best_7d_page() -> None:
         '<div class="youtube-best-header">'
         '<div class="youtube-best-head-cell video">Video</div>'
         '<div class="youtube-best-head-cell">Data da publicacao</div>'
-        '<div class="youtube-best-head-cell">Crescimento</div>'
+        '<div class="youtube-best-head-cell">%</div>'
         '<div class="youtube-best-head-cell">Views</div>'
         '<div class="youtube-best-head-cell">Likes</div>'
         '<div class="youtube-best-head-cell">Comentarios</div>'
