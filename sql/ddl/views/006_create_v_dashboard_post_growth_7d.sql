@@ -49,11 +49,8 @@ SELECT
   p.post_date,
   fs.first_collected_at,
   ls.latest_collected_at,
-  sc.snapshot_count,
   fs.first_views,
   ls.latest_views,
-  ls.latest_likes,
-  ls.latest_comments,
   COALESCE(ls.latest_views, 0) - COALESCE(fs.first_views, 0) AS views_delta_7d,
   CASE
     WHEN COALESCE(fs.first_views, 0) > 0
@@ -62,6 +59,9 @@ SELECT
   END AS views_growth_pct_7d,
   COALESCE(ls.latest_likes, 0) - COALESCE(fs.first_likes, 0) AS likes_delta_7d,
   COALESCE(ls.latest_comments, 0) - COALESCE(fs.first_comments, 0) AS comments_delta_7d,
+  sc.snapshot_count,
+  ls.latest_likes,
+  ls.latest_comments,
   p.views,
   p.likes,
   p.comments
