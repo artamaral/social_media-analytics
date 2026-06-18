@@ -228,15 +228,16 @@ Definicao obrigatoria dos cards semanais:
 - a tela nao deve duplicar essa leitura em tabela; o proprio bloco de cards e o
   grafico semanal devem refletir o tipo selecionado
 - `Videos` mede videos novos publicados na semana, a partir de `public.posts.post_date`
-- `Views` mede views ganhas na semana por todos os videos do criador com
-  snapshots suficientes no periodo
-- `Likes` mede likes ganhos na semana por todos os videos do criador com
-  snapshots suficientes no periodo
-- `Comentarios` mede comentarios ganhos na semana por todos os videos do criador
-  com snapshots suficientes no periodo
-- se nao houver snapshots suficientes na semana, `Views`, `Likes` e
-  `Comentarios` devem aparecer como `--`; `Videos` ainda pode aparecer porque
-  independe de snapshot
+- `Views` mede views ganhas na semana por todos os videos do criador usando o
+  ultimo snapshot antes do `week_start` como base; se nao houver snapshot
+  anterior, a propria semana usa o primeiro snapshot como base operacional
+- `Likes` mede likes ganhos na semana por todos os videos do criador usando a
+  mesma regra de carry-in da serie semanal
+- `Comentarios` mede comentarios ganhos na semana por todos os videos do
+  criador usando a mesma regra de carry-in da serie semanal
+- se nao houver snapshots suficientes na semana e tambem nao existir snapshot
+  anterior, `Views`, `Likes` e `Comentarios` devem aparecer como `--`; `Videos`
+  ainda pode aparecer porque independe de snapshot
 - analise de posts isolados permanece na tabela editorial de videos e em views especificas de detalhe por post
 
 Contrato recomendado:
@@ -270,7 +271,8 @@ Observacao:
 - o Streamlit nao deve calcular a serie bruta localmente; deve consumir a view
   semanal ja consolidada
 - a view semanal deve somar videos por `public.posts.post_date`, mas deve somar
-  views, likes e comentarios por delta de `public.post_metrics_history`
+  views, likes e comentarios por delta de `public.post_metrics_history` usando
+  a ultima coleta anterior ao `week_start` como base, quando existir
 - quando a ligacao SQL acontecer, o ideal e filtrar por `creator_id`
 - a linha `video_type = 'todos'` deve alimentar os cards e graficos semanais
   quando o filtro estiver em `todos`
@@ -279,6 +281,9 @@ Observacao:
 - o filtro `long/short/todos` da pagina deve controlar os cards semanais, o
   grafico de crescimento semanal, o grafico de distribuicao de engajamento e as
   leituras editoriais, como top videos e cards totais filtrados
+- o grafico semanal deve refletir a semana fechada completa, com carry-in da
+  ultima coleta anterior ao `week_start`, e nao apenas a variacao entre o
+  primeiro e o ultimo snapshot da propria semana
 - a unidade recomendada para comparacao e a semana fechada, nao o dia isolado
 - semanas abertas nao devem aparecer no grafico
 - o rotulo recomendado para exibicao e o intervalo completo da semana

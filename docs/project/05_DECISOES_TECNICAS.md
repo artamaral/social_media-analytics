@@ -746,6 +746,38 @@ Impacto esperado:
 - possibilidade futura de comparar crescimento de audiencia com performance de videos
 - menor risco de misturar metricas correntes com metricas historicas
 
+## Regra de carry-in para semana fechada em `v_dashboard_creator_weekly_activity`
+
+Data:
+
+- 2026-06-18
+
+Decisao:
+
+- a semana fechada de `Views`, `Likes` e `Comentarios` deve usar a ultima
+  coleta anterior ao `week_start` como base de delta
+- se nao houver coleta anterior ao `week_start`, a semana usa o primeiro
+  snapshot da propria semana como base operacional
+- nao criar novo status de validacao para esse caso; a correcao deve ser apenas
+  matematica no SQL e documentacao do contrato
+
+Motivo:
+
+- a leitura semanal deve refletir o portfolio completo do criador
+- o valor perdido entre a ultima coleta anterior e a primeira coleta da semana
+  e parte do movimento semanal real
+- usar apenas primeiro versus ultimo snapshot da semana apaga carry-in
+  relevante, especialmente quando a semana cruza a fronteira de publicacao ou
+  quando posts novos entram no meio da janela
+
+Diretriz de implementacao:
+
+- calcular baseline por post a partir do ultimo snapshot antes do `week_start`
+- quando o baseline nao existir, usar o primeiro snapshot da semana
+- manter `posts_sem_baseline_para_delta` apenas para os posts que realmente nao
+  possuem base de delta suficiente
+- manter `videos_publicados` separado do delta de snapshots
+
 ---
 
 ## Score hibrido v2 em espera e foco em analise temporal
