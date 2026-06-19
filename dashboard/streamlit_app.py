@@ -2049,8 +2049,12 @@ def render_youtube_best_7d_page() -> None:
             gap: 0;
         }
         .youtube-best-header {
+            position: sticky;
+            top: 0;
+            z-index: 4;
             background: transparent;
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
         }
         .youtube-best-head-cell {
             min-height: 58px;
