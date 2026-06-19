@@ -150,9 +150,6 @@ def update_creator_avatar(creator_id, avatar_url):
 def run_avatar_backfill():
     print("Avatar backfill started")
 
-    cursor = get_cursor()
-    print(f"Current cursor: {cursor}")
-
     creators = fetch_creators()
     if not creators:
         print("No creators found for avatar backfill")
@@ -164,15 +161,24 @@ def run_avatar_backfill():
         }
 
     total = len(creators)
-    batch = creators[cursor:cursor + BATCH_SIZE]
+
+    if REFRESH_ALL:
+        cursor = get_cursor()
+        print(f"Current cursor: {cursor}")
+        batch = creators[cursor:cursor + BATCH_SIZE]
+    else:
+        cursor = 0
+        print("Current cursor: disabled for null-only backfill")
+        batch = creators[:BATCH_SIZE]
 
     print(f"Total creators: {total}")
     print(f"Batch size: {BATCH_SIZE}")
     print(f"Creators in batch: {len(batch)}")
 
     if not batch:
-        print("End of list reached, resetting cursor")
-        save_cursor(0)
+        if REFRESH_ALL:
+            print("End of list reached, resetting cursor")
+            save_cursor(0)
         return {
             "status": "completed",
             "processed": 0,
@@ -218,11 +224,13 @@ def run_avatar_backfill():
             print("Avatar backfill error:", str(exc))
             errors += 1
 
-    next_cursor = cursor + BATCH_SIZE
-    if next_cursor >= total:
+    if REFRESH_ALL:
+        next_cursor = cursor + BATCH_SIZE
+        if next_cursor >= total:
+            next_cursor = 0
+        save_cursor(next_cursor)
+    else:
         next_cursor = 0
-
-    save_cursor(next_cursor)
 
     print("\n====================================")
     print(f"Processed: {processed}")
