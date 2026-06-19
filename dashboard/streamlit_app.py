@@ -2042,6 +2042,12 @@ def render_youtube_best_7d_page() -> None:
             background: transparent;
             box-shadow: none;
         }
+        .youtube-best-scroll {
+            max-height: 72vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 0.2rem;
+        }
         .youtube-best-header,
         .youtube-best-row {
             display: grid;
@@ -2345,8 +2351,10 @@ def render_youtube_best_7d_page() -> None:
     views_header_icon = header_pill_icon_html("VW", "Views")
     likes_header_icon = header_pill_icon_html("LK", "Likes")
     comments_header_icon = header_pill_icon_html("CM", "Comentarios")
-    st.markdown(
+    row_blocks: list[str] = []
+    table_html = (
         '<div class="youtube-best-table">'
+        '<div class="youtube-best-scroll">'
         '<div class="youtube-best-header">'
         f'<div class="youtube-best-head-cell video"><span class="youtube-best-head-hash">#</span><span class="youtube-best-head-video-label">{video_header_icon}</span></div>'
         f'<div class="youtube-best-head-cell">{date_header_icon}</div>'
@@ -2354,8 +2362,7 @@ def render_youtube_best_7d_page() -> None:
         f'<div class="youtube-best-head-cell">{views_header_icon}</div>'
         f'<div class="youtube-best-head-cell">{likes_header_icon}</div>'
         f'<div class="youtube-best-head-cell">{comments_header_icon}</div>'
-        "</div>",
-        unsafe_allow_html=True,
+        "</div>"
     )
 
     for rank, row in enumerate(df.to_dict("records"), start=1):
@@ -2403,9 +2410,9 @@ def render_youtube_best_7d_page() -> None:
             f'<div class="youtube-best-cell">{escape(format_compact_number(row.get("comments_num")))}</div>'
             "</div>"
         )
-        st.markdown(row_html, unsafe_allow_html=True)
+        row_blocks.append(row_html)
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown(table_html + "".join(row_blocks) + "</div></div>", unsafe_allow_html=True)
     st.caption("O video entra no ranking pelo crescimento de views em 7 dias, enquanto views, likes e comentarios mostram os totais atuais do post.")
 
 
