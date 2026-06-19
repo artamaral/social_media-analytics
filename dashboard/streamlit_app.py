@@ -2036,11 +2036,11 @@ def render_youtube_best_7d_page() -> None:
             white-space: nowrap;
         }
         .youtube-best-table {
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 18px;
-            overflow: hidden;
-            background: linear-gradient(180deg, rgba(34, 39, 49, 0.96), rgba(20, 24, 31, 0.96));
-            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22);
+            border: none;
+            border-radius: 0;
+            overflow: visible;
+            background: transparent;
+            box-shadow: none;
         }
         .youtube-best-header,
         .youtube-best-row {
@@ -2049,7 +2049,7 @@ def render_youtube_best_7d_page() -> None:
             gap: 0;
         }
         .youtube-best-header {
-            background: rgba(255, 255, 255, 0.05);
+            background: transparent;
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         }
         .youtube-best-head-cell {
@@ -2078,7 +2078,7 @@ def render_youtube_best_7d_page() -> None:
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2.9rem;
+            font-size: 1.45rem;
             font-weight: 800;
             line-height: 1;
             color: var(--text);
@@ -2091,6 +2091,8 @@ def render_youtube_best_7d_page() -> None:
         .youtube-best-head-icon {
             width: 21px;
             height: 21px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
