@@ -1049,6 +1049,17 @@ def header_pill_icon_html(picto: str, label: str) -> str:
     )
 
 
+def comments_header_icon_html(label: str) -> str:
+    return (
+        f'<span class="metric-picto youtube-best-head-icon" title="{escape(label)}" aria-label="{escape(label)}">'
+        '<svg viewBox="0 0 24 24" aria-hidden="true">'
+        '<path class="icon-fill" d="M4 5h13a3 3 0 0 1 3 3v5a3 3 0 0 1-3 3h-5l-5 4v-4H4a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3z"></path>'
+        '<path class="icon-fill" d="M8 3h10a3 3 0 0 1 3 3v6.2c-.6-1-1.7-1.7-3-1.7H8z" opacity=".72"></path>'
+        "</svg>"
+        "</span>"
+    )
+
+
 def calendar_header_icon_html(label: str) -> str:
     return (
         f'<span class="youtube-best-head-icon" title="{escape(label)}" aria-label="{escape(label)}">'
@@ -2325,7 +2336,7 @@ def render_youtube_best_7d_page() -> None:
     date_header_icon = calendar_header_icon_html("Publicado em")
     views_header_icon = header_pill_icon_html("VW", "Views")
     likes_header_icon = header_pill_icon_html("LK", "Likes")
-    comments_header_icon = header_pill_icon_html("CM", "Comentarios")
+    comments_header_icon = comments_header_icon_html("Comentarios")
     st.markdown(
         '<div class="youtube-best-table">'
         '<div class="youtube-best-header">'
