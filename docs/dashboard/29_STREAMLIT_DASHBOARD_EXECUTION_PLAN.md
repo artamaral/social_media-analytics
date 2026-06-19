@@ -75,6 +75,50 @@ Definicoes atuais para `YouTube > Melhores videos 7d`:
 - ponto em aberto: a regra fina de desempate do ranking permanece provisoria e deve ser rechecada apos avaliacao visual da tela em uso real
 - validacao observada: apos o ajuste da view para excluir o dia atual, posts de ontem puxados apenas por snapshot de hoje deixaram de aparecer na tela
 
+Expansao controlada fora do escopo minimo original:
+
+- incluir thumbnail real do video no ranking
+- tornar clicavel a thumbnail para abrir o video no YouTube
+- tornar clicavel o titulo do video para abrir o video no YouTube
+
+Escopo funcional da expansao:
+
+- a tela `Melhores videos 7d` deve exibir thumbnail real quando houver URL disponivel
+- o clique na thumbnail e no titulo deve abrir o mesmo destino do video
+- a navegacao deve preservar o foco analitico da tela, sem adicionar novos filtros nem alterar a regra do ranking
+- na ausencia de thumbnail, a tela deve manter placeholder visual sem quebrar o layout
+- na ausencia de link, thumbnail e titulo devem continuar visiveis, mas sem comportamento clicavel
+
+Dependencias tecnicas da expansao:
+
+- decisao tomada: manter essa feature inteiramente no Streamlit, sem alterar a `v_dashboard_post_growth_7d`
+- usar `post_id` como `video_id` do YouTube para composicao das URLs
+- `video_url`: `https://www.youtube.com/watch?v=VIDEO_ID`
+- `thumbnail_url`: `https://i.ytimg.com/vi/VIDEO_ID/mqdefault.jpg`
+- impacto operacional esperado: nenhum ajuste no banco ou na view; toda a composicao fica na camada de apresentacao
+
+Etapas de implementacao da expansao:
+
+1. Validar que `post_id` do YouTube corresponde ao `video_id` esperado para link e thumbnail.
+2. Compor no Streamlit:
+   - `video_url` a partir de `post_id`
+   - `thumbnail_url` a partir de `post_id`
+3. Atualizar o bloco visual da linha:
+   - thumbnail real no lugar do placeholder
+   - titulo com ancora clicavel
+   - thumbnail com ancora clicavel
+4. Tratar fallback:
+   - sem thumbnail
+   - sem link
+   - link invalido
+5. Validar no desktop e mobile que o clique nao compromete leitura nem alinhamento do ranking.
+
+Criterio de pronto da expansao:
+
+- cada linha do ranking abre o video pelo clique no titulo ou na thumbnail quando houver link disponivel
+- a thumbnail real aparece quando o dado existir
+- a ausencia de thumbnail ou link nao quebra o layout nem impede leitura da linha
+
 Tarefas:
 
 - revisar `docs/dashboard/16_ONLINE_DASHBOARD_SUPABASE_SPEC.md`

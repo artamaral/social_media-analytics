@@ -2045,6 +2045,29 @@ Execucao pratica:
 3. Incluir contexto temporal da janela analisada.
 4. Validar fallback para view vazia ou indisponivel.
 
+Expansao proposta fora do escopo minimo original, mas com alto ganho de usabilidade:
+
+- exibir thumbnail real no ranking `Melhores videos 7d`
+- abrir o video ao clicar na thumbnail
+- abrir o video ao clicar no titulo
+
+Detalhamento de execucao da expansao:
+
+1. Compor a URL do video diretamente no Streamlit usando `post_id` como `video_id` do YouTube.
+2. Compor a URL da thumbnail diretamente no Streamlit usando `https://i.ytimg.com/vi/VIDEO_ID/mqdefault.jpg`.
+3. Nao alterar a `v_dashboard_post_growth_7d`, para evitar impacto operacional desnecessario.
+4. Atualizar a UI para:
+   - trocar placeholder por thumbnail real
+   - transformar thumbnail em ancora clicavel
+   - transformar titulo em ancora clicavel
+5. Validar fallback para ausencia de thumbnail e ausencia de link.
+
+Status desta expansao:
+
+- ainda nao faz parte do criterio de conclusao minimo da Atividade 4
+- deve ser tratada como melhoria priorizada da mesma tela apos estabilizacao do ranking atual
+- decisao tomada: manter a feature na camada Streamlit, sem alterar SQL nem contrato operacional da view
+
 #### Atividade 5 - Garantir `Data Quality` antes dos rankings
 
 Status: aberta.
