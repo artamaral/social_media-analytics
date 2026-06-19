@@ -2089,20 +2089,23 @@ def render_youtube_best_7d_page() -> None:
             align-items: center;
         }
         .youtube-best-head-icon {
-            width: 21px;
-            height: 21px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            width: 24px;
+            height: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
             border-radius: 5px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            background: transparent;
+            background: rgba(255, 255, 255, 0.03);
             color: var(--muted);
             font-size: 0;
+            box-sizing: border-box;
+            flex: 0 0 auto;
         }
         .youtube-best-head-icon svg {
-            width: 100%;
-            height: 100%;
+            width: 68%;
+            height: 68%;
+            display: block;
             stroke: currentColor;
             fill: none;
             stroke-width: 2.4;
