@@ -26,6 +26,16 @@ Confiar principalmente em:
 
 ## Sinais observaveis
 
+## Frequencia operacional atual
+
+- Worker `postMetrics`: execucao a cada `30 minutos`
+- Worker `youtube_main_scraper`: execucao a cada `3 horas`
+- Configuracao Cloud Run usada como base FinOps: maximo `1 vCPU` e `256 MB`
+  de RAM por worker
+
+Essa configuracao permite aumentar a cadencia sem duplicar workers nem misturar
+discovery com atualizacao de metricas.
+
 ### 1. Evidencia de snapshot novo
 
 Indicador principal:
@@ -93,7 +103,9 @@ Leitura inicial recomendada:
 - `atencao`: acima de 30 minutos e ate 2 horas
 - `nok`: acima de 2 horas
 
-Esses limites podem ser ajustados se a frequencia do worker mudar.
+Com o worker `postMetrics` rodando a cada `30 minutos`, esses limites continuam
+adequados para detectar atraso sem gerar falso positivo em uma unica execucao
+perdida. Se a frequencia mudar novamente, recalibrar esses thresholds.
 
 ## Padrao de cor
 

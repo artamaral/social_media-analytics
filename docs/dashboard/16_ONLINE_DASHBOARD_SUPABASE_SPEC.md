@@ -318,10 +318,10 @@ Dentro de `Data quality`, o bloco de integridade operacional deve diferenciar os
 2 workers do projeto:
 
 - `Atualizacao de posts`
-  - worker horario
+  - worker com execucao a cada 30 minutos
   - foco em evidencias de novos snapshots em `post_metrics_history`
 - `Descoberta de novos posts`
-  - worker com execucao a cada 6 horas
+  - worker com execucao a cada 3 horas
   - foco em evidencias de novos posts encontrados pelo fluxo principal
 
 Regra importante:
@@ -335,7 +335,7 @@ Regra importante:
   - `posts.created_at` como evidencia de resultado, ou seja, novos posts
     realmente descobertos
 
-Essa separacao evita falso alerta quando o worker roda dentro da janela de 6
+Essa separacao evita falso alerta quando o worker roda dentro da janela de 3
 horas, mas os creators processados nao possuem posts novos para inserir.
 
 Para o worker de `Atualizacao de posts`, o subtipo `Sinais operacionais` deve
@@ -343,7 +343,7 @@ priorizar KPIs de fluxo e risco de cobertura, nao volume bruto de lote:
 
 - `itens_atrasados`
   - mede a fila em faixas de atraso `Ate 1h`, `Ate 6h` e `Ate 24h`
-  - responde se o worker horario esta conseguindo respeitar o agendamento
+  - responde se o worker de metricas esta conseguindo respeitar o agendamento
 - `at_risk_bootstrap`
   - mede posts novos em risco de nao atingir cobertura minima no tempo esperado
   - antecipa degradacao antes de virar passivo consolidado
@@ -363,7 +363,7 @@ Leitura correta dos blocos:
 - `Monitoramento de posts sem checagem`
   - mostra estoque e cobertura acumulada
 - `Sinais operacionais`
-  - mostra fluxo, atraso e risco de degradacao do worker horario
+  - mostra fluxo, atraso e risco de degradacao do worker de metricas
 - `Posts mortos`
   - mostra indisponibilidade e validacao humana
 

@@ -478,8 +478,8 @@ Escopo inicial:
 
 - topico `Integridade da coleta` dentro de `Data quality`
 - diferenciar explicitamente os 2 workers do projeto:
-  - `Atualizacao de posts` com execucao a cada 1 hora
-  - `Descoberta de novos posts` com execucao a cada 6 horas
+  - `Atualizacao de posts` com execucao a cada 30 minutos
+  - `Descoberta de novos posts` com execucao a cada 3 horas
 - 3 blocos principais:
   - `Integridade da coleta`
   - `Evidencia de processamento`
@@ -532,7 +532,7 @@ Regra operacional:
 - um ciclo do worker pode ser saudavel mesmo quando `novos_posts_24h` e baixo
 - `posts.created_at` nao deve ser usado sozinho para dizer que o worker esta atrasado
 
-Escopo revisado para `Sinais operacionais` do worker horario:
+Escopo revisado para `Sinais operacionais` do worker de metricas:
 
 - nao usar `fila_itens_prontos` como KPI principal
   - a `v_post_update_queue_batch` continua desenhada para devolver lote cheio e
@@ -575,7 +575,7 @@ Sequencia minima de execucao:
 
 1. criar primeiro a view de `Integridade da coleta` para `Atualizacao de posts`
 2. criar a view de `Descoberta de novos posts`
-3. criar a view ou contrato de `Sinais operacionais` do worker horario com
+3. criar a view ou contrato de `Sinais operacionais` do worker de metricas com
    faixas de atraso `Ate 1h`, `Ate 6h`, `Ate 24h` e `at_risk_bootstrap`
 4. ligar cada bloco no Streamlit sem tabela detalhada no primeiro momento
 5. validar texto, cor e semantica antes de abrir detalhamento tecnico

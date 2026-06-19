@@ -25,6 +25,8 @@ O objetivo e manter uma leitura simples de:
 - Status: operacional
 - Implementacao principal: `scripts/cloud_run/youtube_main_scraper/main.py`
 - Objetivo: descoberta e ingestao principal de posts
+- Frequencia atual: a cada `3 horas`
+- Configuracao Cloud Run atual: maximo `1 vCPU` e `256 MB` de RAM
 - Observacao: continua sendo a origem normal de novos posts e alimenta a fila
 
 ### 1.2 Worker de metricas de posts
@@ -32,14 +34,18 @@ O objetivo e manter uma leitura simples de:
 - Status: operacional
 - Implementacao principal: `scripts/cloud_run/postMetrics/main.py`
 - Fonte da fila: `public.v_post_update_queue_batch`
+- Frequencia atual: a cada `30 minutos`
 - Lote atual: `50` posts por execucao
 - Guardrail atual: ate `6` posts com menos de `3` checagens
 - Fila normal atual: ate `44` posts por bandas de prioridade
+- Configuracao Cloud Run atual: maximo `1 vCPU` e `256 MB` de RAM
 - Validacao de custo:
   - lote `40`: sem aumento relevante de custo no Cloud Run apos alguns dias em
     producao
   - lote `50`: em validacao controlada; risco esperado baixo porque a chamada
     `videos.list` continua em uma unica requisicao ate `50` IDs
+  - reducao de recursos para maximo `1 vCPU` e `256 MB` de RAM viabilizou
+    aumentar a frequencia operacional sem aumentar complexidade do pipeline
 
 #### Comportamento validado
 
@@ -65,7 +71,7 @@ O objetivo e manter uma leitura simples de:
 - `Evidencia de processamento`: status `ok`
 - `Posts mortos e validacao humana`: `13/13` confirmados ou monitorados, `0` pendencias humanas e `0` candidatos em aberto
 - `Monitoramento de posts sem checagem`: ainda existem posts abaixo da cobertura minima, mas sem risco imediato na faixa critica observada
-- `Sinais operacionais`: continuam sendo o principal ponto de atencao por atraso agregado do worker horario
+- `Sinais operacionais`: continuam sendo o principal ponto de atencao por atraso agregado do worker de metricas
 
 #### Open point principal - regra de `next_check`
 

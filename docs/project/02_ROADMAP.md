@@ -31,7 +31,7 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 - [x] Implementar e operar a view `Posts mortos e validacao humana` no Streamlit, tratando os `13` posts detectados e zerando as pendencias humanas.
 - [ ] Confirmar se toda a camada analitica ja exclui corretamente posts `unavailable` fora dos contextos de auditoria.
 - [ ] Monitorar conclusao do cleanup temporario do guardrail: `warm_8_30d` e `old_30d_plus` ate `3` checagens; `new_0_3d` e `recent_4_7d` ate `2` checagens.
-- [ ] Analisar a regra de `next_check` como principal open point operacional. O monitoramento atual mostra atraso e risco, mas ainda nao diz se a regra e suficiente ou nao para a base em crescimento.
+- [ ] Analisar a regra de `next_check` como principal open point operacional e prioritario ao fim do Sprint 3. O worker de metricas passou a rodar a cada `30 minutos`, dobrando a capacidade potencial de snapshots em relacao ao ciclo horario anterior; a revisao deve avaliar se e possivel reduzir tempos de `next_check` sem recriar concentracao em posts antigos ou excesso de snapshots em itens ja saturados.
 - [ ] Verificar se a prioridade embutida em `next_check` esta coerente com banda, idade do post, cobertura minima esperada e urgencia operacional. A avaliacao nao deve olhar apenas tempo e contagem bruta, porque esses numeros tendem a crescer junto com a base.
 - [ ] Executar teste pendente descrito em `08_QUEUE_CAPACITY_TEST.md` e `09_QUEUE_SLICING_AND_RESCHEDULING.md`.
 - [ ] Garantir que scraper percorre todos creators.

@@ -115,6 +115,46 @@ Resultado observado:
 
 ---
 
+## Otimizacao Cloud Run e nova frequencia dos workers
+
+Data:
+
+- 2026-06-19
+
+Decisao:
+
+- configurar os workers Cloud Run com maximo `1 vCPU` e `256 MB` de RAM
+- rodar o worker `postMetrics` a cada `30 minutos`
+- rodar o `youtube_main_scraper` de descoberta de novos posts a cada `3 horas`
+
+Motivo:
+
+- reduzir custo unitario por execucao no Cloud Run
+- aumentar a cadencia de atualizacao de metricas sem duplicar infraestrutura
+- manter descoberta de novos posts mais frequente sem acoplar discovery e
+  coleta de metricas
+- preservar separacao entre:
+  - discovery de novos posts
+  - atualizacao de metricas de posts ja conhecidos
+
+Impacto esperado:
+
+- maior velocidade para drenar backlog da fila `postMetrics`
+- menor tempo medio ate o primeiro historico de posts novos
+- melhor frescor dos dados para o dashboard
+- custo operacional controlado pela reducao de CPU/RAM por instancia
+
+Validacao operacional:
+
+- acompanhar duracao media das execucoes no Cloud Run
+- acompanhar taxa de erro dos workers
+- acompanhar uso de quota da YouTube Data API
+- acompanhar volume de inserts em `post_metrics_history`
+- acompanhar sinais do Streamlit em `Integridade da coleta`,
+  `Evidencia de processamento` e `Sinais operacionais`
+
+---
+
 ## Regra final de next_check da Sprint 2
 
 Data:
@@ -445,7 +485,7 @@ Documento de referencia:
 
 ---
 
-## Monitoramento operacional do worker horario por fluxo e risco de cobertura
+## Monitoramento operacional do worker de metricas por fluxo e risco de cobertura
 
 Data:
 
@@ -453,9 +493,9 @@ Data:
 
 Decisao:
 
-- o bloco de sinais operacionais do worker horario nao deve usar
+- o bloco de sinais operacionais do worker de metricas nao deve usar
   `fila_itens_prontos` como KPI principal
-- o bloco de sinais operacionais do worker horario nao deve usar
+- o bloco de sinais operacionais do worker de metricas nao deve usar
   `falhas_recentes_24h` como KPI principal
 - os tres KPIs iniciais priorizados passam a ser:
   - `itens_atrasados`
@@ -498,7 +538,7 @@ Diretriz:
 
 Impacto esperado:
 
-- leitura mais fiel da capacidade real do worker horario
+- leitura mais fiel da capacidade real do worker de metricas
 - melhor capacidade de avaliar se o bucket atual esta dimensionado
 - menor duplicacao de KPI entre fluxo operacional e posts mortos
 

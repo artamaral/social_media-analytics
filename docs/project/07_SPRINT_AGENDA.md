@@ -2324,6 +2324,41 @@ Resultado observado:
   - substituicao dos mocks em `Creators`
   - implementacao de `YouTube > Melhores 7d`
 
+### Open point prioritario para fechamento do Sprint 3
+
+#### Recalibrar `next_check` apos aumento de capacidade
+
+Status: aberto e prioritario para o fim do Sprint 3.
+
+Contexto operacional:
+
+- o worker de metricas `postMetrics` passou a rodar a cada `30 minutos`
+- a cadencia anterior era horaria, entao a capacidade potencial de snapshots foi
+  duplicada
+- o `youtube_main_scraper`, responsavel por discovery de novos posts, passou a
+  rodar a cada `3 horas`
+- a otimizacao de Cloud Run para maximo `1 vCPU` e `256 MB` de RAM reduziu o
+  custo por execucao e permitiu aumentar a frequencia sem mudar a arquitetura
+
+Decisao para o Sprint 3:
+
+- nao alterar `next_check` no meio do fechamento do MVP sem validacao de impacto
+- manter a regra atual em producao enquanto o dashboard estabiliza as leituras
+  de fila, data quality e gargalo operacional
+- tratar a revisao de `next_check` como item prioritario de saida do Sprint 3
+
+Criterios para a revisao:
+
+- comparar a capacidade diaria teorica antes e depois da mudanca de frequencia
+- acompanhar `posts_acima_3_2d`, `p95_staleness_days`, `posts_vencidos` e
+  `posts_no_batch_atual`
+- validar quota da YouTube API, duracao das execucoes no Cloud Run e volume de
+  writes no Supabase
+- reduzir intervalos de `next_check` onde a nova capacidade justificar, sem
+  sacrificar `needs_coverage`, posts novos/recentes ou estabilidade da fila
+- evitar aumento de frequencia em posts ja saturados antes de confirmar que o
+  gargalo de cobertura minima esta resolvido
+
 ### Estimativa
 
 `2` a `4` dias.
