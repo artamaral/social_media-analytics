@@ -1049,6 +1049,18 @@ def header_pill_icon_html(picto: str, label: str) -> str:
     )
 
 
+def calendar_header_icon_html(label: str) -> str:
+    return (
+        f'<span class="youtube-best-head-icon" title="{escape(label)}" aria-label="{escape(label)}">'
+        '<svg viewBox="0 0 24 24" aria-hidden="true">'
+        '<rect x="3" y="5" width="18" height="16" rx="2"></rect>'
+        '<path d="M8 3v4M16 3v4M3 9h18"></path>'
+        '<path class="icon-fill" d="M7 12h3v3H7z"></path>'
+        "</svg>"
+        "</span>"
+    )
+
+
 def metric_card_grid(cards: list[str], class_name: str = "fenabrave-card-grid") -> None:
     st.markdown(
         f'<div class="{escape(class_name)}">' + "".join(cards) + "</div>",
@@ -2053,9 +2065,6 @@ def render_youtube_best_7d_page() -> None:
             text-transform: uppercase;
             text-align: center;
         }
-        .youtube-best-head-cell.break {
-            line-height: 1.05;
-        }
         .youtube-best-head-cell.video {
             display: grid;
             grid-template-columns: 48px 140px minmax(0, 1fr);
@@ -2313,6 +2322,7 @@ def render_youtube_best_7d_page() -> None:
         )
         return
 
+    date_header_icon = calendar_header_icon_html("Publicado em")
     views_header_icon = header_pill_icon_html("VW", "Views")
     likes_header_icon = header_pill_icon_html("LK", "Likes")
     comments_header_icon = header_pill_icon_html("CM", "Comentarios")
@@ -2320,7 +2330,7 @@ def render_youtube_best_7d_page() -> None:
         '<div class="youtube-best-table">'
         '<div class="youtube-best-header">'
         '<div class="youtube-best-head-cell video"><span class="youtube-best-head-hash">#</span><span class="youtube-best-head-video-label">Video</span></div>'
-        '<div class="youtube-best-head-cell break">Publicado<br>em</div>'
+        f'<div class="youtube-best-head-cell">{date_header_icon}</div>'
         '<div class="youtube-best-head-cell">%</div>'
         f'<div class="youtube-best-head-cell">{views_header_icon}</div>'
         f'<div class="youtube-best-head-cell">{likes_header_icon}</div>'
@@ -2423,7 +2433,7 @@ def format_pct(value: Any) -> str:
         numeric_value = float(value)
         if pd.isna(numeric_value):
             return "--"
-        return f"{numeric_value:.2f}%".replace(".", ",")
+        return f"{round(numeric_value):.0f}%".replace(".", ",")
     except (TypeError, ValueError):
         return "--"
 
