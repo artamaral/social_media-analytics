@@ -1964,7 +1964,7 @@ Execucao pratica:
 
 #### Atividade 4 - Implementar `YouTube > Melhores videos 7d`
 
-Status: aberta.
+Status: concluida.
 
 Objetivo:
 
@@ -2081,6 +2081,38 @@ Status desta expansao:
 - deve ser tratada como melhoria priorizada da mesma tela apos estabilizacao do ranking atual
 - decisao tomada: manter a feature na camada Streamlit, sem alterar SQL nem contrato operacional da view
 
+Resultado observado em 2026-06-18:
+
+- a pagina `YouTube > Melhores videos 7d` deixou de ser placeholder e passou a
+  consumir `public.v_dashboard_post_growth_7d`
+- a navegacao lateral foi atualizada para `YouTube > Melhores videos 7d`
+- o filtro fixo `Todos`, `Long` e `Short` passou a buscar sempre o `top 10`
+  direto na consulta ao Supabase
+- a tela passou a exibir:
+  - thumbnail real do YouTube
+  - titulo clicavel
+  - canal
+  - tipo de video
+  - data de publicacao
+  - crescimento `7d`
+  - views, likes e comentarios absolutos
+  - ultimo snapshot
+  - quantidade de snapshots
+- a regra temporal foi estabilizada em `7` dias completos fechados pela data
+  local de `America/Sao_Paulo`
+- o caso de snapshot de "hoje" que entrava indevidamente no ranking foi
+  removido apos a correcao final da view
+- a tela passou por refinamento de UX no cabecalho, identidade visual dos
+  icones, links, thumbnails e scroll interno da lista
+
+Leitura de fechamento da Atividade 4:
+
+- o objetivo funcional da atividade foi atingido
+- a tela agora entrega ranking semanal real, com criterio temporal explicito e
+  separacao semantica clara em relacao a `Hot now`
+- permanecem apenas ajustes finos futuros de UX e eventual revisao da regra de
+  desempate, sem bloquear o encerramento desta atividade
+
 #### Atividade 5 - Garantir `Data Quality` antes dos rankings
 
 Status: aberta.
@@ -2132,7 +2164,7 @@ Execucao pratica:
 
 #### Atividade 6 - Fechamento de UX e robustez do MVP
 
-Status: aberta.
+Status: em andamento.
 
 Objetivo:
 
@@ -2204,12 +2236,41 @@ Execucao pratica:
 
 ### Checklist de acompanhamento
 
-- [ ] Atividade 1 concluida
-- [ ] Atividade 2 concluida
+- [x] Atividade 1 concluida
+- [x] Atividade 2 concluida
 - [ ] Atividade 3 concluida
-- [ ] Atividade 4 concluida
+- [x] Atividade 4 concluida
 - [ ] Atividade 5 concluida
 - [ ] Atividade 6 concluida
+
+### Status consolidado em 2026-06-18
+
+Leitura atual do Sprint 3:
+
+- o sprint saiu da fase de infraestrutura e contrato minimo de dados
+- `Overview`, `Criador individual`, `Data quality` e `YouTube > Melhores videos 7d`
+  ja estao ligados a dados reais
+- a etapa de `YouTube > Melhores videos 7d` pode ser considerada concluida
+- o principal gap funcional restante do sprint esta em `Creators > Visao geral`,
+  que ainda usa `get_creator_mock_rows()`
+- o principal gap de governanca restante do sprint esta em aplicar contexto de
+  `Data Quality` antes das leituras de ranking e comparativo
+- o fechamento final do sprint ainda depende de uma passada transversal de UX,
+  estados vazios, erros e smoke test
+
+Classificacao atual das atividades:
+
+- Atividade 1: concluida
+- Atividade 2: concluida
+- Atividade 3: aberta
+- Atividade 4: concluida
+- Atividade 5: aberta
+- Atividade 6: em andamento
+
+Percentual qualitativo estimado:
+
+- Sprint 3 entre `70%` e `80%` de execucao real, considerando esta etapa como
+  encerrada
 
 ### Documentacao relacionada
 

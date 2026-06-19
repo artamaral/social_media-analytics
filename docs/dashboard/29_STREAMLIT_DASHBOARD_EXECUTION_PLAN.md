@@ -84,6 +84,28 @@ Evidencia operacional da correcao:
 - isso provou que a versao anterior da view ainda aceitava snapshots de "hoje" quando o corte era calculado apenas pelo dia UTC do banco
 - a correcao definitiva passou a filtrar pela data local de `America/Sao_Paulo` aplicada ao proprio `collected_at`
 
+Status consolidado do Sprint 3 em 2026-06-18:
+
+- `Overview` pode ser tratada como frente materialmente concluida no escopo do
+  MVP atual
+- `Criador individual` segue apoiado em views reais e coerente com a proposta
+  do sprint
+- `YouTube > Melhores videos 7d` deixou de ser placeholder e passou a operar
+  com ranking semanal real sobre `v_dashboard_post_growth_7d`
+- a etapa de `Melhores videos 7d` pode ser considerada concluida nesta rodada
+- `Creators > Visao geral` ainda permanece como principal gap funcional aberto,
+  porque a tela continua usando `get_creator_mock_rows()`
+- o gate de `Data Quality` antes dos rankings continua como pendencia
+  explicita do sprint
+- o fechamento final do MVP ainda depende de acabamento transversal de UX,
+  estados vazios, mensagens de erro e smoke test
+
+Leitura executiva:
+
+- o Sprint 3 ja entregou a maior parte do valor analitico do MVP
+- o status atual e de consolidacao final, nao mais de estruturacao inicial
+- estimativa qualitativa atual: entre `70%` e `80%` do sprint concluido
+
 Query de validacao recomendada apos apply:
 
 ```sql
