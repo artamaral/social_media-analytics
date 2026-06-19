@@ -787,9 +787,25 @@ def inject_theme() -> None:
             margin-top: 1rem;
         }
 
+        .creator-ranking-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-top: 0.75rem;
+            margin-bottom: 0.15rem;
+            flex-wrap: wrap;
+        }
+
+        .creator-ranking-toolbar-label {
+            color: var(--muted);
+            font-size: 0.82rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
         .creator-ranking-item {
             display: grid;
-            grid-template-columns: minmax(0, 2fr) minmax(120px, 0.9fr) minmax(120px, 0.9fr) minmax(110px, 0.75fr);
+            grid-template-columns: minmax(0, 2fr) minmax(110px, 0.7fr) minmax(120px, 0.85fr) minmax(120px, 0.9fr) minmax(110px, 0.75fr);
             gap: 0.85rem;
             align-items: center;
             background: rgba(255, 255, 255, 0.03);
@@ -4517,6 +4533,30 @@ def render_creator_overview_page() -> None:
 
     st.markdown("#### Ranking comparativo")
     st.caption(f"Base filtrada em {selected_platform}. Engajamento medio atual da carteira: {avg_engagement:.2f}%.")
+    sort_key = st.session_state.get("creator_overview_sort", "engagement")
+    toolbar_cols = st.columns([0.95, 0.7, 0.7, 0.7, 2.0])
+    with toolbar_cols[0]:
+        st.markdown('<div class="creator-ranking-toolbar-label">Ordenar por</div>', unsafe_allow_html=True)
+    with toolbar_cols[1]:
+        if st.button("Seguidores", key="creator_overview_sort_followers", use_container_width=True):
+            st.session_state["creator_overview_sort"] = "followers"
+            sort_key = "followers"
+    with toolbar_cols[2]:
+        if st.button("Views", key="creator_overview_sort_views", use_container_width=True):
+            st.session_state["creator_overview_sort"] = "views"
+            sort_key = "views"
+    with toolbar_cols[3]:
+        if st.button("Engajamento", key="creator_overview_sort_engagement", use_container_width=True):
+            st.session_state["creator_overview_sort"] = "engagement"
+            sort_key = "engagement"
+
+    if sort_key == "followers":
+        working_rows = sorted(working_rows, key=lambda row: row_int(row, "followers"), reverse=True)
+    elif sort_key == "views":
+        working_rows = sorted(working_rows, key=lambda row: row_int(row, "total_views"), reverse=True)
+    else:
+        working_rows = sorted(working_rows, key=lambda row: row_float(row, "engagement_rate_pct"), reverse=True)
+
     ranking_items = []
     for row in working_rows:
         engagement_label = f"{row_float(row, 'engagement_rate_pct'):.2f}%"
@@ -4548,6 +4588,10 @@ def render_creator_overview_page() -> None:
                 f'<div class="creator-ranking-title">{escape(entity_name)}</div>'
                 f'<div class="creator-ranking-meta">{escape(niche_name)} | {escape(platform_name)} | @{escape(username_value)}</div>'
                 '</div>'
+                '</div>'
+                '<div>'
+                '<div class="creator-stat-label">Videos monitorados</div>'
+                f'<div class="creator-stat-value">{escape(format_int(row_int(row, "post_count")))}</div>'
                 '</div>'
                 '<div>'
                 '<div class="creator-stat-label">Seguidores</div>'
