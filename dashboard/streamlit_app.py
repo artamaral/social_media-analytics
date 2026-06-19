@@ -4388,23 +4388,50 @@ def render_creator_detail_page() -> None:
 
 
 def render_creator_overview_page() -> None:
-    rows = get_creator_mock_rows()
+    rows, connection_error = get_view_rows("v_dashboard_creator_summary")
     page_header("Visao geral de criadores", "Leitura comparativa da base monitorada")
     process_banner(
         "Papel desta view",
         "Esta tela resume a carteira monitorada. Ela responde quem esta maior, quem engaja melhor e quem concentra mais volume, sem entrar ainda no detalhe editorial profundo de um unico criador.",
     )
+    render_connection_notice(connection_error)
+
+    if not rows:
+        placeholder_card(
+            "Visao geral de criadores",
+            "Aguardando a view v_dashboard_creator_summary retornar base valida para montar o comparativo da carteira monitorada.",
+        )
+        return
+
+    def row_int(row: dict[str, Any], field_name: str) -> int:
+        return nullable_int(row.get(field_name)) or 0
+
+    def row_float(row: dict[str, Any], field_name: str) -> float:
+        try:
+            value = row.get(field_name)
+            if value in (None, "") or pd.isna(value):
+                return 0.0
+            return float(value)
+        except (TypeError, ValueError):
+            return 0.0
 
     selected_platform = st.selectbox("Plataforma", ["todas", "youtube", "instagram", "tiktok"], index=1)
     working_rows = rows if selected_platform == "todas" else [row for row in rows if row["platform"] == selected_platform]
-    working_rows = sorted(working_rows, key=lambda row: float(row["engagement_rate_pct"]), reverse=True)
+    working_rows = sorted(working_rows, key=lambda row: row_float(row, "engagement_rate_pct"), reverse=True)
 
-    total_followers = sum(int(row["followers"]) for row in working_rows)
-    total_posts = sum(int(row["post_count"]) for row in working_rows)
-    total_views = sum(int(row["total_views"]) for row in working_rows)
-    total_likes = sum(int(row["total_likes"]) for row in working_rows)
-    total_comments = sum(int(row["total_comments"]) for row in working_rows)
-    avg_engagement = round(sum(float(row["engagement_rate_pct"]) for row in working_rows) / max(len(working_rows), 1), 2)
+    if not working_rows:
+        placeholder_card(
+            "Sem criadores neste filtro",
+            f"Nenhum criador da view v_dashboard_creator_summary corresponde ao filtro de plataforma {selected_platform}.",
+        )
+        return
+
+    total_followers = sum(row_int(row, "followers") for row in working_rows)
+    total_posts = sum(row_int(row, "post_count") for row in working_rows)
+    total_views = sum(row_int(row, "total_views") for row in working_rows)
+    total_likes = sum(row_int(row, "total_likes") for row in working_rows)
+    total_comments = sum(row_int(row, "total_comments") for row in working_rows)
+    avg_engagement = round(sum(row_float(row, "engagement_rate_pct") for row in working_rows) / max(len(working_rows), 1), 2)
 
     metric_card_grid(
         [
@@ -4422,21 +4449,25 @@ def render_creator_overview_page() -> None:
     st.caption(f"Base filtrada em {selected_platform}. Engajamento medio atual da carteira: {avg_engagement:.2f}%.")
     ranking_items = []
     for row in working_rows:
-        engagement_label = f"{float(row['engagement_rate_pct']):.2f}%"
+        engagement_label = f"{row_float(row, 'engagement_rate_pct'):.2f}%"
+        entity_name = str(row.get("entity_name") or "Criador sem nome")
+        niche_name = str(row.get("niche") or "Nicho nao informado")
+        platform_name = str(row.get("platform") or "plataforma")
+        username_value = str(row.get("username") or "sem_username").lstrip("@")
         ranking_items.append(
             (
                 '<div class="creator-ranking-item">'
                 '<div class="creator-ranking-main">'
-                f'<div class="creator-ranking-title">{escape(str(row["entity_name"]))}</div>'
-                f'<div class="creator-ranking-meta">{escape(str(row["niche"]))} | {escape(str(row["platform"]))} | @{escape(str(row["username"]).lstrip("@"))}</div>'
+                f'<div class="creator-ranking-title">{escape(entity_name)}</div>'
+                f'<div class="creator-ranking-meta">{escape(niche_name)} | {escape(platform_name)} | @{escape(username_value)}</div>'
                 '</div>'
                 '<div>'
                 '<div class="creator-stat-label">Seguidores</div>'
-                f'<div class="creator-stat-value">{escape(format_int(row["followers"]))}</div>'
+                f'<div class="creator-stat-value">{escape(format_int(row_int(row, "followers")))}</div>'
                 '</div>'
                 '<div>'
                 '<div class="creator-stat-label">Views totais</div>'
-                f'<div class="creator-stat-value">{escape(format_int(row["total_views"]))}</div>'
+                f'<div class="creator-stat-value">{escape(format_int(row_int(row, "total_views")))}</div>'
                 '</div>'
                 '<div>'
                 '<div class="creator-stat-label">Engajamento</div>'
