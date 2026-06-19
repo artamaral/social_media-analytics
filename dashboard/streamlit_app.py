@@ -2005,8 +2005,8 @@ def render_youtube_best_7d_page() -> None:
         .youtube-best-toolbar {
             display: flex;
             align-items: center;
-            gap: 1.1rem;
-            margin: 0.2rem 0 0.85rem;
+            gap: 0.85rem;
+            margin: 0.15rem 0 0.75rem;
         }
         .youtube-best-toolbar-label {
             color: var(--text);
@@ -2025,7 +2025,7 @@ def render_youtube_best_7d_page() -> None:
         .youtube-best-header,
         .youtube-best-row {
             display: grid;
-            grid-template-columns: minmax(460px, 3.35fr) 0.82fr 0.48fr 0.58fr 0.54fr 0.58fr;
+            grid-template-columns: minmax(560px, 4.35fr) 0.66fr 0.34fr 0.42fr 0.38fr 0.42fr;
             gap: 0;
         }
         .youtube-best-header {
@@ -2037,27 +2037,39 @@ def render_youtube_best_7d_page() -> None:
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 0.8rem 0.55rem;
+            padding: 0.74rem 0.35rem;
             color: var(--muted);
-            font-size: 0.74rem;
+            font-size: 0.68rem;
             font-weight: 800;
             letter-spacing: 0.02em;
             text-transform: uppercase;
             text-align: center;
         }
         .youtube-best-head-cell.video {
-            justify-content: flex-start;
+            display: grid;
+            grid-template-columns: 48px 140px minmax(0, 1fr);
+            gap: 0.95rem;
+            align-items: center;
+            justify-content: initial;
             text-align: left;
-            padding-left: 1.35rem;
+            padding-left: 1rem;
+        }
+        .youtube-best-head-hash {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .youtube-best-head-video-label {
+            grid-column: 3;
         }
         .youtube-best-row + .youtube-best-row {
             border-top: 1px solid rgba(255, 255, 255, 0.08);
         }
         .youtube-best-main {
             display: grid;
-            grid-template-columns: 48px 122px minmax(0, 1fr);
+            grid-template-columns: 48px 140px minmax(0, 1fr);
             gap: 0.95rem;
-            align-items: start;
+            align-items: center;
             padding: 1rem;
         }
         .youtube-best-rank {
@@ -2066,10 +2078,9 @@ def render_youtube_best_7d_page() -> None:
             color: var(--text);
             text-align: center;
             line-height: 1;
-            padding-top: 0.95rem;
         }
         .youtube-best-thumb {
-            width: 122px;
+            width: 140px;
             aspect-ratio: 16 / 9;
             border-radius: 14px;
             border: 1px dashed rgba(255, 255, 255, 0.18);
@@ -2087,11 +2098,11 @@ def render_youtube_best_7d_page() -> None:
         }
         .youtube-best-thumb-link {
             display: block;
-            width: 122px;
+            width: 140px;
             text-decoration: none;
         }
         .youtube-best-thumb-image {
-            width: 122px;
+            width: 140px;
             aspect-ratio: 16 / 9;
             object-fit: cover;
             display: block;
@@ -2101,6 +2112,10 @@ def render_youtube_best_7d_page() -> None:
         }
         .youtube-best-copy {
             min-width: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 78px;
         }
         .youtube-best-channel {
             color: var(--accent);
@@ -2151,9 +2166,9 @@ def render_youtube_best_7d_page() -> None:
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 1rem 0.45rem;
+            padding: 1rem 0.28rem;
             color: var(--text);
-            font-size: 0.94rem;
+            font-size: 0.92rem;
             font-weight: 700;
             text-align: center;
         }
@@ -2165,16 +2180,16 @@ def render_youtube_best_7d_page() -> None:
                 grid-template-columns: 1fr;
             }
             .youtube-best-main {
-                grid-template-columns: 40px 104px minmax(0, 1fr);
+                grid-template-columns: 40px 118px minmax(0, 1fr);
             }
             .youtube-best-thumb {
-                width: 104px;
+                width: 118px;
             }
             .youtube-best-thumb-link {
-                width: 104px;
+                width: 118px;
             }
             .youtube-best-thumb-image {
-                width: 104px;
+                width: 118px;
             }
             .youtube-best-cell {
                 justify-content: space-between;
@@ -2187,14 +2202,17 @@ def render_youtube_best_7d_page() -> None:
         unsafe_allow_html=True,
     )
 
-    st.markdown('<div class="youtube-best-toolbar"><div class="youtube-best-toolbar-label">Tipo de video</div></div>', unsafe_allow_html=True)
-    selected_filter = st.radio(
-        "Tipo de video",
-        ["Todos", "Long", "Short"],
-        horizontal=True,
-        key="youtube_best_7d_filter",
-        label_visibility="collapsed",
-    )
+    selector_cols = st.columns([0.19, 0.81])
+    with selector_cols[0]:
+        st.markdown('<div class="youtube-best-toolbar"><div class="youtube-best-toolbar-label">Tipo de video</div></div>', unsafe_allow_html=True)
+    with selector_cols[1]:
+        selected_filter = st.radio(
+            "Tipo de video",
+            ["Todos", "Long", "Short"],
+            horizontal=True,
+            key="youtube_best_7d_filter",
+            label_visibility="collapsed",
+        )
 
     filters: list[tuple[str, Any]] = [("platform", "youtube")]
     if selected_filter == "Long":
@@ -2266,7 +2284,7 @@ def render_youtube_best_7d_page() -> None:
     st.markdown(
         '<div class="youtube-best-table">'
         '<div class="youtube-best-header">'
-        '<div class="youtube-best-head-cell video"># Video</div>'
+        '<div class="youtube-best-head-cell video"><span class="youtube-best-head-hash">#</span><span class="youtube-best-head-video-label">Video</span></div>'
         '<div class="youtube-best-head-cell">Data da publicacao</div>'
         '<div class="youtube-best-head-cell">%</div>'
         '<div class="youtube-best-head-cell">Views</div>'
