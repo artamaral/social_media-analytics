@@ -2085,6 +2085,20 @@ def render_youtube_best_7d_page() -> None:
             text-transform: uppercase;
             letter-spacing: 0.04em;
         }
+        .youtube-best-thumb-link {
+            display: block;
+            width: 122px;
+            text-decoration: none;
+        }
+        .youtube-best-thumb-image {
+            width: 122px;
+            aspect-ratio: 16 / 9;
+            object-fit: cover;
+            display: block;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.04);
+        }
         .youtube-best-copy {
             min-width: 0;
         }
@@ -2103,6 +2117,13 @@ def render_youtube_best_7d_page() -> None:
             line-height: 1.22;
             margin-bottom: 0.48rem;
             word-break: break-word;
+        }
+        .youtube-best-title-link {
+            color: inherit;
+            text-decoration: none;
+        }
+        .youtube-best-title-link:hover {
+            text-decoration: underline;
         }
         .youtube-best-meta {
             display: flex;
@@ -2147,6 +2168,12 @@ def render_youtube_best_7d_page() -> None:
                 grid-template-columns: 40px 104px minmax(0, 1fr);
             }
             .youtube-best-thumb {
+                width: 104px;
+            }
+            .youtube-best-thumb-link {
+                width: 104px;
+            }
+            .youtube-best-thumb-image {
                 width: 104px;
             }
             .youtube-best-cell {
@@ -2255,14 +2282,31 @@ def render_youtube_best_7d_page() -> None:
         snapshot_label = format_int(snapshot_count) if snapshot_count not in (None, "", 0) else "n/d"
         post_date_label = pd.Timestamp(row["post_date_dt"]).strftime("%d/%m/%Y") if pd.notna(row.get("post_date_dt")) else "--"
         growth_label = format_pct(row.get("views_growth_pct_7d_num"))
+        video_id = str(row.get("post_id") or "").strip()
+        video_url = f"https://www.youtube.com/watch?v={video_id}" if video_id else ""
+        thumbnail_url = f"https://i.ytimg.com/vi/{video_id}/mqdefault.jpg" if video_id else ""
+        if video_url:
+            thumb_html = (
+                f'<a class="youtube-best-thumb-link" href="{escape(video_url)}" target="_blank" rel="noopener noreferrer">'
+                f'<img class="youtube-best-thumb-image" src="{escape(thumbnail_url)}" alt="{escape(str(row.get("title_display") or "Thumbnail do video"))}" loading="lazy" />'
+                "</a>"
+            )
+            title_html = (
+                f'<a class="youtube-best-title-link" href="{escape(video_url)}" target="_blank" rel="noopener noreferrer">'
+                f'{escape(str(row.get("title_display") or "Video sem titulo"))}'
+                "</a>"
+            )
+        else:
+            thumb_html = '<div class="youtube-best-thumb">thumbnail</div>'
+            title_html = escape(str(row.get("title_display") or "Video sem titulo"))
         row_html = (
             '<div class="youtube-best-row">'
             '<div class="youtube-best-main">'
             f'<div class="youtube-best-rank">{rank}</div>'
-            '<div class="youtube-best-thumb">thumbnail</div>'
+            f"{thumb_html}"
             '<div class="youtube-best-copy">'
             f'<div class="youtube-best-channel">{escape(str(row.get("channel_name") or "Canal sem nome"))}</div>'
-            f'<div class="youtube-best-title">{escape(str(row.get("title_display") or "Video sem titulo"))}</div>'
+            f'<div class="youtube-best-title">{title_html}</div>'
             '<div class="youtube-best-meta">'
             f'<span class="youtube-best-chip type">{escape(str(row.get("video_type_label") or "Todos"))}</span>'
             f'<span class="youtube-best-chip">Ultimo snapshot {escape(latest_snapshot)}</span>'
@@ -2280,7 +2324,7 @@ def render_youtube_best_7d_page() -> None:
         st.markdown(row_html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
-    st.caption("Thumbnail continua como espaco reservado. O video entra no ranking pelo crescimento de views em 7 dias, enquanto views, likes e comentarios mostram os totais atuais do post.")
+    st.caption("O video entra no ranking pelo crescimento de views em 7 dias, enquanto views, likes e comentarios mostram os totais atuais do post.")
 
 
 def render_data_quality_page() -> None:
