@@ -2078,26 +2078,29 @@ def render_youtube_best_7d_page() -> None:
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 2.9rem;
+            font-weight: 800;
+            line-height: 1;
+            color: var(--text);
         }
         .youtube-best-head-video-label {
             grid-column: 3;
+            display: inline-flex;
+            align-items: center;
         }
         .youtube-best-head-icon {
-            width: 30px;
-            height: 30px;
-            border-radius: 6px;
+            width: 21px;
+            height: 21px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            background: var(--accent);
-            color: #ffffff;
+            background: transparent;
+            color: var(--muted);
             font-size: 0;
-            font-weight: 900;
-            box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
         }
         .youtube-best-head-icon svg {
-            width: 68%;
-            height: 68%;
+            width: 100%;
+            height: 100%;
             stroke: currentColor;
             fill: none;
             stroke-width: 2.4;
@@ -2328,15 +2331,17 @@ def render_youtube_best_7d_page() -> None:
         return
 
     date_header_icon = calendar_header_icon_html("Publicado em")
+    growth_header_icon = header_pill_icon_html("RK", "Crescimento")
+    video_header_icon = header_pill_icon_html("VD", "Video")
     views_header_icon = header_pill_icon_html("VW", "Views")
     likes_header_icon = header_pill_icon_html("LK", "Likes")
     comments_header_icon = header_pill_icon_html("CM", "Comentarios")
     st.markdown(
         '<div class="youtube-best-table">'
         '<div class="youtube-best-header">'
-        '<div class="youtube-best-head-cell video"><span class="youtube-best-head-hash">#</span><span class="youtube-best-head-video-label">Video</span></div>'
+        f'<div class="youtube-best-head-cell video"><span class="youtube-best-head-hash">#</span><span class="youtube-best-head-video-label">{video_header_icon}</span></div>'
         f'<div class="youtube-best-head-cell">{date_header_icon}</div>'
-        '<div class="youtube-best-head-cell">%</div>'
+        f'<div class="youtube-best-head-cell">{growth_header_icon}</div>'
         f'<div class="youtube-best-head-cell">{views_header_icon}</div>'
         f'<div class="youtube-best-head-cell">{likes_header_icon}</div>'
         f'<div class="youtube-best-head-cell">{comments_header_icon}</div>'
