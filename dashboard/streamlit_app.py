@@ -2403,7 +2403,10 @@ def format_timestamp_br(value: Any) -> str:
             return str(value)
     if pd.isna(value):
         return "--"
-    return pd.Timestamp(value).strftime("%d/%m/%Y %H:%M")
+    timestamp = pd.Timestamp(value)
+    if timestamp.tzinfo is None:
+        timestamp = timestamp.tz_localize("UTC")
+    return timestamp.tz_convert("America/Sao_Paulo").strftime("%d/%m/%Y %H:%M")
 
 
 def format_month_label(period: pd.Timestamp) -> str:
