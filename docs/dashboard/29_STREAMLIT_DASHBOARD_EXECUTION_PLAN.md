@@ -65,7 +65,8 @@ Definicoes atuais para `YouTube > Melhores videos 7d`:
 - `Short` mostra os `10` melhores videos `short`
 - a janela nao deve incluir o dia atual parcial
 - a leitura oficial da tela deve usar `7` dias completos fechados
-- a implementacao da `v_dashboard_post_growth_7d` deve usar a janela `>= date_trunc('day', now()) - interval '7 days'` e `< date_trunc('day', now())`, excluindo qualquer snapshot do dia atual
+- a implementacao da `v_dashboard_post_growth_7d` deve excluir o dia atual pela data local de `America/Sao_Paulo`
+- regra final da janela na view: converter `collected_at` de UTC para `America/Sao_Paulo` e filtrar `::date >= (now() at time zone 'America/Sao_Paulo')::date - 7` e `::date < (now() at time zone 'America/Sao_Paulo')::date`
 - a janela precisa aparecer claramente na interface
 - a ordenacao continua por crescimento de views em `7d`
 - a ordenacao oficial deve vir da consulta no Supabase com `order by views_growth_pct_7d desc`
@@ -73,7 +74,34 @@ Definicoes atuais para `YouTube > Melhores videos 7d`:
 - a exibicao de `views`, `likes` e `comentarios` deve usar os valores absolutos do ultimo snapshot
 - a tela deve mostrar `ultimo snapshot` e `quantidade de snapshots` da janela
 - ponto em aberto: a regra fina de desempate do ranking permanece provisoria e deve ser rechecada apos avaliacao visual da tela em uso real
-- validacao observada: apos o ajuste da view para excluir o dia atual, posts de ontem puxados apenas por snapshot de hoje deixaram de aparecer na tela
+- causa raiz resolvida: o Supabase estava em `UTC`, enquanto a regra de negocio era lida em `America/Sao_Paulo`; a versao anterior da view usava `date_trunc('day', now())` e deixava entrar snapshots que ainda eram "hoje" no Brasil
+- validacao observada: depois do ajuste final por data local de `America/Sao_Paulo`, posts de ontem puxados apenas por snapshot de hoje deixaram de aparecer na tela
+
+Evidencia operacional da correcao:
+
+- `current_setting('TIMEZONE')` no Supabase retornou `UTC`
+- um caso real do video `_B7xWH5n8UI` ainda aparecia com `latest_collected_at = 2026-06-18 10:00:11.782639`
+- isso provou que a versao anterior da view ainda aceitava snapshots de "hoje" quando o corte era calculado apenas pelo dia UTC do banco
+- a correcao definitiva passou a filtrar pela data local de `America/Sao_Paulo` aplicada ao proprio `collected_at`
+
+Query de validacao recomendada apos apply:
+
+```sql
+select
+  post_id,
+  title,
+  first_collected_at,
+  latest_collected_at,
+  snapshot_count,
+  views_delta_7d,
+  views_growth_pct_7d
+from public.v_dashboard_post_growth_7d
+where latest_collected_at::date = current_date;
+```
+
+Leitura esperada da validacao:
+
+- a query acima nao deve retornar registros que so entram por snapshot do dia atual no fuso de `America/Sao_Paulo`
 
 Expansao controlada fora do escopo minimo original:
 

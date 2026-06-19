@@ -1985,7 +1985,7 @@ Definicoes aprovadas para a tela:
 - o filtro `Short` deve mostrar sempre os `10` melhores videos `short`
 - `Melhores videos 7d` deve usar `7` dias completos fechados, excluindo o dia atual
   parcial
-- a `v_dashboard_post_growth_7d` deve materializar essa regra com janela iniciando em `date_trunc('day', now()) - interval '7 days'` e terminando antes de `date_trunc('day', now())`
+- a `v_dashboard_post_growth_7d` deve materializar essa regra pela data local de `America/Sao_Paulo`, convertendo `collected_at` antes do filtro
 - a janela precisa aparecer explicitamente na tela, para evitar leitura
   ambigua de periodo
 
@@ -2044,6 +2044,19 @@ Execucao pratica:
 2. Montar cards e tabela ou ranking com foco em leitura rapida.
 3. Incluir contexto temporal da janela analisada.
 4. Validar fallback para view vazia ou indisponivel.
+
+Resolucao documentada da regra temporal:
+
+- a primeira implementacao sem hoje, baseada apenas em `date_trunc('day', now())`, foi insuficiente porque o Supabase operava em `UTC`
+- isso permitia que snapshots ainda considerados "hoje" no Brasil permanecessem na janela
+- a correcao definitiva foi mover a regra para a data local de `America/Sao_Paulo`, aplicando a conversao sobre `collected_at`
+- a UI tambem foi ajustada para exibir `latest_snapshot` em `America/Sao_Paulo`
+
+Evidencia de resolucao:
+
+- o video `_B7xWH5n8UI` (`Avaliação JETOUR T2 2026 - UM MONSTRO OFFROAD QUE NÃO É OFFROAD`) aparecia indevidamente com `latest_collected_at = 2026-06-18 10:00:11.782639`
+- o ambiente do Supabase confirmou `db_timezone = UTC`
+- depois da correcao final e da validacao no Streamlit, o caso deixou de aparecer
 
 Expansao proposta fora do escopo minimo original, mas com alto ganho de usabilidade:
 

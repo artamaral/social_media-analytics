@@ -7,14 +7,10 @@ WITH windowed_history AS (
     h.likes,
     h.comments
   FROM public.post_metrics_history h
-  WHERE h.collected_at >= (
-      (date_trunc('day', now() AT TIME ZONE 'America/Sao_Paulo') - INTERVAL '7 days')
-      AT TIME ZONE 'America/Sao_Paulo'
-    )
-    AND h.collected_at < (
-      date_trunc('day', now() AT TIME ZONE 'America/Sao_Paulo')
-      AT TIME ZONE 'America/Sao_Paulo'
-    )
+  WHERE ((h.collected_at AT TIME ZONE 'UTC') AT TIME ZONE 'America/Sao_Paulo')::date
+      >= ((now() AT TIME ZONE 'America/Sao_Paulo')::date - 7)
+    AND ((h.collected_at AT TIME ZONE 'UTC') AT TIME ZONE 'America/Sao_Paulo')::date
+      < (now() AT TIME ZONE 'America/Sao_Paulo')::date
 ),
 first_snapshot AS (
   SELECT DISTINCT ON (wh.post_id)
