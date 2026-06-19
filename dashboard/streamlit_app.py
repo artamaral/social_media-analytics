@@ -1505,6 +1505,80 @@ def get_filtered_rows(
         return [], f"Falha ao consultar {source_name}: {exc}"
 
 
+@st.cache_data(ttl=300, show_spinner=False)
+def load_creator_posts_rollup(
+    creator_ids: tuple[int, ...],
+    video_type: str,
+) -> dict[int, dict[str, Any]]:
+    client = get_supabase_client()
+    if client is None or not creator_ids:
+        return {}
+
+    page_size = 1000
+    creator_batch_size = 25
+    rollup: dict[int, dict[str, Any]] = {}
+
+    for start in range(0, len(creator_ids), creator_batch_size):
+        creator_batch = list(creator_ids[start:start + creator_batch_size])
+        offset = 0
+
+        while True:
+            query = (
+                client.table("posts")
+                .select("creator_id,views,likes,comments")
+                .in_("creator_id", creator_batch)
+                .eq("video_type", video_type)
+                .range(offset, offset + page_size - 1)
+            )
+            response = query.execute()
+            rows = response.data or []
+
+            for row in rows:
+                creator_id = nullable_int(row.get("creator_id"))
+                if creator_id is None:
+                    continue
+                current = rollup.setdefault(
+                    creator_id,
+                    {
+                        "post_count": 0,
+                        "total_views": 0,
+                        "total_likes": 0,
+                        "total_comments": 0,
+                    },
+                )
+                current["post_count"] += 1
+                current["total_views"] += nullable_int(row.get("views")) or 0
+                current["total_likes"] += nullable_int(row.get("likes")) or 0
+                current["total_comments"] += nullable_int(row.get("comments")) or 0
+
+            if len(rows) < page_size:
+                break
+
+            offset += page_size
+
+    for current in rollup.values():
+        total_views = current["total_views"]
+        total_likes = current["total_likes"]
+        total_comments = current["total_comments"]
+        current["engagement_rate_pct"] = round(((total_likes + total_comments) / total_views) * 100, 4) if total_views > 0 else 0.0
+
+    return rollup
+
+
+def get_creator_posts_rollup(
+    creator_ids: list[int],
+    video_type: str,
+) -> tuple[dict[int, dict[str, Any]], str | None]:
+    if video_type not in {"long", "short"}:
+        return {}, None
+
+    try:
+        normalized_ids = tuple(sorted({creator_id for creator_id in creator_ids if creator_id}))
+        return load_creator_posts_rollup(normalized_ids, video_type), None
+    except Exception as exc:
+        return {}, f"Falha ao segmentar posts por tipo de video: {exc}"
+
+
 def normalize_name_for_intake(value: str) -> str:
     without_accents = unicodedata.normalize("NFKD", value.strip())
     ascii_value = "".join(char for char in without_accents if not unicodedata.combining(char))
@@ -4501,7 +4575,12 @@ def render_creator_overview_page() -> None:
         except (TypeError, ValueError):
             return 0.0
 
-    selected_platform = st.selectbox("Plataforma", ["todas", "youtube", "instagram", "tiktok"], index=1)
+    filter_col1, filter_col2 = st.columns([1.0, 1.0])
+    with filter_col1:
+        selected_platform = st.selectbox("Plataforma", ["todas", "youtube", "instagram", "tiktok"], index=1)
+    with filter_col2:
+        selected_video_type = st.selectbox("Tipo de video", ["todos", "long", "short"], index=0, key="creator_overview_video_type")
+
     working_rows = rows if selected_platform == "todas" else [row for row in rows if row["platform"] == selected_platform]
     working_rows = sorted(working_rows, key=lambda row: row_float(row, "engagement_rate_pct"), reverse=True)
 
@@ -4511,6 +4590,39 @@ def render_creator_overview_page() -> None:
             f"Nenhum criador da view v_dashboard_creator_summary corresponde ao filtro de plataforma {selected_platform}.",
         )
         return
+
+    if selected_video_type in {"long", "short"}:
+        creator_ids = [row_int(row, "creator_id") for row in working_rows]
+        segmented_rollup, segmented_error = get_creator_posts_rollup(creator_ids, selected_video_type)
+        if segmented_error:
+            render_connection_notice(segmented_error)
+            placeholder_card(
+                "Segmentacao indisponivel",
+                f"Nao foi possivel carregar a segmentacao {selected_video_type} a partir de public.posts neste ambiente.",
+            )
+            return
+
+        segmented_rows = []
+        for row in working_rows:
+            creator_id = row_int(row, "creator_id")
+            creator_rollup = segmented_rollup.get(creator_id)
+            if not creator_rollup or (creator_rollup.get("post_count") or 0) <= 0:
+                continue
+            updated_row = dict(row)
+            updated_row["post_count"] = creator_rollup["post_count"]
+            updated_row["total_views"] = creator_rollup["total_views"]
+            updated_row["total_likes"] = creator_rollup["total_likes"]
+            updated_row["total_comments"] = creator_rollup["total_comments"]
+            updated_row["engagement_rate_pct"] = creator_rollup["engagement_rate_pct"]
+            segmented_rows.append(updated_row)
+        working_rows = segmented_rows
+
+        if not working_rows:
+            placeholder_card(
+                "Sem criadores neste filtro",
+                f"Nenhum criador possui videos {selected_video_type} monitorados dentro da carteira selecionada.",
+            )
+            return
 
     total_followers = sum(row_int(row, "followers") for row in working_rows)
     total_posts = sum(row_int(row, "post_count") for row in working_rows)
@@ -4532,7 +4644,7 @@ def render_creator_overview_page() -> None:
     )
 
     st.markdown("#### Ranking comparativo")
-    st.caption(f"Base filtrada em {selected_platform}. Engajamento medio atual da carteira: {avg_engagement:.2f}%.")
+    st.caption(f"Base filtrada em {selected_platform} e tipo {selected_video_type}. Engajamento medio atual da carteira: {avg_engagement:.2f}%.")
     sort_key = st.session_state.get("creator_overview_sort", "engagement")
     toolbar_cols = st.columns([0.95, 0.7, 0.7, 0.7, 2.0])
     with toolbar_cols[0]:
