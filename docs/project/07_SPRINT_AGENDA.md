@@ -1911,7 +1911,7 @@ Execucao pratica:
 
 #### Atividade 3 - Trocar `Creators > Visao geral` para dados reais
 
-Status: aberta.
+Status: concluida.
 
 Objetivo:
 
@@ -1920,7 +1920,7 @@ Objetivo:
 
 Estado atual:
 
-- a tela ainda usa `get_creator_mock_rows()`
+- a `Visao geral de criadores` passou a consumir `v_dashboard_creator_summary`
 - o criador individual ja esta ligado a views reais
 
 Etapas:
@@ -1961,6 +1961,36 @@ Execucao pratica:
 2. Recalcular agregacoes com a base real filtrada.
 3. Ajustar ranking e textos para os campos realmente disponiveis.
 4. Validar consistencia com a tela de criador individual.
+
+Resultado observado em 2026-06-19:
+
+- `render_creator_overview_page()` deixou de usar `get_creator_mock_rows()`
+- a tela passou a ler `v_dashboard_creator_summary` diretamente
+- os KPIs de `Criadores ativos`, `Seguidores monitorados`, `Total de videos`,
+  `Total de views`, `Total de likes` e `Total de comentarios` passaram a ser
+  calculados sobre a base real filtrada
+- o ranking comparativo passou a usar os campos reais da view
+- a tela ganhou fallback honesto para erro de leitura, base vazia e filtro sem
+  linhas
+- por acabamento estético, o ranking comparativo passou a exibir avatar do
+  criador com base em `creators.avatar_url`
+
+Evidencia complementar da camada de avatar:
+
+- foi adicionada a coluna `avatar_url` em `public.creators`
+- `v_dashboard_creator_summary` passou a expor `avatar_url`
+- foi criado um backfill offline em `scripts/offline_backfill/backfill_creator_avatars.py`
+- o backfill foi executado em 2026-06-19 com os seguintes resultados:
+  - lote 1: `35` creators elegiveis, `20` processados, `20` atualizados, `0` erros
+  - lote 2: cursor em `20`, nenhum creator restante sem `avatar_url`, status `completed`
+
+Leitura de fechamento da Atividade 3:
+
+- a visao geral de creators deixou de depender de mock
+- a tela agora reflete a carteira real monitorada e ficou coerente com o
+  restante do dashboard
+- o uso de avatar foi tratado como melhoria estética da mesma frente, sem criar
+  view nova
 
 #### Atividade 4 - Implementar `YouTube > Melhores videos 7d`
 
@@ -2238,7 +2268,7 @@ Execucao pratica:
 
 - [x] Atividade 1 concluida
 - [x] Atividade 2 concluida
-- [ ] Atividade 3 concluida
+- [x] Atividade 3 concluida
 - [x] Atividade 4 concluida
 - [ ] Atividade 5 concluida
 - [ ] Atividade 6 concluida
@@ -2250,9 +2280,9 @@ Leitura atual do Sprint 3:
 - o sprint saiu da fase de infraestrutura e contrato minimo de dados
 - `Overview`, `Criador individual`, `Data quality` e `YouTube > Melhores videos 7d`
   ja estao ligados a dados reais
+- `Creators > Visao geral` tambem passou a consumir dados reais e deixou de
+  depender de mock
 - a etapa de `YouTube > Melhores videos 7d` pode ser considerada concluida
-- o principal gap funcional restante do sprint esta em `Creators > Visao geral`,
-  que ainda usa `get_creator_mock_rows()`
 - o principal gap de governanca restante do sprint esta em aplicar contexto de
   `Data Quality` antes das leituras de ranking e comparativo
 - o fechamento final do sprint ainda depende de uma passada transversal de UX,
@@ -2262,15 +2292,15 @@ Classificacao atual das atividades:
 
 - Atividade 1: concluida
 - Atividade 2: concluida
-- Atividade 3: aberta
+- Atividade 3: concluida
 - Atividade 4: concluida
 - Atividade 5: aberta
 - Atividade 6: em andamento
 
 Percentual qualitativo estimado:
 
-- Sprint 3 entre `70%` e `80%` de execucao real, considerando esta etapa como
-  encerrada
+- Sprint 3 entre `80%` e `90%` de execucao real, com `Atividades 1, 2, 3 e 4`
+  concluidas
 
 ### Documentacao relacionada
 

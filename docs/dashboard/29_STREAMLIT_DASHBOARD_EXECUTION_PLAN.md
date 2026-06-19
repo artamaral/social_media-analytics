@@ -90,21 +90,34 @@ Status consolidado do Sprint 3 em 2026-06-18:
   MVP atual
 - `Criador individual` segue apoiado em views reais e coerente com a proposta
   do sprint
+- `Creators > Visao geral` passou a consumir `v_dashboard_creator_summary` e
+  deixou de depender de `get_creator_mock_rows()`
 - `YouTube > Melhores videos 7d` deixou de ser placeholder e passou a operar
   com ranking semanal real sobre `v_dashboard_post_growth_7d`
 - a etapa de `Melhores videos 7d` pode ser considerada concluida nesta rodada
-- `Creators > Visao geral` ainda permanece como principal gap funcional aberto,
-  porque a tela continua usando `get_creator_mock_rows()`
 - o gate de `Data Quality` antes dos rankings continua como pendencia
   explicita do sprint
 - o fechamento final do MVP ainda depende de acabamento transversal de UX,
   estados vazios, mensagens de erro e smoke test
 
+Entrega complementar de avatar em creators:
+
+- foi adicionada a coluna `avatar_url` em `public.creators`
+- `v_dashboard_creator_summary` passou a expor `avatar_url`
+- o scraper principal de YouTube foi ajustado para capturar o avatar do canal a
+  partir de `channels.list(part=snippet,contentDetails)`
+- foi criado o backfill offline `scripts/offline_backfill/backfill_creator_avatars.py`
+  para popular creators ja existentes sem misturar esse fluxo com os scripts de
+  producao
+- resultado observado em 2026-06-19:
+  - lote 1: `20` creators atualizados com sucesso, `0` erros
+  - lote 2: nenhum creator restante sem `avatar_url`, status `completed`
+
 Leitura executiva:
 
 - o Sprint 3 ja entregou a maior parte do valor analitico do MVP
 - o status atual e de consolidacao final, nao mais de estruturacao inicial
-- estimativa qualitativa atual: entre `70%` e `80%` do sprint concluido
+- estimativa qualitativa atual: entre `80%` e `90%` do sprint concluido
 
 Query de validacao recomendada apos apply:
 
