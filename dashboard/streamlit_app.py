@@ -830,6 +830,18 @@ def inject_theme() -> None:
             display: block;
         }
 
+        .creator-ranking-avatar-link {
+            display: inline-flex;
+            border-radius: 999px;
+            text-decoration: none;
+            flex: 0 0 auto;
+        }
+
+        .creator-ranking-avatar-link:hover .creator-ranking-avatar {
+            border-color: rgba(255, 128, 105, 0.55);
+            box-shadow: 0 0 0 3px rgba(255, 128, 105, 0.14);
+        }
+
         .creator-ranking-copy {
             min-width: 0;
         }
@@ -4514,10 +4526,18 @@ def render_creator_overview_page() -> None:
         username_value = str(row.get("username") or "sem_username").lstrip("@")
         avatar_url = str(row.get("avatar_url") or "").strip()
         avatar_fallback = escape((entity_name[:1] or "C").upper())
-        avatar_html = (
+        avatar_core_html = (
             f'<div class="creator-ranking-avatar"><img src="{escape(avatar_url)}" alt="{escape(entity_name)}" loading="lazy" /></div>'
             if avatar_url
             else f'<div class="creator-ranking-avatar">{avatar_fallback}</div>'
+        )
+        creator_channel_url = ""
+        if str(row.get("platform") or "").strip().lower() == "youtube" and username_value and username_value != "sem_username":
+            creator_channel_url = f"https://www.youtube.com/@{username_value}"
+        avatar_html = (
+            f'<a class="creator-ranking-avatar-link" href="{escape(creator_channel_url)}" target="_blank" rel="noopener noreferrer" aria-label="Abrir canal de {escape(entity_name)}">{avatar_core_html}</a>'
+            if creator_channel_url
+            else avatar_core_html
         )
         ranking_items.append(
             (
