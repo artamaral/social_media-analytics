@@ -286,6 +286,24 @@ def inject_theme() -> None:
             white-space: nowrap;
         }
 
+        .creator-overview-kpi-grid .metric-card {
+            min-height: 118px;
+        }
+
+        .creator-overview-kpi-grid .metric-card-header {
+            font-size: 1.2rem;
+            padding: 0.75rem 0.85rem;
+            line-height: 1.05;
+        }
+
+        .creator-overview-kpi-grid .metric-card-body {
+            padding: 0.95rem 1rem;
+        }
+
+        .creator-overview-kpi-grid .metric-caption {
+            display: none;
+        }
+
         .creator-kpi-grid .metric-picto {
             width: 46px;
             height: 46px;
@@ -4435,14 +4453,14 @@ def render_creator_overview_page() -> None:
 
     metric_card_grid(
         [
-            metric_card_html("Criadores ativos", format_int(len(working_rows)), "Base atual filtrada", "CR"),
-            metric_card_html("Seguidores monitorados", format_int(total_followers), "Soma dos criadores filtrados", "SG"),
-            metric_card_html("Total de videos", format_int(total_posts), "Posts monitorados na base", "VD"),
-            metric_card_html("Total de views", format_int(total_views), "Volume acumulado da carteira", "VW"),
-            metric_card_html("Total de likes", format_int(total_likes), "Interacoes acumuladas", "LK"),
-            metric_card_html("Total de comentarios", format_int(total_comments), "Interacoes acumuladas", "CM"),
+            metric_card_html("Criadores ativos", format_int(len(working_rows)), "", "CR"),
+            metric_card_html("Seguidores monitorados", format_int(total_followers), "", "SG"),
+            metric_card_html("Total de videos", format_int(total_posts), "", "VD"),
+            metric_card_html("Total de views", format_int(total_views), "", "VW"),
+            metric_card_html("Total de likes", format_int(total_likes), "", "LK"),
+            metric_card_html("Total de comentarios", format_int(total_comments), "", "CM"),
         ],
-        class_name="fenabrave-card-grid",
+        class_name="creator-overview-kpi-grid",
     )
 
     st.markdown("#### Ranking comparativo")
