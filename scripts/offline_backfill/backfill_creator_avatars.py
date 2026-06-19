@@ -1,6 +1,27 @@
 import os
 import time
+from pathlib import Path
+
 import requests
+
+
+def load_local_env() -> None:
+    env_path = Path(__file__).with_name(".env")
+    if not env_path.exists():
+        return
+
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+load_local_env()
 
 
 YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY")
@@ -219,15 +240,6 @@ def run_avatar_backfill():
         "total_creators": total,
         "refresh_all": REFRESH_ALL,
     }
-
-
-def run(request):
-    print("Cloud Run avatar backfill started")
-    try:
-        return run_avatar_backfill()
-    except Exception as exc:
-        print("Avatar backfill fatal error:", str(exc))
-        return {"error": str(exc)}
 
 
 if __name__ == "__main__":
