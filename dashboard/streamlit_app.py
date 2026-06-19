@@ -286,13 +286,21 @@ def inject_theme() -> None:
             white-space: nowrap;
         }
 
+        .creator-overview-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 1rem;
+            margin-top: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+
         .creator-overview-kpi-grid .metric-card {
             min-height: 118px;
         }
 
         .creator-overview-kpi-grid .metric-card-header {
-            font-size: 1.2rem;
-            padding: 0.75rem 0.85rem;
+            font-size: 1.05rem;
+            padding: 0.72rem 0.82rem;
             line-height: 1.05;
         }
 
