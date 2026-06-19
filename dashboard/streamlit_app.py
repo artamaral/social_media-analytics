@@ -1041,6 +1041,14 @@ def metric_card(title: str, value: str, caption: str, picto: str, accent_color: 
     )
 
 
+def header_pill_icon_html(picto: str, label: str) -> str:
+    return (
+        f'<span class="youtube-best-head-icon" title="{escape(label)}" aria-label="{escape(label)}">'
+        f"{metric_picto_html(picto)}"
+        "</span>"
+    )
+
+
 def metric_card_grid(cards: list[str], class_name: str = "fenabrave-card-grid") -> None:
     st.markdown(
         f'<div class="{escape(class_name)}">' + "".join(cards) + "</div>",
@@ -2025,7 +2033,7 @@ def render_youtube_best_7d_page() -> None:
         .youtube-best-header,
         .youtube-best-row {
             display: grid;
-            grid-template-columns: minmax(560px, 4.35fr) 0.66fr 0.34fr 0.42fr 0.38fr 0.42fr;
+            grid-template-columns: minmax(610px, 4.9fr) 0.54fr 0.28fr 0.26fr 0.26fr 0.28fr;
             gap: 0;
         }
         .youtube-best-header {
@@ -2037,13 +2045,16 @@ def render_youtube_best_7d_page() -> None:
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 0.74rem 0.35rem;
+            padding: 0.72rem 0.25rem;
             color: var(--muted);
-            font-size: 0.68rem;
+            font-size: 0.72rem;
             font-weight: 800;
             letter-spacing: 0.02em;
             text-transform: uppercase;
             text-align: center;
+        }
+        .youtube-best-head-cell.break {
+            line-height: 1.05;
         }
         .youtube-best-head-cell.video {
             display: grid;
@@ -2061,6 +2072,27 @@ def render_youtube_best_7d_page() -> None:
         }
         .youtube-best-head-video-label {
             grid-column: 3;
+        }
+        .youtube-best-head-icon {
+            width: 18px;
+            height: 18px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--muted);
+        }
+        .youtube-best-head-icon svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 1.8;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        .youtube-best-head-icon .icon-fill {
+            fill: currentColor;
+            stroke: none;
         }
         .youtube-best-row + .youtube-best-row {
             border-top: 1px solid rgba(255, 255, 255, 0.08);
@@ -2281,15 +2313,18 @@ def render_youtube_best_7d_page() -> None:
         )
         return
 
+    views_header_icon = header_pill_icon_html("VW", "Views")
+    likes_header_icon = header_pill_icon_html("LK", "Likes")
+    comments_header_icon = header_pill_icon_html("CM", "Comentarios")
     st.markdown(
         '<div class="youtube-best-table">'
         '<div class="youtube-best-header">'
         '<div class="youtube-best-head-cell video"><span class="youtube-best-head-hash">#</span><span class="youtube-best-head-video-label">Video</span></div>'
-        '<div class="youtube-best-head-cell">Data da publicacao</div>'
+        '<div class="youtube-best-head-cell break">Publicado<br>em</div>'
         '<div class="youtube-best-head-cell">%</div>'
-        '<div class="youtube-best-head-cell">Views</div>'
-        '<div class="youtube-best-head-cell">Likes</div>'
-        '<div class="youtube-best-head-cell">Comentarios</div>'
+        f'<div class="youtube-best-head-cell">{views_header_icon}</div>'
+        f'<div class="youtube-best-head-cell">{likes_header_icon}</div>'
+        f'<div class="youtube-best-head-cell">{comments_header_icon}</div>'
         "</div>",
         unsafe_allow_html=True,
     )
