@@ -4,6 +4,7 @@ create table public.creators (
   platform text not null,
   username text null,
   channel_id text not null,
+  avatar_url text null,
   followers integer null,
   created_at timestamp without time zone null default CURRENT_TIMESTAMP,
   is_active boolean null default true,

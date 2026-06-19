@@ -20,6 +20,7 @@ SELECT
   c.platform,
   c.username,
   c.channel_id,
+  c.avatar_url,
   c.followers,
   COALESCE(pr.post_count, 0) AS post_count,
   COALESCE(pr.total_views, 0) AS total_views,

@@ -799,6 +799,38 @@ def inject_theme() -> None:
         }
 
         .creator-ranking-main {
+            display: grid;
+            grid-template-columns: 52px minmax(0, 1fr);
+            gap: 0.85rem;
+            align-items: center;
+            min-width: 0;
+        }
+
+        .creator-ranking-avatar {
+            width: 52px;
+            height: 52px;
+            border-radius: 999px;
+            overflow: hidden;
+            background: linear-gradient(135deg, rgba(255, 128, 105, 0.28), rgba(255, 255, 255, 0.05));
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text);
+            font-size: 1rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            flex: 0 0 auto;
+        }
+
+        .creator-ranking-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .creator-ranking-copy {
             min-width: 0;
         }
 
@@ -4480,12 +4512,22 @@ def render_creator_overview_page() -> None:
         niche_name = str(row.get("niche") or "Nicho nao informado")
         platform_name = str(row.get("platform") or "plataforma")
         username_value = str(row.get("username") or "sem_username").lstrip("@")
+        avatar_url = str(row.get("avatar_url") or "").strip()
+        avatar_fallback = escape((entity_name[:1] or "C").upper())
+        avatar_html = (
+            f'<div class="creator-ranking-avatar"><img src="{escape(avatar_url)}" alt="{escape(entity_name)}" loading="lazy" /></div>'
+            if avatar_url
+            else f'<div class="creator-ranking-avatar">{avatar_fallback}</div>'
+        )
         ranking_items.append(
             (
                 '<div class="creator-ranking-item">'
                 '<div class="creator-ranking-main">'
+                f'{avatar_html}'
+                '<div class="creator-ranking-copy">'
                 f'<div class="creator-ranking-title">{escape(entity_name)}</div>'
                 f'<div class="creator-ranking-meta">{escape(niche_name)} | {escape(platform_name)} | @{escape(username_value)}</div>'
+                '</div>'
                 '</div>'
                 '<div>'
                 '<div class="creator-stat-label">Seguidores</div>'

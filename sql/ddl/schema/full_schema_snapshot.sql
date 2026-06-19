@@ -7,6 +7,7 @@ CREATE TABLE public.creators (
   platform text NOT NULL CHECK (platform = ANY (ARRAY['youtube'::text, 'instagram'::text, 'tiktok'::text])),
   username text,
   channel_id text NOT NULL UNIQUE,
+  avatar_url text,
   followers integer,
   created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
   is_active boolean DEFAULT true,

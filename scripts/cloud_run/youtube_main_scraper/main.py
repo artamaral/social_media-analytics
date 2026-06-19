@@ -104,11 +104,11 @@ def parse_duration(duration):
         return 0
 
 
-def get_upload_playlist(channel_id):
+def get_channel_profile(channel_id):
     url = "https://www.googleapis.com/youtube/v3/channels"
 
     params = {
-        "part": "contentDetails",
+        "part": "snippet,contentDetails",
         "id": channel_id,
         "key": YOUTUBE_API_KEY
     }
@@ -120,7 +120,39 @@ def get_upload_playlist(channel_id):
     if not items:
         return None
 
-    return items[0]["contentDetails"]["relatedPlaylists"]["uploads"]
+    item = items[0]
+    thumbnails = item.get("snippet", {}).get("thumbnails", {})
+    avatar_url = (
+        thumbnails.get("high", {}).get("url")
+        or thumbnails.get("medium", {}).get("url")
+        or thumbnails.get("default", {}).get("url")
+    )
+
+    return {
+        "playlist_id": item["contentDetails"]["relatedPlaylists"]["uploads"],
+        "avatar_url": avatar_url,
+    }
+
+
+def update_creator_avatar(creator_id, avatar_url):
+    if not creator_id or not avatar_url:
+        return
+
+    url = f"{SUPABASE_URL}/rest/v1/creators?id=eq.{creator_id}"
+
+    headers = HEADERS.copy()
+    headers["Prefer"] = "return=minimal"
+
+    payload = {
+        "avatar_url": avatar_url
+    }
+
+    res = requests.patch(url, headers=headers, json=payload)
+
+    print("📡 Avatar update:", res.status_code)
+
+    if res.status_code >= 300:
+        print("❌ Avatar update error:", res.text)
 
 
 def get_videos_from_playlist(playlist_id):
@@ -275,7 +307,12 @@ def run_pipeline():
             # ==============================
             # 📺 PLAYLIST
             # ==============================
-            playlist_id = get_upload_playlist(channel_id)
+            channel_profile = get_channel_profile(channel_id)
+            playlist_id = channel_profile.get("playlist_id") if channel_profile else None
+
+            avatar_url = channel_profile.get("avatar_url") if channel_profile else None
+            if avatar_url:
+                update_creator_avatar(creator["id"], avatar_url)
             print(f"📺 Playlist ID: {playlist_id}")
 
             if not playlist_id:
