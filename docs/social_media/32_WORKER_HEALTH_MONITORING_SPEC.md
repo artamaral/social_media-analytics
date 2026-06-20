@@ -36,6 +36,24 @@ Confiar principalmente em:
 Essa configuracao permite aumentar a cadencia sem duplicar workers nem misturar
 discovery com atualizacao de metricas.
 
+### Limite conhecido do discovery sem heartbeat
+
+O worker `youtube_main_scraper` atualmente comprova resultado no banco quando
+insere ou atualiza posts em `public.posts`.
+
+Sem heartbeat persistido, o banco nao comprova uma execucao que rodou sem
+encontrar posts novos. Nesses casos, a evidencia de execucao fica apenas nos
+logs do Cloud Run/Scheduler.
+
+Open point futuro:
+
+- persistir um heartbeat do `youtube_main_scraper` em tabela operacional
+- registrar ao menos `started_at`, `finished_at`, `processed_creators`,
+  `inserted_or_updated_posts`, `errors` e `status`
+- usar esse heartbeat no dashboard para diferenciar:
+  - worker rodou e nao encontrou posts novos
+  - worker nao rodou ou falhou antes de produzir evidencia
+
 ### 1. Evidencia de snapshot novo
 
 Indicador principal:

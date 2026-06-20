@@ -155,6 +155,54 @@ Validacao operacional:
 
 ---
 
+## Status do discovery com dados existentes e open point de heartbeat
+
+Data:
+
+- 2026-06-20
+
+Decisao:
+
+- nao alterar o worker `youtube_main_scraper` neste momento
+- ajustar a leitura do dashboard para usar `posts.created_at` como evidencia de
+  resultado do discovery
+- manter `creator_metrics_history` apenas como evidencia legada/auxiliar de
+  snapshot de canal
+- nao marcar o discovery como `nok` quando houver posts inseridos nas ultimas
+  24 horas
+
+Motivo:
+
+- logs do Cloud Run confirmaram execucao bem-sucedida do worker, com `POST 200`,
+  creators processados, `Upsert 200`, `Erros: 0` e cursor salvo
+- a view antiga marcava `nok` porque dependia de `creator_metrics_history`,
+  que nao representa a evidencia principal do fluxo atual de discovery
+- `posts.created_at` comprova resultado de discovery quando posts novos entram
+  no banco
+
+Limite conhecido:
+
+- sem heartbeat persistido pelo worker, o banco nao comprova uma execucao que
+  rodou sem encontrar posts novos
+- quando nao ha posts novos, a evidencia de execucao fica apenas nos logs do
+  Cloud Run/Scheduler
+- por isso, a leitura atual separa:
+  - resultado observado no banco por `posts.created_at`
+  - snapshot legado de canal por `creator_metrics_history`
+  - execucao comprovada apenas fora do banco pelos logs
+
+Open point futuro:
+
+- implementar heartbeat operacional do `youtube_main_scraper`
+- registrar `started_at`, `finished_at`, `processed_creators`,
+  `inserted_or_updated_posts`, `errors` e `status`
+- usar o heartbeat para diferenciar de forma confiavel:
+  - worker rodou e nao encontrou posts novos
+  - worker nao rodou
+  - worker falhou antes de gerar resultado
+
+---
+
 ## Regra final de next_check da Sprint 2
 
 Data:

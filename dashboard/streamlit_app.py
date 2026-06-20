@@ -1303,6 +1303,17 @@ def normalize_worker_tone(status_code: str) -> str:
     }.get(status_code, "neutral")
 
 
+def combine_worker_status(*status_codes: str) -> str:
+    normalized = [str(code or "neutral").lower() for code in status_codes]
+    if any(code in {"nok", "danger"} for code in normalized):
+        return "nok"
+    if any(code in {"atencao", "warning"} for code in normalized):
+        return "atencao"
+    if any(code == "ok" for code in normalized):
+        return "ok"
+    return "neutral"
+
+
 def process_banner(title: str, body: str) -> None:
     st.markdown(
         (
@@ -3163,8 +3174,11 @@ def render_collection_integrity_section() -> None:
         discovery_status_reason = str(discovery_status.get("status_reason") or "Sem detalhe adicional.")
         discovery_execution_timestamp = discovery_status.get("ultima_execucao_discovery")
         discovery_post_timestamp = discovery_status.get("ultima_descoberta_de_post")
+        discovery_evidence_timestamp = discovery_status.get("ultima_evidencia_discovery")
         discovery_snapshot_value = str(
-            discovery_status.get("ultima_execucao_discovery_br")
+            discovery_status.get("ultima_evidencia_discovery_br")
+            or (format_timestamp_br(discovery_evidence_timestamp) if discovery_evidence_timestamp else None)
+            or discovery_status.get("ultima_execucao_discovery_br")
             or (format_timestamp_br(discovery_execution_timestamp) if discovery_execution_timestamp else None)
             or discovery_status.get("ultima_descoberta_de_post_br")
             or (format_timestamp_br(discovery_post_timestamp) if discovery_post_timestamp else None)
@@ -3175,16 +3189,20 @@ def render_collection_integrity_section() -> None:
             or (format_timestamp_br(discovery_post_timestamp) if discovery_post_timestamp else None)
             or "--"
         )
+        discovery_evidence_source = str(discovery_status.get("fonte_ultima_evidencia") or "--")
         discovery_checked_creators = format_int(discovery_status.get("creators_avaliados_24h"))
         discovery_new_posts = format_int(discovery_status.get("novos_posts_24h"))
+        discovery_new_posts_6h = format_int(discovery_status.get("novos_posts_6h"))
     else:
         discovery_status_code = "neutral"
         discovery_status_label = "Aguardando view"
-        discovery_status_reason = "Worker de descoberta roda a cada 6 horas e ainda precisa de uma view propria."
+        discovery_status_reason = "Worker de descoberta roda a cada 3 horas e ainda precisa de uma view propria."
         discovery_snapshot_value = "--"
         discovery_latest_post = "--"
+        discovery_evidence_source = "--"
         discovery_checked_creators = "--"
         discovery_new_posts = "--"
+        discovery_new_posts_6h = "--"
 
     if operational_signals:
         operational_status_code = str(operational_signals.get("status_code") or "atencao").lower()
@@ -3204,6 +3222,8 @@ def render_collection_integrity_section() -> None:
         at_risk_bootstrap = "--"
         at_risk_reason = "Aguardando a view v_dashboard_post_update_operational_signals."
 
+    collection_status_code = combine_worker_status(raw_status_code, discovery_status_code)
+
     panels = [
         worker_panel_html(
             "Integridade da coleta",
@@ -3213,7 +3233,7 @@ def render_collection_integrity_section() -> None:
                 worker_stat_html("Descoberta de novos posts", discovery_status_label, discovery_status_reason, discovery_status_code),
             ],
             "#ff8069",
-            raw_status_code,
+            collection_status_code,
         ),
         worker_panel_html(
             "Evidencia de processamento",
@@ -3229,7 +3249,9 @@ def render_collection_integrity_section() -> None:
                     "Descoberta de novos posts",
                     discovery_snapshot_value,
                     (
-                        f"Creators avaliados 24h: {discovery_checked_creators} | "
+                        f"Fonte: {discovery_evidence_source} | "
+                        f"Snapshots canal 24h: {discovery_checked_creators} | "
+                        f"Novos posts 6h: {discovery_new_posts_6h} | "
                         f"Novos posts 24h: {discovery_new_posts} | "
                         f"Ultima descoberta: {discovery_latest_post}"
                     ),
@@ -3237,11 +3259,11 @@ def render_collection_integrity_section() -> None:
                 ),
             ],
             "#98df96",
-            raw_status_code,
+            collection_status_code,
         ),
         worker_panel_html(
             "Sinais operacionais",
-            "Leitura de atraso e risco de cobertura do worker horario.",
+            "Leitura de atraso e risco de cobertura do worker de metricas.",
             [
                 worker_stat_html(
                     "Ate 1h",

@@ -1,3 +1,11 @@
+-- Migration: 2026-06-20_009_discovery_status_posts_evidence_up
+-- Objetivo:
+-- - Ajustar o status do discovery para usar os dados existentes no banco.
+-- - Usar `posts.created_at` como evidencia de resultado do discovery.
+-- - Manter `creator_metrics_history` como evidencia legada/auxiliar, nao como
+--   unica fonte para marcar o worker como `nok`.
+-- - Nao altera o worker `youtube_main_scraper`.
+
 drop view if exists public.v_dashboard_new_post_discovery_status;
 
 create view public.v_dashboard_new_post_discovery_status as
@@ -102,3 +110,18 @@ from enriched;
 
 grant select on public.v_dashboard_new_post_discovery_status to anon;
 grant select on public.v_dashboard_new_post_discovery_status to authenticated;
+
+-- Validacao sugerida:
+-- select
+--   checked_at_br,
+--   status_code,
+--   status_label,
+--   status_reason,
+--   ultima_execucao_discovery_br,
+--   ultima_descoberta_de_post_br,
+--   ultima_evidencia_discovery_br,
+--   fonte_ultima_evidencia,
+--   novos_posts_24h,
+--   novos_posts_6h,
+--   novos_posts_3h
+-- from public.v_dashboard_new_post_discovery_status;

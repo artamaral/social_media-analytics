@@ -331,12 +331,23 @@ Regra importante:
 - a view `v_dashboard_new_post_discovery_status` cobre o worker de
   `Descoberta de novos posts`
 - o segundo worker deve separar 2 sinais:
-  - `creator_metrics_history.collected_at` como evidencia de execucao do worker
   - `posts.created_at` como evidencia de resultado, ou seja, novos posts
     realmente descobertos
+  - `creator_metrics_history.collected_at` como evidencia legada/auxiliar de
+    snapshot de canal
 
 Essa separacao evita falso alerta quando o worker roda dentro da janela de 3
 horas, mas os creators processados nao possuem posts novos para inserir.
+
+Limite conhecido:
+
+- sem um heartbeat persistido pelo `youtube_main_scraper`, o banco nao comprova
+  uma execucao que rodou sem encontrar posts novos
+- nesse caso, a confirmacao da execucao fica nos logs do Cloud Run/Scheduler,
+  enquanto o dashboard so consegue provar resultado quando `posts.created_at`
+  avanca
+- heartbeat do discovery deve ser tratado como melhoria futura para diferenciar
+  "worker rodou sem novidades" de "worker nao rodou"
 
 Para o worker de `Atualizacao de posts`, o subtipo `Sinais operacionais` deve
 priorizar KPIs de fluxo e risco de cobertura, nao volume bruto de lote:

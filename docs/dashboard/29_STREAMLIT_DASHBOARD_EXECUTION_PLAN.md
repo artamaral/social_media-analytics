@@ -537,13 +537,19 @@ Leitura correta da fase atual:
 - a view atual cobre apenas o worker de `Atualizacao de posts`
 - o worker de `Descoberta de novos posts` deve aparecer no Streamlit com rotulo proprio
 - a view dedicada do segundo worker deve usar:
-  - `creator_metrics_history.collected_at` como evidencia de execucao do worker
   - `posts.created_at` como evidencia de resultado de descoberta
+  - `creator_metrics_history.collected_at` como evidencia legada/auxiliar de
+    snapshot de canal
 
 Regra operacional:
 
 - um ciclo do worker pode ser saudavel mesmo quando `novos_posts_24h` e baixo
-- `posts.created_at` nao deve ser usado sozinho para dizer que o worker esta atrasado
+- `posts.created_at` deve impedir falso `nok` quando houver posts novos nas
+  ultimas 24h
+- `posts.created_at` nao comprova que o worker rodou quando nao houve post novo
+  inserido
+- open point futuro: persistir heartbeat do `youtube_main_scraper` para separar
+  "rodou sem novidades" de "nao rodou"
 
 Escopo revisado para `Sinais operacionais` do worker de metricas:
 

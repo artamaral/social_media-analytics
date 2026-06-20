@@ -47,3 +47,7 @@ YYYY-MM-DD_NNN_descricao_down.sql
   - Aplica a regra final da Sprint 2: `84h` para warm/old com `21+` checagens, recalcula a fila existente e estreita o breakdown operacional de cobertura.
 - `2026-06-16_008_queue_next_check_84h_rebucket_down.sql`
   - Restaura a regra anterior de `12h/24h` para warm/old cobertos e o breakdown antigo de cobertura.
+- `2026-06-20_009_discovery_status_posts_evidence_up.sql`
+  - Ajusta o status do discovery para usar `posts.created_at` como evidencia de resultado, mantendo `creator_metrics_history` como fallback legado.
+- `2026-06-20_009_discovery_status_posts_evidence_down.sql`
+  - Restaura a regra anterior de discovery baseada apenas em `creator_metrics_history`.
