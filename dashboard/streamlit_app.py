@@ -4571,17 +4571,12 @@ def render_creator_detail_page() -> None:
 
 def render_creator_overview_page() -> None:
     rows, connection_error = get_view_rows("v_dashboard_creator_summary")
-    page_header("Visao geral de criadores", "Leitura comparativa da base monitorada")
-    process_banner(
-        "Papel desta view",
-        "Esta tela resume a carteira monitorada. Ela responde quem esta maior, quem engaja melhor e quem concentra mais volume, sem entrar ainda no detalhe editorial profundo de um unico criador.",
-    )
-    render_connection_notice(connection_error)
+    page_header("Visao geral de criadores")
 
     if not rows:
         placeholder_card(
             "Visao geral de criadores",
-            "Aguardando a view v_dashboard_creator_summary retornar base valida para montar o comparativo da carteira monitorada.",
+            connection_error or "Aguardando a view v_dashboard_creator_summary retornar base valida para montar o comparativo da carteira monitorada.",
         )
         return
 
@@ -4597,11 +4592,17 @@ def render_creator_overview_page() -> None:
         except (TypeError, ValueError):
             return 0.0
 
-    filter_col1, filter_col2 = st.columns([1.0, 1.0])
-    with filter_col1:
-        selected_platform = st.selectbox("Plataforma", ["todas", "youtube", "instagram", "tiktok"], index=1)
-    with filter_col2:
+    cards_container = st.container()
+
+    st.markdown("#### Ranking comparativo")
+    control_col1, control_col2, control_col3 = st.columns([1.0, 1.0, 1.0])
+    with control_col1:
+        selected_platform = st.selectbox("Plataforma", ["todas", "youtube", "instagram", "tiktok"], index=1, key="creator_overview_platform")
+    with control_col2:
         selected_video_type = st.selectbox("Tipo de video", ["todos", "long", "short"], index=0, key="creator_overview_video_type")
+    with control_col3:
+        sort_label = st.selectbox("Ordenar por", ["Engajamento", "Seguidores", "Views"], index=0, key="creator_overview_sort_select")
+    sort_key = {"Engajamento": "engagement", "Seguidores": "followers", "Views": "views"}.get(sort_label, "engagement")
 
     working_rows = rows if selected_platform == "todas" else [row for row in rows if row["platform"] == selected_platform]
     working_rows = sorted(working_rows, key=lambda row: row_float(row, "engagement_rate_pct"), reverse=True)
@@ -4653,36 +4654,18 @@ def render_creator_overview_page() -> None:
     total_comments = sum(row_int(row, "total_comments") for row in working_rows)
     avg_engagement = round(sum(row_float(row, "engagement_rate_pct") for row in working_rows) / max(len(working_rows), 1), 2)
 
-    metric_card_grid(
-        [
-            metric_card_html("Criadores ativos", format_int(len(working_rows)), "", "CR"),
-            metric_card_html("Seguidores monitorados", format_int(total_followers), "", "SG"),
-            metric_card_html("Total de videos", format_int(total_posts), "", "VD"),
-            metric_card_html("Total de views", format_int(total_views), "", "VW"),
-            metric_card_html("Total de likes", format_int(total_likes), "", "LK"),
-            metric_card_html("Total de comentarios", format_int(total_comments), "", "CM"),
-        ],
-        class_name="creator-overview-kpi-grid",
-    )
-
-    st.markdown("#### Ranking comparativo")
-    st.caption(f"Base filtrada em {selected_platform} e tipo {selected_video_type}. Engajamento medio atual da carteira: {avg_engagement:.2f}%.")
-    sort_key = st.session_state.get("creator_overview_sort", "engagement")
-    toolbar_cols = st.columns([0.95, 0.7, 0.7, 0.7, 2.0])
-    with toolbar_cols[0]:
-        st.markdown('<div class="creator-ranking-toolbar-label">Ordenar por</div>', unsafe_allow_html=True)
-    with toolbar_cols[1]:
-        if st.button("Seguidores", key="creator_overview_sort_followers", use_container_width=True):
-            st.session_state["creator_overview_sort"] = "followers"
-            sort_key = "followers"
-    with toolbar_cols[2]:
-        if st.button("Views", key="creator_overview_sort_views", use_container_width=True):
-            st.session_state["creator_overview_sort"] = "views"
-            sort_key = "views"
-    with toolbar_cols[3]:
-        if st.button("Engajamento", key="creator_overview_sort_engagement", use_container_width=True):
-            st.session_state["creator_overview_sort"] = "engagement"
-            sort_key = "engagement"
+    with cards_container:
+        metric_card_grid(
+            [
+                metric_card_html("Criadores ativos", format_int(len(working_rows)), "", "CR"),
+                metric_card_html("Seguidores monitorados", format_int(total_followers), "", "SG"),
+                metric_card_html("Total de videos", format_int(total_posts), "", "VD"),
+                metric_card_html("Total de views", format_int(total_views), "", "VW"),
+                metric_card_html("Total de likes", format_int(total_likes), "", "LK"),
+                metric_card_html("Total de comentarios", format_int(total_comments), "", "CM"),
+            ],
+            class_name="creator-overview-kpi-grid",
+        )
 
     if sort_key == "followers":
         working_rows = sorted(working_rows, key=lambda row: row_int(row, "followers"), reverse=True)
