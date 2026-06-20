@@ -29,14 +29,14 @@ Sem confirmacao explicita do usuario, a atividade deve ser tratada como ideia ou
 Status atual:
 
 ```text
-Sprint ativo: nenhum
+Sprint ativo: Sprint 4 - Ranking Hot Now
 Ultimo sprint concluido: Sprint 3 - Dashboard MVP analitico
 Datas: a definir conforme disponibilidade do usuario
 ```
 
-Enquanto o Sprint 3 estiver ativo, apenas tarefas relacionadas ao dashboard
-analitico, validacao das views do Supabase e entregas de `Overview`,
-`Creators` e crescimento semanal devem ser executadas automaticamente.
+Enquanto o Sprint 4 estiver ativo, apenas tarefas relacionadas ao ranking
+`Hot Now`, sua view SQL, validacao temporal, integracao no Streamlit e
+documentacao de limitacoes analiticas devem ser executadas automaticamente.
 Alteracoes fora deste escopo devem aguardar confirmacao.
 
 ## Visao geral
@@ -2380,13 +2380,453 @@ Criterios para a revisao:
 
 Criar a primeira metrica temporal de oportunidade, separada da logica operacional da fila.
 
+O Sprint 4 deve responder, de forma exploratoria e auditavel:
+
+```text
+Quais videos automotivos estao ganhando tracao agora, considerando velocidade
+recente e aceleracao, sem confundir esse ranking com prioridade operacional da
+fila de coleta?
+```
+
+### Escopo funcional
+
+Inclui:
+
+- modelar a view `public.v_dashboard_hot_now`;
+- calcular `velocity_6h`, `previous_velocity` e `acceleration`;
+- aplicar filtros minimos de historico para reduzir falso positivo;
+- excluir videos indisponiveis da leitura analitica;
+- conectar o ranking em `dashboard/streamlit_app.py`;
+- documentar limitacoes e criterio de uso.
+
+Nao inclui:
+
+- alterar a fila operacional `v_post_update_queue_batch`;
+- promover `priority_score_v2` para producao;
+- mudar `calculate_next_check(...)`;
+- criar enrichment por IA;
+- transformar o ranking em decisao automatica de marketing.
+
 ### Atividades
 
-- Criar view SQL `v_dashboard_hot_now`.
-- Calcular `velocity_6h`, `previous_velocity` e `acceleration`.
-- Definir filtros minimos de historico para evitar falso positivo.
-- Separar ranking analitico da fila operacional.
-- Conectar a view no Streamlit.
+- [ ] Etapa 1: confirmar contrato analitico e criterios de elegibilidade.
+- [ ] Etapa 2: desenhar e criar a view SQL `v_dashboard_hot_now`.
+- [ ] Etapa 3: validar a view com dados reais e casos de borda.
+- [ ] Etapa 4: conectar `Hot now` no Streamlit.
+- [ ] Etapa 5: fazer fechamento de UX, documentacao e decisao de pronto.
+
+### Planejamento por etapas
+
+#### Etapa 1 - Contrato analitico e elegibilidade
+
+Status: pendente.
+
+Objetivo:
+
+- definir exatamente o que significa "quente agora" no contexto automotivo;
+- separar crescimento real de ruido causado por historico insuficiente;
+- alinhar a view com a decisao tecnica de manter `priority_score_v2` fora da
+  fila operacional.
+
+Atividades:
+
+1. Revisar o baseline do score hibrido `v2` e a estrategia de avaliacao.
+2. Confirmar os campos disponiveis em `post_metrics_history` e `posts`.
+3. Definir a metrica base para o score temporal inicial:
+   - primeira opcao: score simples derivado de views, likes e comentarios;
+   - alternativa conservadora: velocidade e aceleracao por views, com likes e
+     comentarios como contexto.
+4. Definir criterios minimos de elegibilidade:
+   - quantidade minima de snapshots;
+   - existencia de snapshot recente;
+   - existencia de baseline anterior util;
+   - exclusao de `unavailable` fora de auditoria;
+   - tratamento de videos sem delta suficiente.
+5. Registrar a decisao de metrica antes de criar a view.
+
+Passo a passo operacional:
+
+1. Confirmar a decisao de escopo do Sprint 4:
+   - `Hot now` e ranking analitico de oportunidade;
+   - `Hot now` nao altera fila, worker, `next_check` nem `priority_score_v2`;
+   - a tela deve complementar `Melhores videos 7d`, nao duplicar a leitura
+     semanal fechada.
+2. Revisar a decisao tecnica vigente:
+   - confirmar que `priority_score_v2` permanece em segundo plano;
+   - confirmar que a metrica temporal deve priorizar velocidade recente e
+     aceleracao;
+   - registrar qualquer mudanca conceitual em `05_DECISOES_TECNICAS.md` antes
+     de implementar SQL.
+3. Revisar o baseline do score hibrido `v2`:
+   - identificar por que `base_popularity` dominava o score;
+   - confirmar que videos com pouco historico nao devem liderar por fallback;
+   - extrair o cuidado principal para o `Hot now`: nao premiar apenas volume
+     acumulado.
+4. Confirmar o contrato minimo das tabelas de origem:
+   - `post_metrics_history`: snapshots historicos de views, likes, comentarios
+     e `collected_at`;
+   - `posts`: metadados do video, status, creator, data de publicacao e tipo;
+   - `creators`: nome do canal e avatar, se a view precisar enriquecer a UI.
+5. Levantar a densidade real de historico para saber se a janela de `6h` e
+   viavel:
+
+```sql
+select
+  p.video_type,
+  count(*) as total_posts,
+  count(*) filter (where h.snapshot_count >= 3) as posts_com_3_snapshots,
+  count(*) filter (where h.latest_collected_at >= now() - interval '12 hours') as posts_com_snapshot_recente
+from public.posts p
+left join (
+  select
+    post_id,
+    count(*) as snapshot_count,
+    max(collected_at) as latest_collected_at
+  from public.post_metrics_history
+  group by post_id
+) h on h.post_id = p.post_id
+where coalesce(p.failure_status, 'active') <> 'unavailable'
+group by p.video_type
+order by p.video_type;
+```
+
+6. Validar se existem snapshots suficientes para comparar janelas:
+   - snapshot atual;
+   - snapshot proximo de `6h` atras;
+   - snapshot proximo de `24h` atras;
+   - ou outro baseline aprovado se a densidade real nao suportar a janela
+     ideal.
+7. Escolher a metrica base inicial:
+   - opcao preferencial conservadora: `views` como base de velocidade e
+     aceleracao, com likes/comentarios como contexto;
+   - opcao expandida: score ponderado por views, likes e comentarios;
+   - a escolha deve favorecer interpretabilidade na primeira versao.
+8. Definir formula conceitual do ranking:
+
+```text
+velocity_6h = (score_agora - score_6h_atras) / horas_entre_snapshots
+previous_velocity = (score_6h_atras - score_24h_atras) / horas_entre_snapshots
+acceleration = velocity_6h - previous_velocity
+hot_now_rank_score = funcao simples de velocity_6h + acceleration
+```
+
+9. Definir tolerancia para busca de baseline:
+   - exemplo: aceitar snapshot entre `4h` e `8h` atras como baseline de `6h`;
+   - exemplo: aceitar snapshot entre `18h` e `30h` atras como baseline anterior;
+   - se a tolerancia for ampla demais, marcar o ranking como exploratorio.
+10. Definir filtros minimos de elegibilidade:
+    - excluir `failure_status = 'unavailable'`;
+    - exigir pelo menos `3` snapshots;
+    - exigir snapshot atual recente;
+    - exigir baseline de `6h` e baseline anterior;
+    - exigir delta recente positivo para entrar no ranking principal;
+    - manter `eligibility_status` para explicar exclusoes ou insuficiencia.
+11. Definir campos obrigatorios do contrato da view:
+    - identificacao: `post_id`, `creator_id`, `creator_name`, `title`;
+    - contexto: `video_type`, `published_at`, `latest_collected_at`;
+    - qualidade: `snapshot_count`, `eligibility_status`;
+    - metricas: `velocity_6h`, `previous_velocity`, `acceleration`,
+      `hot_now_rank_score`;
+    - leitura complementar: deltas recentes de views, likes e comentarios.
+12. Definir ordenacao inicial:
+    - ranking principal por `hot_now_rank_score desc`;
+    - desempate por `acceleration desc`;
+    - segundo desempate por `velocity_6h desc`;
+    - evitar ordenar por views totais como criterio principal.
+13. Definir como a UI deve explicar a metrica:
+    - "videos ganhando tracao agora";
+    - "baseado em velocidade recente e aceleracao";
+    - "ranking exploratorio, dependente de densidade de snapshots";
+    - diferenciar claramente de crescimento acumulado em `7` dias.
+14. Registrar a decisao final da Etapa 1 no sprint antes da Etapa 2:
+
+```text
+Metrica base escolhida:
+Janela recente:
+Janela anterior:
+Tolerancia de baseline:
+Filtros de elegibilidade:
+Ordenacao oficial:
+Limitacoes conhecidas:
+Decisao:
+```
+
+15. So iniciar a criacao da `v_dashboard_hot_now` depois que os itens acima
+    estiverem preenchidos.
+
+Dependencias:
+
+- `docs/social_media/26_HYBRID_SCORE_V2_BASELINE_2026-05-17.md`
+- `docs/social_media/13_HYBRID_SCORE_EVALUATION_STRATEGY.md`
+- `docs/project/05_DECISOES_TECNICAS.md`
+
+Saida esperada:
+
+- contrato textual da view `v_dashboard_hot_now`;
+- lista de campos obrigatorios;
+- filtros minimos aprovados;
+- confirmacao de que o ranking e analitico, nao operacional.
+
+Criterio de pronto:
+
+- e possivel escrever a SQL sem ambiguidades sobre janela, baseline, ordenacao
+  e exclusao de dados invalidos.
+
+#### Etapa 2 - View SQL `v_dashboard_hot_now`
+
+Status: pendente.
+
+Objetivo:
+
+- criar a camada SQL de consumo do ranking, mantendo calculo temporal no banco
+  e evitando carregar historico bruto no Streamlit.
+
+Atividades:
+
+1. Criar arquivo novo em `sql/ddl/views/` para `v_dashboard_hot_now`.
+2. Usar CTEs para separar:
+   - snapshots recentes;
+   - baseline de `6h` atras;
+   - baseline anterior;
+   - calculo de velocidade;
+   - calculo de aceleracao;
+   - ranking final.
+3. Calcular campos minimos:
+   - `post_id`;
+   - `creator_id`;
+   - `creator_name`;
+   - `title`;
+   - `video_type`;
+   - `published_at`;
+   - `latest_collected_at`;
+   - `snapshot_count`;
+   - `views_latest`;
+   - `likes_latest`;
+   - `comments_latest`;
+   - `views_delta_recent`;
+   - `likes_delta_recent`;
+   - `comments_delta_recent`;
+   - `velocity_6h`;
+   - `previous_velocity`;
+   - `acceleration`;
+   - `hot_now_rank_score`;
+   - `eligibility_status`.
+4. Aplicar filtros:
+   - remover `failure_status = 'unavailable'`;
+   - exigir historico minimo;
+   - evitar divisao por zero;
+   - limitar ranking a videos com movimento recente real.
+5. Conceder `GRANT SELECT` para `anon` e `authenticated`, seguindo o padrao das
+   views do dashboard.
+
+Dependencias:
+
+- Etapa 1 concluida.
+
+Saida esperada:
+
+- arquivo SQL versionado para `public.v_dashboard_hot_now`;
+- contrato de colunas estavel para o Streamlit;
+- ranking ordenavel por `hot_now_rank_score` e explicavel por velocidade e
+  aceleracao.
+
+Criterio de pronto:
+
+- a view compila localmente/por revisao SQL e esta pronta para aplicacao no
+  Supabase;
+- a SQL nao depende de funcao operacional da fila;
+- a view nao altera tabelas nem workers.
+
+#### Etapa 3 - Validacao com dados reais
+
+Status: pendente.
+
+Objetivo:
+
+- confirmar que o ranking retorna oportunidades temporais plausiveis e nao
+  apenas videos grandes, antigos ou com historico pobre.
+
+Atividades:
+
+1. Aplicar ou validar a view no Supabase.
+2. Consultar o top do ranking:
+
+```sql
+select *
+from public.v_dashboard_hot_now
+order by hot_now_rank_score desc
+limit 20;
+```
+
+3. Verificar casos de borda:
+   - videos com poucos snapshots;
+   - videos antigos com volume alto, mas sem aceleracao;
+   - videos recentes com delta forte;
+   - videos `short` versus `long`;
+   - videos indisponiveis.
+4. Comparar a leitura com `v_dashboard_post_growth_7d` para garantir separacao
+   semantica:
+   - `Melhores videos 7d`: crescimento semanal fechado;
+   - `Hot now`: tracao recente e aceleracao.
+5. Registrar limitacoes encontradas no proprio sprint.
+
+Dependencias:
+
+- Etapa 2 concluida;
+- acesso de leitura ao Supabase com as views aplicadas.
+
+Saida esperada:
+
+- evidencias numericas do ranking;
+- lista de ajustes necessarios antes da UI;
+- decisao se a view esta pronta para consumo no app.
+
+Criterio de pronto:
+
+- top `20` revisado;
+- pelo menos uma amostra de falso positivo analisada ou descartada;
+- `Hot now` nao duplica semanticamente o ranking semanal de `7d`.
+
+#### Etapa 4 - Integracao no Streamlit
+
+Status: pendente.
+
+Objetivo:
+
+- transformar a pagina `Hot now` em uma tela real do dashboard, usando a view
+  `v_dashboard_hot_now`.
+
+Atividades:
+
+1. Localizar a rota atual de `Hot now` em `dashboard/streamlit_app.py`.
+2. Criar funcao de leitura da view com limite conservador, sem carregar
+   historico bruto.
+3. Implementar filtros minimos:
+   - `Todos`;
+   - `Long`;
+   - `Short`.
+4. Renderizar ranking com:
+   - titulo do video;
+   - creator;
+   - tipo;
+   - ultimo snapshot;
+   - velocidade recente;
+   - velocidade anterior;
+   - aceleracao;
+   - views/likes/comentarios recentes.
+5. Reaproveitar o padrao visual de `YouTube > Melhores videos 7d` quando fizer
+   sentido, sem criar identidade paralela.
+6. Tratar estados:
+   - view ausente;
+   - base vazia;
+   - historico insuficiente;
+   - erro de permissao.
+
+Dependencias:
+
+- Etapa 3 concluida;
+- contrato da view estavel.
+
+Saida esperada:
+
+- pagina `Hot now` funcional no dashboard;
+- ranking carregado sob demanda via Supabase;
+- mensagens claras quando o ranking nao puder ser calculado.
+
+Criterio de pronto:
+
+- a pagina deixa de ser placeholder;
+- o ranking carrega sem erro com dados reais;
+- a tela explica que a leitura e de tracao recente, nao de crescimento semanal
+  fechado.
+
+#### Etapa 5 - Fechamento, documentacao e decisao de pronto
+
+Status: pendente.
+
+Objetivo:
+
+- encerrar o sprint com evidencias, limitacoes e criterio claro de uso do
+  ranking.
+
+Atividades:
+
+1. Fazer smoke test local do dashboard.
+2. Validar a rota online se houver deploy automatico pela branch.
+3. Documentar resultado observado nesta agenda:
+   - view criada;
+   - validacao da view;
+   - comportamento no Streamlit;
+   - limitacoes conhecidas.
+4. Atualizar documentacao complementar se houver mudanca de contrato:
+   - `docs/dashboard/29_STREAMLIT_DASHBOARD_EXECUTION_PLAN.md`;
+   - `docs/project/05_DECISOES_TECNICAS.md`, se a metrica final mudar uma
+     decisao tecnica relevante.
+5. Definir se ajustes finos de UX viram backlog ou continuam dentro do Sprint
+   4.
+
+Dependencias:
+
+- Etapas 1 a 4 concluidas.
+
+Saida esperada:
+
+- Sprint 4 encerravel com evidencias;
+- ranking pronto para uso exploratorio interno;
+- proximos refinamentos separados de execucao obrigatoria.
+
+Criterio de pronto:
+
+- SQL, Streamlit e documentacao estao coerentes;
+- ranking e interpretavel para estudo de mercado automotivo;
+- limitacoes de historico insuficiente estao visiveis;
+- nenhuma alteracao operacional de fila foi feita sem decisao separada.
+
+### Ordem recomendada de execucao
+
+1. Fechar contrato analitico.
+2. Criar `v_dashboard_hot_now`.
+3. Validar top do ranking no Supabase.
+4. Ligar a tela `Hot now` no Streamlit.
+5. Fazer smoke test e documentar resultado.
+
+### Plano de execucao por atividades
+
+| Ordem | Atividade | Objetivo operacional | Dependencia principal | Saida esperada | Evidencia de pronto |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Contrato analitico | definir janelas, elegibilidade e metrica | decisoes tecnicas + baseline `v2` | contrato da view | campos e filtros aprovados |
+| 2 | View SQL | materializar ranking temporal no banco | contrato fechado | `v_dashboard_hot_now` | SQL versionado e aplicavel |
+| 3 | Validacao real | reduzir falso positivo e confirmar semantica | view aplicada | leitura do top `20` | amostras revisadas |
+| 4 | Streamlit | entregar pagina real `Hot now` | contrato estavel | ranking no app | placeholder removido |
+| 5 | Fechamento | registrar evidencias e limites | tela funcional | sprint encerravel | smoke test e docs atualizados |
+
+### Checklist de acompanhamento
+
+- [ ] Etapa 1 concluida
+- [ ] Etapa 2 concluida
+- [ ] Etapa 3 concluida
+- [ ] Etapa 4 concluida
+- [ ] Etapa 5 concluida
+
+### Riscos e cuidados
+
+- evitar que videos grandes e antigos liderem apenas por volume acumulado;
+- evitar falso positivo em videos com poucos snapshots;
+- nao reintroduzir o `priority_score_v2` como criterio operacional;
+- nao misturar `Hot now` com `Melhores videos 7d`;
+- nao carregar historico bruto no Streamlit;
+- manter a interpretacao como exploratoria ate a metrica ser observada em uso
+  real.
+
+### Status inicial em 2026-06-20
+
+Leitura atual:
+
+- Sprint 3 esta concluido no escopo aprovado;
+- roadmap ja prioriza `Hot now` como proxima frente do dashboard;
+- plano do dashboard ja aponta `v_dashboard_hot_now` como primeira view nova;
+- decisao tecnica existente separa analise temporal da fila operacional;
+- Sprint 4 fica preparado para iniciar pela definicao do contrato analitico.
 
 ### Documentacao relacionada
 

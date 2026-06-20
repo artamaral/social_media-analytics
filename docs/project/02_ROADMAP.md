@@ -102,7 +102,7 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 
 ### Prioridade atual apos encerramento do Sprint 3
 
-- [ ] Formalizar o proximo sprint antes de retomar execucoes automaticas no dashboard.
+- [x] Formalizar o proximo sprint antes de retomar execucoes automaticas no dashboard.
 - [ ] Priorizar o ranking `Hot now` como proxima frente de dashboard, usando `velocity_6h`, `previous_velocity` e `acceleration`.
 - [ ] Reavaliar se ha algum acabamento adicional de UX que mereca virar backlog, e nao reabrir o Sprint 3.
 
