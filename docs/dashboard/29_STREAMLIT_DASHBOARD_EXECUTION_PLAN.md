@@ -114,8 +114,9 @@ Status consolidado do Sprint 3 em 2026-06-18:
 - `YouTube > Melhores videos 7d` deixou de ser placeholder e passou a operar
   com ranking semanal real sobre `v_dashboard_post_growth_7d`
 - a etapa de `Melhores videos 7d` pode ser considerada concluida nesta rodada
-- o fechamento final do MVP ainda depende de acabamento transversal de UX,
-  estados vazios, mensagens de erro e smoke test
+- o fechamento final de UX, estados vazios, mensagens de erro e smoke test foi
+  aceito como suficiente para o uso pessoal atual do dashboard
+- o Sprint 3 pode ser tratado como encerrado no escopo aprovado
 
 Decisao de escopo em 2026-06-20:
 
@@ -142,8 +143,8 @@ Entrega complementar de avatar em creators:
 Leitura executiva:
 
 - o Sprint 3 ja entregou a maior parte do valor analitico do MVP
-- o status atual e de consolidacao final, nao mais de estruturacao inicial
-- estimativa qualitativa atual: entre `85%` e `95%` do sprint concluido
+- o status atual e de sprint encerrado, nao mais de consolidacao parcial
+- estimativa qualitativa atual: `100%` do sprint concluido no escopo aprovado
 
 Query de validacao recomendada apos apply:
 

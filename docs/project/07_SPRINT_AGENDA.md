@@ -29,7 +29,8 @@ Sem confirmacao explicita do usuario, a atividade deve ser tratada como ideia ou
 Status atual:
 
 ```text
-Sprint ativo: Sprint 3 - Dashboard MVP analitico
+Sprint ativo: nenhum
+Ultimo sprint concluido: Sprint 3 - Dashboard MVP analitico
 Datas: a definir conforme disponibilidade do usuario
 ```
 
@@ -2251,9 +2252,9 @@ Execucao pratica:
 - [x] Atividade 2 concluida
 - [x] Atividade 3 concluida
 - [x] Atividade 4 concluida
-- [ ] Atividade 5 concluida
+- [x] Atividade 5 concluida
 
-### Status consolidado em 2026-06-18
+### Status consolidado em 2026-06-20
 
 Leitura atual do Sprint 3:
 
@@ -2263,8 +2264,10 @@ Leitura atual do Sprint 3:
 - `Creators > Visao geral` tambem passou a consumir dados reais e deixou de
   depender de mock
 - a etapa de `YouTube > Melhores videos 7d` pode ser considerada concluida
-- o fechamento final do sprint ainda depende de uma passada transversal de UX,
-  estados vazios, erros e smoke test
+- o fechamento final de UX, estados vazios, erros e smoke test foi aceito como
+  concluido para o uso pessoal atual do dashboard
+- o Sprint 3 pode ser tratado como encerrado do ponto de vista funcional e
+  documental
 
 Classificacao atual das atividades:
 
@@ -2272,12 +2275,11 @@ Classificacao atual das atividades:
 - Atividade 2: concluida
 - Atividade 3: concluida
 - Atividade 4: concluida
-- Atividade 5: em andamento
+- Atividade 5: concluida
 
 Percentual qualitativo estimado:
 
-- Sprint 3 entre `85%` e `95%` de execucao real, com `Atividades 1, 2, 3 e 4`
-  concluidas e apenas o fechamento final de UX/robustez em aberto
+- Sprint 3 em `100%` de execucao real no escopo aprovado
 
 ### Documentacao relacionada
 
@@ -2292,8 +2294,8 @@ Percentual qualitativo estimado:
 - `Overview` fechada como leitura macro da base monitorada.
 - `Creators > Visao geral` sem mock e coerente com `Criador individual`.
 - `YouTube > Melhores videos 7d` implementada com ranking semanal real.
-- Confirmacao de que rankings aparecem depois dos sinais de confiabilidade.
 - Evidencia de que o MVP ficou pronto para uso interno recorrente.
+- Sprint 3 encerrado sem pendencias funcionais no escopo aprovado.
 
 ### Pre-flight
 
