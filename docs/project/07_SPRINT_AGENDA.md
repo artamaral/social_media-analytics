@@ -2773,7 +2773,7 @@ Decisao:
 
 #### Etapa 3 - Validacao com dados reais
 
-Status: pendente.
+Status: em andamento.
 
 Objetivo:
 
@@ -2820,6 +2820,36 @@ Criterio de pronto:
 - top `20` revisado;
 - pelo menos uma amostra de falso positivo analisada ou descartada;
 - `Hot now` nao duplica semanticamente o ranking semanal de `7d`.
+
+Resultado inicial em 2026-06-20:
+
+- commit da Etapa 2 criado:
+  - `054d45e feat(sql): cria view hot now`
+- consulta REST ao Supabase para `public.v_dashboard_hot_now` retornou:
+
+```text
+status 404
+code PGRST205
+message Could not find the table 'public.v_dashboard_hot_now' in the schema cache
+hint Perhaps you meant the table 'public.v_dashboard_post_growth_7d'
+```
+
+Leitura:
+
+- a view `v_dashboard_hot_now` existe no repositorio em
+  `sql/ddl/views/020_create_v_dashboard_hot_now.sql`
+- a view ainda nao existe no Supabase no momento desta verificacao
+- `psql` e `supabase` CLI nao estao disponiveis localmente nesta maquina
+- nao ha `SUPABASE_DB_URL` configurado no `.env` operacional usado nesta frente
+
+Proxima acao da Etapa 3:
+
+1. Aplicar `sql/ddl/views/020_create_v_dashboard_hot_now.sql` no Supabase SQL
+   Editor.
+2. Reconsultar `public.v_dashboard_hot_now` via REST.
+3. Revisar o top do ranking com dados reais.
+4. Registrar o resultado observado antes de seguir para a integracao no
+   Streamlit.
 
 #### Etapa 4 - Integracao no Streamlit
 
