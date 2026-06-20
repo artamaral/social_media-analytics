@@ -2587,6 +2587,436 @@ def render_youtube_best_7d_page() -> None:
     st.caption("O video entra no ranking pelo crescimento de views em 7 dias, enquanto views, likes e comentarios mostram os totais atuais do post.")
 
 
+def render_youtube_hot_now_page() -> None:
+    page_header("Hot now", "Videos ganhando tracao agora por velocidade recente e aceleracao")
+
+    st.markdown(
+        """
+        <style>
+        .hot-now-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            margin: 0.15rem 0 0.75rem;
+        }
+        .hot-now-toolbar-label {
+            color: var(--text);
+            font-size: 1.7rem;
+            font-weight: 800;
+            line-height: 1;
+            white-space: nowrap;
+        }
+        .hot-now-note {
+            color: var(--muted);
+            font-size: 0.86rem;
+            margin: 0 0 1rem;
+        }
+        .hot-now-table {
+            border: none;
+            border-radius: 0;
+            overflow: visible;
+            background: transparent;
+            box-shadow: none;
+        }
+        .hot-now-scroll {
+            max-height: 72vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 0.2rem;
+        }
+        .hot-now-header,
+        .hot-now-row {
+            display: grid;
+            grid-template-columns: minmax(610px, 4.8fr) 0.46fr 0.34fr 0.34fr 0.34fr 0.34fr;
+            gap: 0;
+        }
+        .hot-now-header {
+            position: sticky;
+            top: 0;
+            z-index: 4;
+            background: transparent;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
+        }
+        .hot-now-head-cell {
+            min-height: 58px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.72rem 0.25rem;
+            color: var(--muted);
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            text-align: center;
+        }
+        .hot-now-head-cell.video {
+            display: grid;
+            grid-template-columns: 48px 140px minmax(0, 1fr);
+            gap: 0.95rem;
+            align-items: center;
+            justify-content: initial;
+            text-align: left;
+            padding-left: 1rem;
+        }
+        .hot-now-head-hash {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.45rem;
+            font-weight: 800;
+            line-height: 1;
+            color: var(--text);
+        }
+        .hot-now-head-video-label {
+            grid-column: 3;
+            display: inline-flex;
+            align-items: center;
+        }
+        .youtube-best-head-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--accent);
+            color: #ffffff;
+            font-size: 0;
+            box-sizing: border-box;
+            flex: 0 0 auto;
+            box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+        }
+        .youtube-best-head-icon svg {
+            width: 68%;
+            height: 68%;
+            display: block;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2.4;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        .youtube-best-head-icon .icon-fill {
+            fill: currentColor;
+            stroke: none;
+        }
+        .hot-now-row + .hot-now-row {
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .hot-now-main {
+            display: grid;
+            grid-template-columns: 48px 140px minmax(0, 1fr);
+            gap: 0.95rem;
+            align-items: center;
+            padding: 1rem;
+        }
+        .hot-now-rank {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--text);
+            text-align: center;
+            line-height: 1;
+        }
+        .hot-now-thumb-link {
+            display: block;
+            width: 140px;
+            text-decoration: none;
+        }
+        .hot-now-thumb-image {
+            width: 140px;
+            aspect-ratio: 16 / 9;
+            object-fit: cover;
+            display: block;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.04);
+        }
+        .hot-now-thumb {
+            width: 140px;
+            aspect-ratio: 16 / 9;
+            border-radius: 14px;
+            border: 1px dashed rgba(255, 255, 255, 0.18);
+            background:
+                linear-gradient(135deg, rgba(255, 128, 105, 0.28), rgba(255, 255, 255, 0.02)),
+                rgba(255, 255, 255, 0.03);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--muted);
+            font-size: 0.74rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .hot-now-copy {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 78px;
+        }
+        .hot-now-channel {
+            color: var(--accent);
+            font-size: 0.82rem;
+            font-weight: 700;
+            margin-bottom: 0.28rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .hot-now-title {
+            color: var(--text);
+            font-size: 1.28rem;
+            font-weight: 700;
+            line-height: 1.22;
+            margin-bottom: 0.48rem;
+            word-break: break-word;
+        }
+        .hot-now-title-link {
+            color: inherit;
+            text-decoration: none;
+        }
+        .hot-now-title-link:hover {
+            text-decoration: underline;
+        }
+        .hot-now-meta {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 0.38rem;
+            align-items: center;
+            overflow: hidden;
+        }
+        .hot-now-chip {
+            border-radius: 999px;
+            padding: 0.26rem 0.58rem;
+            font-size: 0.68rem;
+            font-weight: 700;
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--muted);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            white-space: nowrap;
+        }
+        .hot-now-chip.type {
+            color: white;
+            background: rgba(255, 128, 105, 0.22);
+            border-color: rgba(255, 128, 105, 0.34);
+        }
+        .hot-now-cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem 0.28rem;
+            color: var(--text);
+            font-size: 0.92rem;
+            font-weight: 700;
+            text-align: center;
+        }
+        .hot-now-cell.positive {
+            color: #66d99a;
+        }
+        .hot-now-cell.negative {
+            color: #ff9f91;
+        }
+        @media (max-width: 1100px) {
+            .hot-now-header {
+                display: none;
+            }
+            .hot-now-row {
+                grid-template-columns: 1fr;
+            }
+            .hot-now-main {
+                grid-template-columns: 40px 118px minmax(0, 1fr);
+            }
+            .hot-now-thumb,
+            .hot-now-thumb-link,
+            .hot-now-thumb-image {
+                width: 118px;
+            }
+            .hot-now-cell {
+                justify-content: space-between;
+                border-top: 1px solid rgba(255, 255, 255, 0.06);
+                padding: 0.85rem 1rem;
+            }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    selector_cols = st.columns([0.19, 0.81])
+    with selector_cols[0]:
+        st.markdown('<div class="hot-now-toolbar"><div class="hot-now-toolbar-label">Tipo de video</div></div>', unsafe_allow_html=True)
+    with selector_cols[1]:
+        selected_filter = st.radio(
+            "Tipo de video",
+            ["Todos", "Long", "Short"],
+            horizontal=True,
+            key="youtube_hot_now_filter",
+            label_visibility="collapsed",
+        )
+
+    st.markdown(
+        '<div class="hot-now-note">Ranking exploratorio com snapshot atual ate 12h, baseline de 6h entre 6h e 8h, e baseline anterior entre 18h e 30h.</div>',
+        unsafe_allow_html=True,
+    )
+
+    filters: list[tuple[str, Any]] = [("is_hot_now_eligible", True)]
+    if selected_filter == "Long":
+        filters.append(("video_type", "long"))
+    elif selected_filter == "Short":
+        filters.append(("video_type", "short"))
+
+    rows, error = get_filtered_rows(
+        "v_dashboard_hot_now",
+        filters=tuple(filters),
+        order_by="hot_now_rank_score",
+        order_desc=True,
+        order_nulls_first=False,
+        limit=10,
+    )
+    if error:
+        render_connection_notice(error)
+
+    if error and not rows:
+        placeholder_card(
+            "View indisponivel",
+            "A pagina esta pronta, mas a consulta a v_dashboard_hot_now ainda nao retornou dados neste ambiente.",
+        )
+        return
+
+    if not rows:
+        placeholder_card(
+            "Sem videos elegiveis para Hot now",
+            f"Nenhum video do filtro {selected_filter} passou no contrato conservador de velocidade e aceleracao agora.",
+        )
+        return
+
+    df = pd.DataFrame(rows)
+
+    def optional_series(column_name: str, default_value: Any = None) -> pd.Series:
+        if column_name in df.columns:
+            return df[column_name]
+        return pd.Series([default_value] * len(df), index=df.index)
+
+    df["hot_now_rank_score_num"] = pd.to_numeric(optional_series("hot_now_rank_score", 0), errors="coerce").fillna(0)
+    df["velocity_6h_num"] = pd.to_numeric(optional_series("velocity_6h", 0), errors="coerce").fillna(0)
+    df["previous_velocity_num"] = pd.to_numeric(optional_series("previous_velocity", 0), errors="coerce").fillna(0)
+    df["acceleration_num"] = pd.to_numeric(optional_series("acceleration", 0), errors="coerce").fillna(0)
+    df["views_delta_recent_num"] = pd.to_numeric(optional_series("views_delta_recent", 0), errors="coerce").fillna(0)
+    df["likes_delta_recent_num"] = pd.to_numeric(optional_series("likes_delta_recent", 0), errors="coerce").fillna(0)
+    df["comments_delta_recent_num"] = pd.to_numeric(optional_series("comments_delta_recent", 0), errors="coerce").fillna(0)
+    df["latest_snapshot_age_hours_num"] = pd.to_numeric(optional_series("latest_snapshot_age_hours", 0), errors="coerce").fillna(0)
+    df["latest_collected_at_dt"] = pd.to_datetime(optional_series("latest_collected_at"), errors="coerce", utc=True)
+
+    df["channel_name"] = optional_series("creator_name", "").fillna("").astype(str).str.strip()
+    username_series = optional_series("username", "").fillna("").astype(str).str.strip()
+    df.loc[df["channel_name"] == "", "channel_name"] = username_series[df["channel_name"] == ""]
+    df.loc[df["channel_name"] == "", "channel_name"] = "Canal sem nome"
+    df["title_display"] = optional_series("title", "").fillna("").astype(str).str.strip()
+    df.loc[df["title_display"] == "", "title_display"] = "Video sem titulo"
+    df["video_type_normalized"] = optional_series("video_type", "outro").fillna("outro").astype(str).str.strip().str.lower()
+    df["video_type_label"] = df["video_type_normalized"].map({"long": "Long", "short": "Short"}).fillna("Todos")
+
+    def format_rate(value: Any) -> str:
+        try:
+            numeric_value = float(value)
+            if pd.isna(numeric_value):
+                return "--"
+            return f"{numeric_value:.1f}/h".replace(".", ",")
+        except (TypeError, ValueError):
+            return "--"
+
+    def format_score(value: Any) -> str:
+        try:
+            numeric_value = float(value)
+            if pd.isna(numeric_value):
+                return "--"
+            return f"{numeric_value:.1f}".replace(".", ",")
+        except (TypeError, ValueError):
+            return "--"
+
+    def value_class(value: Any) -> str:
+        try:
+            numeric_value = float(value)
+        except (TypeError, ValueError):
+            return ""
+        if numeric_value > 0:
+            return " positive"
+        if numeric_value < 0:
+            return " negative"
+        return ""
+
+    video_header_icon = header_pill_icon_html("HN", "Hot now")
+    score_header_icon = header_pill_icon_html("SC", "Score")
+    velocity_header_icon = header_pill_icon_html("V6", "Velocidade 6h")
+    previous_header_icon = header_pill_icon_html("VP", "Velocidade anterior")
+    acceleration_header_icon = header_pill_icon_html("AC", "Aceleracao")
+    delta_header_icon = header_pill_icon_html("DV", "Delta views")
+    row_blocks: list[str] = []
+    table_html = (
+        '<div class="hot-now-table">'
+        '<div class="hot-now-scroll">'
+        '<div class="hot-now-header">'
+        f'<div class="hot-now-head-cell video"><span class="hot-now-head-hash">#</span><span class="hot-now-head-video-label">{video_header_icon}</span></div>'
+        f'<div class="hot-now-head-cell">{score_header_icon}</div>'
+        f'<div class="hot-now-head-cell">{velocity_header_icon}</div>'
+        f'<div class="hot-now-head-cell">{previous_header_icon}</div>'
+        f'<div class="hot-now-head-cell">{acceleration_header_icon}</div>'
+        f'<div class="hot-now-head-cell">{delta_header_icon}</div>'
+        "</div>"
+    )
+
+    for rank, row in enumerate(df.to_dict("records"), start=1):
+        video_id = str(row.get("post_id") or "").strip()
+        video_url = f"https://www.youtube.com/watch?v={video_id}" if video_id else ""
+        thumbnail_url = f"https://i.ytimg.com/vi/{video_id}/mqdefault.jpg" if video_id else ""
+        latest_snapshot = format_timestamp_br(row.get("latest_collected_at_dt"))
+        age_label = f"{float(row.get('latest_snapshot_age_hours_num') or 0):.1f}h".replace(".", ",")
+        if video_url:
+            thumb_html = (
+                f'<a class="hot-now-thumb-link" href="{escape(video_url)}" target="_blank" rel="noopener noreferrer">'
+                f'<img class="hot-now-thumb-image" src="{escape(thumbnail_url)}" alt="{escape(str(row.get("title_display") or "Thumbnail do video"))}" loading="lazy" />'
+                "</a>"
+            )
+            title_html = (
+                f'<a class="hot-now-title-link" href="{escape(video_url)}" target="_blank" rel="noopener noreferrer">'
+                f'{escape(str(row.get("title_display") or "Video sem titulo"))}'
+                "</a>"
+            )
+        else:
+            thumb_html = '<div class="hot-now-thumb">thumbnail</div>'
+            title_html = escape(str(row.get("title_display") or "Video sem titulo"))
+
+        acceleration_class = value_class(row.get("acceleration_num"))
+        row_html = (
+            '<div class="hot-now-row">'
+            '<div class="hot-now-main">'
+            f'<div class="hot-now-rank">{rank}</div>'
+            f"{thumb_html}"
+            '<div class="hot-now-copy">'
+            f'<div class="hot-now-channel">{escape(str(row.get("channel_name") or "Canal sem nome"))}</div>'
+            f'<div class="hot-now-title">{title_html}</div>'
+            '<div class="hot-now-meta">'
+            f'<span class="hot-now-chip type">{escape(str(row.get("video_type_label") or "Todos"))}</span>'
+            f'<span class="hot-now-chip">Snapshot {escape(latest_snapshot)}</span>'
+            f'<span class="hot-now-chip">Idade {escape(age_label)}</span>'
+            "</div>"
+            "</div>"
+            "</div>"
+            f'<div class="hot-now-cell">{escape(format_score(row.get("hot_now_rank_score_num")))}</div>'
+            f'<div class="hot-now-cell">{escape(format_rate(row.get("velocity_6h_num")))}</div>'
+            f'<div class="hot-now-cell">{escape(format_rate(row.get("previous_velocity_num")))}</div>'
+            f'<div class="hot-now-cell{acceleration_class}">{escape(format_rate(row.get("acceleration_num")))}</div>'
+            f'<div class="hot-now-cell">{escape(format_compact_number(row.get("views_delta_recent_num")))}</div>'
+            "</div>"
+        )
+        row_blocks.append(row_html)
+
+    st.markdown(table_html + "".join(row_blocks) + "</div></div>", unsafe_allow_html=True)
+    st.caption("Hot now usa velocidade recente e aceleracao por views. Likes e comentarios ficam como contexto do contrato SQL, sem peso no score v1.")
+
+
 def render_data_quality_page() -> None:
     guardrail_rows, dead_posts, queue_rows, queue_error, errors = load_data_quality_context()
     page_header("Data quality", "Confiabilidade operacional antes das análises")
@@ -5140,7 +5570,7 @@ if page == "Overview":
     render_overview()
 elif page == "YouTube":
     if youtube_subpage == "Hot now":
-        render_placeholder_page("Hot now", "View futura para velocidade recente, velocidade anterior e aceleracao.")
+        render_youtube_hot_now_page()
     else:
         render_youtube_best_7d_page()
 elif page == "Creators":

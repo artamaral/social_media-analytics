@@ -463,7 +463,11 @@ Status em 2026-06-20:
   - snapshot atual com no maximo `12h`
   - `hot_now_rank_score = velocity_6h + greatest(acceleration, 0)`
   - likes e comentarios como contexto, sem peso no score v1
-- pendente aplicar/validar a view no Supabase antes da integracao no Streamlit
+- view aplicada e validada no Supabase
+- pagina `YouTube > Hot now` conectada no Streamlit em
+  `dashboard/streamlit_app.py`
+- a tela consome apenas linhas `is_hot_now_eligible = true`, com limite `10` e
+  filtros `Todos`, `Long` e `Short`
 
 Racional:
 

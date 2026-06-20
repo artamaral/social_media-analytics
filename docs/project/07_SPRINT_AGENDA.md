@@ -2411,8 +2411,8 @@ Nao inclui:
 
 - [x] Etapa 1: confirmar contrato analitico e criterios de elegibilidade.
 - [x] Etapa 2: desenhar e criar a view SQL `v_dashboard_hot_now`.
-- [ ] Etapa 3: validar a view com dados reais e casos de borda.
-- [ ] Etapa 4: conectar `Hot now` no Streamlit.
+- [x] Etapa 3: validar a view com dados reais e casos de borda.
+- [x] Etapa 4: conectar `Hot now` no Streamlit.
 - [ ] Etapa 5: fazer fechamento de UX, documentacao e decisao de pronto.
 
 ### Planejamento por etapas
@@ -2895,7 +2895,7 @@ Decisao:
 
 #### Etapa 4 - Integracao no Streamlit
 
-Status: pendente.
+Status: concluida em 2026-06-20.
 
 Objetivo:
 
@@ -2945,6 +2945,45 @@ Criterio de pronto:
 - o ranking carrega sem erro com dados reais;
 - a tela explica que a leitura e de tracao recente, nao de crescimento semanal
   fechado.
+
+Resultado observado em 2026-06-20:
+
+- a rota `YouTube > Hot now` deixou de chamar `render_placeholder_page`
+- foi criada a funcao `render_youtube_hot_now_page()` em `dashboard/streamlit_app.py`
+- a tela passou a consumir `public.v_dashboard_hot_now` via `get_filtered_rows`
+- filtros implementados:
+  - `Todos`
+  - `Long`
+  - `Short`
+- a consulta usa:
+  - `is_hot_now_eligible = true`
+  - `order by hot_now_rank_score desc`
+  - `limit 10`
+- a pagina exibe:
+  - thumbnail e titulo clicaveis para o YouTube
+  - creator
+  - tipo de video
+  - ultimo snapshot
+  - idade do snapshot
+  - score
+  - velocidade `6h`
+  - velocidade anterior
+  - aceleracao
+  - delta recente de views
+- estados tratados:
+  - view indisponivel
+  - base vazia
+  - filtro sem videos elegiveis
+- validacao local:
+  - compilacao em memoria de `dashboard/streamlit_app.py`: `compile_ok`
+  - consulta REST equivalente ao contrato da tela retornou `status 200`,
+    `10` linhas e topo `Lrro2uqNF58` com score `736.6`
+
+Leitura:
+
+- a pagina esta pronta para uso inicial no Streamlit
+- a integracao respeita o contrato conservador da view
+- nao houve alteracao de SQL, fila operacional, worker ou `next_check`
 
 #### Etapa 5 - Fechamento, documentacao e decisao de pronto
 
@@ -3011,7 +3050,7 @@ Criterio de pronto:
 - [x] Etapa 1 concluida
 - [x] Etapa 2 concluida
 - [x] Etapa 3 concluida
-- [ ] Etapa 4 concluida
+- [x] Etapa 4 concluida
 - [ ] Etapa 5 concluida
 
 ### Riscos e cuidados
