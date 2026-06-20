@@ -89,16 +89,22 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 
 ### MVP do app
 
-- [ ] Dashboard inicial.
-- [ ] Ranking de crescimento semanal.
+- [x] Dashboard inicial.
+- [x] Ranking de crescimento semanal.
 - [ ] Criar ranking "quente agora" com velocidade e aceleracao temporal do score, separado da logica operacional da fila.
-- [ ] Seguir plano de execucao do dashboard em `docs/dashboard/29_STREAMLIT_DASHBOARD_EXECUTION_PLAN.md`.
-- [ ] Implementar MVP online com overview, creators e crescimento semanal.
-- [ ] Exibir status de qualidade dos dados antes dos rankings.
+- [x] Seguir plano de execucao do dashboard em `docs/dashboard/29_STREAMLIT_DASHBOARD_EXECUTION_PLAN.md` para fechar o Sprint 3.
+- [x] Implementar MVP online com overview, creators e crescimento semanal.
+- [x] Manter `Data quality` como view dedicada, sem exigir sinalizacao embutida antes de cada ranking no uso pessoal atual do dashboard.
 - [x] Garantir que o app use Supabase sob demanda sem expor service role key.
-- [ ] Criar app Streamlit inicial consumindo as views do Supabase.
-- [ ] Aplicar tema visual do dashboard com fundo em escala de cinza, sidebar escura, cards contrastados e pictos.
-- [ ] Aplicar views de Data Quality do dashboard: guardrail legado e posts mortos/validados.
+- [x] Criar app Streamlit inicial consumindo as views do Supabase.
+- [x] Aplicar tema visual do dashboard com fundo em escala de cinza, sidebar escura, cards contrastados e pictos.
+- [x] Aplicar views de Data Quality do dashboard: guardrail legado e posts mortos/validados.
+
+### Prioridade atual apos encerramento do Sprint 3
+
+- [ ] Formalizar o proximo sprint antes de retomar execucoes automaticas no dashboard.
+- [ ] Priorizar o ranking `Hot now` como proxima frente de dashboard, usando `velocity_6h`, `previous_velocity` e `acceleration`.
+- [ ] Reavaliar se ha algum acabamento adicional de UX que mereca virar backlog, e nao reabrir o Sprint 3.
 
 ### Direcao desta frente
 
