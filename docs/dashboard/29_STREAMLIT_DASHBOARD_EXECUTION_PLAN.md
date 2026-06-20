@@ -84,6 +84,25 @@ Evidencia operacional da correcao:
 - isso provou que a versao anterior da view ainda aceitava snapshots de "hoje" quando o corte era calculado apenas pelo dia UTC do banco
 - a correcao definitiva passou a filtrar pela data local de `America/Sao_Paulo` aplicada ao proprio `collected_at`
 
+Definicao de negocio para engajamento:
+
+- para leitura de negocio no dashboard, `engajamento` representa o quanto a
+  audiencia reagiu ao conteudo proporcionalmente ao total de views
+- em termos executivos, ele responde menos a pergunta "quem teve mais volume?"
+  e mais a pergunta "quem conseguiu fazer uma parcela maior da propria
+  audiencia interagir?"
+- a formula oficial usada hoje nas views comparativas e no criador individual e:
+  `((likes + comments) / views) * 100`
+- interpretacao pratica:
+  - videos ou creators com muito volume podem ter engajamento baixo se a maior
+    parte da audiencia assistir sem reagir
+  - videos ou creators menores podem ter engajamento alto se conseguirem gerar
+    mais likes e comentarios por view
+- portanto:
+  - `views` medem escala
+  - `engajamento` mede resposta proporcional da audiencia
+  - os dois indicadores devem ser lidos em conjunto, nao como substitutos
+
 Status consolidado do Sprint 3 em 2026-06-18:
 
 - `Overview` pode ser tratada como frente materialmente concluida no escopo do

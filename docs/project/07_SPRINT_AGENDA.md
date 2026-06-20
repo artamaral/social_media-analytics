@@ -1992,6 +1992,21 @@ Leitura de fechamento da Atividade 3:
 - o uso de avatar foi tratado como melhoria estética da mesma frente, sem criar
   view nova
 
+Definicao de negocio consolidada para engajamento na `Visao geral de criadores`:
+
+- `engajamento` deve ser lido como taxa de resposta da audiencia monitorada
+- em linguagem de negocio, a metrica mostra qual parcela das views gerou
+  reacao explicita do publico por meio de likes e comentarios
+- a formula oficial atualmente em uso e:
+  `((likes + comments) / views) * 100`
+- leitura executiva:
+  - `views` respondem quem concentrou mais alcance
+  - `engajamento` responde quem ativou melhor a propria audiencia
+  - um creator pode liderar em volume e nao liderar em engajamento, o que
+    indica comportamento diferente de consumo da base
+- essa definicao permanece como referencia principal para ordenacao por
+  `Engajamento` na visao comparativa de creators
+
 #### Atividade 4 - Implementar `YouTube > Melhores videos 7d`
 
 Status: concluida.
