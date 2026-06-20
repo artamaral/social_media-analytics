@@ -2409,7 +2409,7 @@ Nao inclui:
 
 ### Atividades
 
-- [ ] Etapa 1: confirmar contrato analitico e criterios de elegibilidade.
+- [x] Etapa 1: confirmar contrato analitico e criterios de elegibilidade.
 - [ ] Etapa 2: desenhar e criar a view SQL `v_dashboard_hot_now`.
 - [ ] Etapa 3: validar a view com dados reais e casos de borda.
 - [ ] Etapa 4: conectar `Hot now` no Streamlit.
@@ -2419,7 +2419,7 @@ Nao inclui:
 
 #### Etapa 1 - Contrato analitico e elegibilidade
 
-Status: pendente.
+Status: concluida em 2026-06-20.
 
 Objetivo:
 
@@ -2571,6 +2571,83 @@ Criterio de pronto:
 
 - e possivel escrever a SQL sem ambiguidades sobre janela, baseline, ordenacao
   e exclusao de dados invalidos.
+
+Resultado observado em 2026-06-20:
+
+- a consulta real ao Supabase confirmou `4022` posts ativos elegiveis apos
+  excluir `20` posts com `post_collection_failures.status = unavailable`
+- `v_post_priority_score_features_v2` retornou `4042` linhas, coerente com o
+  total bruto de posts antes da exclusao de indisponiveis
+- distribuicao de historico entre posts ativos:
+  - `full`: `3947`
+  - `partial`: `45`
+  - `low`: `30`
+- distribuicao por tipo:
+  - `long`: `1658` ativos, `1633` com baseline `6h/24h`
+  - `short`: `2364` ativos, `2314` com baseline `6h/24h`
+- snapshots correntes:
+  - `1132` posts com snapshot corrente nas ultimas `12h`
+  - `2214` posts com snapshot corrente nas ultimas `24h`
+- a tolerancia ampla de baseline mostrou risco de falso positivo, porque alguns
+  posts tinham baseline nominal de `6h` com distancia real de `42h`, `77h` ou
+  `84h`
+- com criterio conservador para o `Hot now v1`:
+  - snapshot corrente ate `12h`
+  - baseline de `6h` entre `6h` e `8h`
+  - baseline anterior entre `18h` e `30h`
+  - velocidade recente positiva
+  - exclusao de indisponiveis
+- o ranking inicial teria `11` videos elegiveis:
+  - `8` long
+  - `3` short
+  - `7` com aceleracao positiva
+
+Decisao de contrato para a Etapa 2:
+
+```text
+Metrica base escolhida:
+- views por hora como metrica principal de velocidade e aceleracao.
+- likes e comentarios entram como contexto exibido, nao como peso do score v1.
+
+Janela recente:
+- baseline nominal de 6h.
+- aceitar somente baseline real entre 6h e 8h atras.
+
+Janela anterior:
+- baseline nominal de 24h.
+- aceitar baseline real entre 18h e 30h atras.
+
+Snapshot atual:
+- exigir snapshot corrente com no maximo 12h de idade.
+
+Formula:
+- velocity_6h = (views_atual - views_6h) / horas_entre_snapshots.
+- previous_velocity = (views_6h - views_24h) / horas_entre_baselines.
+- acceleration = velocity_6h - previous_velocity.
+- hot_now_rank_score = velocity_6h + greatest(acceleration, 0).
+
+Filtros de elegibilidade:
+- excluir posts com status unavailable em post_collection_failures.
+- exigir baseline 6h e baseline 24h dentro das tolerancias acima.
+- exigir delta recente positivo de views.
+- manter eligibility_status para explicar exclusoes.
+
+Ordenacao oficial:
+- hot_now_rank_score desc.
+- acceleration desc como primeiro desempate.
+- velocity_6h desc como segundo desempate.
+
+Limitacoes conhecidas:
+- o ranking sera inicialmente pequeno por usar tolerancia conservadora.
+- isso e aceitavel para evitar falso positivo e preservar a leitura de
+  oportunidade real.
+- se a tela ficar vazia em algum momento, a expansao de tolerancia deve ser
+  decisao documentada, nao ajuste silencioso.
+
+Decisao:
+- Atividade 1 concluida.
+- Etapa 2 pode criar a view SQL `v_dashboard_hot_now` com esse contrato.
+```
 
 #### Etapa 2 - View SQL `v_dashboard_hot_now`
 
@@ -2802,7 +2879,7 @@ Criterio de pronto:
 
 ### Checklist de acompanhamento
 
-- [ ] Etapa 1 concluida
+- [x] Etapa 1 concluida
 - [ ] Etapa 2 concluida
 - [ ] Etapa 3 concluida
 - [ ] Etapa 4 concluida

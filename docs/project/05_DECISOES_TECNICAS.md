@@ -935,6 +935,69 @@ Documentos relacionados:
 
 ---
 
+## Contrato inicial do ranking `Hot now`
+
+Data:
+
+- 2026-06-20
+
+Decisao:
+
+- implementar o `Hot now v1` como ranking analitico de oportunidade baseado em
+  views por hora, velocidade recente e aceleracao
+- manter likes e comentarios como contexto exibido no dashboard, sem peso no
+  score inicial
+- manter o ranking separado da fila operacional, de `calculate_next_check(...)`
+  e de `priority_score_v2`
+- exigir tolerancia conservadora de baseline para evitar falso positivo:
+  - snapshot corrente com no maximo `12h`
+  - baseline nominal de `6h` aceito entre `6h` e `8h`
+  - baseline nominal de `24h` aceito entre `18h` e `30h`
+  - delta recente positivo de views
+  - exclusao de posts `unavailable`
+
+Motivo:
+
+- a validacao do Sprint 4 mostrou que a base possui historico amplo, mas nem
+  sempre com densidade suficiente para tratar qualquer baseline antigo como
+  comparavel a `6h`
+- `4022` posts estavam ativos apos excluir `20` indisponiveis
+- `3947` posts ativos tinham historico `full` na view analitica existente
+- apenas `11` posts atendiam ao criterio conservador final do `Hot now v1`,
+  dos quais `7` apresentavam aceleracao positiva
+- manter o ranking pequeno no inicio e preferivel a premiar videos com
+  baselines distantes demais e leitura temporal enganosa
+
+Formula v1:
+
+```text
+velocity_6h = (views_atual - views_6h) / horas_entre_snapshots
+previous_velocity = (views_6h - views_24h) / horas_entre_baselines
+acceleration = velocity_6h - previous_velocity
+hot_now_rank_score = velocity_6h + greatest(acceleration, 0)
+```
+
+Diretriz de implementacao:
+
+- a view `v_dashboard_hot_now` deve expor `eligibility_status` para explicar
+  exclusoes por historico insuficiente, baseline fora da tolerancia ou ausencia
+  de movimento recente
+- a ordenacao oficial deve ser:
+  - `hot_now_rank_score desc`
+  - `acceleration desc`
+  - `velocity_6h desc`
+- qualquer relaxamento futuro de tolerancia deve ser registrado como decisao,
+  nao aplicado silenciosamente na SQL ou no Streamlit
+
+Impacto esperado:
+
+- ranking mais fiel a tracao recente
+- menor dependencia de popularidade acumulada
+- separacao clara entre oportunidade analitica e prioridade operacional de
+  coleta
+
+---
+
 ## Execucao controlada por sprint ativo
 
 Data:
