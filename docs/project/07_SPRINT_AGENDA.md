@@ -2410,7 +2410,7 @@ Nao inclui:
 ### Atividades
 
 - [x] Etapa 1: confirmar contrato analitico e criterios de elegibilidade.
-- [ ] Etapa 2: desenhar e criar a view SQL `v_dashboard_hot_now`.
+- [x] Etapa 2: desenhar e criar a view SQL `v_dashboard_hot_now`.
 - [ ] Etapa 3: validar a view com dados reais e casos de borda.
 - [ ] Etapa 4: conectar `Hot now` no Streamlit.
 - [ ] Etapa 5: fazer fechamento de UX, documentacao e decisao de pronto.
@@ -2651,7 +2651,7 @@ Decisao:
 
 #### Etapa 2 - View SQL `v_dashboard_hot_now`
 
-Status: pendente.
+Status: concluida em 2026-06-20.
 
 Objetivo:
 
@@ -2713,6 +2713,63 @@ Criterio de pronto:
   Supabase;
 - a SQL nao depende de funcao operacional da fila;
 - a view nao altera tabelas nem workers.
+
+Resultado observado em 2026-06-20:
+
+- criado o arquivo SQL:
+  - `sql/ddl/views/020_create_v_dashboard_hot_now.sql`
+- a view criada foi:
+  - `public.v_dashboard_hot_now`
+- a SQL usa CTEs para separar:
+  - posts indisponiveis;
+  - ultimo snapshot por post;
+  - contagem de snapshots;
+  - metadados de post, creator e entity;
+  - baseline mais proximo de `6h` dentro da tolerancia `6h-8h`;
+  - baseline mais proximo de `24h` dentro da tolerancia `18h-30h`;
+  - deltas, velocidade, velocidade anterior, aceleracao e elegibilidade
+- a view nao usa:
+  - `priority_score_v2`
+  - `v_post_update_queue_batch`
+  - `post_update_queue`
+  - `calculate_next_check(...)`
+  - `insert`, `update` ou `delete`
+- a view exclui `post_collection_failures.status = 'unavailable'`
+- a view expoe `eligibility_status` e `is_hot_now_eligible`
+- `hot_now_rank_score` so e preenchido quando `eligibility_status = 'eligible'`
+- foram incluidos `GRANT SELECT` para `anon` e `authenticated`
+
+Contrato implementado:
+
+```text
+velocity_6h = (views_latest - views_6h) / horas_entre_latest_e_6h
+previous_velocity = (views_6h - views_24h) / horas_entre_6h_e_24h
+acceleration = velocity_6h - previous_velocity
+hot_now_rank_score = velocity_6h + greatest(acceleration, 0)
+```
+
+Status de elegibilidade implementados:
+
+- `no_snapshot`
+- `insufficient_snapshots`
+- `latest_snapshot_stale`
+- `baseline_6h_missing`
+- `baseline_24h_missing`
+- `no_recent_views_delta`
+- `eligible`
+
+Validacao local executada:
+
+- `git diff --check` sem erros
+- revisao textual confirmou ausencia de dependencia operacional da fila
+- `psql` e `supabase` CLI nao estao disponiveis localmente nesta maquina, entao
+  a compilacao real no banco fica para a Etapa 3 ao aplicar/validar no Supabase
+
+Decisao:
+
+- Etapa 2 concluida do ponto de vista de repositorio e contrato SQL
+- Etapa 3 deve aplicar ou validar `public.v_dashboard_hot_now` no Supabase e
+  revisar o top do ranking com dados reais
 
 #### Etapa 3 - Validacao com dados reais
 
@@ -2880,7 +2937,7 @@ Criterio de pronto:
 ### Checklist de acompanhamento
 
 - [x] Etapa 1 concluida
-- [ ] Etapa 2 concluida
+- [x] Etapa 2 concluida
 - [ ] Etapa 3 concluida
 - [ ] Etapa 4 concluida
 - [ ] Etapa 5 concluida

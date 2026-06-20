@@ -452,6 +452,19 @@ Objetivo:
 
 - criar a primeira view analitica nova orientada ao dashboard, separada da logica operacional da fila.
 
+Status em 2026-06-20:
+
+- SQL versionada criada em `sql/ddl/views/020_create_v_dashboard_hot_now.sql`
+- view alvo: `public.v_dashboard_hot_now`
+- contrato inicial definido no Sprint 4:
+  - metrica principal baseada em views por hora
+  - baseline `6h` aceito entre `6h` e `8h`
+  - baseline `24h` aceito entre `18h` e `30h`
+  - snapshot atual com no maximo `12h`
+  - `hot_now_rank_score = velocity_6h + greatest(acceleration, 0)`
+  - likes e comentarios como contexto, sem peso no score v1
+- pendente aplicar/validar a view no Supabase antes da integracao no Streamlit
+
 Racional:
 
 - a documentacao atual prioriza analise temporal para responder o que esta quente agora
