@@ -2773,7 +2773,7 @@ Decisao:
 
 #### Etapa 3 - Validacao com dados reais
 
-Status: em andamento.
+Status: concluida em 2026-06-20.
 
 Objetivo:
 
@@ -2850,6 +2850,48 @@ Proxima acao da Etapa 3:
 3. Revisar o top do ranking com dados reais.
 4. Registrar o resultado observado antes de seguir para a integracao no
    Streamlit.
+
+Resultado final em 2026-06-20:
+
+- `SUPABASE_DB_URL` foi disponibilizada no `.env` local de
+  `scripts/offline_backfill/`
+- como `psql` e `supabase` CLI nao estavam disponiveis localmente, foi
+  instalado o driver Python `pg8000` na `.venv` para conexao administrativa
+  pontual
+- `sql/ddl/views/020_create_v_dashboard_hot_now.sql` foi aplicado no Supabase
+  via conexao Postgres
+- a consulta REST a `public.v_dashboard_hot_now` passou a retornar `200`
+- total retornado pela view: `4022` linhas
+- distribuicao de elegibilidade:
+  - `eligible`: `11`
+  - `baseline_6h_missing`: `1081`
+  - `insufficient_snapshots`: `50`
+  - `latest_snapshot_stale`: `2880`
+- top do ranking `Hot now` validado com dados reais:
+  - `Lrro2uqNF58` | `long` | Meu Carro Life Style | score `736.6`
+  - `0agSJfeXYqc` | `long` | CarroChefe | score `418.4331`
+  - `4ePDRvnDyCI` | `long` | Meu Carro Life Style | score `413.4982`
+  - `y71QviUz_O0` | `long` | stanleyravagnani | score `295.8159`
+  - `KDp4IHEy0tU` | `short` | Carros com Tiago | score `263.3298`
+- comparacao com o top `10` de `v_dashboard_post_growth_7d` mostrou `3`
+  videos em comum:
+  - `y71QviUz_O0`
+  - `9D4SQbeDgaU`
+  - `Bg7p2x8-r4Y`
+
+Leitura:
+
+- a view foi criada e esta exposta no Supabase
+- o ranking e pequeno, como esperado pelo contrato conservador da Etapa 1
+- a baixa sobreposicao com o top semanal confirma separacao semantica:
+  - `Melhores videos 7d`: crescimento semanal fechado
+  - `Hot now`: tracao recente com baselines proximos
+
+Decisao:
+
+- Etapa 3 concluida
+- a view `v_dashboard_hot_now` esta pronta para consumo inicial no Streamlit
+- a Etapa 4 pode conectar a pagina `YouTube > Hot now` sem alterar a SQL
 
 #### Etapa 4 - Integracao no Streamlit
 
@@ -2968,7 +3010,7 @@ Criterio de pronto:
 
 - [x] Etapa 1 concluida
 - [x] Etapa 2 concluida
-- [ ] Etapa 3 concluida
+- [x] Etapa 3 concluida
 - [ ] Etapa 4 concluida
 - [ ] Etapa 5 concluida
 
