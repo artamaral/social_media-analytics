@@ -972,3 +972,39 @@ Impacto esperado:
 - menor risco de misturar backlog com execucao
 - maior clareza para decidir datas conforme disponibilidade do usuario
 - melhor alinhamento entre roadmap, data quality, pipeline e dashboard
+
+---
+
+## Data Quality como view dedicada, nao como gate embutido em cada ranking
+
+Data:
+
+- 2026-06-20
+
+Decisao:
+
+- remover do Sprint 3 a exigencia de exibir contexto de `Data Quality` dentro
+  de cada tela de ranking ou comparativo
+- manter `Data quality` como view dedicada e navegavel do dashboard
+- nao tratar essa integracao embutida como requisito obrigatorio do MVP atual
+- reforcar que novos requisitos de sprint devem nascer de documentacao de
+  projeto, roadmap ou decisao tecnica registrada, e nao apenas de uma agenda de
+  sprint isolada
+
+Motivo:
+
+- o dashboard tem uso pessoal e a existencia da pagina dedicada de `Data quality`
+  ja entrega o diagnostico operacional necessario para esse contexto
+- embutir esse resumo em todas as telas comparativas aumentaria complexidade de
+  UX sem ganho proporcional de valor para o uso atual
+- a exigencia de "Data Quality antes dos rankings" ficou registrada apenas na
+  agenda do sprint, sem origem clara em documento de prioridade ou decisao
+  tecnica anterior
+- o sprint deve refletir o projeto, nao criar sozinho novos requisitos
+
+Impacto esperado:
+
+- fechamento mais coerente do Sprint 3 com o escopo real do MVP entregue
+- menor acoplamento entre telas analiticas e sinalizacao operacional
+- preservacao da view `Data quality` como superficie oficial de diagnostico
+- governanca mais clara entre roadmap, decisoes tecnicas e agenda de execucao

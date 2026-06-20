@@ -114,10 +114,17 @@ Status consolidado do Sprint 3 em 2026-06-18:
 - `YouTube > Melhores videos 7d` deixou de ser placeholder e passou a operar
   com ranking semanal real sobre `v_dashboard_post_growth_7d`
 - a etapa de `Melhores videos 7d` pode ser considerada concluida nesta rodada
-- o gate de `Data Quality` antes dos rankings continua como pendencia
-  explicita do sprint
 - o fechamento final do MVP ainda depende de acabamento transversal de UX,
   estados vazios, mensagens de erro e smoke test
+
+Decisao de escopo em 2026-06-20:
+
+- a exigencia de embutir `Data Quality` dentro de cada ranking foi removida do
+  Sprint 3
+- para o uso pessoal atual do dashboard, a view dedicada `Data quality` e
+  suficiente como superficie de diagnostico operacional
+- essa mudanca foi registrada como decisao de projeto para evitar que o sprint
+  carregue requisitos nascidos apenas dentro da propria agenda
 
 Entrega complementar de avatar em creators:
 
@@ -136,7 +143,7 @@ Leitura executiva:
 
 - o Sprint 3 ja entregou a maior parte do valor analitico do MVP
 - o status atual e de consolidacao final, nao mais de estruturacao inicial
-- estimativa qualitativa atual: entre `80%` e `90%` do sprint concluido
+- estimativa qualitativa atual: entre `85%` e `95%` do sprint concluido
 
 Query de validacao recomendada apos apply:
 

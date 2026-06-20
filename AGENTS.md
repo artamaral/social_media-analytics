@@ -33,6 +33,14 @@ Regra central:
 - se envolver analise, validar qualidade dos dados antes
 - se envolver decisao tecnica relevante, registrar em decisoes tecnicas
 - se criar documento novo em `docs/`, atualizar `docs/README.md`
+- sprints devem nascer ligados a documentacao existente do projeto, com
+  referencias e decisoes claramente ancoradas em roadmap, decisoes tecnicas,
+  data quality, pipeline status ou outros documentos ja oficiais
+- nao deve haver desenvolvimento dentro do sprint que nao esteja declarado de
+  forma explicita na documentacao do projeto
+- o sprint pode ganhar novas atividades depois de iniciado, desde que essas
+  atividades surjam como desdobramento direto da propria execucao do sprint e
+  sejam registradas de forma explicita na documentacao correspondente
 
 ## Fluxo de trabalho
 
@@ -47,6 +55,16 @@ Seguir o fluxo operacional do projeto:
 
 Nao misturar ideias, execucao, status operacional e decisoes tecnicas no mesmo
 documento.
+
+Regra adicional para sprints:
+
+- a agenda do sprint organiza a execucao, mas nao deve criar sozinha requisitos
+  novos sem base documental anterior ou decisao tecnica registrada
+- quando uma nova necessidade surgir durante a execucao do sprint, ela pode ser
+  incorporada como atividade do proprio sprint apenas se:
+  1. ficar claro que nasceu do andamento do sprint
+  2. for registrada explicitamente na documentacao do projeto
+  3. mantiver rastreabilidade com o contexto e objetivo do sprint ativo
 
 ## Frentes do projeto
 

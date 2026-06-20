@@ -34,9 +34,9 @@ Datas: a definir conforme disponibilidade do usuario
 ```
 
 Enquanto o Sprint 3 estiver ativo, apenas tarefas relacionadas ao dashboard
-analitico, validacao das views do Supabase, Data Quality antes dos rankings e
-entregas de `Overview`, `Creators` e crescimento semanal devem ser executadas
-automaticamente. Alteracoes fora deste escopo devem aguardar confirmacao.
+analitico, validacao das views do Supabase e entregas de `Overview`,
+`Creators` e crescimento semanal devem ser executadas automaticamente.
+Alteracoes fora deste escopo devem aguardar confirmacao.
 
 ## Visao geral
 
@@ -2158,56 +2158,24 @@ Leitura de fechamento da Atividade 4:
 - permanecem apenas ajustes finos futuros de UX e eventual revisao da regra de
   desempate, sem bloquear o encerramento desta atividade
 
-#### Atividade 5 - Garantir `Data Quality` antes dos rankings
+#### Nota de escopo removido - `Data Quality` antes dos rankings
 
-Status: aberta.
+Em 2026-06-20 foi decidido remover do Sprint 3 a exigencia de embutir contexto
+de `Data Quality` dentro de cada ranking ou comparativo.
 
-Objetivo:
+Motivo:
 
-- manter a regra do projeto de que nenhuma leitura analitica relevante deve
-  aparecer sem contexto minimo de confiabilidade operacional
+- o dashboard tem uso pessoal
+- a view dedicada `Data quality` ja entrega o diagnostico operacional
+  necessario
+- esse requisito nao estava ancorado previamente em roadmap ou decisao tecnica
+  do projeto; ele havia nascido apenas dentro da propria agenda do sprint
 
-Etapas:
+Referencia da decisao:
 
-1. Definir onde a sinalizacao de qualidade aparece antes dos rankings.
-2. Reusar views ja consolidadas:
-   - `v_dashboard_guardrail_coverage_status`
-   - `v_dashboard_dead_post_validation_status`
-3. Decidir o formato minimo:
-   - banner
-   - cards
-   - aviso contextual
-4. Garantir que a sinalizacao seja visivel sem poluir a navegacao.
-5. Evitar que uma falha de Data Quality derrube toda a tela analitica.
+- `docs/project/05_DECISOES_TECNICAS.md`
 
-Criterio de conclusao:
-
-- rankings e comparativos aparecem acompanhados de contexto de confiabilidade
-- o dashboard nao incentiva leitura cega de ranking sem sinal operacional
-
-Dependencias:
-
-- Atividade 1 concluida para as views de Data Quality
-- definicao das telas que exibem ranking ou comparativo
-
-Saida esperada:
-
-- padrao unico de sinalizacao de confiabilidade antes de leitura analitica
-- reaproveitamento consistente dos dois KPIs principais de qualidade
-
-Evidencia de conclusao:
-
-- ranking semanal e comparativos acompanhados por contexto de qualidade
-- comportamento resiliente quando a leitura de qualidade falhar
-
-Execucao pratica:
-
-1. Definir o componente de contexto de qualidade.
-2. Aplicar esse componente nas telas comparativas do sprint.
-3. Verificar se a leitura de qualidade informa sem bloquear a navegacao.
-4. Ajustar o texto para orientar interpretacao e nao apenas mostrar alerta.
-
-#### Atividade 6 - Fechamento de UX e robustez do MVP
+#### Atividade 5 - Fechamento de UX e robustez do MVP
 
 Status: em andamento.
 
@@ -2238,7 +2206,7 @@ Criterio de conclusao:
 
 Dependencias:
 
-- Atividades 2 a 5 implementadas ou suficientemente estabilizadas
+- Atividades 2 a 4 implementadas e estabilizadas
 
 Saida esperada:
 
@@ -2265,8 +2233,7 @@ Execucao pratica:
 2. Fechar `Overview` com leitura macro confiavel.
 3. Remover mock da `Visao geral` de `Creators`.
 4. Implementar `YouTube > Melhores videos 7d`.
-5. Aplicar o gate de `Data Quality` antes dos rankings.
-6. Fazer acabamento final de UX, estados vazios e smoke test.
+5. Fazer acabamento final de UX, estados vazios e smoke test.
 
 ### Plano de execucao por atividades
 
@@ -2276,8 +2243,7 @@ Execucao pratica:
 | 2 | Fechar `Overview` | consolidar a leitura macro da base | creators + weekly activity + Fenabrave validados | overview real e sem placeholder estrutural | tela com dados reais e fallback honesto |
 | 3 | Trocar `Creators > Visao geral` | remover mock e ligar carteira real | `v_dashboard_creator_summary` validada | comparativo de creators com base real | ausencia de `get_creator_mock_rows()` na visao geral |
 | 4 | Implementar `YouTube > Melhores videos 7d` | entregar ranking semanal funcional | `v_dashboard_post_growth_7d` validada | nova pagina real de crescimento | tela deixa de ser placeholder |
-| 5 | Garantir `Data Quality` antes dos rankings | reforcar a confiabilidade da leitura | views de Data Quality validadas | padrao unico de contexto de qualidade | ranking com sinal operacional visivel |
-| 6 | Fechamento de UX e robustez | preparar o sprint para uso interno recorrente | atividades anteriores estabilizadas | acabamento final e smoke test | fluxo do MVP navegavel e consistente |
+| 5 | Fechamento de UX e robustez | preparar o sprint para uso interno recorrente | atividades anteriores estabilizadas | acabamento final e smoke test | fluxo do MVP navegavel e consistente |
 
 ### Checklist de acompanhamento
 
@@ -2286,7 +2252,6 @@ Execucao pratica:
 - [x] Atividade 3 concluida
 - [x] Atividade 4 concluida
 - [ ] Atividade 5 concluida
-- [ ] Atividade 6 concluida
 
 ### Status consolidado em 2026-06-18
 
@@ -2298,8 +2263,6 @@ Leitura atual do Sprint 3:
 - `Creators > Visao geral` tambem passou a consumir dados reais e deixou de
   depender de mock
 - a etapa de `YouTube > Melhores videos 7d` pode ser considerada concluida
-- o principal gap de governanca restante do sprint esta em aplicar contexto de
-  `Data Quality` antes das leituras de ranking e comparativo
 - o fechamento final do sprint ainda depende de uma passada transversal de UX,
   estados vazios, erros e smoke test
 
@@ -2309,13 +2272,12 @@ Classificacao atual das atividades:
 - Atividade 2: concluida
 - Atividade 3: concluida
 - Atividade 4: concluida
-- Atividade 5: aberta
-- Atividade 6: em andamento
+- Atividade 5: em andamento
 
 Percentual qualitativo estimado:
 
-- Sprint 3 entre `80%` e `90%` de execucao real, com `Atividades 1, 2, 3 e 4`
-  concluidas
+- Sprint 3 entre `85%` e `95%` de execucao real, com `Atividades 1, 2, 3 e 4`
+  concluidas e apenas o fechamento final de UX/robustez em aberto
 
 ### Documentacao relacionada
 
