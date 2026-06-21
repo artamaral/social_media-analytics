@@ -2905,6 +2905,7 @@ def render_youtube_hot_now_page() -> None:
     df["acceleration_num"] = pd.to_numeric(optional_series("acceleration", 0), errors="coerce").fillna(0)
     df["views_delta_recent_num"] = pd.to_numeric(optional_series("views_delta_recent", 0), errors="coerce").fillna(0)
     df["views_latest_num"] = pd.to_numeric(optional_series("views_latest", 0), errors="coerce").fillna(0)
+    df["snapshot_count_num"] = pd.to_numeric(optional_series("snapshot_count", 0), errors="coerce").fillna(0)
     df["likes_delta_recent_num"] = pd.to_numeric(optional_series("likes_delta_recent", 0), errors="coerce").fillna(0)
     df["comments_delta_recent_num"] = pd.to_numeric(optional_series("comments_delta_recent", 0), errors="coerce").fillna(0)
     df["latest_snapshot_age_hours_num"] = pd.to_numeric(optional_series("latest_snapshot_age_hours", 0), errors="coerce").fillna(0)
@@ -2976,6 +2977,8 @@ def render_youtube_hot_now_page() -> None:
         thumbnail_url = f"https://i.ytimg.com/vi/{video_id}/mqdefault.jpg" if video_id else ""
         latest_snapshot = format_timestamp_br(row.get("latest_collected_at_dt"))
         age_label = f"{float(row.get('latest_snapshot_age_hours_num') or 0):.1f}h".replace(".", ",")
+        snapshot_count = row.get("snapshot_count_num")
+        snapshot_count_label = format_int(snapshot_count) if snapshot_count not in (None, "", 0) else "n/d"
         if video_url:
             thumb_html = (
                 f'<a class="hot-now-thumb-link" href="{escape(video_url)}" target="_blank" rel="noopener noreferrer">'
@@ -3004,6 +3007,7 @@ def render_youtube_hot_now_page() -> None:
             f'<span class="hot-now-chip type">{escape(str(row.get("video_type_label") or "Todos"))}</span>'
             f'<span class="hot-now-chip">Snapshot {escape(latest_snapshot)}</span>'
             f'<span class="hot-now-chip">Idade {escape(age_label)}</span>'
+            f'<span class="hot-now-chip">Snapshots {escape(snapshot_count_label)}</span>'
             "</div>"
             "</div>"
             "</div>"

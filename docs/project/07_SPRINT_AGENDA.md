@@ -2990,6 +2990,7 @@ Complemento em 2026-06-21:
 
 - incluida a coluna `Views totais` logo apos o bloco do video na pagina
   `YouTube > Hot now`
+- incluida no card a quantidade total de snapshots historicos do video
 - observacao de uso: pela manha, os videos podem aparecer com `AC` negativo
   quando a velocidade recente fica abaixo da velocidade anterior
 - nessa situacao, o `Score` fica igual a `V6`, porque o contrato atual usa
