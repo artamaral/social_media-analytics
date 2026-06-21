@@ -115,8 +115,8 @@ Regra de agenda:
 flowchart TD
   A["Confirmar publicacao Fenabrave do mes anterior"]
   B["Registrar ou atualizar source_url"]
-  C["Salvar PDF manualmente no bucket privado"]
-  D["Registrar metadados manualmente em market_source_files"]
+  C["Carregar PDF no bucket privado via Cadastro Fenabrave"]
+  D["Registrar ou atualizar metadados em market_source_files"]
   E["Baixar PDF do Storage para processamento"]
   F["Calcular ou conferir sha256 e tamanho"]
   G["Extrair tabela da pagina 1"]
@@ -140,8 +140,8 @@ flowchart TD
 | Bloco | Atividades incluidas | Tipo predominante | Responsavel principal | Saida esperada |
 |---|---|---|---|---|
 | Confirmacao da fonte | Confirmar publicacao Fenabrave do mes anterior e definir `source_url` | Manual | Arthur + Codex/ChatGPT | URL oficial confirmada |
-| Upload do arquivo | Salvar manualmente o PDF no bucket privado `market-source-files` | Manual | Arthur | PDF preservado em `market-source-files/fenabrave/{ano}/{mes}/` |
-| Registro de metadados | Inserir manualmente linha em `market_source_files` com URL, periodo, storage, hash, status e metodo | Manual | Arthur + Codex/ChatGPT | Arquivo rastreavel no Postgres sem guardar o PDF na tabela |
+| Upload do arquivo | Carregar o PDF pela view `Cadastro Fenabrave` no bucket privado `market-source-files`, sempre em `fenabrave/{ano}/{mes}/` | Operacional guiado por UI | Arthur | PDF preservado com padrao historico consistente |
+| Registro de metadados | Inserir ou atualizar linha em `market_source_files` com URL, periodo, storage, hash, status e metodo | Operacional guiado por UI | Arthur + Codex/ChatGPT | Arquivo rastreavel no Postgres sem guardar o PDF na tabela |
 | Extracao | Ler o PDF ja salvo no Storage, extrair a primeira tabela da pagina 1 e revisar quando necessario | Semiautomatico | Script de extracao + Codex/ChatGPT | Linhas extraidas e conferidas |
 | Preview operacional | Exibir no terminal os segmentos, valores extraidos e checks antes da gravacao | Semiautomatico | Script de extracao + Arthur | Dados conferidos contra o PDF sem persistir uma camada raw |
 | Normalizacao | Converter nomes e a coluna `mes_atual` para formato analitico | Automatico | Script de extracao | Valores mensais prontos como `integer` |
@@ -153,7 +153,8 @@ flowchart TD
 Regra pratica:
 
 - decisoes, revisoes e aprovacoes ficam com humanos
-- upload do PDF e registro inicial de metadados serao manuais nesta fase
+- upload do PDF e registro inicial de metadados podem ser feitos pela view
+  `Cadastro Fenabrave`, mantendo a governanca humana da rotina
 - preview operacional, normalizacao e validacao podem ser apoiados por script de extracao
 - extracao de PDF comeca semiautomatica porque o layout pode mudar entre meses
 - a rotina mensal so deve liberar dados quando as validacoes passarem

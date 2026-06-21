@@ -727,7 +727,7 @@ Impacto esperado:
 
 ---
 
-## PDF Fenabrave via Streamlit apenas como apoio operacional
+## PDF Fenabrave via Streamlit com persistencia oficial no Storage
 
 Data:
 
@@ -735,29 +735,33 @@ Data:
 
 Decisao:
 
-- considerar viavel o carregamento do PDF mensal da Fenabrave via Streamlit
-  apenas como apoio operacional
-- nao tratar o Streamlit como destino final de armazenamento do arquivo
+- permitir o carregamento do PDF mensal e historico da Fenabrave pela view
+  `Cadastro Fenabrave` no Streamlit
+- usar a propria UI para enviar o arquivo ao bucket privado com caminho
+  padronizado por periodo em `fenabrave/{ano}/{mes}/arquivo.pdf`
 - manter o bucket privado `market-source-files` como armazenamento oficial
 
 Contexto:
 
-- a rotina mensal da Fenabrave continua manual nesta fase
-- o mockup da view `Cadastro Fenabrave` mostrou que o upload na UI pode ajudar
-  a conferencia do arquivo e o preenchimento inicial dos metadados
+- a rotina mensal da Fenabrave continua controlada nesta fase
+- a carga historica precisa de um fluxo repetivel por ano e mes dentro da
+  propria UI
 - ao mesmo tempo, o processo documentado exige preservacao do PDF, rastreio por
   `storage_path` e protecao contra exposicao de credenciais privilegiadas
 
 Motivo:
 
 - melhorar a ergonomia operacional sem quebrar a seguranca
-- permitir avaliacao futura de upload guiado no app
+- suportar carga historica no Streamlit sem depender de upload manual fora do
+  app
 - preservar o papel do Storage privado e dos metadados em
   `market_source_files`
 
 Diretriz:
 
-- o upload pelo app, se implementado, deve usar fluxo seguro
+- o upload pelo app deve usar fluxo seguro
+- o `storage_path` deve ser derivado do periodo selecionado para manter a pasta
+  `fenabrave/{ano}/{mes}/`
 - o app nao deve expor `SUPABASE_SERVICE_ROLE_KEY`
 - a versao oficial do PDF precisa continuar no bucket privado
 - a liberacao do periodo segue dependente de preview, validacao e aprovacao

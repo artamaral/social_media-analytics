@@ -3,6 +3,7 @@ from html import escape
 from datetime import date
 from typing import Any
 import unicodedata
+import re
 
 import pandas as pd
 import plotly.express as px
@@ -1742,6 +1743,51 @@ def upsert_fenabrave_source_file(payload: dict[str, Any]) -> tuple[dict[str, Any
         return None, "Nenhum registro retornado por upsert_fenabrave_source_file."
     clear_supabase_data_cache()
     return rows[0], None
+
+
+def normalize_fenabrave_filename(filename: str | None, reference_period: date) -> str:
+    raw_name = str(filename or "").strip()
+    base_name = raw_name.replace("\\", "/").split("/")[-1]
+    safe_name = re.sub(r"[^A-Za-z0-9._-]+", "_", base_name).strip("._")
+    if safe_name.lower().endswith(".pdf"):
+        return safe_name
+    if safe_name:
+        return f"{safe_name}.pdf"
+    return pd.Timestamp(reference_period).strftime("%Y_%m_fenabrave.pdf")
+
+
+def build_fenabrave_storage_path(reference_period: date, filename: str | None) -> str:
+    period_prefix = pd.Timestamp(reference_period).strftime("%Y/%m")
+    normalized_filename = normalize_fenabrave_filename(filename, reference_period)
+    return f"fenabrave/{period_prefix}/{normalized_filename}"
+
+
+def upload_fenabrave_pdf_to_storage(
+    bucket: str,
+    storage_path: str,
+    pdf_bytes: bytes,
+) -> tuple[dict[str, Any] | None, str | None]:
+    if not is_supabase_configured():
+        return None, "Supabase ainda nao configurado. Adicione SUPABASE_URL e SUPABASE_ANON_KEY nos secrets."
+
+    client = get_supabase_client()
+    if client is None:
+        return None, "Cliente Supabase indisponivel."
+
+    try:
+        response = client.storage.from_(bucket).upload(
+            storage_path,
+            pdf_bytes,
+            {"content-type": "application/pdf", "upsert": "true"},
+        )
+        try:
+            payload = response.json()
+        except ValueError:
+            payload = {"storage_path": storage_path, "bucket": bucket}
+        clear_supabase_data_cache()
+        return payload, None
+    except Exception as exc:
+        return None, f"Falha ao enviar PDF para o Storage: {exc}"
 
 
 def trigger_creator_onboarding(creator_id: int) -> tuple[dict[str, Any] | None, str | None]:
@@ -3845,6 +3891,7 @@ def get_mock_taxonomy_options() -> list[str]:
 def get_fenabrave_mock_state() -> dict[str, Any]:
     defaults = {
         "fenabrave_source_confirmed": False,
+        "fenabrave_pdf_uploaded": False,
         "fenabrave_metadata_registered": False,
         "fenabrave_preview_ready": False,
         "fenabrave_validated": False,
@@ -5271,6 +5318,8 @@ def render_fenabrave_intake_page() -> None:
     latest_record = recent_records[0] if recent_records else None
     if latest_record is not None:
         st.session_state["fenabrave_source_confirmed"] = True
+        if latest_record.get("storage_path"):
+            st.session_state["fenabrave_pdf_uploaded"] = True
         st.session_state["fenabrave_metadata_registered"] = True
         if str(latest_record.get("extraction_status")) in {"extracted", "normalized", "validated"}:
             st.session_state["fenabrave_preview_ready"] = True
@@ -5344,16 +5393,29 @@ def render_fenabrave_intake_page() -> None:
             uploaded_pdf = st.file_uploader(
                 "PDF Fenabrave",
                 type=["pdf"],
-                help="O upload no Streamlit e viavel para apoio operacional. A versao oficial ainda deve ser enviada ao bucket privado.",
+                help="O PDF pode ser enviado direto ao bucket privado pela propria tela, mantendo o caminho padrao por ano e mes.",
             )
 
             st.markdown("### 3. Registrar metadados")
-            period_prefix = pd.Timestamp(reference_period).strftime("%Y/%m")
-            default_filename = uploaded_pdf.name if uploaded_pdf is not None else (str(current_record.get("original_filename")) if current_record and current_record.get("original_filename") else "2026_05_02.pdf")
-            default_storage_path = str(current_record.get("storage_path")) if current_record and current_record.get("storage_path") else f"fenabrave/{period_prefix}/{default_filename}"
+            default_filename = uploaded_pdf.name if uploaded_pdf is not None else (
+                str(current_record.get("original_filename")) if current_record and current_record.get("original_filename") else "2026_05_02.pdf"
+            )
+            normalized_filename = normalize_fenabrave_filename(default_filename, reference_period)
+            storage_path = (
+                str(current_record.get("storage_path"))
+                if current_record and current_record.get("storage_path") and uploaded_pdf is None
+                else build_fenabrave_storage_path(reference_period, normalized_filename)
+            )
             storage_bucket = st.text_input("Storage bucket", value=str(current_record.get("storage_bucket")) if current_record and current_record.get("storage_bucket") else "market-source-files")
-            storage_path = st.text_input("Storage path", value=default_storage_path)
-            original_filename = st.text_input("Nome original do arquivo", value=default_filename)
+            original_filename = st.text_input("Nome original do arquivo", value=normalized_filename)
+            storage_path = (
+                str(current_record.get("storage_path"))
+                if current_record and current_record.get("storage_path") and uploaded_pdf is None
+                else build_fenabrave_storage_path(reference_period, original_filename)
+            )
+            expected_storage_prefix = pd.Timestamp(reference_period).strftime("fenabrave/%Y/%m/")
+            st.caption(f"Pasta obrigatoria do periodo selecionado: `{expected_storage_prefix}`")
+            st.code(storage_path)
             status_options = ["stored", "extracted", "normalized", "validated", "failed"]
             current_status = str(current_record.get("extraction_status")) if current_record and current_record.get("extraction_status") in status_options else "stored"
             extraction_status = st.selectbox(
@@ -5362,6 +5424,26 @@ def render_fenabrave_intake_page() -> None:
                 index=status_options.index(current_status),
             )
             extraction_method = st.text_input("Metodo de extracao", value=str(current_record.get("extraction_method")) if current_record and current_record.get("extraction_method") else "pdf_table_extraction")
+            if st.button("Carregar PDF no bucket privado", use_container_width=False):
+                if uploaded_pdf is None:
+                    st.error("Selecione um PDF antes de enviar para o Storage.")
+                elif not storage_path.startswith(expected_storage_prefix):
+                    st.error(f"O storage_path precisa comecar com {expected_storage_prefix}.")
+                else:
+                    upload_payload, upload_error = upload_fenabrave_pdf_to_storage(
+                        storage_bucket,
+                        storage_path,
+                        uploaded_pdf.getvalue(),
+                    )
+                    if upload_error:
+                        st.error(upload_error)
+                    else:
+                        st.session_state["fenabrave_pdf_uploaded"] = True
+                        st.success(
+                            "PDF enviado ao bucket privado em "
+                            f"`{storage_bucket}/{storage_path}`."
+                        )
+                        st.json(upload_payload)
             if st.button("Preparar metadados do arquivo", use_container_width=False):
                 metadata_payload = {
                     "p_reference_period": pd.Timestamp(reference_period).strftime("%Y-%m-%d"),
@@ -5405,12 +5487,14 @@ def render_fenabrave_intake_page() -> None:
             st.markdown("### Leitura da rotina")
             uploaded_name = uploaded_pdf.name if uploaded_pdf is not None else None
             uploaded_size = uploaded_pdf.size if uploaded_pdf is not None else None
+            pdf_uploaded_real = bool(current_record and current_record.get("storage_path")) or st.session_state["fenabrave_pdf_uploaded"]
             metadata_registered_real = current_record is not None
             preview_ready_real = bool(current_record and str(current_record.get("extraction_status")) in {"extracted", "normalized", "validated"})
             validated_real = bool(current_record and str(current_record.get("extraction_status")) == "validated")
             source_confirmed_real = bool(current_record) or st.session_state["fenabrave_source_confirmed"]
             can_validate = (
                 source_confirmed_real
+                and pdf_uploaded_real
                 and metadata_registered_real
                 and (preview_ready_real or st.session_state["fenabrave_preview_ready"])
             )
@@ -5419,8 +5503,8 @@ def render_fenabrave_intake_page() -> None:
                 warnings.append(data_error)
             if not source_confirmed_real:
                 warnings.append("A fonte oficial do mes anterior ainda nao foi confirmada.")
-            if uploaded_pdf is None:
-                warnings.append("O PDF ainda nao foi carregado para apoio operacional na tela.")
+            if not pdf_uploaded_real:
+                warnings.append("O PDF ainda nao foi enviado ao bucket privado para o periodo selecionado.")
             if not metadata_registered_real:
                 warnings.append("Ainda nao existe registro real de market_source_files para o periodo selecionado.")
             if not (preview_ready_real or st.session_state["fenabrave_preview_ready"]):
@@ -5430,7 +5514,7 @@ def render_fenabrave_intake_page() -> None:
 
             chips = [
                 dq_chip("Fonte", "ok" if source_confirmed_real else "pendente", "ok-green" if source_confirmed_real else "alert-yellow"),
-                dq_chip("PDF", "carregado" if uploaded_pdf is not None else "ausente", "ok-green" if uploaded_pdf is not None else "alert-yellow"),
+                dq_chip("PDF", "enviado" if pdf_uploaded_real else "ausente", "ok-green" if pdf_uploaded_real else "alert-yellow"),
                 dq_chip("Metadados", "reais" if metadata_registered_real else "pendente", "ok-green" if metadata_registered_real else "alert-yellow"),
                 dq_chip("Preview", "revisado" if (preview_ready_real or st.session_state["fenabrave_preview_ready"]) else "pendente", "ok-green" if (preview_ready_real or st.session_state["fenabrave_preview_ready"]) else "alert-yellow"),
                 dq_chip("Liberacao", "pronta" if can_validate else "bloqueada", "ok-green" if can_validate else "neutral"),
@@ -5472,15 +5556,17 @@ def render_fenabrave_intake_page() -> None:
                     "pdf_upload_viavel": True,
                     "nome_arquivo": uploaded_name,
                     "tamanho_bytes": uploaded_size,
-                    "uso_recomendado": "apoio operacional e checagem de consistencia antes do envio oficial ao bucket privado",
-                    "restricao": "nao expor service role nem usar o Streamlit publico como destino final de armazenamento",
+                    "storage_path_gerado": storage_path,
+                    "pasta_obrigatoria": expected_storage_prefix,
+                    "uso_recomendado": "carga historica e carga mensal via Streamlit com persistencia oficial no bucket privado",
+                    "restricao": "o app precisa continuar usando credencial com permissao de upload sem expor service role ao navegador",
                 }
             )
 
             if warnings:
                 st.warning(" | ".join(warnings))
             else:
-                st.success("A rotina mockada esta completa e pronta para seguir para validacao final.")
+                st.success("A rotina operacional do periodo esta completa e pronta para seguir para validacao final.")
 
     with tab_review:
         st.markdown("### Periodos registrados em market_source_files")
@@ -5523,7 +5609,7 @@ def render_fenabrave_intake_page() -> None:
 
         timeline = [
             ("Fonte oficial confirmada", "ok" if st.session_state["fenabrave_source_confirmed"] else "atencao"),
-            ("PDF preservado e registrado", "ok" if recent_records else "atencao"),
+            ("PDF preservado e registrado", "ok" if (recent_records or st.session_state["fenabrave_pdf_uploaded"]) else "atencao"),
             ("Preview operacional revisado", "ok" if any(str(row.get("extraction_status")) in {"extracted", "normalized", "validated"} for row in recent_records) or st.session_state["fenabrave_preview_ready"] else "atencao"),
             ("Periodo validado", "ok" if any(str(row.get("extraction_status")) == "validated" for row in recent_records) or st.session_state["fenabrave_validated"] else "neutral"),
         ]
@@ -5536,6 +5622,7 @@ def render_fenabrave_intake_page() -> None:
         if st.button("Reiniciar simulacao Fenabrave", use_container_width=False):
             for key in [
                 "fenabrave_source_confirmed",
+                "fenabrave_pdf_uploaded",
                 "fenabrave_metadata_registered",
                 "fenabrave_preview_ready",
                 "fenabrave_validated",
@@ -5546,7 +5633,7 @@ def render_fenabrave_intake_page() -> None:
     with tab_rules:
         st.markdown("### O que a UI precisa respeitar")
         st.info(
-            "O PDF pode ser carregado no Streamlit, mas o arquivo oficial precisa continuar no bucket privado market-source-files com registro em market_source_files."
+            "O PDF deve ser carregado pelo Streamlit direto no bucket privado market-source-files, sempre em `fenabrave/AAAA/MM/arquivo.pdf`, com registro correspondente em market_source_files."
         )
         st.markdown(
             """

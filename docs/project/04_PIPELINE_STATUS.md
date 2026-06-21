@@ -302,8 +302,11 @@ Proxima avaliacao:
 
 #### Escopo operacional atual
 
-- o PDF fonte ja deve estar salvo no Supabase Storage
-- o registro inicial em `market_source_files` continua manual nesta fase
+- o PDF fonte pode ser carregado pela view `Cadastro Fenabrave` direto no
+  bucket privado `market-source-files`
+- o caminho do arquivo deve respeitar o padrao `fenabrave/{ano}/{mes}/`
+- o registro em `market_source_files` continua guiado pela rotina operacional
+  do app
 - o script executa leitura do PDF, extracao da primeira tabela, normalizacao e
   validacao dos totais
 - o fluxo suporta `dry-run`, `write`, `replace` e revisao interativa

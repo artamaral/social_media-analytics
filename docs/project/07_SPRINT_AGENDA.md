@@ -3238,6 +3238,8 @@ Consolidar dados externos sem comprometer governanca, rastreabilidade ou qualida
 ### Atividades Fenabrave
 
 - Validar rotina mensal.
+- Implementar upload do PDF pela view `Cadastro Fenabrave` com pasta
+  obrigatoria por `ano/mes` para suportar historico.
 - Decidir se modelagem por segmento e suficiente por enquanto.
 - Avaliar necessidade de `ingestion_runs` e validacoes persistidas.
 
