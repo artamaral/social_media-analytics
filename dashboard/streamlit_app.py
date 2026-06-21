@@ -2888,7 +2888,7 @@ def render_youtube_hot_now_page() -> None:
     if not rows:
         placeholder_card(
             "Sem videos elegiveis para Hot now",
-            f"Nenhum video do filtro {selected_filter} passou no contrato conservador de velocidade e aceleracao agora.",
+            f"Nenhum video do filtro {selected_filter} tem ao menos 3 snapshots validos com frescor de ate 24h agora.",
         )
         return
 
@@ -2952,7 +2952,7 @@ def render_youtube_hot_now_page() -> None:
     video_header_icon = header_pill_icon_html("HN", "Hot now")
     total_views_header_icon = header_pill_icon_html("VT", "Views totais")
     score_header_icon = header_pill_icon_html("SC", "Score")
-    velocity_header_icon = header_pill_icon_html("V6", "Velocidade 6h")
+    velocity_header_icon = header_pill_icon_html("VA", "Velocidade atual")
     previous_header_icon = header_pill_icon_html("VP", "Velocidade anterior")
     acceleration_header_icon = header_pill_icon_html("AC", "Aceleracao")
     delta_header_icon = header_pill_icon_html("DV", "Delta views")
@@ -3022,7 +3022,7 @@ def render_youtube_hot_now_page() -> None:
         row_blocks.append(row_html)
 
     st.markdown(table_html + "".join(row_blocks) + "</div></div>", unsafe_allow_html=True)
-    st.caption("Hot now usa velocidade recente e aceleracao por views. Quando a aceleracao e negativa, o score fica igual a V6 porque o contrato atual so soma bonus de aceleracao positiva.")
+    st.caption("Hot now 24h usa o ultimo snapshot, o snapshot anterior e o penultimo disponivel. VA representa a velocidade atual entre os dois snapshots mais recentes; VP representa a velocidade imediatamente anterior; o score soma VA com bonus apenas para aceleracao positiva.")
 
 
 def render_data_quality_page() -> None:

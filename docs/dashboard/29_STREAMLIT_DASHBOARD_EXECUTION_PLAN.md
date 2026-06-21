@@ -469,6 +469,24 @@ Status em 2026-06-20:
 - a tela consome apenas linhas `is_hot_now_eligible = true`, com limite `10` e
   filtros `Todos`, `Long` e `Short`
 
+Atualizacao em 2026-06-21:
+
+- o contrato inicial `6h/24h` foi revisado apos comparacao com a politica de
+  `next_check` e com o overlap frente a `v_dashboard_post_growth_7d`
+- a implementacao vigente do `Hot now` passou a usar:
+  - bloqueios duros por `no_snapshot` e `insufficient_snapshots`
+  - frescor maximo de `24h`
+  - velocidade atual baseada no ultimo snapshot contra o anterior disponivel
+  - velocidade anterior baseada no snapshot anterior contra o penultimo
+  - `hot_now_rank_score = velocidade_atual + greatest(aceleracao, 0)`
+- a tela Streamlit preserva o mesmo consumo da view, mas os indicadores visuais
+  passam a representar velocidade atual e velocidade anterior entre snapshots
+  reais consecutivos
+- validacao apos reaplicar a view no Supabase:
+  - `eligible`: `2125`
+  - `latest_snapshot_stale`: `1899`
+  - `insufficient_snapshots`: `49`
+
 Racional:
 
 - a documentacao atual prioriza analise temporal para responder o que esta quente agora

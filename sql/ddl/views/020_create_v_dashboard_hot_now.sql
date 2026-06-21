@@ -5,22 +5,72 @@ with unavailable_posts as (
   from public.post_collection_failures f
   where f.status = 'unavailable'
 ),
-latest_snapshot as (
-  select distinct on (h.post_id)
-    h.post_id,
-    h.collected_at as latest_collected_at,
-    h.views as views_latest,
-    h.likes as likes_latest,
-    h.comments as comments_latest
-  from public.post_metrics_history h
-  order by h.post_id, h.collected_at desc
-),
-snapshot_counts as (
+ordered_snapshots as (
   select
     h.post_id,
-    count(*)::bigint as snapshot_count
+    h.collected_at,
+    h.views,
+    h.likes,
+    h.comments,
+    lag(h.collected_at, 1) over (
+      partition by h.post_id
+      order by h.collected_at
+    ) as prev_collected_at,
+    lag(h.views, 1) over (
+      partition by h.post_id
+      order by h.collected_at
+    ) as prev_views,
+    lag(h.likes, 1) over (
+      partition by h.post_id
+      order by h.collected_at
+    ) as prev_likes,
+    lag(h.comments, 1) over (
+      partition by h.post_id
+      order by h.collected_at
+    ) as prev_comments,
+    lag(h.collected_at, 2) over (
+      partition by h.post_id
+      order by h.collected_at
+    ) as prev2_collected_at,
+    lag(h.views, 2) over (
+      partition by h.post_id
+      order by h.collected_at
+    ) as prev2_views,
+    lag(h.likes, 2) over (
+      partition by h.post_id
+      order by h.collected_at
+    ) as prev2_likes,
+    lag(h.comments, 2) over (
+      partition by h.post_id
+      order by h.collected_at
+    ) as prev2_comments,
+    row_number() over (
+      partition by h.post_id
+      order by h.collected_at desc
+    ) as row_num_desc,
+    count(*) over (
+      partition by h.post_id
+    )::bigint as snapshot_count
   from public.post_metrics_history h
-  group by h.post_id
+),
+latest_snapshot as (
+  select
+    os.post_id,
+    os.collected_at as latest_collected_at,
+    os.views as views_latest,
+    os.likes as likes_latest,
+    os.comments as comments_latest,
+    os.prev_collected_at,
+    os.prev_views,
+    os.prev_likes,
+    os.prev_comments,
+    os.prev2_collected_at,
+    os.prev2_views,
+    os.prev2_likes,
+    os.prev2_comments,
+    os.snapshot_count
+  from ordered_snapshots os
+  where os.row_num_desc = 1
 ),
 base_posts as (
   select
@@ -40,7 +90,15 @@ base_posts as (
     ls.views_latest,
     ls.likes_latest,
     ls.comments_latest,
-    coalesce(sc.snapshot_count, 0) as snapshot_count
+    ls.prev_collected_at,
+    ls.prev_views,
+    ls.prev_likes,
+    ls.prev_comments,
+    ls.prev2_collected_at,
+    ls.prev2_views,
+    ls.prev2_likes,
+    ls.prev2_comments,
+    coalesce(ls.snapshot_count, 0) as snapshot_count
   from public.posts p
   join public.creators c
     on c.id = p.creator_id
@@ -48,90 +106,40 @@ base_posts as (
     on e.id = c.entity_id
   left join latest_snapshot ls
     on ls.post_id = p.post_id
-  left join snapshot_counts sc
-    on sc.post_id = p.post_id
   where not exists (
     select 1
     from unavailable_posts up
     where up.post_id = p.post_id
   )
 ),
-snapshots as (
-  select
-    bp.*,
-    h6.collected_at as collected_at_6h,
-    h6.views as views_6h,
-    h6.likes as likes_6h,
-    h6.comments as comments_6h,
-    h24.collected_at as collected_at_24h,
-    h24.views as views_24h,
-    h24.likes as likes_24h,
-    h24.comments as comments_24h
-  from base_posts bp
-  left join lateral (
-    select
-      h.collected_at,
-      h.views,
-      h.likes,
-      h.comments
-    from public.post_metrics_history h
-    where h.post_id = bp.post_id
-      and bp.latest_collected_at is not null
-      and h.collected_at <= bp.latest_collected_at - interval '6 hours'
-      and h.collected_at >= bp.latest_collected_at - interval '8 hours'
-    order by
-      abs(extract(epoch from (h.collected_at - (bp.latest_collected_at - interval '6 hours')))) asc,
-      h.collected_at desc
-    limit 1
-  ) h6 on true
-  left join lateral (
-    select
-      h.collected_at,
-      h.views,
-      h.likes,
-      h.comments
-    from public.post_metrics_history h
-    where h.post_id = bp.post_id
-      and bp.latest_collected_at is not null
-      and h.collected_at <= bp.latest_collected_at - interval '18 hours'
-      and h.collected_at >= bp.latest_collected_at - interval '30 hours'
-    order by
-      abs(extract(epoch from (h.collected_at - (bp.latest_collected_at - interval '24 hours')))) asc,
-      h.collected_at desc
-    limit 1
-  ) h24 on true
-),
 calculated as (
   select
-    s.*,
-    extract(epoch from ((now()::timestamp without time zone) - s.latest_collected_at)) / 3600.0
+    bp.*,
+    extract(epoch from ((now()::timestamp without time zone) - bp.latest_collected_at)) / 3600.0
       as latest_snapshot_age_hours,
-    extract(epoch from (s.latest_collected_at - s.collected_at_6h)) / 3600.0
-      as hours_between_latest_and_6h,
-    extract(epoch from (s.collected_at_6h - s.collected_at_24h)) / 3600.0
-      as hours_between_6h_and_24h,
-    s.views_latest - s.views_6h as views_delta_recent,
-    s.likes_latest - s.likes_6h as likes_delta_recent,
-    s.comments_latest - s.comments_6h as comments_delta_recent,
-    (s.views_latest - s.views_6h)::numeric
-      / nullif(extract(epoch from (s.latest_collected_at - s.collected_at_6h)) / 3600.0, 0)
-      as velocity_6h,
-    (s.views_6h - s.views_24h)::numeric
-      / nullif(extract(epoch from (s.collected_at_6h - s.collected_at_24h)) / 3600.0, 0)
-      as previous_velocity
-  from snapshots s
+    extract(epoch from (bp.latest_collected_at - bp.prev_collected_at)) / 3600.0
+      as hours_between_latest_and_prev,
+    extract(epoch from (bp.prev_collected_at - bp.prev2_collected_at)) / 3600.0
+      as hours_between_prev_and_prev2,
+    bp.views_latest - bp.prev_views as views_delta_recent,
+    bp.likes_latest - bp.prev_likes as likes_delta_recent,
+    bp.comments_latest - bp.prev_comments as comments_delta_recent,
+    (bp.views_latest - bp.prev_views)::numeric
+      / nullif(extract(epoch from (bp.latest_collected_at - bp.prev_collected_at)) / 3600.0, 0)
+      as velocity_current,
+    (bp.prev_views - bp.prev2_views)::numeric
+      / nullif(extract(epoch from (bp.prev_collected_at - bp.prev2_collected_at)) / 3600.0, 0)
+      as velocity_previous
+  from base_posts bp
 ),
 classified as (
   select
     c.*,
-    (c.velocity_6h - c.previous_velocity) as acceleration,
+    (c.velocity_current - c.velocity_previous) as acceleration,
     case
       when c.latest_collected_at is null then 'no_snapshot'
       when c.snapshot_count < 3 then 'insufficient_snapshots'
-      when c.latest_snapshot_age_hours > 12 then 'latest_snapshot_stale'
-      when c.collected_at_6h is null then 'baseline_6h_missing'
-      when c.collected_at_24h is null then 'baseline_24h_missing'
-      when coalesce(c.views_delta_recent, 0) <= 0 then 'no_recent_views_delta'
+      when c.latest_snapshot_age_hours > 24 then 'latest_snapshot_stale'
       else 'eligible'
     end as eligibility_status
   from calculated c
@@ -155,25 +163,25 @@ select
   views_latest,
   likes_latest,
   comments_latest,
-  collected_at_6h,
-  views_6h,
-  likes_6h,
-  comments_6h,
-  round(hours_between_latest_and_6h::numeric, 4) as hours_between_latest_and_6h,
-  collected_at_24h,
-  views_24h,
-  likes_24h,
-  comments_24h,
-  round(hours_between_6h_and_24h::numeric, 4) as hours_between_6h_and_24h,
+  prev_collected_at as collected_at_6h,
+  prev_views as views_6h,
+  prev_likes as likes_6h,
+  prev_comments as comments_6h,
+  round(hours_between_latest_and_prev::numeric, 4) as hours_between_latest_and_6h,
+  prev2_collected_at as collected_at_24h,
+  prev2_views as views_24h,
+  prev2_likes as likes_24h,
+  prev2_comments as comments_24h,
+  round(hours_between_prev_and_prev2::numeric, 4) as hours_between_6h_and_24h,
   views_delta_recent,
   likes_delta_recent,
   comments_delta_recent,
-  round(velocity_6h::numeric, 4) as velocity_6h,
-  round(previous_velocity::numeric, 4) as previous_velocity,
+  round(velocity_current::numeric, 4) as velocity_6h,
+  round(velocity_previous::numeric, 4) as previous_velocity,
   round(acceleration::numeric, 4) as acceleration,
   case
     when eligibility_status = 'eligible'
-      then round((velocity_6h + greatest(acceleration, 0))::numeric, 4)
+      then round((velocity_current + greatest(acceleration, 0))::numeric, 4)
     else null
   end as hot_now_rank_score,
   eligibility_status,

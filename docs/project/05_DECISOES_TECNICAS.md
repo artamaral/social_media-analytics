@@ -998,6 +998,77 @@ Impacto esperado:
 
 ---
 
+## Revisao do ranking `Hot now` para o modelo 24h
+
+Data:
+
+- 2026-06-21
+
+Decisao:
+
+- substituir o contrato inicial `6h/24h` do `Hot now v1` por um contrato
+  `Hot now 24h`
+- manter separados:
+  - ranking analitico do dashboard
+  - fila operacional
+  - `calculate_next_check(...)`
+- aplicar os seguintes bloqueios:
+  - `no_snapshot`
+  - `insufficient_snapshots`
+  - `latest_snapshot_stale` quando o ultimo snapshot tiver mais de `24h`
+- calcular o sinal temporal com os tres snapshots mais recentes disponiveis:
+  - velocidade atual = ultimo vs anterior
+  - velocidade anterior = anterior vs penultimo
+  - aceleracao = velocidade atual - velocidade anterior
+- manter o score:
+  - `hot_now_rank_score = velocidade_atual + greatest(aceleracao, 0)`
+
+Motivo:
+
+- a comparacao entre elegibilidade do `Hot now` e a regra vigente de
+  `next_check` mostrou desalinhamento estrutural:
+  - `2935` posts eram excluidos por `latest_snapshot_stale`
+  - `1305` desses ainda estavam com `next_check` no futuro
+- a simulacao de relaxar apenas o stale threshold quase nao resolvia a lista;
+  o verdadeiro gargalo do contrato antigo passava a ser `baseline_6h_missing`
+- a simulacao com snapshots consecutivos preservou rastreabilidade temporal e
+  ficou mais aderente ao ritmo real de medicao da base
+
+Evidencia:
+
+- no universo `Hot now`, excluindo `unavailable`:
+  - `frescor_24h`: `2125` elegiveis
+  - `718` elegiveis com aceleracao positiva
+- overlap com `v_dashboard_post_growth_7d`:
+  - interseccao total alta por compartilhar a base recente monitorada
+  - overlap baixo no topo:
+    - `top 10 x top 10`: `0`
+    - `top 20 x top 20`: `3`
+    - `top 50 x top 50`: `13`
+- leitura final:
+  - `Melhores videos 7d` continua respondendo crescimento semanal
+  - `Hot now 24h` passa a responder aceleracao recente sob frescor operacional
+    plausivel
+
+Formula v2:
+
+```text
+velocidade_atual = (views_ultimo - views_anterior) / horas_entre_eles
+velocidade_anterior = (views_anterior - views_penultimo) / horas_entre_eles
+aceleracao = velocidade_atual - velocidade_anterior
+hot_now_rank_score = velocidade_atual + greatest(aceleracao, 0)
+```
+
+Diretriz de implementacao:
+
+- preservar o contrato de colunas da `v_dashboard_hot_now` para evitar quebra
+  no Streamlit
+- aceitar que os aliases historicos `velocity_6h` e `collected_at_6h` passem a
+  representar o snapshot anterior disponivel, nao uma ancora fixa de `6h`
+- refletir essa mudanca de semantica nos rotulos e textos explicativos da tela
+
+---
+
 ## Execucao controlada por sprint ativo
 
 Data:

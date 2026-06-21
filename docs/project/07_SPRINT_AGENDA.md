@@ -2893,6 +2893,88 @@ Decisao:
 - a view `v_dashboard_hot_now` esta pronta para consumo inicial no Streamlit
 - a Etapa 4 pode conectar a pagina `YouTube > Hot now` sem alterar a SQL
 
+#### Revisao pos-implantacao - overlap e Hot now 24h
+
+Status: concluida em 2026-06-21.
+
+Objetivo:
+
+- revisar a elegibilidade do `Hot now` a luz da regra atual de `next_check`;
+- medir a sobreposicao com `Melhores videos 7d`;
+- substituir o contrato conservador `6h/24h` por um contrato mais aderente a
+  base real monitorada.
+
+Achados:
+
+- a regra original de elegibilidade deixou a view pequena demais para o estado
+  atual da coleta:
+  - total na view: `4073`
+  - `eligible`: `9`
+  - `latest_snapshot_stale`: `2935`
+  - `baseline_6h_missing`: `1075`
+- o conflito principal apareceu na comparacao com `next_check`:
+  - `1305` posts `latest_snapshot_stale` ainda estavam com `next_check` no
+    futuro;
+  - isso confirmou que boa parte das exclusoes vinha de uma regra de frescor
+    mais exigente do que a cadencia operacional prometida pela fila.
+
+Simulacao aprovada:
+
+- manter bloqueios duros:
+  - `no_snapshot`;
+  - `insufficient_snapshots`.
+- manter corte de frescor:
+  - `latest_snapshot_stale` quando o ultimo snapshot tiver mais de `24h`.
+- trocar o calculo temporal para snapshots reais consecutivos:
+  - velocidade atual = ultimo snapshot vs snapshot anterior disponivel;
+  - velocidade anterior = snapshot anterior vs penultimo disponivel;
+  - aceleracao = velocidade atual - velocidade anterior.
+
+Resultado da simulacao no universo do `Hot now`, excluindo `unavailable`:
+
+- `sem_filtro_frescor`:
+  - `4024` elegiveis
+  - `1324` com aceleracao positiva
+- `frescor_24h`:
+  - `2125` elegiveis
+  - `718` com aceleracao positiva
+- `frescor_36h`:
+  - `3125` elegiveis
+  - `1075` com aceleracao positiva
+
+Analise de overlap com `v_dashboard_post_growth_7d`:
+
+- universo `Hot now 24h`: `2125` videos
+- universo `Melhores videos 7d`: `3991` videos
+- interseccao total: `2111` videos
+- overlap do topo:
+  - `top 10 x top 10`: `0`
+  - `top 20 x top 20`: `3`
+  - `top 50 x top 50`: `13`
+- leitura:
+  - a interseccao de universo e alta porque os dois rankings reaproveitam a
+    base monitorada recente;
+  - a sobreposicao baixa no topo confirma separacao semantica util:
+    - `Melhores videos 7d`: crescimento semanal acumulado;
+    - `Hot now 24h`: aceleracao recente com frescor operacionalmente
+      plausivel.
+
+Implementacao aplicada:
+
+- `sql/ddl/views/020_create_v_dashboard_hot_now.sql` foi revisada para o
+  modelo `Hot now 24h`;
+- a view passou a:
+  - excluir `unavailable`;
+  - bloquear apenas `no_snapshot`, `insufficient_snapshots` e
+    `latest_snapshot_stale > 24h`;
+  - calcular velocidade e aceleracao com os tres snapshots mais recentes do
+    proprio video;
+  - manter o score como `velocidade_atual + greatest(aceleracao, 0)`.
+- validacao real apos aplicar no Supabase:
+  - `eligible`: `2125`
+  - `latest_snapshot_stale`: `1899`
+  - `insufficient_snapshots`: `49`
+
 #### Etapa 4 - Integracao no Streamlit
 
 Status: concluida em 2026-06-20.
