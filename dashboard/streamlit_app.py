@@ -2925,7 +2925,7 @@ def render_youtube_hot_now_page() -> None:
             numeric_value = float(value)
             if pd.isna(numeric_value):
                 return "--"
-            return f"{numeric_value:.1f}/h".replace(".", ",")
+            return f"{int(round(numeric_value))}/h"
         except (TypeError, ValueError):
             return "--"
 
@@ -2934,7 +2934,7 @@ def render_youtube_hot_now_page() -> None:
             numeric_value = float(value)
             if pd.isna(numeric_value):
                 return "--"
-            return f"{numeric_value:.1f}".replace(".", ",")
+            return format_int(round(numeric_value))
         except (TypeError, ValueError):
             return "--"
 
