@@ -1,4 +1,6 @@
+import hashlib
 from html import escape
+from datetime import date
 from typing import Any
 import unicodedata
 
@@ -1726,6 +1728,20 @@ def call_supabase_rpc(function_name: str, params: dict[str, Any] | None = None) 
         return response.data or [], None
     except Exception as exc:
         return [], f"Falha ao executar {function_name}: {exc}"
+
+
+def list_fenabrave_source_files(limit: int = 12) -> tuple[list[dict[str, Any]], str | None]:
+    return call_supabase_rpc("list_fenabrave_source_files", {"p_limit": limit})
+
+
+def upsert_fenabrave_source_file(payload: dict[str, Any]) -> tuple[dict[str, Any] | None, str | None]:
+    rows, error = call_supabase_rpc("upsert_fenabrave_source_file", payload)
+    if error:
+        return None, error
+    if not rows:
+        return None, "Nenhum registro retornado por upsert_fenabrave_source_file."
+    clear_supabase_data_cache()
+    return rows[0], None
 
 
 def trigger_creator_onboarding(creator_id: int) -> tuple[dict[str, Any] | None, str | None]:
@@ -3838,6 +3854,30 @@ def get_fenabrave_mock_state() -> dict[str, Any]:
     return {key: st.session_state[key] for key in defaults}
 
 
+def get_fenabrave_record_for_period(
+    records: list[dict[str, Any]],
+    reference_period: date,
+) -> dict[str, Any] | None:
+    target_label = pd.Timestamp(reference_period).strftime("%Y-%m-%d")
+    for row in records:
+        row_period = normalize_text(row.get("reference_period"))
+        if row_period == target_label:
+            return row
+    return None
+
+
+def get_fenabrave_preview_rows(reference_period: date) -> list[dict[str, Any]]:
+    period_label = pd.Timestamp(reference_period).strftime("%Y-%m-%d")
+    rows, error = get_filtered_rows(
+        "v_dashboard_fenabrave_monthly_segments",
+        filters=(("reference_period", period_label),),
+        order_by="segment_sort",
+    )
+    if error:
+        return []
+    return rows
+
+
 def get_creator_mock_rows() -> list[dict[str, Any]]:
     return [
         {
@@ -5213,11 +5253,24 @@ def render_creator_overview_page() -> None:
 
 def render_fenabrave_intake_page() -> None:
     state = get_fenabrave_mock_state()
-    page_header("Cadastro Fenabrave", "Mockup da rotina mensal de inclusao de dados")
+    page_header("Cadastro Fenabrave", "Apoio operacional da rotina mensal de inclusao de dados")
     process_banner(
         "Regra obrigatoria de governanca",
         "A rotina mensal continua manual no ponto certo: confirmar a publicacao, preservar o PDF no bucket privado, registrar metadados, revisar preview, validar e so depois liberar consumo.",
     )
+
+    connection_error = None if is_supabase_configured() else "Supabase ainda nao configurado. Adicione SUPABASE_URL e SUPABASE_ANON_KEY nos secrets."
+    recent_records, recent_records_error = list_fenabrave_source_files(limit=12) if connection_error is None else ([], None)
+    data_error = connection_error or recent_records_error
+    latest_record = recent_records[0] if recent_records else None
+    if latest_record is not None:
+        st.session_state["fenabrave_source_confirmed"] = True
+        st.session_state["fenabrave_metadata_registered"] = True
+        if str(latest_record.get("extraction_status")) in {"extracted", "normalized", "validated"}:
+            st.session_state["fenabrave_preview_ready"] = True
+        if str(latest_record.get("extraction_status")) == "validated":
+            st.session_state["fenabrave_validated"] = True
+        state = get_fenabrave_mock_state()
 
     step_cards = [
         process_step_card(
@@ -5260,18 +5313,22 @@ def render_fenabrave_intake_page() -> None:
 
         with left:
             st.markdown("### 1. Confirmar publicacao do mes anterior")
+            default_reference_period = pd.Timestamp("2026-05-01").date()
             reference_period = st.date_input(
                 "Periodo de referencia",
-                value=pd.Timestamp("2026-04-01").date(),
+                value=default_reference_period,
                 format="DD/MM/YYYY",
             )
+            current_record = get_fenabrave_record_for_period(recent_records, reference_period)
+            default_source_url = str(current_record.get("source_url")) if current_record else "https://www.fenabrave.org.br/portal/files/2026_05_02.pdf"
+            default_source_page_url = str(current_record.get("source_page_url")) if current_record and current_record.get("source_page_url") else "https://www.fenabrave.org.br/portalv2/Conteudo/Emplacamentos%20"
             source_url = st.text_input(
                 "URL oficial do PDF",
-                value="https://www.fenabrave.org.br/portal/files/2026_04_02.pdf",
+                value=default_source_url,
             )
             source_page_url = st.text_input(
                 "Pagina oficial de origem",
-                value="https://www.fenabrave.org.br/portalv2/Conteudo/Emplacamentos%20",
+                value=default_source_page_url,
             )
             if st.button("Confirmar fonte mensal", use_container_width=False):
                 st.session_state["fenabrave_source_confirmed"] = True
@@ -5285,26 +5342,55 @@ def render_fenabrave_intake_page() -> None:
             )
 
             st.markdown("### 3. Registrar metadados")
-            storage_bucket = st.text_input("Storage bucket", value="market-source-files")
-            storage_path = st.text_input("Storage path", value="fenabrave/2026/04/2026_04_02.pdf")
-            original_filename = st.text_input("Nome original do arquivo", value="2026_04_02.pdf")
+            period_prefix = pd.Timestamp(reference_period).strftime("%Y/%m")
+            default_filename = uploaded_pdf.name if uploaded_pdf is not None else (str(current_record.get("original_filename")) if current_record and current_record.get("original_filename") else "2026_05_02.pdf")
+            default_storage_path = str(current_record.get("storage_path")) if current_record and current_record.get("storage_path") else f"fenabrave/{period_prefix}/{default_filename}"
+            storage_bucket = st.text_input("Storage bucket", value=str(current_record.get("storage_bucket")) if current_record and current_record.get("storage_bucket") else "market-source-files")
+            storage_path = st.text_input("Storage path", value=default_storage_path)
+            original_filename = st.text_input("Nome original do arquivo", value=default_filename)
+            status_options = ["stored", "extracted", "normalized", "validated", "failed"]
+            current_status = str(current_record.get("extraction_status")) if current_record and current_record.get("extraction_status") in status_options else "stored"
             extraction_status = st.selectbox(
                 "Status de extracao",
-                ["stored", "extracted", "normalized", "validated", "failed"],
-                index=0,
+                status_options,
+                index=status_options.index(current_status),
             )
-            extraction_method = st.text_input("Metodo de extracao", value="pdf_table_extraction")
+            extraction_method = st.text_input("Metodo de extracao", value=str(current_record.get("extraction_method")) if current_record and current_record.get("extraction_method") else "pdf_table_extraction")
             if st.button("Preparar metadados do arquivo", use_container_width=False):
-                st.session_state["fenabrave_metadata_registered"] = True
-                st.rerun()
+                metadata_payload = {
+                    "p_reference_period": pd.Timestamp(reference_period).strftime("%Y-%m-%d"),
+                    "p_source_url": source_url,
+                    "p_source_page_url": source_page_url,
+                    "p_storage_bucket": storage_bucket,
+                    "p_storage_path": storage_path,
+                    "p_original_filename": original_filename,
+                    "p_file_size_bytes": uploaded_pdf.size if uploaded_pdf is not None else current_record.get("file_size_bytes") if current_record else None,
+                    "p_sha256": hashlib.sha256(uploaded_pdf.getvalue()).hexdigest() if uploaded_pdf is not None else current_record.get("sha256") if current_record else None,
+                    "p_extraction_status": extraction_status,
+                    "p_extraction_method": extraction_method,
+                    "p_extraction_notes": "Metadados preparados via Cadastro Fenabrave no Streamlit.",
+                }
+                saved_row, save_error = upsert_fenabrave_source_file(metadata_payload)
+                if save_error:
+                    st.error(save_error)
+                else:
+                    st.session_state["fenabrave_metadata_registered"] = True
+                    st.session_state["fenabrave_source_confirmed"] = True
+                    st.success(
+                        "Metadados reais registrados em market_source_files para o periodo "
+                        f"{pd.Timestamp(reference_period).strftime('%m/%Y')}."
+                    )
+                    st.json(saved_row)
+                    st.rerun()
 
             st.markdown("### 4. Preview operacional")
-            preview_rows = [
-                {"segment_code": "autos", "segmento": "Autos", "mes_atual": 187313},
-                {"segment_code": "comerciais_leves", "segmento": "Comerciais Leves", "mes_atual": 49943},
-                {"segment_code": "autos_comerciais_leves", "segmento": "Autos + Comerciais Leves", "mes_atual": 237256},
-            ]
-            st.dataframe(pd.DataFrame(preview_rows), use_container_width=True, hide_index=True)
+            preview_rows = get_fenabrave_preview_rows(reference_period)
+            if preview_rows:
+                preview_df = pd.DataFrame(preview_rows)
+                preview_columns = [column for column in ["segment_code", "segment_label", "monthly_units", "current_year_accumulated_units"] if column in preview_df.columns]
+                st.dataframe(preview_df[preview_columns], use_container_width=True, hide_index=True)
+            else:
+                st.info("Nenhum preview real disponivel para o periodo selecionado nesta tela. O preview operacional continua no fluxo do script offline.")
             if st.button("Marcar preview como revisado", use_container_width=False):
                 st.session_state["fenabrave_preview_ready"] = True
                 st.rerun()
@@ -5313,27 +5399,34 @@ def render_fenabrave_intake_page() -> None:
             st.markdown("### Leitura da rotina")
             uploaded_name = uploaded_pdf.name if uploaded_pdf is not None else None
             uploaded_size = uploaded_pdf.size if uploaded_pdf is not None else None
+            metadata_registered_real = current_record is not None
+            preview_ready_real = bool(current_record and str(current_record.get("extraction_status")) in {"extracted", "normalized", "validated"})
+            validated_real = bool(current_record and str(current_record.get("extraction_status")) == "validated")
+            source_confirmed_real = bool(current_record) or st.session_state["fenabrave_source_confirmed"]
             can_validate = (
-                st.session_state["fenabrave_source_confirmed"]
-                and st.session_state["fenabrave_metadata_registered"]
-                and st.session_state["fenabrave_preview_ready"]
+                source_confirmed_real
+                and metadata_registered_real
+                and (preview_ready_real or st.session_state["fenabrave_preview_ready"])
             )
             warnings = []
-            if not st.session_state["fenabrave_source_confirmed"]:
+            if data_error:
+                warnings.append(data_error)
+            if not source_confirmed_real:
                 warnings.append("A fonte oficial do mes anterior ainda nao foi confirmada.")
             if uploaded_pdf is None:
                 warnings.append("O PDF ainda nao foi carregado para apoio operacional na tela.")
-            if not st.session_state["fenabrave_metadata_registered"]:
-                warnings.append("Os metadados de market_source_files ainda nao foram preparados.")
-            if not st.session_state["fenabrave_preview_ready"]:
-                warnings.append("O preview operacional ainda precisa de revisao humana.")
+            if not metadata_registered_real:
+                warnings.append("Ainda nao existe registro real de market_source_files para o periodo selecionado.")
+            if not (preview_ready_real or st.session_state["fenabrave_preview_ready"]):
+                warnings.append("O preview operacional ainda precisa de revisao humana ou status real de extracao.")
             if not can_validate:
                 warnings.append("A liberacao da view deve ficar bloqueada ate a rotina mensal ficar completa.")
 
             chips = [
-                dq_chip("Fonte", "ok" if st.session_state["fenabrave_source_confirmed"] else "pendente", "ok-green" if st.session_state["fenabrave_source_confirmed"] else "alert-yellow"),
+                dq_chip("Fonte", "ok" if source_confirmed_real else "pendente", "ok-green" if source_confirmed_real else "alert-yellow"),
                 dq_chip("PDF", "carregado" if uploaded_pdf is not None else "ausente", "ok-green" if uploaded_pdf is not None else "alert-yellow"),
-                dq_chip("Preview", "revisado" if st.session_state["fenabrave_preview_ready"] else "pendente", "ok-green" if st.session_state["fenabrave_preview_ready"] else "alert-yellow"),
+                dq_chip("Metadados", "reais" if metadata_registered_real else "pendente", "ok-green" if metadata_registered_real else "alert-yellow"),
+                dq_chip("Preview", "revisado" if (preview_ready_real or st.session_state["fenabrave_preview_ready"]) else "pendente", "ok-green" if (preview_ready_real or st.session_state["fenabrave_preview_ready"]) else "alert-yellow"),
                 dq_chip("Liberacao", "pronta" if can_validate else "bloqueada", "ok-green" if can_validate else "neutral"),
             ]
             st.markdown(
@@ -5359,8 +5452,13 @@ def render_fenabrave_intake_page() -> None:
                     "original_filename": original_filename,
                     "extraction_status": extraction_status,
                     "extraction_method": extraction_method,
+                    "registro_real_encontrado": metadata_registered_real,
                 }
             )
+
+            if current_record is not None:
+                st.markdown("### Registro real do periodo")
+                st.json(current_record)
 
             st.markdown("### Avaliacao do PDF no Streamlit")
             st.json(
@@ -5379,7 +5477,7 @@ def render_fenabrave_intake_page() -> None:
                 st.success("A rotina mockada esta completa e pronta para seguir para validacao final.")
 
     with tab_review:
-        st.markdown("### Simulacao da rotina operacional")
+        st.markdown("### Periodos registrados em market_source_files")
         flow_col1, flow_col2, flow_col3, flow_col4 = st.columns(4)
 
         with flow_col1:
@@ -5395,40 +5493,33 @@ def render_fenabrave_intake_page() -> None:
             if st.button("Aprovar periodo", use_container_width=True):
                 st.session_state["fenabrave_validated"] = True
 
-        review_rows = [
-            {
-                "periodo": "01/04/2026",
-                "fonte": "Fenabrave",
-                "arquivo": "2026_04_02.pdf",
-                "storage_path": "fenabrave/2026/04/2026_04_02.pdf",
-                "status_arquivo": "validated" if st.session_state["fenabrave_validated"] else "stored",
-                "preview_operacional": "revisado" if st.session_state["fenabrave_preview_ready"] else "pendente",
-                "resultado_validacao": "OK" if st.session_state["fenabrave_validated"] else "AGUARDANDO",
-                "observacao": "Liberar view somente depois da aprovacao humana.",
-            }
-        ]
-        review_card_grid(
-            [
-                {
-                    "raw_name": row["arquivo"],
-                    "sub_niche_name": row["periodo"],
-                    "status": row["status_arquivo"],
-                    "review_result": row["resultado_validacao"],
-                    "existing_entity_id": row["fonte"],
-                    "existing_entity_name": row["storage_path"],
-                    "sub_niche_id": row["preview_operacional"],
-                    "matched_sub_niche_name": "Rotina mensal Fenabrave",
-                    "notes": row["observacao"],
-                }
-                for row in review_rows
-            ]
-        )
+        if recent_records:
+            review_card_grid(
+                [
+                    {
+                        "raw_name": str(row.get("original_filename") or "--"),
+                        "sub_niche_name": pd.Timestamp(row.get("reference_period")).strftime("%d/%m/%Y") if row.get("reference_period") else "--",
+                        "status": str(row.get("extraction_status") or "--"),
+                        "review_result": "OK" if str(row.get("extraction_status")) == "validated" else "AGUARDANDO",
+                        "existing_entity_id": str(row.get("source_name") or "Fenabrave"),
+                        "existing_entity_name": str(row.get("storage_path") or "--"),
+                        "sub_niche_id": str(row.get("extraction_method") or "--"),
+                        "matched_sub_niche_name": "Rotina mensal Fenabrave",
+                        "notes": str(row.get("extraction_notes") or "Registro operacional real do periodo."),
+                    }
+                    for row in recent_records[:12]
+                ]
+            )
+        elif data_error:
+            st.error(data_error)
+        else:
+            st.info("Nenhum periodo Fenabrave encontrado em market_source_files.")
 
         timeline = [
             ("Fonte oficial confirmada", "ok" if st.session_state["fenabrave_source_confirmed"] else "atencao"),
-            ("PDF preservado e registrado", "ok" if st.session_state["fenabrave_metadata_registered"] else "atencao"),
-            ("Preview operacional revisado", "ok" if st.session_state["fenabrave_preview_ready"] else "atencao"),
-            ("Periodo validado", "ok" if st.session_state["fenabrave_validated"] else "neutral"),
+            ("PDF preservado e registrado", "ok" if recent_records else "atencao"),
+            ("Preview operacional revisado", "ok" if any(str(row.get("extraction_status")) in {"extracted", "normalized", "validated"} for row in recent_records) or st.session_state["fenabrave_preview_ready"] else "atencao"),
+            ("Periodo validado", "ok" if any(str(row.get("extraction_status")) == "validated" for row in recent_records) or st.session_state["fenabrave_validated"] else "neutral"),
         ]
         st.markdown("### Estado atual do processo")
         st.markdown(
