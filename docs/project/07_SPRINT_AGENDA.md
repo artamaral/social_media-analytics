@@ -29,15 +29,15 @@ Sem confirmacao explicita do usuario, a atividade deve ser tratada como ideia ou
 Status atual:
 
 ```text
-Sprint ativo: Sprint 4 - Ranking Hot Now
-Ultimo sprint concluido: Sprint 3 - Dashboard MVP analitico
+Sprint ativo: Sprint 5 - Fontes externas
+Ultimo sprint concluido: Sprint 4 - Ranking Hot Now
 Datas: a definir conforme disponibilidade do usuario
 ```
 
-Enquanto o Sprint 4 estiver ativo, apenas tarefas relacionadas ao ranking
-`Hot Now`, sua view SQL, validacao temporal, integracao no Streamlit e
-documentacao de limitacoes analiticas devem ser executadas automaticamente.
-Alteracoes fora deste escopo devem aguardar confirmacao.
+Enquanto o Sprint 5 estiver ativo, apenas tarefas relacionadas a fontes
+externas, rotina repetivel de Fenabrave e decisao de viabilidade do Carros na
+Web devem ser executadas automaticamente. Alteracoes fora deste escopo devem
+aguardar confirmacao.
 
 ## Visao geral
 
