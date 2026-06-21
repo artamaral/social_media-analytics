@@ -3860,7 +3860,13 @@ def get_fenabrave_record_for_period(
 ) -> dict[str, Any] | None:
     target_label = pd.Timestamp(reference_period).strftime("%Y-%m-%d")
     for row in records:
-        row_period = normalize_text(row.get("reference_period"))
+        row_period_raw = row.get("reference_period")
+        if row_period_raw in (None, ""):
+            continue
+        try:
+            row_period = pd.Timestamp(row_period_raw).strftime("%Y-%m-%d")
+        except Exception:
+            continue
         if row_period == target_label:
             return row
     return None
