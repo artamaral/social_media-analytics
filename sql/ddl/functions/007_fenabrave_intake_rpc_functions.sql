@@ -194,7 +194,7 @@ BEGIN
     v_extraction_method,
     v_extraction_notes
   )
-  ON CONFLICT (source_id, reference_period, source_url)
+  ON CONFLICT ON CONSTRAINT market_source_files_unique_file
   DO UPDATE SET
     source_page_url = EXCLUDED.source_page_url,
     storage_bucket = EXCLUDED.storage_bucket,
