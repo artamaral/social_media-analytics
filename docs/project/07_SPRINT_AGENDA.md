@@ -2965,6 +2965,7 @@ Resultado observado em 2026-06-20:
   - tipo de video
   - ultimo snapshot
   - idade do snapshot
+  - views totais
   - score
   - velocidade `6h`
   - velocidade anterior
@@ -2984,6 +2985,17 @@ Leitura:
 - a pagina esta pronta para uso inicial no Streamlit
 - a integracao respeita o contrato conservador da view
 - nao houve alteracao de SQL, fila operacional, worker ou `next_check`
+
+Complemento em 2026-06-21:
+
+- incluida a coluna `Views totais` logo apos o bloco do video na pagina
+  `YouTube > Hot now`
+- observacao de uso: pela manha, os videos podem aparecer com `AC` negativo
+  quando a velocidade recente fica abaixo da velocidade anterior
+- nessa situacao, o `Score` fica igual a `V6`, porque o contrato atual usa
+  `hot_now_rank_score = velocity_6h + greatest(acceleration, 0)`
+- a avaliacao sobre `6h` ser uma janela curta demais deve ser tratada como
+  ajuste de contrato em atividade posterior, nao como mudanca silenciosa da UI
 
 #### Etapa 5 - Fechamento, documentacao e decisao de pronto
 

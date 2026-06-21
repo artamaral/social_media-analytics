@@ -2627,7 +2627,7 @@ def render_youtube_hot_now_page() -> None:
         .hot-now-header,
         .hot-now-row {
             display: grid;
-            grid-template-columns: minmax(610px, 4.8fr) 0.46fr 0.34fr 0.34fr 0.34fr 0.34fr;
+            grid-template-columns: minmax(560px, 4.45fr) 0.36fr 0.4fr 0.33fr 0.33fr 0.33fr 0.33fr;
             gap: 0;
         }
         .hot-now-header {
@@ -2904,6 +2904,7 @@ def render_youtube_hot_now_page() -> None:
     df["previous_velocity_num"] = pd.to_numeric(optional_series("previous_velocity", 0), errors="coerce").fillna(0)
     df["acceleration_num"] = pd.to_numeric(optional_series("acceleration", 0), errors="coerce").fillna(0)
     df["views_delta_recent_num"] = pd.to_numeric(optional_series("views_delta_recent", 0), errors="coerce").fillna(0)
+    df["views_latest_num"] = pd.to_numeric(optional_series("views_latest", 0), errors="coerce").fillna(0)
     df["likes_delta_recent_num"] = pd.to_numeric(optional_series("likes_delta_recent", 0), errors="coerce").fillna(0)
     df["comments_delta_recent_num"] = pd.to_numeric(optional_series("comments_delta_recent", 0), errors="coerce").fillna(0)
     df["latest_snapshot_age_hours_num"] = pd.to_numeric(optional_series("latest_snapshot_age_hours", 0), errors="coerce").fillna(0)
@@ -2948,6 +2949,7 @@ def render_youtube_hot_now_page() -> None:
         return ""
 
     video_header_icon = header_pill_icon_html("HN", "Hot now")
+    total_views_header_icon = header_pill_icon_html("VT", "Views totais")
     score_header_icon = header_pill_icon_html("SC", "Score")
     velocity_header_icon = header_pill_icon_html("V6", "Velocidade 6h")
     previous_header_icon = header_pill_icon_html("VP", "Velocidade anterior")
@@ -2959,6 +2961,7 @@ def render_youtube_hot_now_page() -> None:
         '<div class="hot-now-scroll">'
         '<div class="hot-now-header">'
         f'<div class="hot-now-head-cell video"><span class="hot-now-head-hash">#</span><span class="hot-now-head-video-label">{video_header_icon}</span></div>'
+        f'<div class="hot-now-head-cell">{total_views_header_icon}</div>'
         f'<div class="hot-now-head-cell">{score_header_icon}</div>'
         f'<div class="hot-now-head-cell">{velocity_header_icon}</div>'
         f'<div class="hot-now-head-cell">{previous_header_icon}</div>'
@@ -3004,6 +3007,7 @@ def render_youtube_hot_now_page() -> None:
             "</div>"
             "</div>"
             "</div>"
+            f'<div class="hot-now-cell">{escape(format_compact_number(row.get("views_latest_num")))}</div>'
             f'<div class="hot-now-cell">{escape(format_score(row.get("hot_now_rank_score_num")))}</div>'
             f'<div class="hot-now-cell">{escape(format_rate(row.get("velocity_6h_num")))}</div>'
             f'<div class="hot-now-cell">{escape(format_rate(row.get("previous_velocity_num")))}</div>'
@@ -3014,7 +3018,7 @@ def render_youtube_hot_now_page() -> None:
         row_blocks.append(row_html)
 
     st.markdown(table_html + "".join(row_blocks) + "</div></div>", unsafe_allow_html=True)
-    st.caption("Hot now usa velocidade recente e aceleracao por views. Likes e comentarios ficam como contexto do contrato SQL, sem peso no score v1.")
+    st.caption("Hot now usa velocidade recente e aceleracao por views. Quando a aceleracao e negativa, o score fica igual a V6 porque o contrato atual so soma bonus de aceleracao positiva.")
 
 
 def render_data_quality_page() -> None:
