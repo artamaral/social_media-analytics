@@ -2413,7 +2413,7 @@ Nao inclui:
 - [x] Etapa 2: desenhar e criar a view SQL `v_dashboard_hot_now`.
 - [x] Etapa 3: validar a view com dados reais e casos de borda.
 - [x] Etapa 4: conectar `Hot now` no Streamlit.
-- [ ] Etapa 5: fazer fechamento de UX, documentacao e decisao de pronto.
+- [x] Etapa 5: fazer fechamento de UX, documentacao e decisao de pronto.
 
 ### Planejamento por etapas
 
@@ -3085,7 +3085,7 @@ Complemento em 2026-06-21:
 
 #### Etapa 5 - Fechamento, documentacao e decisao de pronto
 
-Status: pendente.
+Status: concluida em 2026-06-21.
 
 Objetivo:
 
@@ -3125,6 +3125,39 @@ Saida esperada:
 - ranking pronto para uso exploratorio interno;
 - proximos refinamentos separados de execucao obrigatoria.
 
+Andamento inicial em 2026-06-21:
+
+- smoke test local iniciado e validado:
+  - parse de sintaxe de `dashboard/streamlit_app.py`: `syntax_ok`
+  - dependencia local do dashboard instalada na `.venv` a partir de
+    `dashboard/requirements.txt`
+  - app Streamlit iniciada localmente em `http://127.0.0.1:8502`
+  - checagem HTTP local retornou `status 200`
+- backlog ja atualizado com melhoria estetica em aberto:
+  - alinhar a lista de videos do criador individual ao mesmo padrao visual de
+    `YouTube > Melhores videos 7d`
+
+Validacao online:
+
+- URL documentada para o dashboard:
+  - `https://vehicle-market-media-analytics.streamlit.app/`
+- teste realizado em 2026-06-21 com proxy limpo no ambiente local:
+  - resposta HTTP `200`
+  - retorno HTML de bootstrap do Streamlit com `content_length = 7902`
+- leitura aplicada para fechamento:
+  - smoke test local: validado;
+  - validacao online: concluida no endpoint publico do app.
+
+Decisao final de pronto:
+
+- Sprint 4 fica encerrado para uso exploratorio interno;
+- a view `Hot now 24h` esta aplicada no Supabase e conectada ao Streamlit;
+- a tela local respondeu `200` no smoke test;
+- a documentacao do sprint, da execucao do dashboard e das decisoes tecnicas
+  foi atualizada para o contrato `Hot now 24h`;
+- ajustes finos adicionais de UX ficam fora do escopo obrigatorio do sprint e
+  devem seguir pelo backlog.
+
 Criterio de pronto:
 
 - SQL, Streamlit e documentacao estao coerentes;
@@ -3156,7 +3189,7 @@ Criterio de pronto:
 - [x] Etapa 2 concluida
 - [x] Etapa 3 concluida
 - [x] Etapa 4 concluida
-- [ ] Etapa 5 concluida
+- [x] Etapa 5 concluida
 
 ### Riscos e cuidados
 

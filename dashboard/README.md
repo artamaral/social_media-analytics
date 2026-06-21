@@ -12,6 +12,12 @@ Branch: codex/dashboard-streamlit-mvp
 Main file path: dashboard/streamlit_app.py
 ```
 
+URL publica atualmente usada para validacao online:
+
+```text
+https://vehicle-market-media-analytics.streamlit.app/
+```
+
 ## Rodar localmente
 
 Executar a partir da raiz do repositorio:
