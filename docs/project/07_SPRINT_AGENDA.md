@@ -2991,6 +2991,9 @@ Complemento em 2026-06-21:
 - incluida a coluna `Views totais` logo apos o bloco do video na pagina
   `YouTube > Hot now`
 - incluida no card a quantidade total de snapshots historicos do video
+- removido o chip `Idade`, porque duplicava a informacao de data/hora do
+  ultimo snapshot e podia ser confundido com idade do video
+- incluido chip `Publicado DD/MM/AAAA` logo apos o chip de tipo de video
 - observacao de uso: pela manha, os videos podem aparecer com `AC` negativo
   quando a velocidade recente fica abaixo da velocidade anterior
 - nessa situacao, o `Score` fica igual a `V6`, porque o contrato atual usa

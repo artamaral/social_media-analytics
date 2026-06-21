@@ -2908,8 +2908,8 @@ def render_youtube_hot_now_page() -> None:
     df["snapshot_count_num"] = pd.to_numeric(optional_series("snapshot_count", 0), errors="coerce").fillna(0)
     df["likes_delta_recent_num"] = pd.to_numeric(optional_series("likes_delta_recent", 0), errors="coerce").fillna(0)
     df["comments_delta_recent_num"] = pd.to_numeric(optional_series("comments_delta_recent", 0), errors="coerce").fillna(0)
-    df["latest_snapshot_age_hours_num"] = pd.to_numeric(optional_series("latest_snapshot_age_hours", 0), errors="coerce").fillna(0)
     df["latest_collected_at_dt"] = pd.to_datetime(optional_series("latest_collected_at"), errors="coerce", utc=True)
+    df["published_at_dt"] = pd.to_datetime(optional_series("published_at"), errors="coerce")
 
     df["channel_name"] = optional_series("creator_name", "").fillna("").astype(str).str.strip()
     username_series = optional_series("username", "").fillna("").astype(str).str.strip()
@@ -2976,7 +2976,7 @@ def render_youtube_hot_now_page() -> None:
         video_url = f"https://www.youtube.com/watch?v={video_id}" if video_id else ""
         thumbnail_url = f"https://i.ytimg.com/vi/{video_id}/mqdefault.jpg" if video_id else ""
         latest_snapshot = format_timestamp_br(row.get("latest_collected_at_dt"))
-        age_label = f"{float(row.get('latest_snapshot_age_hours_num') or 0):.1f}h".replace(".", ",")
+        published_label = pd.Timestamp(row["published_at_dt"]).strftime("%d/%m/%Y") if pd.notna(row.get("published_at_dt")) else "--"
         snapshot_count = row.get("snapshot_count_num")
         snapshot_count_label = format_int(snapshot_count) if snapshot_count not in (None, "", 0) else "n/d"
         if video_url:
@@ -3005,8 +3005,8 @@ def render_youtube_hot_now_page() -> None:
             f'<div class="hot-now-title">{title_html}</div>'
             '<div class="hot-now-meta">'
             f'<span class="hot-now-chip type">{escape(str(row.get("video_type_label") or "Todos"))}</span>'
+            f'<span class="hot-now-chip">Publicado {escape(published_label)}</span>'
             f'<span class="hot-now-chip">Snapshot {escape(latest_snapshot)}</span>'
-            f'<span class="hot-now-chip">Idade {escape(age_label)}</span>'
             f'<span class="hot-now-chip">Snapshots {escape(snapshot_count_label)}</span>'
             "</div>"
             "</div>"
