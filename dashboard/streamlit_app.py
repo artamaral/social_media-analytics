@@ -1090,6 +1090,44 @@ def metric_picto_html(picto: str) -> str:
             '<path class="icon-fill" d="M4 20h3V9H4zM10.5 20h3V4h-3zM17 20h3v-8h-3z"/>'
             "</svg>"
         ),
+        "SC": (
+            '<svg viewBox="0 0 24 24" aria-hidden="true">'
+            '<path d="M4 16h4l3-5 3.2 6 2.2-4H20"/>'
+            '<path class="icon-fill" d="M18.2 4.4l.8 1.7 1.8.2-1.3 1.2.3 1.8-1.6-.9-1.6.9.3-1.8-1.3-1.2 1.8-.2z"/>'
+            '<circle class="icon-fill" cx="8" cy="16" r="1.6"/>'
+            '<circle class="icon-fill" cx="14.2" cy="17" r="1.6"/>'
+            "</svg>"
+        ),
+        "VA": (
+            '<svg viewBox="0 0 24 24" aria-hidden="true">'
+            '<path d="M5 16a7 7 0 0 1 14 0"/>'
+            '<path d="M12 16l4.8-4.8"/>'
+            '<circle class="icon-fill" cx="12" cy="16" r="1.9"/>'
+            '<path d="M8 12.4h.01M12 10h.01M16 12.4h.01"/>'
+            "</svg>"
+        ),
+        "VP": (
+            '<svg viewBox="0 0 24 24" aria-hidden="true">'
+            '<path d="M5 16a7 7 0 0 1 14 0"/>'
+            '<path d="M12 16l-3.8-2.6"/>'
+            '<circle class="icon-fill" cx="12" cy="16" r="1.9"/>'
+            '<path d="M7.2 10.9l1.2 1.2M16.8 10.9l-1.2 1.2" opacity=".65"/>'
+            "</svg>"
+        ),
+        "AC": (
+            '<svg viewBox="0 0 24 24" aria-hidden="true">'
+            '<path class="icon-fill" d="M4 20h3v-5H4zM10 20h3v-8H10zM16 20h3v-11h-3z"/>'
+            '<path d="M5.5 10.5 10 8l3.3 2.2L20 4.5"/>'
+            '<path d="M16.8 4.5H20v3.2"/>'
+            "</svg>"
+        ),
+        "DV": (
+            '<svg viewBox="0 0 24 24" aria-hidden="true">'
+            '<path d="M2.5 12s3.6-5.5 9.5-5.5 9.5 5.5 9.5 5.5-3.6 5.5-9.5 5.5S2.5 12 2.5 12z"/>'
+            '<circle class="icon-fill" cx="12" cy="12" r="2.3"/>'
+            '<path d="M18.5 5.5v5M16 8h5"/>'
+            "</svg>"
+        ),
     }
     return icons.get(picto, f'<span class="metric-picto-text">{escape(picto)}</span>')
 
@@ -2949,8 +2987,8 @@ def render_youtube_hot_now_page() -> None:
             return " negative"
         return ""
 
-    video_header_icon = header_pill_icon_html("HN", "Hot now")
-    total_views_header_icon = header_pill_icon_html("VT", "Views totais")
+    video_header_icon = header_pill_icon_html("VD", "Video")
+    total_views_header_icon = header_pill_icon_html("VW", "Views totais")
     score_header_icon = header_pill_icon_html("SC", "Score")
     velocity_header_icon = header_pill_icon_html("VA", "Velocidade atual")
     previous_header_icon = header_pill_icon_html("VP", "Velocidade anterior")
