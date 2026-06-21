@@ -3107,6 +3107,13 @@ Atividades:
      decisao tecnica relevante.
 5. Definir se ajustes finos de UX viram backlog ou continuam dentro do Sprint
    4.
+   - melhoria em aberto ja identificada:
+     alinhar a lista de videos do criador individual ao mesmo padrao visual de
+     `YouTube > Melhores videos 7d`;
+   - classificacao:
+     melhoria estetica;
+   - destino:
+     backlog, sem ampliar o escopo obrigatorio do Sprint 4.
 
 Dependencias:
 
