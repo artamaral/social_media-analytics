@@ -1798,10 +1798,28 @@ def upload_fenabrave_pdf_to_storage(
             pdf_bytes,
             {"content-type": "application/pdf", "upsert": "true"},
         )
-        try:
-            payload = response.json()
-        except ValueError:
-            payload = {"storage_path": storage_path, "bucket": bucket}
+        payload = {"storage_path": storage_path, "bucket": bucket}
+        if isinstance(response, dict):
+            payload.update(response)
+        elif hasattr(response, "model_dump"):
+            payload.update(response.model_dump())
+        elif hasattr(response, "dict"):
+            payload.update(response.dict())
+        elif hasattr(response, "json"):
+            try:
+                response_payload = response.json()
+                if isinstance(response_payload, dict):
+                    payload.update(response_payload)
+            except Exception:
+                pass
+        elif hasattr(response, "__dict__"):
+            payload.update(
+                {
+                    key: value
+                    for key, value in vars(response).items()
+                    if not key.startswith("_")
+                }
+            )
         clear_supabase_data_cache()
         return payload, None
     except Exception as exc:
