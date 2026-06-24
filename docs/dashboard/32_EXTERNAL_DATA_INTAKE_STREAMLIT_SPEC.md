@@ -64,7 +64,7 @@ Fora do escopo inicial:
 - escrita direta em `public.entity_sub_niches`
 - upload/processamento automatico de PDFs da Fenabrave
 - crawler ou scraper disparado pela tela
-- uso de `SUPABASE_SERVICE_ROLE_KEY` no Streamlit
+- uso de `SUPABASE_SERVICE_ROLE_KEY` no navegador ou no frontend
 
 ## Sub-view: novo criador de conteudo
 

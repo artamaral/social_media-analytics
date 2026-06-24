@@ -1450,6 +1450,10 @@ def is_supabase_configured() -> bool:
     return bool(get_secret("SUPABASE_URL") and get_secret("SUPABASE_ANON_KEY"))
 
 
+def is_supabase_upload_configured() -> bool:
+    return bool(get_secret("SUPABASE_URL") and get_secret("SUPABASE_SERVICE_ROLE_KEY"))
+
+
 def is_creator_onboarding_configured() -> bool:
     return bool(get_secret("CREATOR_ONBOARDING_WORKER_URL") and get_secret("ONBOARDING_WORKER_TOKEN"))
 
@@ -1463,6 +1467,17 @@ def get_supabase_client():
     if not supabase_url or not supabase_anon_key:
         return None
     return create_client(supabase_url, supabase_anon_key)
+
+
+@st.cache_resource(show_spinner=False)
+def get_supabase_upload_client():
+    from supabase import create_client
+
+    supabase_url = get_secret("SUPABASE_URL")
+    supabase_service_role_key = get_secret("SUPABASE_SERVICE_ROLE_KEY")
+    if not supabase_url or not supabase_service_role_key:
+        return None
+    return create_client(supabase_url, supabase_service_role_key)
 
 
 @st.cache_data(ttl=300, show_spinner=False)
@@ -1767,12 +1782,15 @@ def upload_fenabrave_pdf_to_storage(
     storage_path: str,
     pdf_bytes: bytes,
 ) -> tuple[dict[str, Any] | None, str | None]:
-    if not is_supabase_configured():
-        return None, "Supabase ainda nao configurado. Adicione SUPABASE_URL e SUPABASE_ANON_KEY nos secrets."
+    if not is_supabase_upload_configured():
+        return None, (
+            "Upload ao Storage ainda nao configurado. "
+            "Adicione SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY nos secrets do Streamlit."
+        )
 
-    client = get_supabase_client()
+    client = get_supabase_upload_client()
     if client is None:
-        return None, "Cliente Supabase indisponivel."
+        return None, "Cliente Supabase de upload indisponivel."
 
     try:
         response = client.storage.from_(bucket).upload(
@@ -5559,7 +5577,7 @@ def render_fenabrave_intake_page() -> None:
                     "storage_path_gerado": storage_path,
                     "pasta_obrigatoria": expected_storage_prefix,
                     "uso_recomendado": "carga historica e carga mensal via Streamlit com persistencia oficial no bucket privado",
-                    "restricao": "o app precisa continuar usando credencial com permissao de upload sem expor service role ao navegador",
+                    "restricao": "o upload precisa rodar no servidor do Streamlit com SUPABASE_SERVICE_ROLE_KEY em secrets, sem expor a chave ao navegador",
                 }
             )
 

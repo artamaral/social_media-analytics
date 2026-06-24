@@ -298,12 +298,14 @@ Tarefas:
   - Supabase Python client com anon key e RLS/grants, ou
   - conexao Postgres com usuario read-only
 - criar ou validar usuario/chave de leitura
-- garantir que `SUPABASE_SERVICE_ROLE_KEY` nao sera usada no app
+- garantir que `SUPABASE_SERVICE_ROLE_KEY` nao sera exposta no frontend; uso
+  server-side em `secrets` so e aceitavel para uploads operacionais
 - configurar secrets no Streamlit Cloud:
 
 ```toml
 SUPABASE_URL = "..."
 SUPABASE_ANON_KEY = "..."
+SUPABASE_SERVICE_ROLE_KEY = "..."
 ```
 
 ou, se for conexao Postgres:

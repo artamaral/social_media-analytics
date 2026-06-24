@@ -762,7 +762,8 @@ Diretriz:
 - o upload pelo app deve usar fluxo seguro
 - o `storage_path` deve ser derivado do periodo selecionado para manter a pasta
   `fenabrave/{ano}/{mes}/`
-- o app nao deve expor `SUPABASE_SERVICE_ROLE_KEY`
+- o app nao deve expor `SUPABASE_SERVICE_ROLE_KEY` ao navegador; se o upload
+  ocorrer pelo Streamlit, a chave pode existir apenas em `secrets` do servidor
 - a versao oficial do PDF precisa continuar no bucket privado
 - a liberacao do periodo segue dependente de preview, validacao e aprovacao
   humana
