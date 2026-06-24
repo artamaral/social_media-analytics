@@ -1,6 +1,8 @@
 import hashlib
+import importlib.util
 from html import escape
 from datetime import date
+from pathlib import Path
 from typing import Any
 import unicodedata
 import re
@@ -1480,6 +1482,17 @@ def get_supabase_upload_client():
     return create_client(supabase_url, supabase_service_role_key)
 
 
+@st.cache_resource(show_spinner=False)
+def load_fenabrave_ingestion_module():
+    module_path = Path(__file__).resolve().parents[1] / "scripts" / "fenabrave_ingestion" / "ingest_fenabrave_phase1.py"
+    spec = importlib.util.spec_from_file_location("fenabrave_phase1_module", module_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Nao foi possivel carregar o modulo Fenabrave em {module_path}.")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 @st.cache_data(ttl=300, show_spinner=False)
 def load_single_row_view(view_name: str) -> dict[str, Any] | None:
     client = get_supabase_client()
@@ -1657,6 +1670,7 @@ def clear_supabase_data_cache() -> None:
     load_view_rows.clear()
     load_filtered_rows.clear()
     load_sub_niches_for_intake.clear()
+    load_fenabrave_preview_from_storage.clear()
 
 
 CREATOR_INTAKE_FORM_DEFAULTS: dict[str, Any] = {
@@ -1760,6 +1774,26 @@ def upsert_fenabrave_source_file(payload: dict[str, Any]) -> tuple[dict[str, Any
     return rows[0], None
 
 
+def build_fenabrave_upsert_payload(
+    record: dict[str, Any],
+    extraction_status: str,
+    extraction_notes: str | None = None,
+) -> dict[str, Any]:
+    return {
+        "p_reference_period": pd.Timestamp(record.get("reference_period")).strftime("%Y-%m-%d"),
+        "p_source_url": str(record.get("source_url") or ""),
+        "p_source_page_url": str(record.get("source_page_url") or ""),
+        "p_storage_bucket": str(record.get("storage_bucket") or ""),
+        "p_storage_path": str(record.get("storage_path") or ""),
+        "p_original_filename": str(record.get("original_filename") or ""),
+        "p_file_size_bytes": nullable_int(record.get("file_size_bytes")),
+        "p_sha256": str(record.get("sha256") or "") or None,
+        "p_extraction_status": extraction_status,
+        "p_extraction_method": str(record.get("extraction_method") or "pdf_table_extraction"),
+        "p_extraction_notes": extraction_notes if extraction_notes is not None else record.get("extraction_notes"),
+    }
+
+
 def normalize_fenabrave_filename(filename: str | None, reference_period: date) -> str:
     raw_name = str(filename or "").strip()
     base_name = raw_name.replace("\\", "/").split("/")[-1]
@@ -1824,6 +1858,91 @@ def upload_fenabrave_pdf_to_storage(
         return payload, None
     except Exception as exc:
         return None, f"Falha ao enviar PDF para o Storage: {exc}"
+
+
+def create_fenabrave_signed_url(
+    bucket: str,
+    storage_path: str,
+    expires_in_seconds: int = 1800,
+) -> tuple[str | None, str | None]:
+    if not is_supabase_upload_configured():
+        return None, (
+            "Abertura segura do PDF ainda nao configurada. "
+            "Adicione SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY nos secrets do Streamlit."
+        )
+
+    client = get_supabase_upload_client()
+    if client is None:
+        return None, "Cliente Supabase de upload indisponivel."
+
+    try:
+        response = client.storage.from_(bucket).create_signed_url(storage_path, expires_in_seconds)
+        signed_url = response.get("signedURL") or response.get("signed_url")
+        if not signed_url:
+            return None, "Nao foi possivel gerar a signed URL do PDF."
+        return str(signed_url), None
+    except Exception as exc:
+        return None, f"Falha ao gerar link seguro do PDF: {exc}"
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def load_fenabrave_preview_from_storage(
+    source_file_id: int,
+    reference_period_label: str,
+    storage_bucket: str,
+    storage_path: str,
+) -> dict[str, Any]:
+    if not is_supabase_upload_configured():
+        raise RuntimeError(
+            "Preview operacional indisponivel: adicione SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY nos secrets do Streamlit."
+        )
+
+    module = load_fenabrave_ingestion_module()
+    base_url = module.normalize_supabase_url(get_secret("SUPABASE_URL"))
+    supabase_service_role_key = get_secret("SUPABASE_SERVICE_ROLE_KEY")
+    if not base_url or not supabase_service_role_key:
+        raise RuntimeError("Credenciais de upload/preview indisponiveis.")
+
+    pdf_bytes = module.download_pdf_from_storage(base_url, supabase_service_role_key, storage_bucket, storage_path)
+    raw_rows = module.extract_first_page_table(pdf_bytes)
+    normalized_rows = module.normalize_rows(raw_rows, source_file_id, reference_period_label)
+    checks = module.validate_normalized_rows(normalized_rows)
+    return {
+        "pdf_size_bytes": len(pdf_bytes),
+        "pdf_sha256": hashlib.sha256(pdf_bytes).hexdigest(),
+        "raw_rows": raw_rows,
+        "normalized_rows": normalized_rows,
+        "checks": checks,
+    }
+
+
+def get_fenabrave_preview_from_storage(record: dict[str, Any] | None) -> tuple[dict[str, Any] | None, str | None]:
+    if record is None:
+        return None, "Selecione ou registre um periodo Fenabrave antes de gerar o preview."
+
+    source_file_id = nullable_int(record.get("source_file_id"))
+    reference_period = record.get("reference_period")
+    storage_bucket = str(record.get("storage_bucket") or "").strip()
+    storage_path = str(record.get("storage_path") or "").strip()
+
+    if source_file_id is None:
+        return None, "Registro Fenabrave sem source_file_id."
+    if not reference_period:
+        return None, "Registro Fenabrave sem reference_period."
+    if not storage_bucket or not storage_path:
+        return None, "Registro Fenabrave sem bucket/path do PDF."
+
+    try:
+        reference_period_label = pd.Timestamp(reference_period).strftime("%Y-%m-%d")
+        payload = load_fenabrave_preview_from_storage(
+            source_file_id,
+            reference_period_label,
+            storage_bucket,
+            storage_path,
+        )
+        return payload, None
+    except Exception as exc:
+        return None, f"Falha ao gerar preview operacional: {exc}"
 
 
 def trigger_creator_onboarding(creator_id: int) -> tuple[dict[str, Any] | None, str | None]:
@@ -5396,7 +5515,7 @@ def render_fenabrave_intake_page() -> None:
     process_step_grid(step_cards)
 
     tab_monthly, tab_review, tab_rules = st.tabs(
-        ["Rotina mensal", "Simulacao de status", "Regras da governanca"]
+        ["Rotina mensal", "Validador de status", "Regras da governanca"]
     )
 
     with tab_monthly:
@@ -5424,6 +5543,16 @@ def render_fenabrave_intake_page() -> None:
             if st.button("Confirmar fonte mensal", use_container_width=False):
                 st.session_state["fenabrave_source_confirmed"] = True
                 st.rerun()
+
+            current_record = get_fenabrave_record_for_period(recent_records, reference_period)
+            preview_payload, preview_error = get_fenabrave_preview_from_storage(current_record)
+            signed_pdf_url = None
+            signed_pdf_url_error = None
+            if current_record and current_record.get("storage_bucket") and current_record.get("storage_path"):
+                signed_pdf_url, signed_pdf_url_error = create_fenabrave_signed_url(
+                    str(current_record.get("storage_bucket")),
+                    str(current_record.get("storage_path")),
+                )
 
             st.markdown("### 2. Carregar PDF do mes")
             uploaded_pdf = st.file_uploader(
@@ -5508,16 +5637,79 @@ def render_fenabrave_intake_page() -> None:
                     st.rerun()
 
             st.markdown("### 4. Preview operacional")
+            if current_record is not None:
+                compare_col, action_col = st.columns([1.15, 1])
+                with compare_col:
+                    if signed_pdf_url:
+                        st.link_button("Abrir PDF real para comparativo", signed_pdf_url, use_container_width=False)
+                        st.caption("Link temporario do arquivo real salvo no bucket privado.")
+                    elif signed_pdf_url_error:
+                        st.warning(signed_pdf_url_error)
+                with action_col:
+                    if current_record:
+                        current_status_label = str(current_record.get("extraction_status") or "stored")
+                        st.caption(f"Status real atual do periodo: `{current_status_label}`")
+
+            if preview_payload and preview_payload.get("normalized_rows"):
+                normalized_df = pd.DataFrame(preview_payload["normalized_rows"])
+                normalized_df = normalized_df.rename(
+                    columns={
+                        "segmento": "segment_label",
+                        "mes_atual": "monthly_units",
+                    }
+                )
+                preview_columns = [
+                    column
+                    for column in ["segment_code", "segment_label", "monthly_units"]
+                    if column in normalized_df.columns
+                ]
+                st.dataframe(normalized_df[preview_columns], use_container_width=True, hide_index=True)
+
+                if preview_payload.get("checks"):
+                    checks_df = pd.DataFrame(preview_payload["checks"]).rename(
+                        columns={
+                            "check_name": "check",
+                            "calculated_value": "calculated",
+                            "expected_value": "expected",
+                            "difference": "difference",
+                            "passed": "passed",
+                            "severity": "severity",
+                            "notes": "notes",
+                        }
+                    )
+                    st.markdown("#### Checks estruturais")
+                    st.dataframe(checks_df, use_container_width=True, hide_index=True)
+
+                if current_record is not None and st.button("Marcar preview real como revisado", use_container_width=False):
+                    notes = (
+                        "Preview operacional revisado via Cadastro Fenabrave no Streamlit. "
+                        f"PDF={preview_payload.get('pdf_sha256')}."
+                    )
+                    saved_row, save_error = upsert_fenabrave_source_file(
+                        build_fenabrave_upsert_payload(current_record, "extracted", notes)
+                    )
+                    if save_error:
+                        st.error(save_error)
+                    else:
+                        st.session_state["fenabrave_preview_ready"] = True
+                        st.success("Status real do periodo atualizado para extracted apos revisao do preview.")
+                        st.json(saved_row)
+                        st.rerun()
+            elif preview_error:
+                st.warning(preview_error)
+            else:
+                st.info("Ainda nao foi possivel gerar o preview operacional real a partir do PDF salvo.")
+
             preview_rows = get_fenabrave_preview_rows(reference_period)
             if preview_rows:
-                preview_df = pd.DataFrame(preview_rows)
-                preview_columns = [column for column in ["segment_code", "segment_label", "monthly_units", "current_year_accumulated_units"] if column in preview_df.columns]
-                st.dataframe(preview_df[preview_columns], use_container_width=True, hide_index=True)
-            else:
-                st.info("Nenhum preview real disponivel para o periodo selecionado nesta tela. O preview operacional continua no fluxo do script offline.")
-            if st.button("Marcar preview como revisado", use_container_width=False):
-                st.session_state["fenabrave_preview_ready"] = True
-                st.rerun()
+                persisted_df = pd.DataFrame(preview_rows)
+                persisted_columns = [
+                    column
+                    for column in ["segment_code", "segment_label", "monthly_units", "current_year_accumulated_units"]
+                    if column in persisted_df.columns
+                ]
+                st.markdown("#### Dados persistidos da view analitica")
+                st.dataframe(persisted_df[persisted_columns], use_container_width=True, hide_index=True)
 
         with right:
             st.markdown("### Leitura da rotina")
@@ -5592,6 +5784,8 @@ def render_fenabrave_intake_page() -> None:
                     "pdf_upload_viavel": True,
                     "nome_arquivo": uploaded_name,
                     "tamanho_bytes": uploaded_size,
+                    "pdf_sha256_preview": preview_payload.get("pdf_sha256") if preview_payload else None,
+                    "pdf_size_preview_bytes": preview_payload.get("pdf_size_bytes") if preview_payload else None,
                     "storage_path_gerado": storage_path,
                     "pasta_obrigatoria": expected_storage_prefix,
                     "uso_recomendado": "carga historica e carga mensal via Streamlit com persistencia oficial no bucket privado",
@@ -5605,21 +5799,77 @@ def render_fenabrave_intake_page() -> None:
                 st.success("A rotina operacional do periodo esta completa e pronta para seguir para validacao final.")
 
     with tab_review:
-        st.markdown("### Periodos registrados em market_source_files")
+        st.markdown("### Validador operacional do periodo")
         flow_col1, flow_col2, flow_col3, flow_col4 = st.columns(4)
 
         with flow_col1:
-            if st.button("Confirmar fonte", use_container_width=True):
-                st.session_state["fenabrave_source_confirmed"] = True
+            if st.button("Marcar stored", use_container_width=True, disabled=current_record is None):
+                if current_record is not None:
+                    saved_row, save_error = upsert_fenabrave_source_file(
+                        build_fenabrave_upsert_payload(
+                            current_record,
+                            "stored",
+                            "Status atualizado via validador operacional no Streamlit.",
+                        )
+                    )
+                    if save_error:
+                        st.error(save_error)
+                    else:
+                        st.success("Periodo atualizado para stored.")
+                        st.json(saved_row)
+                        st.rerun()
         with flow_col2:
-            if st.button("Registrar metadados", use_container_width=True):
-                st.session_state["fenabrave_metadata_registered"] = True
+            if st.button("Marcar extracted", use_container_width=True, disabled=current_record is None):
+                if current_record is not None:
+                    saved_row, save_error = upsert_fenabrave_source_file(
+                        build_fenabrave_upsert_payload(
+                            current_record,
+                            "extracted",
+                            "Preview operacional revisado via validador no Streamlit.",
+                        )
+                    )
+                    if save_error:
+                        st.error(save_error)
+                    else:
+                        st.success("Periodo atualizado para extracted.")
+                        st.json(saved_row)
+                        st.rerun()
         with flow_col3:
-            if st.button("Validar preview", use_container_width=True):
-                st.session_state["fenabrave_preview_ready"] = True
+            if st.button("Marcar normalized", use_container_width=True, disabled=current_record is None):
+                if current_record is not None:
+                    saved_row, save_error = upsert_fenabrave_source_file(
+                        build_fenabrave_upsert_payload(
+                            current_record,
+                            "normalized",
+                            "Carga analitica sinalizada via validador no Streamlit.",
+                        )
+                    )
+                    if save_error:
+                        st.error(save_error)
+                    else:
+                        st.success("Periodo atualizado para normalized.")
+                        st.json(saved_row)
+                        st.rerun()
         with flow_col4:
-            if st.button("Aprovar periodo", use_container_width=True):
-                st.session_state["fenabrave_validated"] = True
+            if st.button("Marcar validated", use_container_width=True, disabled=current_record is None):
+                if current_record is not None:
+                    saved_row, save_error = upsert_fenabrave_source_file(
+                        build_fenabrave_upsert_payload(
+                            current_record,
+                            "validated",
+                            "Periodo aprovado via validador operacional no Streamlit.",
+                        )
+                    )
+                    if save_error:
+                        st.error(save_error)
+                    else:
+                        st.success("Periodo atualizado para validated.")
+                        st.json(saved_row)
+                        st.rerun()
+
+        if current_record is not None:
+            st.markdown("### Registro real do periodo selecionado")
+            st.json(current_record)
 
         if recent_records:
             review_card_grid(
