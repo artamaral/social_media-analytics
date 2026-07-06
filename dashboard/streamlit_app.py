@@ -875,6 +875,17 @@ def inject_theme() -> None:
             overflow-wrap: anywhere;
         }
 
+        .creator-ranking-title-link {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .creator-ranking-title-link:hover {
+            text-decoration: underline;
+            text-decoration-color: var(--accent);
+            text-underline-offset: 0.14em;
+        }
+
         .creator-ranking-meta {
             color: var(--muted);
             font-size: 0.82rem;
@@ -4316,6 +4327,24 @@ def get_engagement_rank(rows: list[dict[str, Any]], entity_name: str) -> tuple[i
     return total, total
 
 
+def build_creator_channel_url(row: dict[str, Any]) -> str:
+    platform = str(row.get("platform") or "").strip().lower()
+    if platform != "youtube":
+        return ""
+
+    channel_id = str(row.get("channel_id") or "").strip()
+    if channel_id:
+        if channel_id.startswith(("http://", "https://")):
+            return channel_id
+        return f"https://www.youtube.com/channel/{channel_id}"
+
+    username_value = str(row.get("username") or "").strip().lstrip("@")
+    if username_value:
+        return f"https://www.youtube.com/@{username_value}"
+
+    return ""
+
+
 def format_ordinal_rank(position: int) -> str:
     return f"{position}º"
 
@@ -5412,13 +5441,21 @@ def render_creator_overview_page() -> None:
             if avatar_url
             else f'<div class="creator-ranking-avatar">{avatar_fallback}</div>'
         )
-        creator_channel_url = ""
-        if str(row.get("platform") or "").strip().lower() == "youtube" and username_value and username_value != "sem_username":
-            creator_channel_url = f"https://www.youtube.com/@{username_value}"
+        creator_channel_url = build_creator_channel_url(row)
+        creator_link_attrs = (
+            f' href="{escape(creator_channel_url)}" target="_blank" rel="noopener noreferrer" aria-label="Abrir canal de {escape(entity_name)}"'
+            if creator_channel_url
+            else ""
+        )
         avatar_html = (
-            f'<a class="creator-ranking-avatar-link" href="{escape(creator_channel_url)}" target="_blank" rel="noopener noreferrer" aria-label="Abrir canal de {escape(entity_name)}">{avatar_core_html}</a>'
+            f'<a class="creator-ranking-avatar-link"{creator_link_attrs}>{avatar_core_html}</a>'
             if creator_channel_url
             else avatar_core_html
+        )
+        title_html = (
+            f'<a class="creator-ranking-title-link"{creator_link_attrs}>{escape(entity_name)}</a>'
+            if creator_channel_url
+            else f'<div class="creator-ranking-title">{escape(entity_name)}</div>'
         )
         ranking_items.append(
             (
@@ -5426,7 +5463,7 @@ def render_creator_overview_page() -> None:
                 '<div class="creator-ranking-main">'
                 f'{avatar_html}'
                 '<div class="creator-ranking-copy">'
-                f'<div class="creator-ranking-title">{escape(entity_name)}</div>'
+                f'{title_html}'
                 f'<div class="creator-ranking-meta">{escape(niche_name)} | {escape(platform_name)} | @{escape(username_value)}</div>'
                 '</div>'
                 '</div>'
