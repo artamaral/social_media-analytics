@@ -5613,22 +5613,11 @@ def render_fenabrave_intake_page() -> None:
             )
 
             st.markdown("### 3. Registrar metadados")
-            default_filename = uploaded_pdf.name if uploaded_pdf is not None else (
-                str(current_record.get("original_filename")) if current_record and current_record.get("original_filename") else fallback_pdf_name
-            )
+            default_filename = uploaded_pdf.name if uploaded_pdf is not None else fallback_pdf_name
             normalized_filename = normalize_fenabrave_filename(default_filename, reference_period)
-            storage_path = (
-                str(current_record.get("storage_path"))
-                if current_record and current_record.get("storage_path") and uploaded_pdf is None
-                else build_fenabrave_storage_path(reference_period, normalized_filename)
-            )
             storage_bucket = st.text_input("Storage bucket", value=str(current_record.get("storage_bucket")) if current_record and current_record.get("storage_bucket") else "market-source-files")
             original_filename = st.text_input("Nome original do arquivo", value=normalized_filename)
-            storage_path = (
-                str(current_record.get("storage_path"))
-                if current_record and current_record.get("storage_path") and uploaded_pdf is None
-                else build_fenabrave_storage_path(reference_period, original_filename)
-            )
+            storage_path = build_fenabrave_storage_path(reference_period, original_filename)
             expected_storage_prefix = pd.Timestamp(reference_period).strftime("fenabrave/%Y/%m/")
             st.caption(f"Pasta obrigatoria do periodo selecionado: `{expected_storage_prefix}`")
             st.code(storage_path)
@@ -5668,8 +5657,8 @@ def render_fenabrave_intake_page() -> None:
                     "p_storage_bucket": storage_bucket,
                     "p_storage_path": storage_path,
                     "p_original_filename": original_filename,
-                    "p_file_size_bytes": uploaded_pdf.size if uploaded_pdf is not None else current_record.get("file_size_bytes") if current_record else None,
-                    "p_sha256": hashlib.sha256(uploaded_pdf.getvalue()).hexdigest() if uploaded_pdf is not None else current_record.get("sha256") if current_record else None,
+                    "p_file_size_bytes": uploaded_pdf.size if uploaded_pdf is not None else None,
+                    "p_sha256": hashlib.sha256(uploaded_pdf.getvalue()).hexdigest() if uploaded_pdf is not None else None,
                     "p_extraction_status": extraction_status,
                     "p_extraction_method": extraction_method,
                     "p_extraction_notes": "Metadados preparados via Cadastro Fenabrave no Streamlit.",
