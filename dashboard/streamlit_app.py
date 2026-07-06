@@ -5596,7 +5596,6 @@ def render_fenabrave_intake_page() -> None:
                 st.rerun()
 
             current_record = get_fenabrave_record_for_period(recent_records, reference_period)
-            preview_payload, preview_error = get_fenabrave_preview_from_storage(current_record)
             signed_pdf_url = None
             signed_pdf_url_error = None
             if current_record and current_record.get("storage_bucket") and current_record.get("storage_path"):
@@ -5676,19 +5675,40 @@ def render_fenabrave_intake_page() -> None:
                     st.json(saved_row)
                     st.rerun()
 
+            preview_source_file_id = nullable_int(current_record.get("source_file_id")) if current_record else -1
+            preview_record = {
+                "source_file_id": preview_source_file_id if preview_source_file_id is not None else -1,
+                "reference_period": reference_period,
+                "source_url": source_url,
+                "source_page_url": source_page_url,
+                "storage_bucket": storage_bucket,
+                "storage_path": storage_path,
+                "original_filename": original_filename,
+                "extraction_method": extraction_method,
+            }
+
             st.markdown("### 4. Preview operacional")
-            if current_record is not None:
+            if preview_record is not None:
                 compare_col, action_col = st.columns([1.15, 1])
                 with compare_col:
-                    if signed_pdf_url:
-                        st.link_button("Abrir PDF real para comparativo", signed_pdf_url, use_container_width=False)
+                    preview_signed_pdf_url = None
+                    preview_signed_pdf_url_error = None
+                    if storage_bucket and storage_path:
+                        preview_signed_pdf_url, preview_signed_pdf_url_error = create_fenabrave_signed_url(
+                            storage_bucket,
+                            storage_path,
+                        )
+                    if preview_signed_pdf_url:
+                        st.link_button("Abrir PDF real para comparativo", preview_signed_pdf_url, use_container_width=False)
                         st.caption("Link temporario do arquivo real salvo no bucket privado.")
-                    elif signed_pdf_url_error:
-                        st.warning(signed_pdf_url_error)
+                    elif preview_signed_pdf_url_error:
+                        st.warning(preview_signed_pdf_url_error)
                 with action_col:
                     if current_record:
                         current_status_label = str(current_record.get("extraction_status") or "stored")
                         st.caption(f"Status real atual do periodo: `{current_status_label}`")
+
+            preview_payload, preview_error = get_fenabrave_preview_from_storage(preview_record)
 
             if preview_payload and preview_payload.get("normalized_rows"):
                 normalized_df = pd.DataFrame(preview_payload["normalized_rows"])
@@ -5762,7 +5782,7 @@ def render_fenabrave_intake_page() -> None:
             elif preview_error:
                 st.warning(preview_error)
             else:
-                st.info("Ainda nao foi possivel gerar o preview operacional real a partir do PDF salvo.")
+                    st.info("Ainda nao foi possivel gerar o preview operacional real a partir do PDF salvo.")
 
             preview_rows = get_fenabrave_preview_rows(reference_period)
             if preview_rows:
