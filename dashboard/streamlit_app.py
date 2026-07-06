@@ -1459,6 +1459,17 @@ def get_secret(name: str) -> str | None:
     return str(value).strip() or None
 
 
+def normalize_fenabrave_reference_period(value: Any) -> date:
+    timestamp = pd.Timestamp(value)
+    first_day_of_month = timestamp.to_period("M").to_timestamp().date()
+    return first_day_of_month
+
+
+def get_default_fenabrave_reference_period() -> date:
+    today = pd.Timestamp.today().normalize()
+    return (today.to_period("M").to_timestamp() - pd.offsets.MonthBegin(1)).date()
+
+
 def is_supabase_configured() -> bool:
     return bool(get_secret("SUPABASE_URL") and get_secret("SUPABASE_ANON_KEY"))
 
@@ -1790,8 +1801,9 @@ def build_fenabrave_upsert_payload(
     extraction_status: str,
     extraction_notes: str | None = None,
 ) -> dict[str, Any]:
+    normalized_reference_period = normalize_fenabrave_reference_period(record.get("reference_period"))
     return {
-        "p_reference_period": pd.Timestamp(record.get("reference_period")).strftime("%Y-%m-%d"),
+        "p_reference_period": pd.Timestamp(normalized_reference_period).strftime("%Y-%m-%d"),
         "p_source_url": str(record.get("source_url") or ""),
         "p_source_page_url": str(record.get("source_page_url") or ""),
         "p_storage_bucket": str(record.get("storage_bucket") or ""),
@@ -1944,7 +1956,7 @@ def get_fenabrave_preview_from_storage(record: dict[str, Any] | None) -> tuple[d
         return None, "Registro Fenabrave sem bucket/path do PDF."
 
     try:
-        reference_period_label = pd.Timestamp(reference_period).strftime("%Y-%m-%d")
+        reference_period_label = pd.Timestamp(normalize_fenabrave_reference_period(reference_period)).strftime("%Y-%m-%d")
         payload = load_fenabrave_preview_from_storage(
             source_file_id,
             reference_period_label,
@@ -4071,13 +4083,13 @@ def get_fenabrave_record_for_period(
     records: list[dict[str, Any]],
     reference_period: date,
 ) -> dict[str, Any] | None:
-    target_label = pd.Timestamp(reference_period).strftime("%Y-%m-%d")
+    target_label = pd.Timestamp(normalize_fenabrave_reference_period(reference_period)).strftime("%Y-%m-%d")
     for row in records:
         row_period_raw = row.get("reference_period")
         if row_period_raw in (None, ""):
             continue
         try:
-            row_period = pd.Timestamp(row_period_raw).strftime("%Y-%m-%d")
+            row_period = pd.Timestamp(normalize_fenabrave_reference_period(row_period_raw)).strftime("%Y-%m-%d")
         except Exception:
             continue
         if row_period == target_label:
@@ -4086,7 +4098,7 @@ def get_fenabrave_record_for_period(
 
 
 def get_fenabrave_preview_rows(reference_period: date) -> list[dict[str, Any]]:
-    period_label = pd.Timestamp(reference_period).strftime("%Y-%m-%d")
+    period_label = pd.Timestamp(normalize_fenabrave_reference_period(reference_period)).strftime("%Y-%m-%d")
     rows, error = get_filtered_rows(
         "v_dashboard_fenabrave_monthly_segments",
         filters=(("reference_period", period_label),),
@@ -5560,14 +5572,16 @@ def render_fenabrave_intake_page() -> None:
 
         with left:
             st.markdown("### 1. Confirmar publicacao do mes anterior")
-            default_reference_period = pd.Timestamp("2026-05-01").date()
+            default_reference_period = get_default_fenabrave_reference_period()
             reference_period = st.date_input(
                 "Periodo de referencia",
                 value=default_reference_period,
                 format="DD/MM/YYYY",
             )
+            reference_period = normalize_fenabrave_reference_period(reference_period)
             current_record = get_fenabrave_record_for_period(recent_records, reference_period)
-            default_source_url = str(current_record.get("source_url")) if current_record else "https://www.fenabrave.org.br/portal/files/2026_05_02.pdf"
+            fallback_pdf_name = pd.Timestamp(reference_period).strftime("%Y_%m_02.pdf")
+            default_source_url = str(current_record.get("source_url")) if current_record else f"https://www.fenabrave.org.br/portal/files/{fallback_pdf_name}"
             default_source_page_url = str(current_record.get("source_page_url")) if current_record and current_record.get("source_page_url") else "https://www.fenabrave.org.br/portalv2/Conteudo/Emplacamentos%20"
             source_url = st.text_input(
                 "URL oficial do PDF",
@@ -5600,7 +5614,7 @@ def render_fenabrave_intake_page() -> None:
 
             st.markdown("### 3. Registrar metadados")
             default_filename = uploaded_pdf.name if uploaded_pdf is not None else (
-                str(current_record.get("original_filename")) if current_record and current_record.get("original_filename") else "2026_05_02.pdf"
+                str(current_record.get("original_filename")) if current_record and current_record.get("original_filename") else fallback_pdf_name
             )
             normalized_filename = normalize_fenabrave_filename(default_filename, reference_period)
             storage_path = (
@@ -5732,6 +5746,30 @@ def render_fenabrave_intake_page() -> None:
                         st.success("Status real do periodo atualizado para extracted apos revisao do preview.")
                         st.json(saved_row)
                         st.rerun()
+                if current_record is not None and st.button("Gravar dados analiticos no Supabase", use_container_width=False):
+                    module = load_fenabrave_ingestion_module()
+                    base_url = module.normalize_supabase_url(get_secret("SUPABASE_URL"))
+                    supabase_service_role_key = get_secret("SUPABASE_SERVICE_ROLE_KEY")
+                    if not base_url or not supabase_service_role_key:
+                        st.error("Adicione SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY nos secrets do Streamlit.")
+                    else:
+                        try:
+                            headers = module.build_headers(supabase_service_role_key)
+                            module.write_results(
+                                base_url,
+                                headers,
+                                int(current_record["source_file_id"]),
+                                preview_payload["normalized_rows"],
+                                preview_payload["checks"],
+                                True,
+                            )
+                        except Exception as exc:
+                            st.error(f"Falha ao gravar os dados analiticos: {exc}")
+                        else:
+                            st.session_state["fenabrave_preview_ready"] = True
+                            st.session_state["fenabrave_validated"] = True
+                            st.success("Dados analiticos gravados em market_vehicle_registrations_segment e view atualizada.")
+                            st.rerun()
             elif preview_error:
                 st.warning(preview_error)
             else:
