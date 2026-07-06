@@ -215,7 +215,8 @@ Componentes:
 - seis blocos de consolidado por categoria
 - picto por categoria inspirado no padrao visual da tabela Fenabrave
 - valor mensal do ultimo periodo disponivel
-- acumulado do ano por categoria
+- acumulado do ano por categoria, reiniciado a cada ano calendario
+- os cards nao devem somar todos os arquivos carregados; devem refletir apenas o acumulado do ano do periodo corrente
 - grafico de barras mensal por categoria
 
 View recomendada:

@@ -33,7 +33,7 @@
 
 - [ ] App Streamlit online consumindo Supabase sob demanda
 - [ ] Tela inicial com status de qualidade dos dados
-- [ ] Ajustar a view Fenabrave consumida pelo Streamlit para tambem exibir os periodos de 2025, garantindo leitura historica alem de 2026.
+- [ ] Evoluir a view Fenabrave consumida pelo Streamlit para exibir o historico anual completo por periodo, garantindo leitura de 2025 e 2026, com cards mostrando o acumulado do ano por categoria e nao a soma de todos os arquivos carregados.
 - [ ] Ranking de creators por views, engajamento e frequencia
 - [ ] Ranking semanal de crescimento de videos
 - [ ] Melhoria estetica: alinhar a lista de videos do criador individual ao mesmo padrao visual de `YouTube > Melhores videos 7d`, com hierarquia, colunas e leitura comparavel entre as duas telas.
