@@ -1147,3 +1147,65 @@ Impacto esperado:
 - menor acoplamento entre telas analiticas e sinalizacao operacional
 - preservacao da view `Data quality` como superficie oficial de diagnostico
 - governanca mais clara entre roadmap, decisoes tecnicas e agenda de execucao
+
+---
+
+## Fenabrave fase 2 por itens, nao por parser unico do PDF
+
+Data:
+
+- 2026-07-07
+
+Decisao:
+
+- implementar a expansao Fenabrave em blocos por item do PDF, com parser,
+  preview, validacao e backfill especificos para cada item
+- nao criar um parser generico para todo o PDF Fenabrave nesta etapa
+- iniciar a execucao pelo item 1 da fase 2:
+  `Ranking dos emplacamentos mes`, pagina 6, automoveis e comerciais leves
+- manter os itens 2 e 3 no backlog como pendencias explicitas:
+  - item 2: localizar e validar corretamente o ranking acumulado antes de
+    implementar, pois ele nao foi encontrado na pagina 6 pelo teste de texto e
+    tabelas
+  - item 3: implementar apos o item 1, aproveitando que o teste da pagina 8
+    indicou boa extraibilidade, mas sem misturar a primeira entrega
+- deixar paginas com graficos ou associacao visual ambigua fora da primeira
+  carga automatizada
+
+Evidencia:
+
+- teste exploratorio com o PDF oficial `2026_06_02.pdf`, baixado da URL publica
+  da Fenabrave em 2026-07-06
+- resultado geral dos 20 itens avaliados:
+  - `10` itens com extracao inicial OK
+  - `3` itens com warning
+  - `7` itens com falha ou baixa confiabilidade
+- paginas com boa extracao textual inicial:
+  - `6`, `8`, `9`, `20`, `30`, `31`, `32`, `33`
+- paginas com problemas relevantes:
+  - `24` e `25`: percentuais aparecem, mas a associacao visual entre categoria
+    e canal precisa revisao manual
+  - `26` a `29`: conteudo aparece como grafico; texto sai invertido ou fora de
+    ordem
+  - item 2, item 9 e item 10: nao foram localizados nas paginas informadas pelo
+    metodo de texto/tabelas usado no teste
+
+Motivo:
+
+- o PDF combina tabelas reais, texto bem estruturado, blocos graficos e paginas
+  cujo significado depende de leitura visual
+- uma extracao unica aumentaria o risco de persistir dados aparentemente
+  estruturados, mas semanticamente errados
+- uma implantacao por item permite validar cada pagina com criterio proprio,
+  fazer backfill historico com menor risco e registrar excecoes sem bloquear os
+  itens confiaveis
+
+Diretriz de implementacao:
+
+- criar ou usar uma camada de controle por `source_file_id` e `item_code` para
+  registrar status, quantidade de linhas, validacoes e pendencias
+- implementar primeiro o item 1 com parser dedicado para a pagina 6
+- carregar o historico por item para todos os PDFs ja preservados, antes de
+  avanca-lo como fonte confiavel para dashboard ou API
+- tratar os itens posteriores como extensoes independentes, cada um com plano,
+  validacao e criterio de aceite proprios

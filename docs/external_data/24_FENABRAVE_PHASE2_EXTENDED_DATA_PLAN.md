@@ -372,6 +372,22 @@ Regra operacional:
 - `--replace` deve substituir somente o item em reprocessamento
 - a rotina mensal deve mostrar claramente quais itens estao pendentes
 
+Contrato de automacao mensal:
+
+- todo item da fase 2 que for implementado deixa de ser uma extracao avulsa e
+  passa a fazer parte da inclusao mensal padrao da Fenabrave
+- apos o upload/registro do PDF mensal e a validacao da fase 1, a rotina deve
+  executar automaticamente todos os itens da fase 2 marcados como ativos
+- cada item ativo deve gravar seus dados no banco, atualizar
+  `market_fenabrave_extraction_items` e expor status de sucesso, warning ou
+  falha para o periodo
+- falhas em itens ativos devem aparecer como pendencia operacional do mes, nao
+  como ausencia silenciosa de dados
+- a automacao mensal deve permitir reprocessamento por item e por periodo, sem
+  duplicar linhas e sem apagar dados de outros itens
+- itens ainda nao implementados ficam como backlog ou `pending`, mas nao devem
+  impedir a carga mensal dos itens ja ativos
+
 ## Metodo para validar PDFs ja carregados, mas ainda nao persistidos
 
 Criar uma auditoria de cobertura por periodo e por item.

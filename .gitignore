@@ -6,3 +6,4 @@ scripts/offline_backfill/logs/*.log
 scripts/carrosnaweb_ingestion/data/
 scripts/queue_simulation/output/
 scripts/queue_simulation/output_*/
+tmp/

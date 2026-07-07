@@ -34,6 +34,9 @@
 - [ ] App Streamlit online consumindo Supabase sob demanda
 - [ ] Tela inicial com status de qualidade dos dados
 - [ ] Evoluir a view Fenabrave consumida pelo Streamlit para exibir o historico anual completo por periodo, garantindo leitura de 2025 e 2026, com cards mostrando o acumulado do ano por categoria e nao a soma de todos os arquivos carregados.
+- [ ] ATIVIDADE ATUAL E PRIORITARIA: implementar o item 1 da fase 2 Fenabrave, `Ranking dos emplacamentos mes` da pagina 6, para automoveis e comerciais leves, seguindo o plano em `docs/external_data/25_FENABRAVE_PHASE2_ITEM1_RANKING_EMPLACAMENTOS_MES_PLAN.md`.
+- [ ] Pendencia Fenabrave fase 2 item 2: localizar e validar corretamente o `Ranking dos emplacamentos acumulado`, pois o teste exploratorio de junho/2026 nao encontrou esse dado na pagina 6 usando texto/tabelas do PDF.
+- [ ] Pendencia Fenabrave fase 2 item 3: implementar `Ranking por marca mes` da pagina 8 apos a entrega do item 1, aproveitando a boa extraibilidade observada no teste de junho/2026, mas mantendo entrega e validacao separadas.
 - [ ] Ranking de creators por views, engajamento e frequencia
 - [ ] Ranking semanal de crescimento de videos
 - [ ] Melhoria estetica: alinhar a lista de videos do criador individual ao mesmo padrao visual de `YouTube > Melhores videos 7d`, com hierarquia, colunas e leitura comparavel entre as duas telas.
