@@ -34,7 +34,7 @@
 - [ ] App Streamlit online consumindo Supabase sob demanda
 - [ ] Tela inicial com status de qualidade dos dados
 - [ ] Evoluir a view Fenabrave consumida pelo Streamlit para exibir o historico anual completo por periodo, garantindo leitura de 2025 e 2026, com cards mostrando o acumulado do ano por categoria e nao a soma de todos os arquivos carregados.
-- [ ] ATIVIDADE ATUAL E PRIORITARIA: implementar o item 1 da fase 2 Fenabrave, `Ranking dos emplacamentos mes` da pagina 6, para automoveis e comerciais leves, seguindo o plano em `docs/external_data/25_FENABRAVE_PHASE2_ITEM1_RANKING_EMPLACAMENTOS_MES_PLAN.md`.
+- [ ] ATIVIDADE ATUAL E PRIORITARIA: iniciar o item 2 da fase 2 Fenabrave, `Ranking dos emplacamentos acumulado`, confirmando a localizacao correta no PDF, definindo o parser, as validacoes e o backfill historico antes da liberacao operacional.
 - [ ] Pendencia Fenabrave fase 2 item 2: localizar e validar corretamente o `Ranking dos emplacamentos acumulado`, pois o teste exploratorio de junho/2026 nao encontrou esse dado na pagina 6 usando texto/tabelas do PDF.
 - [ ] Pendencia Fenabrave fase 2 item 3: implementar `Ranking por marca mes` da pagina 8 apos a entrega do item 1, aproveitando a boa extraibilidade observada no teste de junho/2026, mas mantendo entrega e validacao separadas.
 - [ ] Ranking de creators por views, engajamento e frequencia
@@ -55,3 +55,4 @@
 - [x] Tratar videos indisponiveis na YouTube API para evitar posts presos na fila. Implementado com `post_collection_failures`, RPC `register_post_collection_result(...)`, view `v_dashboard_unavailable_video_review`, exclusao de `status = unavailable` da fila ativa e processo de confirmacao manual documentado em `docs/social_media/27_UNAVAILABLE_VIDEO_HANDLING_SPEC.md`.
 - [x] Criar limpeza temporaria do backlog de guardrail. Implementado no script `scripts/offline_backfill/legacy_low_backfill_phase1.py`, documentado em `docs/social_media/25_MINIMUM_HISTORY_COVERAGE_GUARDRAIL_SPEC.md` e em execucao controlada via scheduler `guardrail-cleanup-backfill`.
 - [x] Manter `priority_score_v2` em modo analitico/segundo plano. Decisao registrada em `docs/project/05_DECISOES_TECNICAS.md`; o `v2` nao deve ser promovido para a fila ativa enquanto o foco for analise temporal de videos quentes no momento.
+- [x] Finalizar o item 1 da fase 2 Fenabrave, `Ranking dos emplacamentos mes` da pagina 6, para automoveis e comerciais leves, com parser integrado a rotina mensal, preview no Streamlit, persistencia no banco e backfill historico validado para `12/2025` a `06/2026`, conforme `docs/external_data/25_FENABRAVE_PHASE2_ITEM1_RANKING_EMPLACAMENTOS_MES_PLAN.md` e `docs/external_data/24_FENABRAVE_PHASE2_EXTENDED_DATA_PLAN.md`.

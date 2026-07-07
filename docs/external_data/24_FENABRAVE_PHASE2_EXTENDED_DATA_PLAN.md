@@ -608,6 +608,77 @@ Um item so pode ser considerado concluido quando:
 | Dados misturados entre meses | validar `reference_period` contra storage path e nome original |
 | Reprocessamento duplicar linhas | exigir chaves unicas por item e modo replace por item |
 
+## Nota operacional
+
+### Dezembro de 2025
+
+Na execucao real do item 1, foi identificado que dezembro/2025 possuia
+inconsistencia historica em `market_source_files`:
+
+- dois registros para o mesmo PDF oficial, `id = 8` e `id = 17`
+- `id = 17` como registro mensal canonico com `reference_period = 2025-12-01`
+- `id = 8` como registro legado duplicado com `reference_period = 2025-12-02`
+- ambos apontavam para `storage_path` incorreto
+  `fenabrave/2025/12/2026_05_02.pdf`
+
+Correcao aplicada:
+
+- os dados analiticos foram preservados
+- o item 1 foi gravado no registro canonico `id = 17`
+- os dois registros tiveram metadados corrigidos para o objeto real
+  `fenabrave/2025/12/2025_12_02.pdf`
+- o registro `id = 8` foi mantido apenas por rastreabilidade, com nota de
+  legado duplicado
+
+Diretriz:
+
+- ao executar backfill historico, tratar `id = 17` como referencia oficial de
+  dezembro/2025
+- nao apagar automaticamente registros legados sem antes confirmar impactos em
+  tabelas dependentes
+
+## Status atual
+
+### Item 1 concluido no historico disponivel
+
+Status consolidado em 2026-07-07:
+
+- item 1 implementado na rotina mensal automatica da Fenabrave
+- preview operacional disponivel no Streamlit para revisao antes da gravacao
+- persistencia habilitada em `market_vehicle_model_rankings`
+- controle operacional habilitado em `market_fenabrave_extraction_items`
+- views de consumo do item 1 ja criadas
+
+Backfill historico executado e validado para os PDFs atualmente disponiveis:
+
+| Periodo | source_file_id | Situacao do item 1 | Linhas gravadas |
+|---|---:|---|---:|
+| 12/2025 | 17 | validated / passed | 100 |
+| 01/2026 | 5 | validated / passed | 100 |
+| 02/2026 | 4 | validated / passed | 100 |
+| 03/2026 | 3 | validated / passed | 100 |
+| 04/2026 | 2 | validated / passed | 100 |
+| 05/2026 | 6 | validated / passed | 100 |
+| 06/2026 | 13 | validated / passed | 100 |
+
+Observacoes operacionais:
+
+- o backfill foi executado por item, mes a mes, conforme a estrategia definida
+  neste plano
+- todos os periodos acima ficaram com `validation_status = passed`
+- todos os periodos acima ficaram com `row_count = 100` no controle do item
+- a extracao de segmentos continua emitindo apenas o warning conhecido de
+  ausencia da linha `total` no PDF extraido, sem bloquear a carga
+- o registro legado `source_file_id = 8` permaneceu fora da carga analitica e
+  deve continuar sendo tratado apenas como duplicidade historica rastreavel
+
+Pendencias para a fase 2 a partir deste ponto:
+
+- iniciar o item 2 com o mesmo padrao de parser, preview, validacao e backfill
+- iniciar o item 3 em seguida, mantendo a implantacao incremental por item
+- manter a documentacao e a auditoria de cobertura atualizadas a cada novo item
+  liberado
+
 ## Proximo passo apos aprovacao do plano
 
 Depois da aprovacao deste plano, a execucao deve comecar pelo item 1:
