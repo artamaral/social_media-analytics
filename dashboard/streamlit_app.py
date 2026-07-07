@@ -1930,12 +1930,18 @@ def load_fenabrave_preview_from_storage(
     raw_rows = module.extract_first_page_table(pdf_bytes)
     normalized_rows = module.normalize_rows(raw_rows, source_file_id, reference_period_label)
     checks = module.validate_normalized_rows(normalized_rows)
+    item1_raw_rows = module.extract_item1_model_rankings(pdf_bytes)
+    item1_rows = module.normalize_item1_rows(item1_raw_rows, source_file_id, reference_period_label)
+    item1_checks = module.validate_item1_rows(item1_rows, normalized_rows)
     return {
         "pdf_size_bytes": len(pdf_bytes),
         "pdf_sha256": hashlib.sha256(pdf_bytes).hexdigest(),
         "raw_rows": raw_rows,
         "normalized_rows": normalized_rows,
         "checks": checks,
+        "item1_raw_rows": item1_raw_rows,
+        "item1_rows": item1_rows,
+        "item1_checks": item1_checks,
     }
 
 
@@ -5740,6 +5746,29 @@ def render_fenabrave_intake_page() -> None:
                     st.markdown("#### Checks estruturais")
                     st.dataframe(checks_df, use_container_width=True, hide_index=True)
 
+                    item1_rows = preview_payload.get("item1_rows") or []
+                    item1_checks = preview_payload.get("item1_checks") or []
+                    if item1_rows:
+                        st.markdown("#### Item 1 fase 2 - Ranking dos emplacamentos mes")
+                        item1_df = pd.DataFrame(item1_rows)
+                        item1_preview_columns = [
+                            column
+                            for column in ["vehicle_category", "rank_position", "model_label_raw", "monthly_units"]
+                            if column in item1_df.columns
+                        ]
+                        st.dataframe(
+                            item1_df[item1_preview_columns].head(20),
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+                    if item1_checks:
+                        st.markdown("#### Checks item 1 fase 2")
+                        st.dataframe(
+                            pd.DataFrame(item1_checks),
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+
                 if current_record is not None and st.button("Marcar preview real como revisado", use_container_width=False):
                     notes = (
                         "Preview operacional revisado via Cadastro Fenabrave no Streamlit. "
@@ -5771,13 +5800,18 @@ def render_fenabrave_intake_page() -> None:
                                 preview_payload["normalized_rows"],
                                 preview_payload["checks"],
                                 True,
+                                item1_rows=preview_payload.get("item1_rows"),
+                                item1_checks=preview_payload.get("item1_checks"),
                             )
                         except Exception as exc:
                             st.error(f"Falha ao gravar os dados analiticos: {exc}")
                         else:
                             st.session_state["fenabrave_preview_ready"] = True
                             st.session_state["fenabrave_validated"] = True
-                            st.success("Dados analiticos gravados em market_vehicle_registrations_segment e view atualizada.")
+                            st.success(
+                                "Dados analiticos gravados em market_vehicle_registrations_segment "
+                                "e item 1 da fase 2 gravado em market_vehicle_model_rankings."
+                            )
                             st.rerun()
             elif preview_error:
                 st.warning(preview_error)

@@ -80,6 +80,8 @@ O script deve imprimir:
 - linhas extraidas da primeira tabela da pagina 1
 - valores normalizados por segmento, usando apenas a coluna `mes_atual`
 - checks locais de soma
+- item 1 da fase 2, com ranking mensal da pagina 6 para automoveis e comerciais leves
+- checks locais do item 1
 
 O parser seleciona para `mes_atual` o primeiro volume inteiro nao negativo da linha. Ele procura primeiro nas celulas depois do rotulo e, se encontrar apenas percentuais negativos, faz fallback para a linha inteira. Isso evita confundir a coluna mensal com percentuais como `-9,23`, quando o PDF extrai as celulas fora da ordem visual.
 
@@ -130,6 +132,8 @@ fenabrave/2026/04/2026_04_02.pdf -> 2026-04-01
 ```
 
 O script carrega apenas a coluna `mes_atual`. Acumulados mensais ou anuais devem ser gerados depois por view SQL.
+
+O item 1 da fase 2 faz parte da inclusao mensal padrao: quando o script roda sem opcao de contingencia, ele tambem extrai a pagina 6 e prepara/grava `market_vehicle_model_rankings` com o ranking mensal de automoveis e comerciais leves. Para contingencia operacional, use `--skip-phase2-item1` e registre a pendencia do item no controle mensal.
 
 ## Opcoes de revisao
 
