@@ -672,26 +672,27 @@ Observacoes operacionais:
 - o registro legado `source_file_id = 8` permaneceu fora da carga analitica e
   deve continuar sendo tratado apenas como duplicidade historica rastreavel
 
+Atualizacao consolidada de 2026-07-08:
+
+- os itens `2`, `3` e `4` foram concluidos seguindo o mesmo padrao incremental do
+  item `1`: parser, preview operacional no Streamlit, validacoes locais,
+  persistencia no banco e backfill historico por PDF existente
+- o item `4` (`Ranking por marca acumulado`, pagina `9`) passou a gravar em
+  `market_vehicle_brand_rankings` com `published_period_type = accumulated`,
+  `sales_channel = all` e `21` linhas por categoria
+- o backfill oficial do item `4` foi concluido para `12/2025` a `06/2026`,
+  usando os `source_file_id` canônicos `17`, `5`, `4`, `3`, `2`, `6` e `13`
+- todos os periodos do item `4` ficaram com `status = validated`,
+  `validation_status = passed` e `row_count = 42`
+- o registro legado `source_file_id = 8` continua fora da carga analitica e deve
+  permanecer apenas como duplicidade historica rastreavel
+
 Pendencias para a fase 2 a partir deste ponto:
 
-- iniciar o item 2 com o mesmo padrao de parser, preview, validacao e backfill
-- iniciar o item 3 em seguida, mantendo a implantacao incremental por item
+- iniciar o item `5` com o mesmo padrao de parser, preview, validacao e
+  backfill, usando a pagina `17` do PDF
 - manter a documentacao e a auditoria de cobertura atualizadas a cada novo item
   liberado
-
-### Item 2 em andamento
-
-Atualizacao de 2026-07-08:
-
-- o `Ranking dos emplacamentos acumulado` foi confirmado na pagina `7` do PDF,
-  e nao na pagina `6`
-- o parser do item 2 passou a reutilizar o mesmo contrato estrutural do item 1
-  em `market_vehicle_model_rankings`
-- o preview operacional passou a exibir o item 2 junto do item 1 no Streamlit
-- o `dry-run` de junho/2026 validou a extracao estrutural do item 2 com `50`
-  linhas por categoria e checks locais aprovados
-- ainda falta concluir a gravacao historica dos meses ja disponiveis e registrar
-  o status final do item 2 em todos os periodos
 
 ## Proximo passo apos aprovacao do plano
 

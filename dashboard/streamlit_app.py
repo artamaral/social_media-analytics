@@ -1939,6 +1939,9 @@ def load_fenabrave_preview_from_storage(
     item3_raw_rows = module.extract_item3_brand_rankings(pdf_bytes)
     item3_rows = module.normalize_item3_rows(item3_raw_rows, source_file_id, reference_period_label)
     item3_checks = module.validate_item3_rows(item3_rows)
+    item4_raw_rows = module.extract_item4_brand_rankings(pdf_bytes)
+    item4_rows = module.normalize_item4_rows(item4_raw_rows, source_file_id, reference_period_label)
+    item4_checks = module.validate_item4_rows(item4_rows, item3_rows)
     return {
         "pdf_size_bytes": len(pdf_bytes),
         "pdf_sha256": hashlib.sha256(pdf_bytes).hexdigest(),
@@ -1954,6 +1957,9 @@ def load_fenabrave_preview_from_storage(
         "item3_raw_rows": item3_raw_rows,
         "item3_rows": item3_rows,
         "item3_checks": item3_checks,
+        "item4_raw_rows": item4_raw_rows,
+        "item4_rows": item4_rows,
+        "item4_checks": item4_checks,
     }
 
 
@@ -5764,6 +5770,8 @@ def render_fenabrave_intake_page() -> None:
                     item2_checks = preview_payload.get("item2_checks") or []
                     item3_rows = preview_payload.get("item3_rows") or []
                     item3_checks = preview_payload.get("item3_checks") or []
+                    item4_rows = preview_payload.get("item4_rows") or []
+                    item4_checks = preview_payload.get("item4_checks") or []
                     if item1_rows:
                         st.markdown("#### Item 1 fase 2 - Ranking dos emplacamentos mes")
                         item1_df = pd.DataFrame(item1_rows)
@@ -5824,6 +5832,26 @@ def render_fenabrave_intake_page() -> None:
                             use_container_width=True,
                             hide_index=True,
                         )
+                    if item4_rows:
+                        st.markdown("#### Item 4 fase 2 - Ranking por marca acumulado")
+                        item4_df = pd.DataFrame(item4_rows)
+                        item4_preview_columns = [
+                            column
+                            for column in ["vehicle_category", "rank_position", "brand_name_raw", "units", "market_share_pct"]
+                            if column in item4_df.columns
+                        ]
+                        st.dataframe(
+                            item4_df[item4_preview_columns].head(25),
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+                    if item4_checks:
+                        st.markdown("#### Checks item 4 fase 2")
+                        st.dataframe(
+                            pd.DataFrame(item4_checks),
+                            use_container_width=True,
+                            hide_index=True,
+                        )
 
                 if current_record is not None and st.button("Marcar preview real como revisado", use_container_width=False):
                     notes = (
@@ -5862,6 +5890,8 @@ def render_fenabrave_intake_page() -> None:
                                 item2_checks=preview_payload.get("item2_checks"),
                                 item3_rows=preview_payload.get("item3_rows"),
                                 item3_checks=preview_payload.get("item3_checks"),
+                                item4_rows=preview_payload.get("item4_rows"),
+                                item4_checks=preview_payload.get("item4_checks"),
                             )
                         except Exception as exc:
                             st.error(f"Falha ao gravar os dados analiticos: {exc}")
@@ -5870,7 +5900,7 @@ def render_fenabrave_intake_page() -> None:
                             st.session_state["fenabrave_validated"] = True
                             st.success(
                                 "Dados analiticos gravados em market_vehicle_registrations_segment "
-                                "e itens 1, 2 e 3 da fase 2 gravados nas tabelas Fenabrave."
+                                "e itens 1, 2, 3 e 4 da fase 2 gravados nas tabelas Fenabrave."
                             )
                             st.rerun()
             elif preview_error:

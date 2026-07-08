@@ -133,7 +133,7 @@ fenabrave/2026/04/2026_04_02.pdf -> 2026-04-01
 
 O script carrega apenas a coluna `mes_atual`. Acumulados mensais ou anuais devem ser gerados depois por view SQL.
 
-Os itens 1, 2 e 3 da fase 2 fazem parte da inclusao mensal padrao: quando o script roda sem opcao de contingencia, ele tambem extrai a pagina 6 com o ranking mensal, a pagina 7 com o ranking acumulado e a pagina 8 com o ranking mensal por marca, preparando/gravando `market_vehicle_model_rankings` e `market_vehicle_brand_rankings` para automoveis e comerciais leves. Para contingencia operacional, use `--skip-phase2-item1`, `--skip-phase2-item2` e/ou `--skip-phase2-item3` e registre a pendencia do item no controle mensal.
+Os itens 1, 2, 3 e 4 da fase 2 fazem parte da inclusao mensal padrao: quando o script roda sem opcao de contingencia, ele tambem extrai a pagina 6 com o ranking mensal, a pagina 7 com o ranking acumulado, a pagina 8 com o ranking mensal por marca e a pagina 9 com o ranking acumulado por marca, preparando/gravando `market_vehicle_model_rankings` e `market_vehicle_brand_rankings` para automoveis e comerciais leves. Para contingencia operacional, use `--skip-phase2-item1`, `--skip-phase2-item2`, `--skip-phase2-item3` e/ou `--skip-phase2-item4` e registre a pendencia do item no controle mensal.
 
 ## Opcoes de revisao
 
