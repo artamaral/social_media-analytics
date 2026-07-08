@@ -34,7 +34,7 @@
 - [ ] App Streamlit online consumindo Supabase sob demanda
 - [ ] Tela inicial com status de qualidade dos dados
 - [ ] Evoluir a view Fenabrave consumida pelo Streamlit para exibir o historico anual completo por periodo, garantindo leitura de 2025 e 2026, com cards mostrando o acumulado do ano por categoria e nao a soma de todos os arquivos carregados.
-- [ ] ATIVIDADE ATUAL E PRIORITARIA: implementar o item 5 da fase 2 Fenabrave, `Modelos mais emplacados automoveis acumulado` da pagina 17, com parser, preview, validacoes, persistencia mensal e backfill historico para o subsegmento de automoveis.
+- [ ] ATIVIDADE ATUAL E PRIORITARIA: implementar o item 5 da fase 2 Fenabrave, `Emplacamentos por sub segmento` da pagina 16, com parser, preview, validacoes, persistencia mensal e backfill historico para automoveis, considerando mes corrente, acumulado do ano corrente (`n`) e acumulado do ano anterior (`n-1`), sem carregar a coluna de mes anterior.
 - [ ] Ranking de creators por views, engajamento e frequencia
 - [ ] Ranking semanal de crescimento de videos
 - [ ] Melhoria estetica: alinhar a lista de videos do criador individual ao mesmo padrao visual de `YouTube > Melhores videos 7d`, com hierarquia, colunas e leitura comparavel entre as duas telas.
