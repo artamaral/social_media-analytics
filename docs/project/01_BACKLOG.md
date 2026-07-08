@@ -33,8 +33,8 @@
 
 - [ ] App Streamlit online consumindo Supabase sob demanda
 - [ ] Tela inicial com status de qualidade dos dados
-- [ ] Evoluir a view Fenabrave consumida pelo Streamlit para exibir o historico anual completo por periodo, garantindo leitura de 2025 e 2026, com cards mostrando o acumulado do ano por categoria e nao a soma de todos os arquivos carregados.
-- [ ] ATIVIDADE ATUAL E PRIORITARIA: implementar o item 5 da fase 2 Fenabrave, `Emplacamentos por sub segmento` da pagina 17, com parser, preview, validacoes, persistencia mensal e backfill historico para automoveis, considerando os percentuais publicados de mes corrente, acumulado do ano corrente (`n`) e acumulado do ano anterior (`n-1`), sem carregar a coluna de mes anterior.
+- [ ] Evoluir a view Fenabrave consumida pelo Streamlit para exibir o historico anual completo por periodo, garantindo leitura de 2025 e 2026, com cards mostrando o acumulado do ano por categoria e nao a soma de todos os arquivos carregados. Neste ponto temos um issue, porque o acumulado nao referecia ano o que gera um problema quando o mes de dezembro de 2025 e escolhido. ele mostra todos os cards duplicados e o acumulado continua o mesmo valor.
+- [ ] ATIVIDADE ATUAL E PRIORITARIA: implementar o item 6 da fase 2 Fenabrave
 - [ ] Ranking de creators por views, engajamento e frequencia
 - [ ] Ranking semanal de crescimento de videos
 - [ ] Melhoria estetica: alinhar a lista de videos do criador individual ao mesmo padrao visual de `YouTube > Melhores videos 7d`, com hierarquia, colunas e leitura comparavel entre as duas telas.
@@ -50,6 +50,7 @@
 
 ## Itens tratados / arquivados
 
+- [x] implementar o item 5 da fase 2 Fenabrave, `Emplacamentos por sub segmento` da pagina 17, com parser, preview, validacoes, persistencia mensal e backfill historico para automoveis, considerando os percentuais publicados de mes corrente, acumulado do ano corrente (`n`) e acumulado do ano anterior (`n-1`), sem carregar a coluna de mes anterior.
 - [x] Tratar videos indisponiveis na YouTube API para evitar posts presos na fila. Implementado com `post_collection_failures`, RPC `register_post_collection_result(...)`, view `v_dashboard_unavailable_video_review`, exclusao de `status = unavailable` da fila ativa e processo de confirmacao manual documentado em `docs/social_media/27_UNAVAILABLE_VIDEO_HANDLING_SPEC.md`.
 - [x] Criar limpeza temporaria do backlog de guardrail. Implementado no script `scripts/offline_backfill/legacy_low_backfill_phase1.py`, documentado em `docs/social_media/25_MINIMUM_HISTORY_COVERAGE_GUARDRAIL_SPEC.md` e em execucao controlada via scheduler `guardrail-cleanup-backfill`.
 - [x] Manter `priority_score_v2` em modo analitico/segundo plano. Decisao registrada em `docs/project/05_DECISOES_TECNICAS.md`; o `v2` nao deve ser promovido para a fila ativa enquanto o foco for analise temporal de videos quentes no momento.
