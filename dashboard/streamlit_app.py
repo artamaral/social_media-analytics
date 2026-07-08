@@ -1933,6 +1933,9 @@ def load_fenabrave_preview_from_storage(
     item1_raw_rows = module.extract_item1_model_rankings(pdf_bytes)
     item1_rows = module.normalize_item1_rows(item1_raw_rows, source_file_id, reference_period_label)
     item1_checks = module.validate_item1_rows(item1_rows, normalized_rows)
+    item2_raw_rows = module.extract_item2_model_rankings(pdf_bytes)
+    item2_rows = module.normalize_item2_rows(item2_raw_rows, source_file_id, reference_period_label)
+    item2_checks = module.validate_item2_rows(item2_rows, item1_rows)
     return {
         "pdf_size_bytes": len(pdf_bytes),
         "pdf_sha256": hashlib.sha256(pdf_bytes).hexdigest(),
@@ -1942,6 +1945,9 @@ def load_fenabrave_preview_from_storage(
         "item1_raw_rows": item1_raw_rows,
         "item1_rows": item1_rows,
         "item1_checks": item1_checks,
+        "item2_raw_rows": item2_raw_rows,
+        "item2_rows": item2_rows,
+        "item2_checks": item2_checks,
     }
 
 
@@ -5748,6 +5754,8 @@ def render_fenabrave_intake_page() -> None:
 
                     item1_rows = preview_payload.get("item1_rows") or []
                     item1_checks = preview_payload.get("item1_checks") or []
+                    item2_rows = preview_payload.get("item2_rows") or []
+                    item2_checks = preview_payload.get("item2_checks") or []
                     if item1_rows:
                         st.markdown("#### Item 1 fase 2 - Ranking dos emplacamentos mes")
                         item1_df = pd.DataFrame(item1_rows)
@@ -5765,6 +5773,26 @@ def render_fenabrave_intake_page() -> None:
                         st.markdown("#### Checks item 1 fase 2")
                         st.dataframe(
                             pd.DataFrame(item1_checks),
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+                    if item2_rows:
+                        st.markdown("#### Item 2 fase 2 - Ranking dos emplacamentos acumulado")
+                        item2_df = pd.DataFrame(item2_rows)
+                        item2_preview_columns = [
+                            column
+                            for column in ["vehicle_category", "rank_position", "model_label_raw", "monthly_units"]
+                            if column in item2_df.columns
+                        ]
+                        st.dataframe(
+                            item2_df[item2_preview_columns].head(20),
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+                    if item2_checks:
+                        st.markdown("#### Checks item 2 fase 2")
+                        st.dataframe(
+                            pd.DataFrame(item2_checks),
                             use_container_width=True,
                             hide_index=True,
                         )
@@ -5802,6 +5830,8 @@ def render_fenabrave_intake_page() -> None:
                                 True,
                                 item1_rows=preview_payload.get("item1_rows"),
                                 item1_checks=preview_payload.get("item1_checks"),
+                                item2_rows=preview_payload.get("item2_rows"),
+                                item2_checks=preview_payload.get("item2_checks"),
                             )
                         except Exception as exc:
                             st.error(f"Falha ao gravar os dados analiticos: {exc}")
@@ -5810,7 +5840,7 @@ def render_fenabrave_intake_page() -> None:
                             st.session_state["fenabrave_validated"] = True
                             st.success(
                                 "Dados analiticos gravados em market_vehicle_registrations_segment "
-                                "e item 1 da fase 2 gravado em market_vehicle_model_rankings."
+                                "e itens 1 e 2 da fase 2 gravados em market_vehicle_model_rankings."
                             )
                             st.rerun()
             elif preview_error:

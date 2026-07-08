@@ -1,8 +1,8 @@
 -- 014_create_market_vehicle_model_rankings.sql
 
--- Rankings de modelos extraidos da Fenabrave. A primeira carga prevista e o
--- item 1 da fase 2: ranking mensal de emplacamentos da pagina 6, separado em
--- automoveis e comerciais leves.
+-- Rankings de modelos extraidos da Fenabrave. As primeiras cargas previstas
+-- cobrem os itens 1 e 2 da fase 2: ranking mensal da pagina 6 e ranking
+-- acumulado da pagina 7, separados em automoveis e comerciais leves.
 CREATE TABLE IF NOT EXISTS public.market_vehicle_model_rankings (
   id BIGSERIAL PRIMARY KEY,
   source_file_id BIGINT NOT NULL REFERENCES public.market_source_files(id),
@@ -70,4 +70,4 @@ COMMENT ON COLUMN public.market_vehicle_model_rankings.model_label_raw IS
   'Nome bruto extraido do PDF, preservando marca/modelo como publicado.';
 
 COMMENT ON COLUMN public.market_vehicle_model_rankings.monthly_units IS
-  'Volume mensal de emplacamentos extraido do ranking publicado.';
+  'Volume publicado no ranking Fenabrave; no item 1 representa o mensal e no item 2 representa o acumulado.';
