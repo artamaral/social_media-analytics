@@ -93,6 +93,14 @@ FENABRAVE_ITEM2_PERIOD_TYPE = "accumulated"
 FENABRAVE_ITEM2_MARKET_SCOPE = "Brasil"
 FENABRAVE_ITEM2_SALES_CHANNEL = "all"
 
+FENABRAVE_ITEM3_CODE = "fenabrave_item_03_ranking_por_marca_mes"
+FENABRAVE_ITEM3_LABEL = "Ranking por marca mes"
+FENABRAVE_ITEM3_PAGE = 8
+FENABRAVE_ITEM3_PERIOD_TYPE = "monthly"
+FENABRAVE_ITEM3_MARKET_SCOPE = "Brasil"
+FENABRAVE_ITEM3_SALES_CHANNEL = "all"
+FENABRAVE_ITEM3_EXPECTED_RANKS = 21
+
 FENABRAVE_MODEL_RANKING_ITEMS = {
     FENABRAVE_ITEM1_CODE: {
         "code": FENABRAVE_ITEM1_CODE,
@@ -111,6 +119,21 @@ FENABRAVE_MODEL_RANKING_ITEMS = {
         "sales_channel": FENABRAVE_ITEM2_SALES_CHANNEL,
     },
 }
+
+FENABRAVE_BRAND_RANKING_ITEMS = {
+    FENABRAVE_ITEM3_CODE: {
+        "code": FENABRAVE_ITEM3_CODE,
+        "label": FENABRAVE_ITEM3_LABEL,
+        "page": FENABRAVE_ITEM3_PAGE,
+        "published_period_type": FENABRAVE_ITEM3_PERIOD_TYPE,
+        "market_scope": FENABRAVE_ITEM3_MARKET_SCOPE,
+        "sales_channel": FENABRAVE_ITEM3_SALES_CHANNEL,
+    },
+}
+
+FENABRAVE_ITEM_DEFINITIONS = {}
+FENABRAVE_ITEM_DEFINITIONS.update(FENABRAVE_MODEL_RANKING_ITEMS)
+FENABRAVE_ITEM_DEFINITIONS.update(FENABRAVE_BRAND_RANKING_ITEMS)
 
 
 def infer_reference_period_from_path(storage_path):
@@ -677,6 +700,56 @@ def split_fenabrave_ranked_entries(line):
     return entries
 
 
+def split_fenabrave_brand_ranked_entries(line):
+    """
+    Separa entradas de ranking por marca em uma linha da pagina 8.
+
+    Resultado esperado:
+    - `1o VW 42.425 19,93% 1o FIAT 21.848 45,93%` vira duas entradas.
+    - captura rank, marca, unidades e participacao em cada coluna.
+    """
+    text = normalize_text(line)
+    matches = list(re.finditer(r"(\d+)(?:\u00ba|o)\s+", text, flags=re.IGNORECASE))
+    entries = []
+
+    for index, match in enumerate(matches):
+        start = match.end()
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+        body = normalize_text(text[start:end])
+
+        if not body:
+            continue
+
+        value_match = re.search(
+            r"(.+?)\s+(\d{1,3}(?:\.\d{3})*|\d+)\s+(\d{1,3},\d+)%\s*$",
+            body,
+        )
+
+        if not value_match:
+            continue
+
+        brand_name_raw = normalize_text(value_match.group(1))
+        units_raw = value_match.group(2)
+        share_raw = value_match.group(3)
+
+        if not brand_name_raw:
+            continue
+
+        entries.append(
+            {
+                "rank_position": int(match.group(1)),
+                "brand_name_raw": brand_name_raw,
+                "units_raw": units_raw,
+                "units": parse_int_br(units_raw),
+                "market_share_pct_raw": share_raw,
+                "market_share_pct": parse_decimal_br(share_raw),
+                "raw_entry": body,
+            }
+        )
+
+    return entries
+
+
 def extract_model_rankings_from_page(pdf_bytes, item_definition):
     """
     Extrai ranking Fenabrave de uma pagina com layout em duas colunas.
@@ -752,6 +825,73 @@ def extract_item2_model_rankings(pdf_bytes):
     )
 
 
+def extract_item3_brand_rankings(pdf_bytes):
+    """
+    Extrai o item 3 da fase 2: ranking por marca mensal da pagina 8.
+    """
+    try:
+        import pdfplumber
+    except ImportError as error:
+        raise RuntimeError(
+            "Dependencia ausente: pdfplumber. Execute `pip install -r requirements.txt` "
+            "em scripts/fenabrave_ingestion."
+        ) from error
+
+    with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
+        if len(pdf.pages) < FENABRAVE_ITEM3_PAGE:
+            raise RuntimeError(
+                f"PDF sem pagina {FENABRAVE_ITEM3_PAGE} para {FENABRAVE_ITEM3_CODE}."
+            )
+
+        page = pdf.pages[FENABRAVE_ITEM3_PAGE - 1]
+        text = page.extract_text(x_tolerance=1, y_tolerance=3) or ""
+
+    rows = []
+    row_number = 0
+
+    for raw_line in text.splitlines():
+        line = normalize_text(raw_line)
+        line_key = normalize_key(line)
+
+        if not line:
+            continue
+        if "automoveis + comerciais leves" in line_key:
+            break
+        if (
+            line_key.startswith("ed ")
+            or line_key == "informativo emplacamentos"
+            or line_key.startswith("sao paulo ")
+            or line_key.startswith("ranking por marca ")
+            or line_key == "automoveis comerciais leves"
+            or line_key == "fabricante quant part fabricante quant part"
+            or line_key.startswith("www fenabrave org br")
+        ):
+            continue
+
+        entries = split_fenabrave_brand_ranked_entries(line)
+
+        if not entries:
+            continue
+
+        row_number += 1
+
+        for entry_index, entry in enumerate(entries[:2]):
+            vehicle_category = (
+                "automoveis" if entry_index == 0 else "comerciais_leves"
+            )
+            rows.append(
+                {
+                    "page_number": FENABRAVE_ITEM3_PAGE,
+                    "row_number": row_number,
+                    "entry_index": entry_index + 1,
+                    "vehicle_category": vehicle_category,
+                    **entry,
+                }
+            )
+
+    return rows
+
+
 def normalize_model_ranking_rows(raw_rows, source_file_id, reference_period, item_code):
     """
     Normaliza linhas de ranking Fenabrave para `market_vehicle_model_rankings`.
@@ -759,7 +899,7 @@ def normalize_model_ranking_rows(raw_rows, source_file_id, reference_period, ite
     Resultado esperado:
     - payloads prontos para gravacao e reprocessamento por item.
     """
-    item_definition = FENABRAVE_MODEL_RANKING_ITEMS[item_code]
+    item_definition = FENABRAVE_ITEM_DEFINITIONS[item_code]
     normalized = []
 
     for row in raw_rows:
@@ -806,6 +946,34 @@ def normalize_item2_rows(raw_rows, source_file_id, reference_period):
         reference_period,
         FENABRAVE_ITEM2_CODE,
     )
+
+
+def normalize_item3_rows(raw_rows, source_file_id, reference_period):
+    """
+    Normaliza linhas do item 3 para `market_vehicle_brand_rankings`.
+    """
+    normalized = []
+    item_definition = FENABRAVE_BRAND_RANKING_ITEMS[FENABRAVE_ITEM3_CODE]
+
+    for row in raw_rows:
+        normalized.append(
+            {
+                "source_file_id": source_file_id,
+                "reference_period": reference_period,
+                "item_code": item_definition["code"],
+                "published_period_type": item_definition["published_period_type"],
+                "market_scope": item_definition["market_scope"],
+                "vehicle_category": row["vehicle_category"],
+                "sales_channel": item_definition["sales_channel"],
+                "rank_position": row["rank_position"],
+                "brand_name_raw": row["brand_name_raw"],
+                "units": row["units"],
+                "market_share_pct": row["market_share_pct"],
+                "raw_label": row["brand_name_raw"],
+            }
+        )
+
+    return normalized
 
 
 def normalize_rows(raw_rows, source_file_id, reference_period):
@@ -1133,6 +1301,116 @@ def validate_item2_rows(item2_rows, item1_rows=None):
     )
 
 
+def validate_item3_rows(item3_rows):
+    """
+    Valida o ranking por marca mensal da pagina 8.
+    """
+    rows_by_category = {
+        category: [
+            row for row in item3_rows if row.get("vehicle_category") == category
+        ]
+        for category in FENABRAVE_ITEM1_CATEGORIES
+    }
+    checks = []
+
+    for category, rows in rows_by_category.items():
+        ranks = [row.get("rank_position") for row in rows]
+        units = [row.get("units") for row in rows]
+        brands = [row.get("brand_name_raw") for row in rows]
+        shares = [row.get("market_share_pct") for row in rows]
+        row_count = len(rows)
+        distinct_ranks = len(set(ranks))
+        expected_ranks = set(range(1, row_count + 1))
+        found_ranks = set(rank for rank in ranks if rank is not None)
+        missing_ranks = sorted(expected_ranks - found_ranks)
+        invalid_units = sum(1 for value in units if value is None or value <= 0)
+        missing_brands = sum(1 for value in brands if not normalize_text(value))
+        invalid_shares = sum(
+            1 for value in shares if value is None or value < 0 or value > 100
+        )
+        sorted_rows = sorted(rows, key=lambda row: row.get("rank_position") or 999)
+        order_violations = sum(
+            1
+            for previous, current in zip(sorted_rows, sorted_rows[1:])
+            if (previous.get("units") or 0) < (current.get("units") or 0)
+        )
+        share_total = round(sum(value or 0 for value in shares), 4)
+
+        checks.extend(
+            [
+                {
+                    "check_name": f"{category}_row_count",
+                    "calculated_value": row_count,
+                    "expected_value": FENABRAVE_ITEM3_EXPECTED_RANKS,
+                    "difference": row_count - FENABRAVE_ITEM3_EXPECTED_RANKS,
+                    "passed": row_count == FENABRAVE_ITEM3_EXPECTED_RANKS,
+                    "severity": "warning",
+                    "notes": "Quantidade de marcas publicadas pode mudar se o layout da Fenabrave mudar.",
+                },
+                {
+                    "check_name": f"{category}_distinct_ranks",
+                    "calculated_value": distinct_ranks,
+                    "expected_value": row_count,
+                    "difference": distinct_ranks - row_count,
+                    "passed": distinct_ranks == row_count and not missing_ranks,
+                    "severity": "error",
+                    "notes": (
+                        "Ranks ausentes: " + ", ".join(str(rank) for rank in missing_ranks)
+                        if missing_ranks
+                        else None
+                    ),
+                },
+                {
+                    "check_name": f"{category}_positive_units",
+                    "calculated_value": invalid_units,
+                    "expected_value": 0,
+                    "difference": invalid_units,
+                    "passed": invalid_units == 0,
+                    "severity": "error",
+                    "notes": None,
+                },
+                {
+                    "check_name": f"{category}_brand_names",
+                    "calculated_value": missing_brands,
+                    "expected_value": 0,
+                    "difference": missing_brands,
+                    "passed": missing_brands == 0,
+                    "severity": "error",
+                    "notes": None,
+                },
+                {
+                    "check_name": f"{category}_share_range",
+                    "calculated_value": invalid_shares,
+                    "expected_value": 0,
+                    "difference": invalid_shares,
+                    "passed": invalid_shares == 0,
+                    "severity": "error",
+                    "notes": None,
+                },
+                {
+                    "check_name": f"{category}_descending_units",
+                    "calculated_value": order_violations,
+                    "expected_value": 0,
+                    "difference": order_violations,
+                    "passed": order_violations == 0,
+                    "severity": "error",
+                    "notes": None,
+                },
+                {
+                    "check_name": f"{category}_share_total_lte_100",
+                    "calculated_value": share_total,
+                    "expected_value": 100,
+                    "difference": round(share_total - 100, 4),
+                    "passed": share_total <= 100.5,
+                    "severity": "warning",
+                    "notes": "Top N por marca pode nao somar 100% se houver marcas fora do ranking publicado.",
+                },
+            ]
+        )
+
+    return checks
+
+
 def print_preview(raw_rows, normalized_rows, checks, pdf_bytes):
     """
     Imprime uma pre-visualizacao da extracao no terminal.
@@ -1185,7 +1463,7 @@ def print_model_ranking_preview(ranking_rows, ranking_checks, item_code):
     Resultado esperado:
     - operador consegue conferir top 10 de cada categoria e checks do item.
     """
-    item_definition = FENABRAVE_MODEL_RANKING_ITEMS[item_code]
+    item_definition = FENABRAVE_ITEM_DEFINITIONS[item_code]
     print(
         f"{item_definition['label']} (pagina {item_definition['page']}, "
         f"{item_definition['published_period_type']})"
@@ -1250,6 +1528,50 @@ def print_item2_preview(item2_rows, item2_checks):
     )
 
 
+def print_item3_preview(item3_rows, item3_checks):
+    """
+    Imprime preview do ranking por marca mensal da pagina 8.
+    """
+    print("Ranking por marca mes (pagina 8, monthly)")
+    print("-" * 96)
+    print(f"{'categoria':20} {'rank':>4} {'marca':28} {'unidades':>10} {'share':>10}")
+    print("-" * 96)
+
+    for category in FENABRAVE_ITEM1_CATEGORIES:
+        category_rows = sorted(
+            [row for row in item3_rows if row["vehicle_category"] == category],
+            key=lambda row: row["rank_position"],
+        )[:10]
+
+        for row in category_rows:
+            print(
+                f"{category[:20]:20} "
+                f"{row['rank_position']:>4} "
+                f"{row['brand_name_raw'][:28]:28} "
+                f"{row['units']:>10} "
+                f"{row['market_share_pct']:>9.2f}%"
+            )
+
+    print("")
+    print(f"Validacoes locais de {FENABRAVE_ITEM3_CODE}")
+    print("-" * 96)
+
+    for check in item3_checks:
+        print(
+            f"{check['check_name']:42} "
+            f"calc={check['calculated_value']} "
+            f"expected={check['expected_value']} "
+            f"diff={check['difference']} "
+            f"passed={check['passed']} "
+            f"severity={check['severity']}"
+        )
+
+        if check["notes"]:
+            print(f"{'':42} notes={check['notes']}")
+
+    print("")
+
+
 def delete_existing_rows(base_url, headers, source_file_id):
     """
     Remove cargas anteriores do mesmo arquivo de origem.
@@ -1292,6 +1614,28 @@ def delete_model_ranking_rows(base_url, headers, source_file_id, item_code):
     if response.status_code not in {200, 204}:
         raise RuntimeError(
             "Falha ao limpar market_vehicle_model_rankings: "
+            f"status={response.status_code} body={response.text[:500]}"
+        )
+
+
+def delete_brand_ranking_rows(base_url, headers, source_file_id, item_code):
+    """
+    Remove linhas de ranking por marca para um arquivo/item.
+    """
+    params = {
+        "source_file_id": f"eq.{source_file_id}",
+        "item_code": f"eq.{item_code}",
+    }
+    response = requests.delete(
+        rest_url(base_url, "market_vehicle_brand_rankings"),
+        headers=headers,
+        params=params,
+        timeout=60,
+    )
+
+    if response.status_code not in {200, 204}:
+        raise RuntimeError(
+            "Falha ao limpar market_vehicle_brand_rankings: "
             f"status={response.status_code} body={response.text[:500]}"
         )
 
@@ -1340,7 +1684,7 @@ def upsert_fenabrave_item_status(
     Resultado esperado:
     - `market_fenabrave_extraction_items` reflete a situacao mensal do item.
     """
-    item_definition = FENABRAVE_MODEL_RANKING_ITEMS[item_code]
+    item_definition = FENABRAVE_ITEM_DEFINITIONS[item_code]
     params = {
         "select": "id",
         "source_file_id": f"eq.{source_file_id}",
@@ -1433,6 +1777,8 @@ def write_results(
     item1_checks=None,
     item2_rows=None,
     item2_checks=None,
+    item3_rows=None,
+    item3_checks=None,
 ):
     """
     Persiste normalizado e status no Supabase.
@@ -1539,6 +1885,51 @@ def write_results(
                 len(item2_rows),
                 "passed",
                 "Item 2 Fenabrave validado e gravado pela rotina mensal.",
+            )
+
+    if item3_rows is not None:
+        if replace:
+            delete_brand_ranking_rows(
+                base_url,
+                headers,
+                source_file_id,
+                FENABRAVE_ITEM3_CODE,
+            )
+
+        item3_has_error = any(
+            not check["passed"] and check["severity"] == "error"
+            for check in (item3_checks or [])
+        )
+
+        if item3_has_error:
+            upsert_fenabrave_item_status(
+                base_url,
+                headers,
+                source_file_id,
+                normalized_rows[0]["reference_period"],
+                FENABRAVE_ITEM3_CODE,
+                "failed",
+                len(item3_rows),
+                "failed",
+                "Item 3 Fenabrave falhou em validacoes locais.",
+            )
+        else:
+            insert_rows(
+                base_url,
+                headers,
+                "market_vehicle_brand_rankings",
+                item3_rows,
+            )
+            upsert_fenabrave_item_status(
+                base_url,
+                headers,
+                source_file_id,
+                normalized_rows[0]["reference_period"],
+                FENABRAVE_ITEM3_CODE,
+                "validated",
+                len(item3_rows),
+                "passed",
+                "Item 3 Fenabrave validado e gravado pela rotina mensal.",
             )
 
     has_error = any(
@@ -1790,6 +2181,14 @@ def parse_args():
             "por padrao o item 2 passa a fazer parte da inclusao mensal Fenabrave."
         ),
     )
+    parser.add_argument(
+        "--skip-phase2-item3",
+        action="store_true",
+        help=(
+            "Nao executa o item 3 da fase 2. Use apenas para contingencia; "
+            "por padrao o item 3 passa a fazer parte da inclusao mensal Fenabrave."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -1863,6 +2262,8 @@ def main():
     item1_checks = None
     item2_rows = None
     item2_checks = None
+    item3_rows = None
+    item3_checks = None
 
     if not args.skip_phase2_item1:
         print("Extraindo item 1 da fase 2 na pagina 6...")
@@ -1884,6 +2285,16 @@ def main():
         )
         item2_checks = validate_item2_rows(item2_rows, item1_rows)
 
+    if not args.skip_phase2_item3:
+        print("Extraindo item 3 da fase 2 na pagina 8...")
+        item3_raw_rows = extract_item3_brand_rankings(pdf_bytes)
+        item3_rows = normalize_item3_rows(
+            item3_raw_rows,
+            source_file_id_for_preview,
+            reference_period,
+        )
+        item3_checks = validate_item3_rows(item3_rows)
+
     print_preview(raw_rows, normalized_rows, checks, pdf_bytes)
 
     if item1_rows is not None:
@@ -1891,6 +2302,9 @@ def main():
 
     if item2_rows is not None:
         print_item2_preview(item2_rows, item2_checks)
+
+    if item3_rows is not None:
+        print_item3_preview(item3_rows, item3_checks)
 
     if args.dry_run:
         print("Dry-run concluido. Nenhum dado foi gravado.")
@@ -1928,6 +2342,8 @@ def main():
         item1_checks=item1_checks,
         item2_rows=item2_rows,
         item2_checks=item2_checks,
+        item3_rows=item3_rows,
+        item3_checks=item3_checks,
     )
     print("Carga concluida.")
 

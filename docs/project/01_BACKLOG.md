@@ -36,7 +36,7 @@
 - [ ] Evoluir a view Fenabrave consumida pelo Streamlit para exibir o historico anual completo por periodo, garantindo leitura de 2025 e 2026, com cards mostrando o acumulado do ano por categoria e nao a soma de todos os arquivos carregados.
 - [ ] ATIVIDADE ATUAL E PRIORITARIA: implementar o item 2 da fase 2 Fenabrave, `Ranking dos emplacamentos acumulado` da pagina 7, com parser, preview, validacoes e backfill historico antes da liberacao operacional.
 - [ ] Pendencia Fenabrave fase 2 item 2: concluir a gravacao historica e a validacao operacional do `Ranking dos emplacamentos acumulado` na pagina 7, agora que a localizacao correta do bloco foi confirmada.
-- [ ] Pendencia Fenabrave fase 2 item 3: implementar `Ranking por marca mes` da pagina 8 apos a entrega do item 1, aproveitando a boa extraibilidade observada no teste de junho/2026, mas mantendo entrega e validacao separadas.
+- [ ] ATIVIDADE ATUAL E PRIORITARIA: implementar o item 3 da fase 2 Fenabrave, `Ranking por marca mes` da pagina 8, com parser, preview, validacoes e persistencia mensal antes do backfill historico.
 - [ ] Ranking de creators por views, engajamento e frequencia
 - [ ] Ranking semanal de crescimento de videos
 - [ ] Melhoria estetica: alinhar a lista de videos do criador individual ao mesmo padrao visual de `YouTube > Melhores videos 7d`, com hierarquia, colunas e leitura comparavel entre as duas telas.
