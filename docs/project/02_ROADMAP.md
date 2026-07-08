@@ -45,6 +45,11 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 
 - [ ] Criar abordagem analitica simples para `hot now`, baseada em `velocity_6h`, `previous_velocity` e `acceleration`, usando views SQL para dashboard.
 
+### Prioridade media - enriquecimento IA de videos
+
+- [ ] Registrar e executar uma fase metodologica controlada para classificacao de nicho, subnicho e dimensoes complementares dos videos, começando por amostra manual de `10` videos e comparacao humano vs IA antes de qualquer escala para a base completa, conforme `docs/external_data/29_SPEC-INGESTAO-VALIDACAO-NICHOS-SUBNICHOS.md`.
+- [ ] Definir a camada operacional de OpenAI para classificacao inicial, transcricao parcial sob demanda e reclassificacao, com controle conservador de TPM/RPM, batches pequenos, baixa concorrencia, historico de tentativas e janelas separadas do Hermes, conforme `docs/external_data/30_SPEC_PREMISSAS_OPENAI_CLASSIFICACAO_TRANSCRICAO.md`.
+
 ### Itens concluidos nesta frente
 
 - [x] Validacao da mudanca para FIFO dentro da banda ao inves de score. Usar arquivo `11_QUEUE_FIFO_VALIDATION_2026-05-08.md` como referencia e deixar rodar por dois dias. Validacao em 2026-05-10.

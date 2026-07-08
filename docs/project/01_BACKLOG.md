@@ -47,6 +47,8 @@
 
 - [ ] Classificar videos por tipo
 - [ ] Melhorar subnicho automatico
+- [ ] Proxima etapa de IA: montar a validacao metodologica de nicho/subnicho com amostra inicial de `10` videos, classificacao humana, classificacao por IA sem transcricao, calculo de `agreement_score` e revisao da taxonomia antes de escalar para lotes maiores, conforme `docs/external_data/29_SPEC-INGESTAO-VALIDACAO-NICHOS-SUBNICHOS.md`.
+- [ ] Proxima etapa operacional de IA: desenhar a implementacao com OpenAI para classificacao inicial, transcricao parcial e reclassificacao, incluindo thresholds, controle de `TPM/RPM`, batch pequeno, concorrencia baixa, backoff, historico de tentativas e separacao operacional do Hermes, conforme `docs/external_data/30_SPEC_PREMISSAS_OPENAI_CLASSIFICACAO_TRANSCRICAO.md`.
 
 ## Itens tratados / arquivados
 
