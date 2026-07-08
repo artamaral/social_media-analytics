@@ -108,6 +108,14 @@ FENABRAVE_ITEM4_PERIOD_TYPE = "accumulated"
 FENABRAVE_ITEM4_MARKET_SCOPE = "Brasil"
 FENABRAVE_ITEM4_SALES_CHANNEL = "all"
 
+FENABRAVE_ITEM5_CODE = "fenabrave_item_05_emplacamentos_por_subsegmento"
+FENABRAVE_ITEM5_LABEL = "Emplacamentos por sub segmento"
+FENABRAVE_ITEM5_PAGE = 17
+FENABRAVE_ITEM5_PERIOD_TYPE = "mixed"
+FENABRAVE_ITEM5_MARKET_SCOPE = "Brasil"
+FENABRAVE_ITEM5_SALES_CHANNEL = "all"
+FENABRAVE_ITEM5_EXPECTED_ROWS = 13
+
 FENABRAVE_MODEL_RANKING_ITEMS = {
     FENABRAVE_ITEM1_CODE: {
         "code": FENABRAVE_ITEM1_CODE,
@@ -146,9 +154,21 @@ FENABRAVE_BRAND_RANKING_ITEMS = {
     },
 }
 
+FENABRAVE_SUBSEGMENT_ITEMS = {
+    FENABRAVE_ITEM5_CODE: {
+        "code": FENABRAVE_ITEM5_CODE,
+        "label": FENABRAVE_ITEM5_LABEL,
+        "page": FENABRAVE_ITEM5_PAGE,
+        "published_period_type": FENABRAVE_ITEM5_PERIOD_TYPE,
+        "market_scope": FENABRAVE_ITEM5_MARKET_SCOPE,
+        "sales_channel": FENABRAVE_ITEM5_SALES_CHANNEL,
+    },
+}
+
 FENABRAVE_ITEM_DEFINITIONS = {}
 FENABRAVE_ITEM_DEFINITIONS.update(FENABRAVE_MODEL_RANKING_ITEMS)
 FENABRAVE_ITEM_DEFINITIONS.update(FENABRAVE_BRAND_RANKING_ITEMS)
+FENABRAVE_ITEM_DEFINITIONS.update(FENABRAVE_SUBSEGMENT_ITEMS)
 
 
 def infer_reference_period_from_path(storage_path):
@@ -402,6 +422,18 @@ def parse_decimal_br(value):
 
     text = text.replace("%", "").replace(".", "").replace(",", ".")
     return float(text)
+
+
+def normalize_subsegment_name(value):
+    """
+    Normaliza subsegmentos removendo prefixos tecnicos do PDF.
+
+    Resultado esperado:
+    - `AU - SUVs` vira `SUVs`.
+    """
+    text = normalize_text(value)
+    text = re.sub(r"^AU\s*-\s*", "", text, flags=re.IGNORECASE)
+    return normalize_text(text)
 
 
 def build_headers(supabase_key):
@@ -765,6 +797,47 @@ def split_fenabrave_brand_ranked_entries(line):
     return entries
 
 
+def split_fenabrave_subsegment_share_entry(line):
+    """
+    Extrai uma linha da pagina 17 com shares por subsegmento.
+
+    Resultado esperado:
+    - `AU - SUVs 59,08% 57,70% 57,95% 53,35%` vira um dicionario com
+      subsegmento, mes corrente, mes anterior e acumulados n/n-1.
+    """
+    text = normalize_text(line)
+    match = re.search(
+        r"(.+?)\s+"
+        r"(\d{1,3},\d+)%\s+"
+        r"(\d{1,3},\d+)%\s+"
+        r"(?:=\s+)?(\d{1,3},\d+)%\s+"
+        r"(\d{1,3},\d+)%\s*(?:=\s*)?$",
+        text,
+    )
+
+    if not match:
+        return None
+
+    raw_label = normalize_text(match.group(1))
+    subsegment_name = normalize_subsegment_name(raw_label)
+
+    if not subsegment_name:
+        return None
+
+    return {
+        "raw_label": raw_label,
+        "subsegment_name": subsegment_name,
+        "current_month_share_pct_raw": match.group(2),
+        "current_month_share_pct": parse_decimal_br(match.group(2)),
+        "previous_month_share_pct_raw": match.group(3),
+        "previous_month_share_pct": parse_decimal_br(match.group(3)),
+        "prior_year_accum_share_pct_raw": match.group(4),
+        "prior_year_accum_share_pct": parse_decimal_br(match.group(4)),
+        "current_year_accum_share_pct_raw": match.group(5),
+        "current_year_accum_share_pct": parse_decimal_br(match.group(5)),
+    }
+
+
 def extract_model_rankings_from_page(pdf_bytes, item_definition):
     """
     Extrai ranking Fenabrave de uma pagina com layout em duas colunas.
@@ -929,6 +1002,61 @@ def extract_item4_brand_rankings(pdf_bytes):
     )
 
 
+def extract_item5_subsegment_shares(pdf_bytes):
+    """
+    Extrai o item 5 da fase 2: shares por subsegmento da pagina 17.
+    """
+    try:
+        import pdfplumber
+    except ImportError as error:
+        raise RuntimeError(
+            "Dependencia ausente: pdfplumber. Execute `pip install -r requirements.txt` "
+            "em scripts/fenabrave_ingestion."
+        ) from error
+
+    with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
+        if len(pdf.pages) < FENABRAVE_ITEM5_PAGE:
+            raise RuntimeError(
+                f"PDF sem pagina {FENABRAVE_ITEM5_PAGE} para {FENABRAVE_ITEM5_CODE}."
+            )
+
+        page = pdf.pages[FENABRAVE_ITEM5_PAGE - 1]
+        text = page.extract_text(x_tolerance=1, y_tolerance=3) or ""
+
+    rows = []
+
+    for raw_line in text.splitlines():
+        line = normalize_text(raw_line)
+        line_key = normalize_key(line)
+
+        if not line:
+            continue
+        if (
+            line_key.startswith("ed ")
+            or line_key == "informativo emplacamentos"
+            or line_key.startswith("sao paulo ")
+            or line_key.startswith("modelos mais emplacados ")
+            or line_key.startswith("www fenabrave org br")
+        ):
+            continue
+
+        entry = split_fenabrave_subsegment_share_entry(line)
+
+        if not entry:
+            continue
+
+        rows.append(
+            {
+                "page_number": FENABRAVE_ITEM5_PAGE,
+                "row_number": len(rows) + 1,
+                "vehicle_category": "automoveis",
+                **entry,
+            }
+        )
+
+    return rows
+
+
 def normalize_model_ranking_rows(raw_rows, source_file_id, reference_period, item_code):
     """
     Normaliza linhas de ranking Fenabrave para `market_vehicle_model_rankings`.
@@ -1035,6 +1163,34 @@ def normalize_item4_rows(raw_rows, source_file_id, reference_period):
                 "units": row["units"],
                 "market_share_pct": row["market_share_pct"],
                 "raw_label": row["brand_name_raw"],
+            }
+        )
+
+    return normalized
+
+
+def normalize_item5_rows(raw_rows, source_file_id, reference_period):
+    """
+    Normaliza linhas do item 5 para `market_vehicle_subsegment_shares`.
+    """
+    normalized = []
+    item_definition = FENABRAVE_SUBSEGMENT_ITEMS[FENABRAVE_ITEM5_CODE]
+
+    for row in raw_rows:
+        normalized.append(
+            {
+                "source_file_id": source_file_id,
+                "reference_period": reference_period,
+                "item_code": item_definition["code"],
+                "published_period_type": item_definition["published_period_type"],
+                "market_scope": item_definition["market_scope"],
+                "vehicle_category": row["vehicle_category"],
+                "sales_channel": item_definition["sales_channel"],
+                "subsegment_name": row["subsegment_name"],
+                "current_month_share_pct": row["current_month_share_pct"],
+                "current_year_accum_share_pct": row["current_year_accum_share_pct"],
+                "prior_year_accum_share_pct": row["prior_year_accum_share_pct"],
+                "raw_label": row["raw_label"],
             }
         )
 
@@ -1536,6 +1692,159 @@ def validate_item4_rows(item4_rows, item3_rows=None):
     return checks
 
 
+def validate_item5_rows(item5_rows, item5_raw_rows=None):
+    """
+    Valida shares por subsegmento da pagina 17.
+    """
+    raw_rows = item5_raw_rows or []
+    subsegments = [row.get("subsegment_name") for row in item5_rows]
+    row_count = len(item5_rows)
+    distinct_count = len(
+        {
+            normalize_key(value)
+            for value in subsegments
+            if normalize_text(value)
+        }
+    )
+    missing_names = sum(1 for value in subsegments if not normalize_text(value))
+
+    current_month_invalid = sum(
+        1
+        for row in item5_rows
+        if row.get("current_month_share_pct") is None
+        or row.get("current_month_share_pct") < 0
+        or row.get("current_month_share_pct") > 100
+    )
+    current_year_invalid = sum(
+        1
+        for row in item5_rows
+        if row.get("current_year_accum_share_pct") is None
+        or row.get("current_year_accum_share_pct") < 0
+        or row.get("current_year_accum_share_pct") > 100
+    )
+    prior_year_invalid = sum(
+        1
+        for row in item5_rows
+        if row.get("prior_year_accum_share_pct") is None
+        or row.get("prior_year_accum_share_pct") < 0
+        or row.get("prior_year_accum_share_pct") > 100
+    )
+
+    previous_month_invalid = sum(
+        1
+        for row in raw_rows
+        if row.get("previous_month_share_pct") is None
+        or row.get("previous_month_share_pct") < 0
+        or row.get("previous_month_share_pct") > 100
+    )
+
+    current_month_total = round(
+        sum(row.get("current_month_share_pct") or 0 for row in item5_rows), 4
+    )
+    previous_month_total = round(
+        sum(row.get("previous_month_share_pct") or 0 for row in raw_rows), 4
+    )
+    current_year_total = round(
+        sum(row.get("current_year_accum_share_pct") or 0 for row in item5_rows), 4
+    )
+    prior_year_total = round(
+        sum(row.get("prior_year_accum_share_pct") or 0 for row in item5_rows), 4
+    )
+
+    return [
+        {
+            "check_name": "subsegment_row_count",
+            "calculated_value": row_count,
+            "expected_value": FENABRAVE_ITEM5_EXPECTED_ROWS,
+            "difference": row_count - FENABRAVE_ITEM5_EXPECTED_ROWS,
+            "passed": row_count == FENABRAVE_ITEM5_EXPECTED_ROWS,
+            "severity": "warning",
+            "notes": "Quantidade de subsegmentos pode variar se a Fenabrave alterar a composicao publicada.",
+        },
+        {
+            "check_name": "subsegment_distinct_names",
+            "calculated_value": distinct_count,
+            "expected_value": row_count,
+            "difference": distinct_count - row_count,
+            "passed": distinct_count == row_count and missing_names == 0,
+            "severity": "error",
+            "notes": None,
+        },
+        {
+            "check_name": "subsegment_current_month_share_range",
+            "calculated_value": current_month_invalid,
+            "expected_value": 0,
+            "difference": current_month_invalid,
+            "passed": current_month_invalid == 0,
+            "severity": "error",
+            "notes": None,
+        },
+        {
+            "check_name": "subsegment_previous_month_share_range",
+            "calculated_value": previous_month_invalid,
+            "expected_value": 0,
+            "difference": previous_month_invalid,
+            "passed": previous_month_invalid == 0,
+            "severity": "error",
+            "notes": "Coluna lida apenas para auditoria local; nao entra na persistencia inicial.",
+        },
+        {
+            "check_name": "subsegment_current_year_share_range",
+            "calculated_value": current_year_invalid,
+            "expected_value": 0,
+            "difference": current_year_invalid,
+            "passed": current_year_invalid == 0,
+            "severity": "error",
+            "notes": None,
+        },
+        {
+            "check_name": "subsegment_prior_year_share_range",
+            "calculated_value": prior_year_invalid,
+            "expected_value": 0,
+            "difference": prior_year_invalid,
+            "passed": prior_year_invalid == 0,
+            "severity": "error",
+            "notes": None,
+        },
+        {
+            "check_name": "subsegment_current_month_total_close_100",
+            "calculated_value": current_month_total,
+            "expected_value": 100,
+            "difference": round(current_month_total - 100, 4),
+            "passed": 99 <= current_month_total <= 101,
+            "severity": "warning",
+            "notes": "Tabela publicada em percentuais pode variar ligeiramente por arredondamento.",
+        },
+        {
+            "check_name": "subsegment_previous_month_total_close_100",
+            "calculated_value": previous_month_total,
+            "expected_value": 100,
+            "difference": round(previous_month_total - 100, 4),
+            "passed": 99 <= previous_month_total <= 101,
+            "severity": "warning",
+            "notes": "Coluna lida apenas para auditoria local.",
+        },
+        {
+            "check_name": "subsegment_current_year_total_close_100",
+            "calculated_value": current_year_total,
+            "expected_value": 100,
+            "difference": round(current_year_total - 100, 4),
+            "passed": 99 <= current_year_total <= 101,
+            "severity": "warning",
+            "notes": None,
+        },
+        {
+            "check_name": "subsegment_prior_year_total_close_100",
+            "calculated_value": prior_year_total,
+            "expected_value": 100,
+            "difference": round(prior_year_total - 100, 4),
+            "passed": 99 <= prior_year_total <= 101,
+            "severity": "warning",
+            "notes": "Campo precisa permanecer separado do acumulado corrente para suportar n-1.",
+        },
+    ]
+
+
 def print_preview(raw_rows, normalized_rows, checks, pdf_bytes):
     """
     Imprime uma pre-visualizacao da extracao no terminal.
@@ -1743,6 +2052,45 @@ def print_item4_preview(item4_rows, item4_checks):
     print("")
 
 
+def print_item5_preview(item5_rows, item5_checks):
+    """
+    Imprime preview do item 5 na pagina 17.
+    """
+    print("Emplacamentos por sub segmento (pagina 17, mixed)")
+    print("-" * 120)
+    print(
+        f"{'subsegmento':28} {'mes':>8} {'acum_n':>10} {'acum_n_1':>12}"
+    )
+    print("-" * 120)
+
+    for row in item5_rows:
+        print(
+            f"{row['subsegment_name'][:28]:28} "
+            f"{row['current_month_share_pct']:>7.2f}% "
+            f"{row['current_year_accum_share_pct']:>9.2f}% "
+            f"{row['prior_year_accum_share_pct']:>11.2f}%"
+        )
+
+    print("")
+    print(f"Validacoes locais de {FENABRAVE_ITEM5_CODE}")
+    print("-" * 120)
+
+    for check in item5_checks:
+        print(
+            f"{check['check_name']:42} "
+            f"calc={check['calculated_value']} "
+            f"expected={check['expected_value']} "
+            f"diff={check['difference']} "
+            f"passed={check['passed']} "
+            f"severity={check['severity']}"
+        )
+
+        if check["notes"]:
+            print(f"{'':42} notes={check['notes']}")
+
+    print("")
+
+
 def delete_existing_rows(base_url, headers, source_file_id):
     """
     Remove cargas anteriores do mesmo arquivo de origem.
@@ -1807,6 +2155,28 @@ def delete_brand_ranking_rows(base_url, headers, source_file_id, item_code):
     if response.status_code not in {200, 204}:
         raise RuntimeError(
             "Falha ao limpar market_vehicle_brand_rankings: "
+            f"status={response.status_code} body={response.text[:500]}"
+        )
+
+
+def delete_subsegment_share_rows(base_url, headers, source_file_id, item_code):
+    """
+    Remove apenas linhas de shares por subsegmento para um arquivo.
+    """
+    params = {
+        "source_file_id": f"eq.{source_file_id}",
+        "item_code": f"eq.{item_code}",
+    }
+    response = requests.delete(
+        rest_url(base_url, "market_vehicle_subsegment_shares"),
+        headers=headers,
+        params=params,
+        timeout=60,
+    )
+
+    if response.status_code not in {200, 204}:
+        raise RuntimeError(
+            "Falha ao limpar market_vehicle_subsegment_shares: "
             f"status={response.status_code} body={response.text[:500]}"
         )
 
@@ -1952,6 +2322,8 @@ def write_results(
     item3_checks=None,
     item4_rows=None,
     item4_checks=None,
+    item5_rows=None,
+    item5_checks=None,
 ):
     """
     Persiste normalizado e status no Supabase.
@@ -2148,6 +2520,51 @@ def write_results(
                 len(item4_rows),
                 "passed",
                 "Item 4 Fenabrave validado e gravado pela rotina mensal.",
+            )
+
+    if item5_rows is not None:
+        if replace:
+            delete_subsegment_share_rows(
+                base_url,
+                headers,
+                source_file_id,
+                FENABRAVE_ITEM5_CODE,
+            )
+
+        item5_has_error = any(
+            not check["passed"] and check["severity"] == "error"
+            for check in (item5_checks or [])
+        )
+
+        if item5_has_error:
+            upsert_fenabrave_item_status(
+                base_url,
+                headers,
+                source_file_id,
+                normalized_rows[0]["reference_period"],
+                FENABRAVE_ITEM5_CODE,
+                "failed",
+                len(item5_rows),
+                "failed",
+                "Item 5 Fenabrave falhou em validacoes locais.",
+            )
+        else:
+            insert_rows(
+                base_url,
+                headers,
+                "market_vehicle_subsegment_shares",
+                item5_rows,
+            )
+            upsert_fenabrave_item_status(
+                base_url,
+                headers,
+                source_file_id,
+                normalized_rows[0]["reference_period"],
+                FENABRAVE_ITEM5_CODE,
+                "validated",
+                len(item5_rows),
+                "passed",
+                "Item 5 Fenabrave validado e gravado pela rotina mensal.",
             )
 
     has_error = any(
@@ -2415,6 +2832,14 @@ def parse_args():
             "por padrao o item 4 passa a fazer parte da inclusao mensal Fenabrave."
         ),
     )
+    parser.add_argument(
+        "--skip-phase2-item5",
+        action="store_true",
+        help=(
+            "Nao executa o item 5 da fase 2. Use apenas para contingencia; "
+            "por padrao o item 5 passa a fazer parte da inclusao mensal Fenabrave."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -2492,6 +2917,8 @@ def main():
     item3_checks = None
     item4_rows = None
     item4_checks = None
+    item5_rows = None
+    item5_checks = None
 
     if not args.skip_phase2_item1:
         print("Extraindo item 1 da fase 2 na pagina 6...")
@@ -2533,6 +2960,16 @@ def main():
         )
         item4_checks = validate_item4_rows(item4_rows, item3_rows)
 
+    if not args.skip_phase2_item5:
+        print("Extraindo item 5 da fase 2 na pagina 17...")
+        item5_raw_rows = extract_item5_subsegment_shares(pdf_bytes)
+        item5_rows = normalize_item5_rows(
+            item5_raw_rows,
+            source_file_id_for_preview,
+            reference_period,
+        )
+        item5_checks = validate_item5_rows(item5_rows, item5_raw_rows)
+
     print_preview(raw_rows, normalized_rows, checks, pdf_bytes)
 
     if item1_rows is not None:
@@ -2546,6 +2983,9 @@ def main():
 
     if item4_rows is not None:
         print_item4_preview(item4_rows, item4_checks)
+
+    if item5_rows is not None:
+        print_item5_preview(item5_rows, item5_checks)
 
     if args.dry_run:
         print("Dry-run concluido. Nenhum dado foi gravado.")
@@ -2587,6 +3027,8 @@ def main():
         item3_checks=item3_checks,
         item4_rows=item4_rows,
         item4_checks=item4_checks,
+        item5_rows=item5_rows,
+        item5_checks=item5_checks,
     )
     print("Carga concluida.")
 

@@ -65,7 +65,7 @@ Persistencia:
 | 2 | Ranking dos emplacamentos | 6 | acumulado | automoveis e comerciais leves | sim |
 | 3 | Ranking por marca | 8 | mes | automoveis e comerciais leves | sim |
 | 4 | Ranking por marca | 9 | acumulado | automoveis e comerciais leves | sim |
-| 5 | Emplacamentos por sub segmento | 16 | mes e acumulado | automoveis | sim |
+| 5 | Emplacamentos por sub segmento | 17 | mes e acumulado | automoveis | sim |
 | 6 | Mercado de eletrificados autos | 20 | mes | eletricos e hibridos | sim |
 | 7 | Total por marca leves hibrido | 20 | mes | leves hibridos | sim |
 | 8 | Total por marca leves eletrico | 20 | mes | leves eletricos | sim |
@@ -547,6 +547,7 @@ Aplicar ao item 5:
 
 - `subsegment_name` obrigatorio
 - cada linha deve representar um subsegmento valido de automoveis
+- o nome persistido do subsegmento deve remover o prefixo tecnico `AU -`
 - a coluna de mes anterior pode ser lida para auditoria, mas nao deve ser
   persistida como dado principal do item
 - o parser deve persistir o mes corrente do periodo, o acumulado do ano
@@ -555,8 +556,9 @@ Aplicar ao item 5:
   valor no mesmo campo do acumulado de `2025`
 - os acumulados precisam distinguir explicitamente o ano de referencia do
   acumulado publicado, porque a tabela sempre traz comparacao entre `n` e `n-1`
-- paginas `18` e `19` devem ficar fora da analise do item `5`, pois funcionam
-  apenas como breakdown complementar do bloco principal da pagina `16`
+- paginas `16`, `18` e `19` devem ficar fora da analise principal do item `5`,
+  pois funcionam apenas como breakdown complementar do bloco principal da
+  pagina `17`
 
 ### Observacao operacional do item 5
 
@@ -564,13 +566,18 @@ Confirmacao manual com os PDFs carregados:
 
 - o titulo conceitual correto do item `5` deve ser tratado como
   `Emplacamentos por sub segmento`
-- a pagina principal do item e a `16`
+- a pagina principal do item e a `17`
 - a tabela relevante traz, por linha de subsegmento:
   `mes corrente`, `mes anterior`, `acumulado n-1` e `acumulado n`
+- o nome da subcategoria deve ser normalizado sem o prefixo `AU -`
+- os valores publicados nesse bloco aparecem como percentuais por subsegmento,
+  e nao como totais absolutos por modelo
 - a coluna de `mes anterior` nao entra no escopo inicial de persistencia
 - os campos de acumulado precisam suportar comparacao interanual publicada no
   proprio PDF, inclusive quando o periodo corrente for `12/2025` e o
   acumulado anterior for `2024`
+- a pagina `16` mostra apenas um breakdown especifico de `Suv's` e nao deve ser
+  tratada como a tabela principal do item `5`
 
 ## Views de consumo esperadas
 
