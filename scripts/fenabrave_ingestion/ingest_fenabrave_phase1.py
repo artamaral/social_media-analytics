@@ -141,6 +141,8 @@ FENABRAVE_ELECTRIFIED_PAGE_MAP = {
     20: "automoveis",
     21: "comerciais_leves",
 }
+FENABRAVE_ELECTRIFIED_PAGE21_MONTHLY_HYBRID_BBOX = (45, 220, 255, 345)
+FENABRAVE_ELECTRIFIED_PAGE21_MONTHLY_ELECTRIC_BBOX = (300, 205, 495, 345)
 FENABRAVE_ELECTRIFIED_MARKET_LABELS = {
     "a hibridos": "hybrid",
     "b eletricos": "electric",
@@ -972,6 +974,10 @@ def extract_electrified_pages(pdf_bytes):
             or ""
             for page_number in FENABRAVE_ELECTRIFIED_PAGE_MAP
         }
+        page_object_map = {
+            page_number: pdf.pages[page_number - 1]
+            for page_number in FENABRAVE_ELECTRIFIED_PAGE_MAP
+        }
 
     market_rows = []
     hybrid_brand_rows = []
@@ -1053,7 +1059,95 @@ def extract_electrified_pages(pdf_bytes):
                     }
                 )
 
+        if page_number == 21:
+            hybrid_brand_rows = [
+                row
+                for row in hybrid_brand_rows
+                if not (
+                    row.get("page_number") == page_number
+                    and row.get("vehicle_category") == vehicle_category
+                )
+            ]
+            electric_brand_rows = [
+                row
+                for row in electric_brand_rows
+                if not (
+                    row.get("page_number") == page_number
+                    and row.get("vehicle_category") == vehicle_category
+                )
+            ]
+
+            positioned_hybrid_rows = extract_positioned_electrified_brand_rows(
+                page_object_map[page_number],
+                page_number=page_number,
+                vehicle_category=vehicle_category,
+                bbox=FENABRAVE_ELECTRIFIED_PAGE21_MONTHLY_HYBRID_BBOX,
+                powertrain_type="hybrid",
+                stop_header="hibridos acumulado",
+            )
+            positioned_electric_rows = extract_positioned_electrified_brand_rows(
+                page_object_map[page_number],
+                page_number=page_number,
+                vehicle_category=vehicle_category,
+                bbox=FENABRAVE_ELECTRIFIED_PAGE21_MONTHLY_ELECTRIC_BBOX,
+                powertrain_type="electric",
+                stop_header="eletricos acumulado",
+            )
+            hybrid_brand_rows.extend(positioned_hybrid_rows)
+            electric_brand_rows.extend(positioned_electric_rows)
+
     return market_rows, hybrid_brand_rows, electric_brand_rows
+
+
+def extract_positioned_electrified_brand_rows(
+    page,
+    page_number,
+    vehicle_category,
+    bbox,
+    powertrain_type,
+    stop_header,
+):
+    """
+    Extrai um bloco mensal por marca da pagina 21 via recorte posicional.
+
+    A pagina 21 varia a posicao vertical dos blocos de comerciais leves entre
+    meses. Por isso mantemos um recorte largo em `y` e interrompemos a leitura
+    quando o cabecalho do bloco acumulado aparece dentro da area.
+    """
+    cropped_text = page.crop(bbox).extract_text(x_tolerance=1, y_tolerance=3) or ""
+    rows = []
+
+    for raw_line in cropped_text.splitlines():
+        line = normalize_text(raw_line)
+        line_key = normalize_key(line)
+
+        if not line:
+            continue
+        if (
+            line_key in {"hibridos mes", "eletricos mes", "fabricante quant part"}
+            or line_key.startswith("fabricante")
+        ):
+            continue
+        if line_key == stop_header:
+            break
+
+        entries = split_fenabrave_brand_ranked_entries(line)
+
+        if not entries:
+            continue
+
+        entry = entries[0]
+        rows.append(
+            {
+                "page_number": page_number,
+                "row_number": len(rows) + 1,
+                "vehicle_category": vehicle_category,
+                "powertrain_type": powertrain_type,
+                **entry,
+            }
+        )
+
+    return rows
 
 
 def extract_model_rankings_from_page(pdf_bytes, item_definition):
@@ -2858,6 +2952,28 @@ def delete_subsegment_share_rows(base_url, headers, source_file_id, item_code):
         )
 
 
+def delete_electrified_rows(base_url, headers, source_file_id, item_code):
+    """
+    Remove apenas linhas de eletrificados para um arquivo e item.
+    """
+    params = {
+        "source_file_id": f"eq.{source_file_id}",
+        "item_code": f"eq.{item_code}",
+    }
+    response = requests.delete(
+        rest_url(base_url, "market_vehicle_electrified_registrations"),
+        headers=headers,
+        params=params,
+        timeout=60,
+    )
+
+    if response.status_code not in {200, 204}:
+        raise RuntimeError(
+            "Falha ao limpar market_vehicle_electrified_registrations: "
+            f"status={response.status_code} body={response.text[:500]}"
+        )
+
+
 def insert_rows(base_url, headers, table, rows):
     """
     Insere uma lista de registros em uma tabela Supabase.
@@ -3001,6 +3117,12 @@ def write_results(
     item4_checks=None,
     item5_rows=None,
     item5_checks=None,
+    item6_rows=None,
+    item6_checks=None,
+    item7_rows=None,
+    item7_checks=None,
+    item8_rows=None,
+    item8_checks=None,
 ):
     """
     Persiste normalizado e status no Supabase.
@@ -3242,6 +3364,141 @@ def write_results(
                 len(item5_rows),
                 "passed",
                 "Item 5 Fenabrave validado e gravado pela rotina mensal.",
+            )
+
+    if item6_rows is not None:
+        if replace:
+            delete_electrified_rows(
+                base_url,
+                headers,
+                source_file_id,
+                FENABRAVE_ITEM6_CODE,
+            )
+
+        item6_has_error = any(
+            not check["passed"] and check["severity"] == "error"
+            for check in (item6_checks or [])
+        )
+
+        if item6_has_error:
+            upsert_fenabrave_item_status(
+                base_url,
+                headers,
+                source_file_id,
+                normalized_rows[0]["reference_period"],
+                FENABRAVE_ITEM6_CODE,
+                "failed",
+                len(item6_rows),
+                "failed",
+                "Item 6 Fenabrave falhou em validacoes locais.",
+            )
+        else:
+            insert_rows(
+                base_url,
+                headers,
+                "market_vehicle_electrified_registrations",
+                item6_rows,
+            )
+            upsert_fenabrave_item_status(
+                base_url,
+                headers,
+                source_file_id,
+                normalized_rows[0]["reference_period"],
+                FENABRAVE_ITEM6_CODE,
+                "validated",
+                len(item6_rows),
+                "passed",
+                "Item 6 Fenabrave validado e gravado pela rotina mensal.",
+            )
+
+    if item7_rows is not None:
+        if replace:
+            delete_electrified_rows(
+                base_url,
+                headers,
+                source_file_id,
+                FENABRAVE_ITEM7_CODE,
+            )
+
+        item7_has_error = any(
+            not check["passed"] and check["severity"] == "error"
+            for check in (item7_checks or [])
+        )
+
+        if item7_has_error:
+            upsert_fenabrave_item_status(
+                base_url,
+                headers,
+                source_file_id,
+                normalized_rows[0]["reference_period"],
+                FENABRAVE_ITEM7_CODE,
+                "failed",
+                len(item7_rows),
+                "failed",
+                "Item 7 Fenabrave falhou em validacoes locais.",
+            )
+        else:
+            insert_rows(
+                base_url,
+                headers,
+                "market_vehicle_electrified_registrations",
+                item7_rows,
+            )
+            upsert_fenabrave_item_status(
+                base_url,
+                headers,
+                source_file_id,
+                normalized_rows[0]["reference_period"],
+                FENABRAVE_ITEM7_CODE,
+                "validated",
+                len(item7_rows),
+                "passed",
+                "Item 7 Fenabrave validado e gravado pela rotina mensal.",
+            )
+
+    if item8_rows is not None:
+        if replace:
+            delete_electrified_rows(
+                base_url,
+                headers,
+                source_file_id,
+                FENABRAVE_ITEM8_CODE,
+            )
+
+        item8_has_error = any(
+            not check["passed"] and check["severity"] == "error"
+            for check in (item8_checks or [])
+        )
+
+        if item8_has_error:
+            upsert_fenabrave_item_status(
+                base_url,
+                headers,
+                source_file_id,
+                normalized_rows[0]["reference_period"],
+                FENABRAVE_ITEM8_CODE,
+                "failed",
+                len(item8_rows),
+                "failed",
+                "Item 8 Fenabrave falhou em validacoes locais.",
+            )
+        else:
+            insert_rows(
+                base_url,
+                headers,
+                "market_vehicle_electrified_registrations",
+                item8_rows,
+            )
+            upsert_fenabrave_item_status(
+                base_url,
+                headers,
+                source_file_id,
+                normalized_rows[0]["reference_period"],
+                FENABRAVE_ITEM8_CODE,
+                "validated",
+                len(item8_rows),
+                "passed",
+                "Item 8 Fenabrave validado e gravado pela rotina mensal.",
             )
 
     has_error = any(
@@ -3517,6 +3774,30 @@ def parse_args():
             "por padrao o item 5 passa a fazer parte da inclusao mensal Fenabrave."
         ),
     )
+    parser.add_argument(
+        "--skip-phase2-item6",
+        action="store_true",
+        help=(
+            "Nao executa o item 6 da fase 2. Use apenas para contingencia; "
+            "por padrao o item 6 passa a fazer parte da inclusao mensal Fenabrave."
+        ),
+    )
+    parser.add_argument(
+        "--skip-phase2-item7",
+        action="store_true",
+        help=(
+            "Nao executa o item 7 da fase 2. Use apenas para contingencia; "
+            "por padrao o item 7 passa a fazer parte da inclusao mensal Fenabrave."
+        ),
+    )
+    parser.add_argument(
+        "--skip-phase2-item8",
+        action="store_true",
+        help=(
+            "Nao executa o item 8 da fase 2. Use apenas para contingencia; "
+            "por padrao o item 8 passa a fazer parte da inclusao mensal Fenabrave."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -3596,6 +3877,12 @@ def main():
     item4_checks = None
     item5_rows = None
     item5_checks = None
+    item6_rows = None
+    item6_checks = None
+    item7_rows = None
+    item7_checks = None
+    item8_rows = None
+    item8_checks = None
 
     if not args.skip_phase2_item1:
         print("Extraindo item 1 da fase 2 na pagina 6...")
@@ -3647,6 +3934,36 @@ def main():
         )
         item5_checks = validate_item5_rows(item5_rows, item5_raw_rows)
 
+    if not args.skip_phase2_item6:
+        print("Extraindo item 6 da fase 2 nas paginas 20 e 21...")
+        item6_raw_rows = extract_item6_electrified_market(pdf_bytes)
+        item6_rows = normalize_item6_rows(
+            item6_raw_rows,
+            source_file_id_for_preview,
+            reference_period,
+        )
+        item6_checks = validate_item6_rows(item6_rows)
+
+    if not args.skip_phase2_item7:
+        print("Extraindo item 7 da fase 2 nas paginas 20 e 21...")
+        item7_raw_rows = extract_item7_electrified_hybrid_brands(pdf_bytes)
+        item7_rows = normalize_item7_rows(
+            item7_raw_rows,
+            source_file_id_for_preview,
+            reference_period,
+        )
+        item7_checks = validate_item7_rows(item7_rows, item6_rows)
+
+    if not args.skip_phase2_item8:
+        print("Extraindo item 8 da fase 2 nas paginas 20 e 21...")
+        item8_raw_rows = extract_item8_electrified_electric_brands(pdf_bytes)
+        item8_rows = normalize_item8_rows(
+            item8_raw_rows,
+            source_file_id_for_preview,
+            reference_period,
+        )
+        item8_checks = validate_item8_rows(item8_rows, item6_rows)
+
     print_preview(raw_rows, normalized_rows, checks, pdf_bytes)
 
     if item1_rows is not None:
@@ -3663,6 +3980,15 @@ def main():
 
     if item5_rows is not None:
         print_item5_preview(item5_rows, item5_checks)
+
+    if item6_rows is not None:
+        print_item6_preview(item6_rows, item6_checks)
+
+    if item7_rows is not None:
+        print_item7_preview(item7_rows, item7_checks)
+
+    if item8_rows is not None:
+        print_item8_preview(item8_rows, item8_checks)
 
     if args.dry_run:
         print("Dry-run concluido. Nenhum dado foi gravado.")
@@ -3706,6 +4032,12 @@ def main():
         item4_checks=item4_checks,
         item5_rows=item5_rows,
         item5_checks=item5_checks,
+        item6_rows=item6_rows,
+        item6_checks=item6_checks,
+        item7_rows=item7_rows,
+        item7_checks=item7_checks,
+        item8_rows=item8_rows,
+        item8_checks=item8_checks,
     )
     print("Carga concluida.")
 

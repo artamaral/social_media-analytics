@@ -6012,6 +6012,12 @@ def render_fenabrave_intake_page() -> None:
                                 item4_checks=preview_payload.get("item4_checks"),
                                 item5_rows=preview_payload.get("item5_rows"),
                                 item5_checks=preview_payload.get("item5_checks"),
+                                item6_rows=preview_payload.get("item6_rows"),
+                                item6_checks=preview_payload.get("item6_checks"),
+                                item7_rows=preview_payload.get("item7_rows"),
+                                item7_checks=preview_payload.get("item7_checks"),
+                                item8_rows=preview_payload.get("item8_rows"),
+                                item8_checks=preview_payload.get("item8_checks"),
                             )
                         except Exception as exc:
                             st.error(f"Falha ao gravar os dados analiticos: {exc}")
@@ -6020,7 +6026,7 @@ def render_fenabrave_intake_page() -> None:
                             st.session_state["fenabrave_validated"] = True
                             st.success(
                                 "Dados analiticos gravados em market_vehicle_registrations_segment "
-                                "e itens 1, 2, 3, 4 e 5 da fase 2 gravados nas tabelas Fenabrave."
+                                "e itens 1, 2, 3, 4, 5, 6, 7 e 8 da fase 2 gravados nas tabelas Fenabrave."
                             )
                             st.rerun()
             elif preview_error:

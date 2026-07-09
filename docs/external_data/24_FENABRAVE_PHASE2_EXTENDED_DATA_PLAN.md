@@ -785,6 +785,56 @@ Pendencias imediatas a partir deste ponto:
   `market_fenabrave_extraction_items` e backfill historico dos itens `6`, `7` e
   `8`
 
+Atualizacao complementar de 2026-07-09:
+
+- a extracao da pagina `21` foi ajustada com leitura por `regiao posicionada`
+  para os blocos mensais de `comerciais_leves`
+- o recorte posicional passou a isolar corretamente `Hibridos mes` e
+  `Eletricos mes` mesmo quando a altura vertical do bloco varia entre meses
+- a validacao historica local de `12/2025` a `06/2026` passou sem falhas de
+  severidade `error` para os itens `7` e `8`
+- as quantidades de linhas por mes variam conforme o PDF publicado, mas agora
+  aparecem de forma consistente em `comerciais_leves`:
+  `item 7` entre `3` e `4` marcas e `item 8` entre `3` e `9` marcas no
+  historico testado
+- com isso, o parser e o preview dos itens `6`, `7` e `8` ficam estabilizados
+  para o historico atualmente disponivel
+
+Proximo passo operacional dos itens `6`, `7` e `8`:
+
+- habilitar persistencia em
+  `market_vehicle_electrified_registrations`
+- registrar o status por item em
+  `market_fenabrave_extraction_items`
+- executar o backfill historico de `12/2025` a `06/2026`
+
+Atualizacao final de 2026-07-09 para os itens `6`, `7` e `8`:
+
+- a tabela `public.market_vehicle_electrified_registrations` foi criada no
+  Supabase e passou a receber os dados dos itens `6`, `7` e `8`
+- a rotina mensal Fenabrave foi atualizada para persistir esses itens no mesmo
+  fluxo operacional dos itens anteriores, com suporte a `--replace`
+- o Streamlit passou a enviar os itens `6`, `7` e `8` na acao de gravacao
+  analitica do preview operacional
+- o piloto de `06/2026` foi executado com sucesso no banco real
+- o backfill historico oficial foi concluido para os `source_file_id`
+  canonicos `17`, `5`, `4`, `3`, `2`, `6` e `13`, cobrindo `12/2025` a
+  `06/2026`
+- todos os periodos carregados ficaram com `status = validated`,
+  `validation_status = passed` e com contagem de linhas coerente por item:
+  `item 6` com `6` linhas em todos os meses, `item 7` entre `18` e `19`
+  linhas, e `item 8` entre `18` e `24` linhas
+- o `source_file_id = 8` continua fora da carga analitica e deve permanecer
+  apenas como duplicidade historica rastreavel de `12/2025`
+
+Estado consolidado apos o backfill:
+
+- itens `6`, `7` e `8` concluídos no historico atualmente disponivel
+- parser, preview, persistencia, controle por item e backfill historico todos
+  validados no banco
+- a proxima frente da fase 2 pode avancar para os itens `9` e `10`, caso a
+  decisao de escopo os mantenha ativos
+
 ## Proximo passo apos aprovacao do plano
 
 Depois da aprovacao deste plano, a execucao deve comecar pelo item 1:
