@@ -66,9 +66,9 @@ Persistencia:
 | 3 | Ranking por marca | 8 | mes | automoveis e comerciais leves | sim |
 | 4 | Ranking por marca | 9 | acumulado | automoveis e comerciais leves | sim |
 | 5 | Emplacamentos por sub segmento | 17 | mes e acumulado | automoveis | sim |
-| 6 | Mercado de eletrificados autos | 20 | mes | eletricos e hibridos | sim |
-| 7 | Total por marca leves hibrido | 20 | mes | leves hibridos | sim |
-| 8 | Total por marca leves eletrico | 20 | mes | leves eletricos | sim |
+| 6 | Mercado de eletrificados | 20 e 21 | mes | automoveis e comerciais leves | sim |
+| 7 | Total por marca mes hibrido | 20 e 21 | mes | automoveis e comerciais leves hibridos | sim |
+| 8 | Total por marca mes eletrico | 20 e 21 | mes | automoveis e comerciais leves eletricos | sim |
 | 9 | Total por modelo leves hibrido | 20 | mes | leves hibridos | sim |
 | 10 | Total por modelo leves eletrico | 20 | mes | leves eletricos | sim |
 | 11 | Participacao de venda direta e varejo | 24 | mes | canal de venda | sim |
@@ -288,7 +288,7 @@ item_code
 published_period_type        -- monthly nesta fase
 aggregation_level            -- market, brand, model
 powertrain_type              -- electric, hybrid
-vehicle_category             -- leves
+vehicle_category             -- automoveis ou comerciais_leves
 rank_position
 brand_name
 model_name
@@ -303,6 +303,23 @@ Chave unica sugerida:
 ```text
 source_file_id, item_code, aggregation_level, powertrain_type, rank_position, brand_name, model_name
 ```
+
+Observacao operacional refinada para os itens `6`, `7` e `8`:
+
+- a pagina `20` cobre `automoveis`
+- a pagina `21` cobre `comerciais_leves`
+- as duas paginas seguem o mesmo desenho com `3` blocos relevantes
+- o bloco `1` traz `A) Hibridos`, `B) Eletricos` e `Tot.Eletrificados`
+- no bloco `1`, o escopo inicial deve persistir apenas a `coluna 1`, isto e,
+  o valor absoluto do mes
+- as demais colunas do bloco `1` representam outros meses, acumulados ou
+  comparativos e ficam fora do escopo inicial de persistencia
+- o bloco `2` traz `Hibridos mes`, por marca, com `fabricante` e `quantidade`
+- o bloco `3` traz `Eletricos mes`, por marca, com `fabricante` e `quantidade`
+- a implementacao deve manter `item_code` separado para `6`, `7` e `8`, mas
+  pode usar um parser compartilhado para as paginas `20` e `21`
+- no item `6`, o campo `powertrain_type` precisa suportar tambem a linha
+  consolidada `total_electrified`, alem de `hybrid` e `electric`
 
 ### 6. Participacao por canal de venda
 
@@ -533,13 +550,21 @@ Aplicar aos itens 11 a 20:
 
 Aplicar aos itens 6 a 10:
 
-- `powertrain_type` deve ser sempre `electric` ou `hybrid`
+- `powertrain_type` deve ser `hybrid`, `electric` ou `total_electrified`
+  quando o item for o bloco de mercado consolidado
 - itens de marca nao devem gravar `model_name`
 - itens de modelo devem gravar `brand_name` e `model_name`, quando o PDF
   permitir identificar ambos
 - totais por marca/modelo nao devem exceder o total de eletrificados do mesmo
   tipo de propulsao, salvo se o PDF usar recorte diferente documentado
 - eletricos e hibridos devem ser carregados como categorias separadas
+- no item `6`, `hybrid + electric` deve bater com `total_electrified` dentro da
+  margem de arredondamento ou de eventual diferenca publicada no proprio PDF
+- no item `6`, somente a primeira coluna de volume mensal entra na
+  persistencia inicial; colunas de mes anterior, acumulado e comparativos ficam
+  apenas para auditoria futura
+- os itens `7` e `8` devem usar apenas os blocos mensais por marca, ignorando
+  os blocos acumulados enquanto eles nao fizerem parte do escopo ativo
 
 ### Validacoes de subsegmento
 
@@ -721,6 +746,44 @@ Pendencias para a fase 2 a partir deste ponto:
   backfill, usando a pagina `17` do PDF
 - manter a documentacao e a auditoria de cobertura atualizadas a cada novo item
   liberado
+
+Atualizacao consolidada de 2026-07-09:
+
+- o item `5` foi concluido e saiu da fila ativa, com parser, preview,
+  persistencia e backfill historico ja documentados no backlog e nos artefatos
+  da fase 2
+- os itens `6`, `7` e `8` entraram em implementacao conjunta porque compartilham
+  as paginas `20` e `21` e a mesma familia de validacoes operacionais
+- o contrato funcional dos itens `6`, `7` e `8` foi refinado e documentado:
+  `item 6` persiste apenas a primeira coluna mensal do bloco consolidado de
+  mercado, enquanto `itens 7 e 8` persistem os blocos mensais por marca para
+  `hibridos` e `eletricos`
+- o parser base e o preview operacional no Streamlit ja foram implementados
+  para os itens `6`, `7` e `8`
+- no piloto com `06/2026`, o `item 6` extraiu corretamente os dados de
+  `automoveis` e `comerciais_leves`, incluindo a reconciliacao esperada entre
+  `hybrid`, `electric` e `total_electrified`
+- no mesmo piloto, os `itens 7 e 8` extraem corretamente os rankings de marca
+  para `automoveis`
+- a principal pendencia tecnica atual ficou concentrada na pagina `21`, onde os
+  blocos de `comerciais_leves` de `Hibridos mes` e `Eletricos mes` variam em
+  posicao vertical e nao sao capturados com seguranca pelo fluxo textual simples
+- foi feita uma validacao historica de layout dos PDFs de `12/2025` a `06/2026`
+  e a conclusao operacional e que a abordagem correta para a pagina `21` deve
+  ser por `regioes posicionadas`, com `x` fixo por bloco e `y` tolerante
+  conforme a altura efetiva das tabelas
+- a persistencia no banco para os itens `6`, `7` e `8` ainda nao foi ativada;
+  nesta etapa a entrega habilitada e de parser, preview e validacoes iniciais
+
+Pendencias imediatas a partir deste ponto:
+
+- ajustar a extracao da pagina `21` com leitura por regiao para capturar
+  corretamente os blocos mensais de `comerciais_leves`
+- reexecutar o piloto de `06/2026` para confirmar `item 7` e `item 8` completos
+  nas duas categorias
+- somente depois disso ativar persistencia, controle em
+  `market_fenabrave_extraction_items` e backfill historico dos itens `6`, `7` e
+  `8`
 
 ## Proximo passo apos aprovacao do plano
 

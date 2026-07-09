@@ -34,7 +34,7 @@
 - [ ] App Streamlit online consumindo Supabase sob demanda
 - [ ] Tela inicial com status de qualidade dos dados
 - [ ] Evoluir a view Fenabrave consumida pelo Streamlit para exibir o historico anual completo por periodo, garantindo leitura de 2025 e 2026, com cards mostrando o acumulado do ano por categoria e nao a soma de todos os arquivos carregados. Neste ponto temos um issue, porque o acumulado nao referecia ano o que gera um problema quando o mes de dezembro de 2025 e escolhido. ele mostra todos os cards duplicados e o acumulado continua o mesmo valor.
-- [ ] ATIVIDADE ATUAL E PRIORITARIA: implementar o item 6 da fase 2 Fenabrave, `Mercado de Eletrificados Autos` da pagina 20, garantindo extracao, preview, validacoes, persistencia mensal automatica e backfill dos meses que ja possuem PDF oficial no bucket.
+- [ ] ATIVIDADE ATUAL E PRIORITARIA: concluir os itens 6, 7 e 8 da fase 2 Fenabrave nas paginas 20 e 21, finalizando a extracao por regiao dos blocos de `comerciais_leves` (`hibridos mes` e `eletricos mes`), para entao habilitar persistencia mensal automatica, controle operacional por item e backfill historico no banco.
 - [ ] Ranking de creators por views, engajamento e frequencia
 - [ ] Ranking semanal de crescimento de videos
 - [ ] Melhoria estetica: alinhar a lista de videos do criador individual ao mesmo padrao visual de `YouTube > Melhores videos 7d`, com hierarquia, colunas e leitura comparavel entre as duas telas.
@@ -60,3 +60,4 @@
 - [x] Finalizar o item 2 da fase 2 Fenabrave, `Ranking dos emplacamentos acumulado` da pagina 7, para automoveis e comerciais leves, com parser integrado a rotina mensal, persistencia em `market_vehicle_model_rankings` e backfill historico validado.
 - [x] Finalizar o item 3 da fase 2 Fenabrave, `Ranking por marca mes` da pagina 8, para automoveis e comerciais leves, com parser integrado a rotina mensal, persistencia em `market_vehicle_brand_rankings` e backfill historico validado.
 - [x] Finalizar o item 4 da fase 2 Fenabrave, `Ranking por marca acumulado` da pagina 9, para automoveis e comerciais leves, com parser integrado a rotina mensal, preview no Streamlit, persistencia em `market_vehicle_brand_rankings` e backfill historico validado para `12/2025` a `06/2026` nos `source_file_id` oficiais `17, 5, 4, 3, 2, 6 e 13`, mantendo `source_file_id = 8` apenas como duplicidade historica rastreavel.
+- [x] Finalizar o item 5 da fase 2 Fenabrave, `Emplacamentos por sub segmento` da pagina 17, com parser, preview, validacoes, persistencia mensal automatica e backfill historico validado, considerando apenas a tabela principal da pagina 17, removendo o prefixo `AU -` dos subsegmentos e preservando separadamente o acumulado do ano corrente (`n`) e do ano anterior (`n-1`).

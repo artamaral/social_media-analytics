@@ -116,6 +116,37 @@ FENABRAVE_ITEM5_MARKET_SCOPE = "Brasil"
 FENABRAVE_ITEM5_SALES_CHANNEL = "all"
 FENABRAVE_ITEM5_EXPECTED_ROWS = 13
 
+FENABRAVE_ITEM6_CODE = "fenabrave_item_06_mercado_eletrificados_mes"
+FENABRAVE_ITEM6_LABEL = "Mercado de eletrificados mes"
+FENABRAVE_ITEM6_PAGE = 20
+FENABRAVE_ITEM6_PERIOD_TYPE = "monthly"
+FENABRAVE_ITEM6_MARKET_SCOPE = "Brasil"
+FENABRAVE_ITEM6_SALES_CHANNEL = "all"
+
+FENABRAVE_ITEM7_CODE = "fenabrave_item_07_total_marca_hibrido_mes"
+FENABRAVE_ITEM7_LABEL = "Total por marca hibrido mes"
+FENABRAVE_ITEM7_PAGE = 20
+FENABRAVE_ITEM7_PERIOD_TYPE = "monthly"
+FENABRAVE_ITEM7_MARKET_SCOPE = "Brasil"
+FENABRAVE_ITEM7_SALES_CHANNEL = "all"
+
+FENABRAVE_ITEM8_CODE = "fenabrave_item_08_total_marca_eletrico_mes"
+FENABRAVE_ITEM8_LABEL = "Total por marca eletrico mes"
+FENABRAVE_ITEM8_PAGE = 20
+FENABRAVE_ITEM8_PERIOD_TYPE = "monthly"
+FENABRAVE_ITEM8_MARKET_SCOPE = "Brasil"
+FENABRAVE_ITEM8_SALES_CHANNEL = "all"
+
+FENABRAVE_ELECTRIFIED_PAGE_MAP = {
+    20: "automoveis",
+    21: "comerciais_leves",
+}
+FENABRAVE_ELECTRIFIED_MARKET_LABELS = {
+    "a hibridos": "hybrid",
+    "b eletricos": "electric",
+    "tot eletrificados": "total_electrified",
+}
+
 FENABRAVE_MODEL_RANKING_ITEMS = {
     FENABRAVE_ITEM1_CODE: {
         "code": FENABRAVE_ITEM1_CODE,
@@ -165,10 +196,38 @@ FENABRAVE_SUBSEGMENT_ITEMS = {
     },
 }
 
+FENABRAVE_ELECTRIFIED_ITEMS = {
+    FENABRAVE_ITEM6_CODE: {
+        "code": FENABRAVE_ITEM6_CODE,
+        "label": FENABRAVE_ITEM6_LABEL,
+        "page": FENABRAVE_ITEM6_PAGE,
+        "published_period_type": FENABRAVE_ITEM6_PERIOD_TYPE,
+        "market_scope": FENABRAVE_ITEM6_MARKET_SCOPE,
+        "sales_channel": FENABRAVE_ITEM6_SALES_CHANNEL,
+    },
+    FENABRAVE_ITEM7_CODE: {
+        "code": FENABRAVE_ITEM7_CODE,
+        "label": FENABRAVE_ITEM7_LABEL,
+        "page": FENABRAVE_ITEM7_PAGE,
+        "published_period_type": FENABRAVE_ITEM7_PERIOD_TYPE,
+        "market_scope": FENABRAVE_ITEM7_MARKET_SCOPE,
+        "sales_channel": FENABRAVE_ITEM7_SALES_CHANNEL,
+    },
+    FENABRAVE_ITEM8_CODE: {
+        "code": FENABRAVE_ITEM8_CODE,
+        "label": FENABRAVE_ITEM8_LABEL,
+        "page": FENABRAVE_ITEM8_PAGE,
+        "published_period_type": FENABRAVE_ITEM8_PERIOD_TYPE,
+        "market_scope": FENABRAVE_ITEM8_MARKET_SCOPE,
+        "sales_channel": FENABRAVE_ITEM8_SALES_CHANNEL,
+    },
+}
+
 FENABRAVE_ITEM_DEFINITIONS = {}
 FENABRAVE_ITEM_DEFINITIONS.update(FENABRAVE_MODEL_RANKING_ITEMS)
 FENABRAVE_ITEM_DEFINITIONS.update(FENABRAVE_BRAND_RANKING_ITEMS)
 FENABRAVE_ITEM_DEFINITIONS.update(FENABRAVE_SUBSEGMENT_ITEMS)
+FENABRAVE_ITEM_DEFINITIONS.update(FENABRAVE_ELECTRIFIED_ITEMS)
 
 
 def infer_reference_period_from_path(storage_path):
@@ -838,6 +897,165 @@ def split_fenabrave_subsegment_share_entry(line):
     }
 
 
+def split_fenabrave_electrified_market_entry(line):
+    """
+    Extrai uma linha de mercado de eletrificados das paginas 20 e 21.
+
+    Resultado esperado:
+    - `A) Hibridos 32.563 ...` vira uma linha com o volume mensal e o tipo de
+      propulsao correspondente.
+    - somente a primeira coluna mensal entra no escopo inicial.
+    """
+    text = normalize_text(line)
+    line_key = normalize_key(text)
+
+    if line_key.startswith("a hibridos"):
+        raw_label = "A) Hibridos"
+        powertrain_type = "hybrid"
+    elif line_key.startswith("b eletricos"):
+        raw_label = "B) Eletricos"
+        powertrain_type = "electric"
+    elif line_key.startswith("tot eletrificados"):
+        raw_label = "Tot.Eletrificados"
+        powertrain_type = "total_electrified"
+    else:
+        return None
+
+    numbers = re.findall(r"\d{1,3}(?:\.\d{3})*|\d+", text)
+
+    if not numbers:
+        return None
+
+    units_raw = normalize_text(numbers[0])
+    monthly_units = parse_int_br(units_raw)
+
+    if monthly_units is None:
+        return None
+
+    return {
+        "raw_label": raw_label,
+        "powertrain_type": powertrain_type,
+        "monthly_units_raw": units_raw,
+        "monthly_units": monthly_units,
+    }
+
+
+def extract_electrified_pages(pdf_bytes):
+    """
+    Extrai os blocos mensais de eletrificados das paginas 20 e 21.
+
+    Resultado esperado:
+    - item 6: mercado mensal por categoria veicular e propulsao.
+    - item 7: ranking mensal por marca de hibridos.
+    - item 8: ranking mensal por marca de eletricos.
+    """
+    try:
+        import pdfplumber
+    except ImportError as error:
+        raise RuntimeError(
+            "Dependencia ausente: pdfplumber. Execute `pip install -r requirements.txt` "
+            "em scripts/fenabrave_ingestion."
+        ) from error
+
+    with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
+        for page_number in FENABRAVE_ELECTRIFIED_PAGE_MAP:
+            if len(pdf.pages) < page_number:
+                raise RuntimeError(
+                    f"PDF sem pagina {page_number} para os itens 6, 7 e 8 da Fenabrave."
+                )
+
+        page_text_map = {
+            page_number: pdf.pages[page_number - 1].extract_text(
+                x_tolerance=1,
+                y_tolerance=3,
+            )
+            or ""
+            for page_number in FENABRAVE_ELECTRIFIED_PAGE_MAP
+        }
+
+    market_rows = []
+    hybrid_brand_rows = []
+    electric_brand_rows = []
+
+    for page_number, vehicle_category in FENABRAVE_ELECTRIFIED_PAGE_MAP.items():
+        text = page_text_map[page_number]
+        monthly_brand_section = False
+        market_row_number = 0
+        brand_row_number = 0
+
+        for raw_line in text.splitlines():
+            line = normalize_text(raw_line)
+            line_key = normalize_key(line)
+
+            if not line:
+                continue
+            if (
+                line_key.startswith("ed ")
+                or line_key == "informativo emplacamentos"
+                or line_key.startswith("sao paulo ")
+                or line_key == "mercado de eletrificados autos"
+                or line_key == "mercado de eletrificados comerciais leves"
+                or line_key == "variacao"
+                or line_key == "a b a d c e"
+                or line_key.startswith("www fenabrave org br")
+            ):
+                continue
+
+            market_entry = split_fenabrave_electrified_market_entry(line)
+            if market_entry:
+                market_row_number += 1
+                market_rows.append(
+                    {
+                        "page_number": page_number,
+                        "row_number": market_row_number,
+                        "vehicle_category": vehicle_category,
+                        **market_entry,
+                    }
+                )
+                continue
+
+            if line_key == "hibridos mes eletricos mes":
+                monthly_brand_section = True
+                continue
+
+            if line_key == "hibridos acumulado eletricos acumulado":
+                break
+
+            if not monthly_brand_section:
+                continue
+
+            entries = split_fenabrave_brand_ranked_entries(line)
+
+            if not entries:
+                continue
+
+            brand_row_number += 1
+
+            if len(entries) >= 1:
+                hybrid_brand_rows.append(
+                    {
+                        "page_number": page_number,
+                        "row_number": brand_row_number,
+                        "vehicle_category": vehicle_category,
+                        "powertrain_type": "hybrid",
+                        **entries[0],
+                    }
+                )
+
+            if len(entries) >= 2:
+                electric_brand_rows.append(
+                    {
+                        "page_number": page_number,
+                        "row_number": brand_row_number,
+                        "vehicle_category": vehicle_category,
+                        "powertrain_type": "electric",
+                        **entries[1],
+                    }
+                )
+
+    return market_rows, hybrid_brand_rows, electric_brand_rows
+
+
 def extract_model_rankings_from_page(pdf_bytes, item_definition):
     """
     Extrai ranking Fenabrave de uma pagina com layout em duas colunas.
@@ -1057,6 +1275,30 @@ def extract_item5_subsegment_shares(pdf_bytes):
     return rows
 
 
+def extract_item6_electrified_market(pdf_bytes):
+    """
+    Extrai o item 6 da fase 2: mercado mensal de eletrificados das paginas 20 e 21.
+    """
+    market_rows, _, _ = extract_electrified_pages(pdf_bytes)
+    return market_rows
+
+
+def extract_item7_electrified_hybrid_brands(pdf_bytes):
+    """
+    Extrai o item 7 da fase 2: marcas mensais de hibridos das paginas 20 e 21.
+    """
+    _, hybrid_brand_rows, _ = extract_electrified_pages(pdf_bytes)
+    return hybrid_brand_rows
+
+
+def extract_item8_electrified_electric_brands(pdf_bytes):
+    """
+    Extrai o item 8 da fase 2: marcas mensais de eletricos das paginas 20 e 21.
+    """
+    _, _, electric_brand_rows = extract_electrified_pages(pdf_bytes)
+    return electric_brand_rows
+
+
 def normalize_model_ranking_rows(raw_rows, source_file_id, reference_period, item_code):
     """
     Normaliza linhas de ranking Fenabrave para `market_vehicle_model_rankings`.
@@ -1191,6 +1433,96 @@ def normalize_item5_rows(raw_rows, source_file_id, reference_period):
                 "current_year_accum_share_pct": row["current_year_accum_share_pct"],
                 "prior_year_accum_share_pct": row["prior_year_accum_share_pct"],
                 "raw_label": row["raw_label"],
+            }
+        )
+
+    return normalized
+
+
+def normalize_item6_rows(raw_rows, source_file_id, reference_period):
+    """
+    Normaliza linhas do item 6 para `market_vehicle_electrified_registrations`.
+    """
+    normalized = []
+    item_definition = FENABRAVE_ELECTRIFIED_ITEMS[FENABRAVE_ITEM6_CODE]
+
+    for row in raw_rows:
+        normalized.append(
+            {
+                "source_file_id": source_file_id,
+                "reference_period": reference_period,
+                "item_code": item_definition["code"],
+                "published_period_type": item_definition["published_period_type"],
+                "market_scope": item_definition["market_scope"],
+                "aggregation_level": "market",
+                "powertrain_type": row["powertrain_type"],
+                "vehicle_category": row["vehicle_category"],
+                "rank_position": None,
+                "brand_name_raw": None,
+                "model_name_raw": None,
+                "units": row["monthly_units"],
+                "market_share_pct": None,
+                "raw_label": row["raw_label"],
+            }
+        )
+
+    return normalized
+
+
+def normalize_item7_rows(raw_rows, source_file_id, reference_period):
+    """
+    Normaliza linhas do item 7 para `market_vehicle_electrified_registrations`.
+    """
+    normalized = []
+    item_definition = FENABRAVE_ELECTRIFIED_ITEMS[FENABRAVE_ITEM7_CODE]
+
+    for row in raw_rows:
+        normalized.append(
+            {
+                "source_file_id": source_file_id,
+                "reference_period": reference_period,
+                "item_code": item_definition["code"],
+                "published_period_type": item_definition["published_period_type"],
+                "market_scope": item_definition["market_scope"],
+                "aggregation_level": "brand",
+                "powertrain_type": "hybrid",
+                "vehicle_category": row["vehicle_category"],
+                "rank_position": row["rank_position"],
+                "brand_name_raw": row["brand_name_raw"],
+                "model_name_raw": None,
+                "units": row["units"],
+                "market_share_pct": row["market_share_pct"],
+                "raw_label": row["brand_name_raw"],
+            }
+        )
+
+    return normalized
+
+
+def normalize_item8_rows(raw_rows, source_file_id, reference_period):
+    """
+    Normaliza linhas do item 8 para `market_vehicle_electrified_registrations`.
+    """
+    normalized = []
+    item_definition = FENABRAVE_ELECTRIFIED_ITEMS[FENABRAVE_ITEM8_CODE]
+
+    for row in raw_rows:
+        normalized.append(
+            {
+                "source_file_id": source_file_id,
+                "reference_period": reference_period,
+                "item_code": item_definition["code"],
+                "published_period_type": item_definition["published_period_type"],
+                "market_scope": item_definition["market_scope"],
+                "aggregation_level": "brand",
+                "powertrain_type": "electric",
+                "vehicle_category": row["vehicle_category"],
+                "rank_position": row["rank_position"],
+                "brand_name_raw": row["brand_name_raw"],
+                "model_name_raw": None,
+                "units": row["units"],
+                "market_share_pct": row["market_share_pct"],
+                "raw_label": row["brand_name_raw"],
             }
         )
 
@@ -1845,6 +2177,217 @@ def validate_item5_rows(item5_rows, item5_raw_rows=None):
     ]
 
 
+def validate_item6_rows(item6_rows):
+    """
+    Valida mercado mensal de eletrificados das paginas 20 e 21.
+    """
+    checks = []
+
+    for category in FENABRAVE_ELECTRIFIED_PAGE_MAP.values():
+        rows = [row for row in item6_rows if row.get("vehicle_category") == category]
+        row_count = len(rows)
+        powertrains = {row.get("powertrain_type") for row in rows}
+        invalid_units = sum(1 for row in rows if (row.get("units") or 0) <= 0)
+        values = {row.get("powertrain_type"): row.get("units") for row in rows}
+        hybrid_units = values.get("hybrid")
+        electric_units = values.get("electric")
+        total_units = values.get("total_electrified")
+        total_match = (
+            hybrid_units is not None
+            and electric_units is not None
+            and total_units is not None
+            and (hybrid_units + electric_units) == total_units
+        )
+
+        checks.extend(
+            [
+                {
+                    "check_name": f"{category}_market_row_count",
+                    "calculated_value": row_count,
+                    "expected_value": 3,
+                    "difference": row_count - 3,
+                    "passed": row_count == 3,
+                    "severity": "error",
+                    "notes": None,
+                },
+                {
+                    "check_name": f"{category}_market_powertrain_labels",
+                    "calculated_value": len(powertrains),
+                    "expected_value": 3,
+                    "difference": len(powertrains) - 3,
+                    "passed": powertrains == {"hybrid", "electric", "total_electrified"},
+                    "severity": "error",
+                    "notes": None,
+                },
+                {
+                    "check_name": f"{category}_market_positive_units",
+                    "calculated_value": invalid_units,
+                    "expected_value": 0,
+                    "difference": invalid_units,
+                    "passed": invalid_units == 0,
+                    "severity": "error",
+                    "notes": None,
+                },
+                {
+                    "check_name": f"{category}_market_total_match",
+                    "calculated_value": None
+                    if hybrid_units is None or electric_units is None
+                    else hybrid_units + electric_units,
+                    "expected_value": total_units,
+                    "difference": None
+                    if hybrid_units is None or electric_units is None or total_units is None
+                    else (hybrid_units + electric_units) - total_units,
+                    "passed": total_match,
+                    "severity": "warning",
+                    "notes": "O total consolidado deve bater com hibridos + eletricos no bloco mensal.",
+                },
+            ]
+        )
+
+    return checks
+
+
+def validate_item7_rows(item7_rows, item6_rows=None):
+    """
+    Valida ranking mensal por marca de hibridos das paginas 20 e 21.
+    """
+    return validate_electrified_brand_rows(
+        item7_rows,
+        item6_rows=item6_rows,
+        powertrain_type="hybrid",
+    )
+
+
+def validate_item8_rows(item8_rows, item6_rows=None):
+    """
+    Valida ranking mensal por marca de eletricos das paginas 20 e 21.
+    """
+    return validate_electrified_brand_rows(
+        item8_rows,
+        item6_rows=item6_rows,
+        powertrain_type="electric",
+    )
+
+
+def validate_electrified_brand_rows(item_rows, item6_rows=None, powertrain_type="hybrid"):
+    """
+    Valida rankings por marca de eletrificados.
+    """
+    checks = []
+
+    for category in FENABRAVE_ELECTRIFIED_PAGE_MAP.values():
+        rows = [row for row in item_rows if row.get("vehicle_category") == category]
+        ranks = [row.get("rank_position") for row in rows]
+        units = [row.get("units") for row in rows]
+        brands = [row.get("brand_name_raw") for row in rows]
+        shares = [row.get("market_share_pct") for row in rows]
+        distinct_ranks = len({rank for rank in ranks if rank is not None})
+        invalid_units = sum(1 for value in units if value is None or value <= 0)
+        missing_brands = sum(1 for value in brands if not normalize_text(value))
+        invalid_shares = sum(
+            1 for value in shares if value is None or value < 0 or value > 100
+        )
+        sorted_rows = sorted(rows, key=lambda row: row.get("rank_position") or 999)
+        order_violations = sum(
+            1
+            for previous, current in zip(sorted_rows, sorted_rows[1:])
+            if (previous.get("units") or 0) < (current.get("units") or 0)
+        )
+        share_total = round(sum(value or 0 for value in shares), 4)
+        ranking_total = sum(row.get("units") or 0 for row in rows)
+        compare_total = None
+
+        if item6_rows:
+            compare_total = next(
+                (
+                    row.get("units")
+                    for row in item6_rows
+                    if row.get("vehicle_category") == category
+                    and row.get("powertrain_type") == powertrain_type
+                ),
+                None,
+            )
+
+        checks.extend(
+            [
+                {
+                    "check_name": f"{category}_{powertrain_type}_row_count",
+                    "calculated_value": len(rows),
+                    "expected_value": None,
+                    "difference": None,
+                    "passed": len(rows) > 0,
+                    "severity": "error",
+                    "notes": "A quantidade de marcas publicadas pode variar por mes.",
+                },
+                {
+                    "check_name": f"{category}_{powertrain_type}_distinct_ranks",
+                    "calculated_value": distinct_ranks,
+                    "expected_value": len(rows),
+                    "difference": distinct_ranks - len(rows),
+                    "passed": distinct_ranks == len(rows),
+                    "severity": "error",
+                    "notes": None,
+                },
+                {
+                    "check_name": f"{category}_{powertrain_type}_positive_units",
+                    "calculated_value": invalid_units,
+                    "expected_value": 0,
+                    "difference": invalid_units,
+                    "passed": invalid_units == 0,
+                    "severity": "error",
+                    "notes": None,
+                },
+                {
+                    "check_name": f"{category}_{powertrain_type}_brand_names",
+                    "calculated_value": missing_brands,
+                    "expected_value": 0,
+                    "difference": missing_brands,
+                    "passed": missing_brands == 0,
+                    "severity": "error",
+                    "notes": None,
+                },
+                {
+                    "check_name": f"{category}_{powertrain_type}_share_range",
+                    "calculated_value": invalid_shares,
+                    "expected_value": 0,
+                    "difference": invalid_shares,
+                    "passed": invalid_shares == 0,
+                    "severity": "error",
+                    "notes": None,
+                },
+                {
+                    "check_name": f"{category}_{powertrain_type}_descending_units",
+                    "calculated_value": order_violations,
+                    "expected_value": 0,
+                    "difference": order_violations,
+                    "passed": order_violations == 0,
+                    "severity": "error",
+                    "notes": None,
+                },
+                {
+                    "check_name": f"{category}_{powertrain_type}_share_total_lte_100",
+                    "calculated_value": share_total,
+                    "expected_value": 100,
+                    "difference": round(share_total - 100, 4),
+                    "passed": share_total <= 100.5,
+                    "severity": "warning",
+                    "notes": "Top N por marca pode nao somar 100% se houver marcas fora do ranking publicado.",
+                },
+                {
+                    "check_name": f"{category}_{powertrain_type}_ranking_total_lte_market_total",
+                    "calculated_value": ranking_total,
+                    "expected_value": compare_total,
+                    "difference": None if compare_total is None else ranking_total - compare_total,
+                    "passed": compare_total is None or ranking_total <= compare_total,
+                    "severity": "warning" if compare_total is None else "error",
+                    "notes": "Comparacao usa o bloco mensal consolidado do item 6.",
+                },
+            ]
+        )
+
+    return checks
+
+
 def print_preview(raw_rows, normalized_rows, checks, pdf_bytes):
     """
     Imprime uma pre-visualizacao da extracao no terminal.
@@ -2049,8 +2592,6 @@ def print_item4_preview(item4_rows, item4_checks):
 
     print("")
 
-    print("")
-
 
 def print_item5_preview(item5_rows, item5_checks):
     """
@@ -2076,6 +2617,142 @@ def print_item5_preview(item5_rows, item5_checks):
     print("-" * 120)
 
     for check in item5_checks:
+        print(
+            f"{check['check_name']:42} "
+            f"calc={check['calculated_value']} "
+            f"expected={check['expected_value']} "
+            f"diff={check['difference']} "
+            f"passed={check['passed']} "
+            f"severity={check['severity']}"
+        )
+
+        if check["notes"]:
+            print(f"{'':42} notes={check['notes']}")
+
+    print("")
+
+
+def print_item6_preview(item6_rows, item6_checks):
+    """
+    Imprime preview do mercado mensal de eletrificados.
+    """
+    item_definition = FENABRAVE_ELECTRIFIED_ITEMS[FENABRAVE_ITEM6_CODE]
+    print(
+        f"{item_definition['label']} (paginas 20-21, "
+        f"{item_definition['published_period_type']})"
+    )
+    print("-" * 96)
+    print(f"{'categoria':20} {'propulsao':22} {'unidades':>12}")
+    print("-" * 96)
+
+    for row in item6_rows:
+        print(
+            f"{row['vehicle_category'][:20]:20} "
+            f"{str(row['powertrain_type'])[:22]:22} "
+            f"{row['units']:>12}"
+        )
+
+    print("")
+    print(f"Validacoes locais de {item_definition['code']}")
+    print("-" * 96)
+
+    for check in item6_checks:
+        print(
+            f"{check['check_name']:42} "
+            f"calc={check['calculated_value']} "
+            f"expected={check['expected_value']} "
+            f"diff={check['difference']} "
+            f"passed={check['passed']} "
+            f"severity={check['severity']}"
+        )
+
+        if check["notes"]:
+            print(f"{'':42} notes={check['notes']}")
+
+    print("")
+
+
+def print_item7_preview(item7_rows, item7_checks):
+    """
+    Imprime preview do ranking mensal por marca de hibridos.
+    """
+    item_definition = FENABRAVE_ELECTRIFIED_ITEMS[FENABRAVE_ITEM7_CODE]
+    print(
+        f"{item_definition['label']} (paginas 20-21, "
+        f"{item_definition['published_period_type']})"
+    )
+    print("-" * 96)
+    print(f"{'categoria':20} {'rank':>4} {'marca':34} {'unidades':>10} {'share':>8}")
+    print("-" * 96)
+
+    for category in FENABRAVE_ELECTRIFIED_PAGE_MAP.values():
+        category_rows = sorted(
+            [row for row in item7_rows if row["vehicle_category"] == category],
+            key=lambda row: row["rank_position"],
+        )[:10]
+
+        for row in category_rows:
+            print(
+                f"{category[:20]:20} "
+                f"{row['rank_position']:>4} "
+                f"{row['brand_name_raw'][:34]:34} "
+                f"{row['units']:>10} "
+                f"{row['market_share_pct']:>7.2f}%"
+            )
+
+    print("")
+    print(f"Validacoes locais de {item_definition['code']}")
+    print("-" * 96)
+
+    for check in item7_checks:
+        print(
+            f"{check['check_name']:42} "
+            f"calc={check['calculated_value']} "
+            f"expected={check['expected_value']} "
+            f"diff={check['difference']} "
+            f"passed={check['passed']} "
+            f"severity={check['severity']}"
+        )
+
+        if check["notes"]:
+            print(f"{'':42} notes={check['notes']}")
+
+    print("")
+
+
+def print_item8_preview(item8_rows, item8_checks):
+    """
+    Imprime preview do ranking mensal por marca de eletricos.
+    """
+    item_definition = FENABRAVE_ELECTRIFIED_ITEMS[FENABRAVE_ITEM8_CODE]
+    print(
+        f"{item_definition['label']} (paginas 20-21, "
+        f"{item_definition['published_period_type']})"
+    )
+    print("-" * 96)
+    print(f"{'categoria':20} {'rank':>4} {'marca':34} {'unidades':>10} {'share':>8}")
+    print("-" * 96)
+
+    for category in FENABRAVE_ELECTRIFIED_PAGE_MAP.values():
+        category_rows = sorted(
+            [row for row in item8_rows if row["vehicle_category"] == category],
+            key=lambda row: row["rank_position"],
+        )[:10]
+
+        for row in category_rows:
+            print(
+                f"{category[:20]:20} "
+                f"{row['rank_position']:>4} "
+                f"{row['brand_name_raw'][:34]:34} "
+                f"{row['units']:>10} "
+                f"{row['market_share_pct']:>7.2f}%"
+            )
+
+    print("")
+    print(f"Validacoes locais de {item_definition['code']}")
+    print("-" * 96)
+
+    for check in item8_checks:
         print(
             f"{check['check_name']:42} "
             f"calc={check['calculated_value']} "

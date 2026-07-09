@@ -1945,6 +1945,15 @@ def load_fenabrave_preview_from_storage(
     item5_raw_rows = module.extract_item5_subsegment_shares(pdf_bytes)
     item5_rows = module.normalize_item5_rows(item5_raw_rows, source_file_id, reference_period_label)
     item5_checks = module.validate_item5_rows(item5_rows, item5_raw_rows)
+    item6_raw_rows = module.extract_item6_electrified_market(pdf_bytes)
+    item6_rows = module.normalize_item6_rows(item6_raw_rows, source_file_id, reference_period_label)
+    item6_checks = module.validate_item6_rows(item6_rows)
+    item7_raw_rows = module.extract_item7_electrified_hybrid_brands(pdf_bytes)
+    item7_rows = module.normalize_item7_rows(item7_raw_rows, source_file_id, reference_period_label)
+    item7_checks = module.validate_item7_rows(item7_rows, item6_rows)
+    item8_raw_rows = module.extract_item8_electrified_electric_brands(pdf_bytes)
+    item8_rows = module.normalize_item8_rows(item8_raw_rows, source_file_id, reference_period_label)
+    item8_checks = module.validate_item8_rows(item8_rows, item6_rows)
     return {
         "pdf_size_bytes": len(pdf_bytes),
         "pdf_sha256": hashlib.sha256(pdf_bytes).hexdigest(),
@@ -1966,6 +1975,15 @@ def load_fenabrave_preview_from_storage(
         "item5_raw_rows": item5_raw_rows,
         "item5_rows": item5_rows,
         "item5_checks": item5_checks,
+        "item6_raw_rows": item6_raw_rows,
+        "item6_rows": item6_rows,
+        "item6_checks": item6_checks,
+        "item7_raw_rows": item7_raw_rows,
+        "item7_rows": item7_rows,
+        "item7_checks": item7_checks,
+        "item8_raw_rows": item8_raw_rows,
+        "item8_rows": item8_rows,
+        "item8_checks": item8_checks,
     }
 
 
@@ -5780,6 +5798,12 @@ def render_fenabrave_intake_page() -> None:
                     item4_checks = preview_payload.get("item4_checks") or []
                     item5_rows = preview_payload.get("item5_rows") or []
                     item5_checks = preview_payload.get("item5_checks") or []
+                    item6_rows = preview_payload.get("item6_rows") or []
+                    item6_checks = preview_payload.get("item6_checks") or []
+                    item7_rows = preview_payload.get("item7_rows") or []
+                    item7_checks = preview_payload.get("item7_checks") or []
+                    item8_rows = preview_payload.get("item8_rows") or []
+                    item8_checks = preview_payload.get("item8_checks") or []
                     if item1_rows:
                         st.markdown("#### Item 1 fase 2 - Ranking dos emplacamentos mes")
                         item1_df = pd.DataFrame(item1_rows)
@@ -5882,6 +5906,67 @@ def render_fenabrave_intake_page() -> None:
                         st.markdown("#### Checks item 5 fase 2")
                         st.dataframe(
                             pd.DataFrame(item5_checks),
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+                    if item6_rows:
+                        st.markdown("#### Item 6 fase 2 - Mercado de eletrificados mes")
+                        st.caption("Preview operacional das paginas 20 e 21. Nesta etapa a UI mostra parser e checks; a persistencia dos itens 6, 7 e 8 ainda nao entra na gravacao automatica deste botao.")
+                        item6_df = pd.DataFrame(item6_rows)
+                        item6_preview_columns = [
+                            column
+                            for column in ["vehicle_category", "powertrain_type", "units"]
+                            if column in item6_df.columns
+                        ]
+                        st.dataframe(
+                            item6_df[item6_preview_columns],
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+                    if item6_checks:
+                        st.markdown("#### Checks item 6 fase 2")
+                        st.dataframe(
+                            pd.DataFrame(item6_checks),
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+                    if item7_rows:
+                        st.markdown("#### Item 7 fase 2 - Total por marca hibrido mes")
+                        item7_df = pd.DataFrame(item7_rows)
+                        item7_preview_columns = [
+                            column
+                            for column in ["vehicle_category", "rank_position", "brand_name_raw", "units", "market_share_pct"]
+                            if column in item7_df.columns
+                        ]
+                        st.dataframe(
+                            item7_df[item7_preview_columns].head(30),
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+                    if item7_checks:
+                        st.markdown("#### Checks item 7 fase 2")
+                        st.dataframe(
+                            pd.DataFrame(item7_checks),
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+                    if item8_rows:
+                        st.markdown("#### Item 8 fase 2 - Total por marca eletrico mes")
+                        item8_df = pd.DataFrame(item8_rows)
+                        item8_preview_columns = [
+                            column
+                            for column in ["vehicle_category", "rank_position", "brand_name_raw", "units", "market_share_pct"]
+                            if column in item8_df.columns
+                        ]
+                        st.dataframe(
+                            item8_df[item8_preview_columns].head(30),
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+                    if item8_checks:
+                        st.markdown("#### Checks item 8 fase 2")
+                        st.dataframe(
+                            pd.DataFrame(item8_checks),
                             use_container_width=True,
                             hide_index=True,
                         )
