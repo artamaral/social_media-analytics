@@ -56,6 +56,21 @@ Seguir o fluxo operacional do projeto:
 Nao misturar ideias, execucao, status operacional e decisoes tecnicas no mesmo
 documento.
 
+## Como registrar um ponto no backlog
+
+Quando surgir uma nova ideia, registrar em `docs/project/01_BACKLOG.md` com:
+
+- uma unica linha por item, escrita como acao objetiva;
+- contexto curto do problema ou oportunidade;
+- impacto esperado no projeto automotivo quando houver;
+- referencia explicita ao documento de origem quando o item nascer de roadmap,
+  sprint, decisao tecnica ou validacao operacional;
+- criterio de aceite ou proxima validacao quando o item depender de
+  confirmacao futura.
+
+Se o ponto ainda nao estiver pronto para execucao, ele deve entrar no backlog
+antes de virar prioridade de roadmap ou atividade de sprint.
+
 Regra adicional para sprints:
 
 - a agenda do sprint organiza a execucao, mas nao deve criar sozinha requisitos

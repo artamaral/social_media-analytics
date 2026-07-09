@@ -43,7 +43,7 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 
 ### Prioridade estrategica - modelo de priorizacao
 
-- [ ] Criar abordagem analitica simples para `hot now`, baseada em `velocity_6h`, `previous_velocity` e `acceleration`, usando views SQL para dashboard.
+- [x] Criar abordagem analitica simples para `hot now`, baseada em `velocity_6h`, `previous_velocity` e `acceleration`, usando views SQL para dashboard. Entregue como `v_dashboard_hot_now` e consolidada no contrato `Hot now 24h`.
 
 ### Prioridade media - enriquecimento IA de videos
 
@@ -96,7 +96,7 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 
 - [x] Dashboard inicial.
 - [x] Ranking de crescimento semanal.
-- [ ] Criar ranking "quente agora" com velocidade e aceleracao temporal do score, separado da logica operacional da fila.
+- [x] Criar ranking "quente agora" com velocidade e aceleracao temporal do score, separado da logica operacional da fila. Entregue como pagina `Hot now` com a view `public.v_dashboard_hot_now`.
 - [x] Seguir plano de execucao do dashboard em `docs/dashboard/29_STREAMLIT_DASHBOARD_EXECUTION_PLAN.md` para fechar o Sprint 3.
 - [x] Implementar MVP online com overview, creators e crescimento semanal.
 - [x] Manter `Data quality` como view dedicada, sem exigir sinalizacao embutida antes de cada ranking no uso pessoal atual do dashboard.
@@ -108,7 +108,7 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 ### Prioridade atual apos encerramento do Sprint 3
 
 - [x] Formalizar o proximo sprint antes de retomar execucoes automaticas no dashboard.
-- [ ] Priorizar o ranking `Hot now` como proxima frente de dashboard, usando `velocity_6h`, `previous_velocity` e `acceleration`.
+- [x] Priorizar o ranking `Hot now` como proxima frente de dashboard, usando `velocity_6h`, `previous_velocity` e `acceleration`. A frente foi executada e nao permanece como pendencia ativa.
 - [ ] Reavaliar se ha algum acabamento adicional de UX que mereca virar backlog, e nao reabrir o Sprint 3.
 
 ### Direcao desta frente

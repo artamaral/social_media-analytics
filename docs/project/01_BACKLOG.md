@@ -8,15 +8,15 @@
 
 ## Dados / Qualidade
 
-- [ ] Validar se todos posts possuem historico
-- [ ] Checar consistencia de collected_at
+- [x] Validar se todos posts possuem historico. Fechado com a auditoria da Sprint 1: posts ativos sem snapshot = `0`; os casos restantes eram `unavailable` confirmados.
+- [x] Checar consistencia de collected_at. Fechado com a auditoria da Sprint 1: nao houve evidencia de `collected_at` nulo ou defasado em posts ativos.
 - [ ] Identificar creators sem coleta recente
 - [ ] Monitorar backlog de guardrail separando posts novos, recentes, warm e antigos para garantir que posts novos nao fiquem bloqueados por divida historica.
 - [ ] Padronizar exclusao de posts confirmados como dead/unavailable das metricas e views analiticas, pois posts ja confirmados pelo usuario ainda aparecem fora da fila ativa.
 
 ## Analytics
 
-- [ ] Criar view temporal `v_dashboard_hot_posts_now` baseada em velocidade recente e aceleracao do score, sem depender do score hibrido `v2` como regra operacional.
+- [x] Criar view temporal `v_dashboard_hot_posts_now` baseada em velocidade recente e aceleracao do score, sem depender do score hibrido `v2` como regra operacional. Entregue como `v_dashboard_hot_now` e refinada para o contrato `Hot now 24h`.
 - [ ] Query de crescimento por intervalo
 - [ ] Ranking de creators emergentes
 - [ ] Identificacao de outliers
@@ -31,12 +31,12 @@
 
 ## Visualizacao / Estudos de mercado
 
-- [ ] App Streamlit online consumindo Supabase sob demanda
-- [ ] Tela inicial com status de qualidade dos dados
-- [ ] Evoluir a view Fenabrave consumida pelo Streamlit para exibir o historico anual completo por periodo, garantindo leitura de 2025 e 2026, com cards mostrando o acumulado do ano por categoria e nao a soma de todos os arquivos carregados. Neste ponto temos um issue, porque o acumulado nao referecia ano o que gera um problema quando o mes de dezembro de 2025 e escolhido. ele mostra todos os cards duplicados e o acumulado continua o mesmo valor.
+- [x] App Streamlit online consumindo Supabase sob demanda. Entregue com Streamlit Community Cloud consumindo Supabase sob demanda.
+- [x] Tela inicial com status de qualidade dos dados. Entregue na superficie `Data quality` do dashboard.
+- [x] Evoluir a view Fenabrave consumida pelo Streamlit para exibir o historico anual completo por periodo, garantindo leitura de 2025 e 2026, com cards mostrando o acumulado do ano por categoria e nao a soma de todos os arquivos carregados. O contrato da dashboard ja define acumulado reiniciado por ano calendario e os cards nao devem somar todos os arquivos.
 - [ ] ATIVIDADE ATUAL E PRIORITARIA: definir o proximo bloco da fase 2 Fenabrave apos a conclusao dos itens 6, 7 e 8, priorizando a decisao entre avancar para os itens 9 e 10 de modelos eletrificados ou reorganizar o escopo ativo da fase 2 antes da proxima implementacao.
 - [ ] Ranking de creators por views, engajamento e frequencia
-- [ ] Ranking semanal de crescimento de videos
+- [x] Ranking semanal de crescimento de videos. Entregue como `v_dashboard_post_growth_7d` e consumido no dashboard.
 - [ ] Melhoria estetica: alinhar a lista de videos do criador individual ao mesmo padrao visual de `YouTube > Melhores videos 7d`, com hierarquia, colunas e leitura comparavel entre as duas telas.
 - [ ] Rechecar a regra fina de desempate do ranking `YouTube > Melhores videos 7d` apos avaliacao visual da tela em uso real, antes de consolidar a ordenacao como contrato definitivo.
 - [ ] Incluir thumbnail real e link clicavel no titulo e na thumbnail de `YouTube > Melhores videos 7d`, com fallback seguro para ausencia de imagem ou URL.
