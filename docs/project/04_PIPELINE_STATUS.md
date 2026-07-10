@@ -69,25 +69,37 @@ O objetivo e manter uma leitura simples de:
 
 - `Integridade da coleta`: status `ok`
 - `Evidencia de processamento`: status `ok`
-- `Posts mortos e validacao humana`: `13/13` confirmados ou monitorados, `0` pendencias humanas e `0` candidatos em aberto
+- `Posts mortos e validacao humana`: `33/33` confirmados ou monitorados, `0` pendencias humanas e `0` candidatos em aberto
 - `Monitoramento de posts sem checagem`: ainda existem posts abaixo da cobertura minima, mas sem risco imediato na faixa critica observada
 - `Sinais operacionais`: continuam sendo o principal ponto de atencao por atraso agregado do worker de metricas
+
+Leitura operacional:
+
+- essa frente cobre o review humano dos videos indisponiveis e nao deve ser lida como sinal de duplicidade de coleta
+- o papel dela e separar confirmados/monitorados de candidatos em aberto e manter visibilidade operacional do fluxo
 
 #### Open point principal - regra de `next_check`
 
 - status: aberto e prioritario
 - leitura atual:
-  - o monitoramento implementado ja mostra atraso e cobertura, mas ainda nao
-    responde se a regra de `next_check` e suficiente ou nao
-  - contagens brutas por faixa de atraso tendem a crescer conforme a base de
-    posts cresce, portanto nao devem ser lidas isoladamente
+  - o monitoramento implementado ja mostra atraso, cobertura e frescor, mas a
+    regra de `next_check` continua em aberto porque a pressao operacional cresce
+    junto com a base de posts
+  - contagens brutas por faixa de atraso tendem a crescer com o tempo, portanto
+    nao devem ser lidas isoladamente
   - a analise precisa considerar a prioridade esperada de cada post no
     agendamento, e nao apenas `tempo desde o atraso` e `volume acumulado`
+  - para formar historico rapido e confiavel, cada post deve sair do bootstrap
+    com mais de `3` snapshots, apoiado pela prioridade da fila
 - checagens que ainda faltam:
   - verificar se a prioridade embutida em `next_check` esta coerente com banda
   - verificar se esta coerente com idade do post
   - verificar se esta coerente com cobertura minima esperada
   - verificar se esta coerente com urgencia operacional e risco real de atraso
+- criterio operacional ja valido:
+  - manter os posts monitorados ate ultrapassarem `3` snapshots
+  - tratar a fila como mecanismo de aceleracao do historico, nao como
+    contagem estavel em tempo fixo
 - criterio de saida deste open point:
   - concluir se a regra atual e suficiente ou nao
   - se nao for suficiente, definir ajuste de prioridade antes de mudar apenas

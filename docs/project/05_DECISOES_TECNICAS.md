@@ -426,7 +426,7 @@ Decisao:
 
 - o bloco de Data Quality do dashboard deve ter exatamente dois KPIs principais
 - KPI 1: legado guardrail, usando `v_dashboard_guardrail_coverage_status`
-- KPI 2: posts mortos e validacao humana, usando `v_dashboard_dead_post_validation_status`
+- KPI 2: posts mortos e validacao humana, usando `v_dashboard_dead_post_validation_status` para acompanhar o review humano dos indisponiveis e separar confirmados de candidatos, sem confundir esse fluxo com duplicidade de coleta
 - a view generica `v_dashboard_data_quality_status` pode continuar existindo como auditoria auxiliar, mas nao deve guiar o bloco principal de Data Quality do app
 
 Motivo:
@@ -1209,3 +1209,40 @@ Diretriz de implementacao:
   avanca-lo como fonte confiavel para dashboard ou API
 - tratar os itens posteriores como extensoes independentes, cada um com plano,
   validacao e criterio de aceite proprios
+
+---
+
+## Status de hold para creators sem coleta recente
+
+Data:
+
+- 2026-07-10
+
+Decisao:
+
+- adotar um status operacional `on_hold_discovery` para creators sem novos posts
+  por mais de `30` dias, quando a ausencia de publicacao indicar baixa
+  probabilidade de discovery util em vez de falha transitória
+- manter a identificacao como monitoramento continuo, nao como exclusao
+  definitiva
+- usar esse status para sinalizar pausa do discovery daquele creator e evitar
+  gasto recorrente com busca de novos posts de um canal potencialmente inativo
+
+Motivo:
+
+- creators sem coleta recente podem representar canal realmente inativo,
+  periodo sem publicacao ou falha de discovery
+- a ausencia de criterio unico pode fazer o scraper continuar investindo em
+  creators com baixa chance de retorno
+- um status intermediario separa o "ainda ativo" do "parar por ora e revisar"
+
+Leitura operacional:
+
+- o gatilho inicial de analise deve considerar `> 30d` sem novos posts
+- a revisao deve usar contexto de posts existentes, idade da base e recorrencia
+  historica do creator
+- o status `on_hold_discovery` deve ser reversivel quando houver evidencia nova
+  de publicacao
+- a auditoria de suporte continua sendo a query de integridade entre creators e
+  posts, com `creator_without_recent_discovery` como sinal de alerta e nao como
+  bloqueio automatico
