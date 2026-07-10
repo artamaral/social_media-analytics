@@ -71,6 +71,24 @@ Quando surgir uma nova ideia, registrar em `docs/project/01_BACKLOG.md` com:
 Se o ponto ainda nao estiver pronto para execucao, ele deve entrar no backlog
 antes de virar prioridade de roadmap ou atividade de sprint.
 
+## Tags do backlog
+
+Usar poucas tags padronizadas no inicio de cada item aberto do backlog:
+
+- `bug`: corrige falha, inconsistencia ou comportamento incorreto
+- `melhoria`: ajusta ou refina algo ja existente
+- `feat`: cria nova capacidade, tela, view ou fluxo
+- `ops`: trata operacao, monitoramento, rotina ou confiabilidade de pipeline
+- `analise`: envolve investigacao, validacao, decisao ou estudo antes de
+  implementar
+
+Formato recomendado:
+
+- `- [ ] [tag] texto do item`
+
+Se um item encaixar em mais de uma categoria, escolher a tag principal que
+melhor descreve a natureza do trabalho.
+
 Regra adicional para sprints:
 
 - a agenda do sprint organiza a execucao, mas nao deve criar sozinha requisitos
