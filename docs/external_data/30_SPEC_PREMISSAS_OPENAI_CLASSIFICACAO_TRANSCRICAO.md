@@ -103,6 +103,21 @@ Premissa:
 
 A transcrição só é acionada quando a classificação inicial não é suficiente ou quando o vídeo tem alta relevância analítica.
 
+Ponto de atenção operacional:
+
+- no `gpt-4o-mini-transcribe`, o principal consumo de tokens vem do áudio de
+  entrada, não do texto final transcrito
+- quando não houver `prompt` textual adicional, o input manual tende a ser
+  desprezível perto do áudio enviado
+- a saída textual costuma ser pequena em relação ao input de áudio, então o
+  risco de `TPM` deve ser lido principalmente como função de minutos de áudio
+  processados por janela, e não apenas pelo tamanho do transcript
+- em teste manual do projeto com um vídeo de `176s`, a resposta transcrita
+  ficou em cerca de `290` a `300` tokens de saída, enquanto a estimativa de
+  input ficou em torno de `7k` audio tokens
+- conclusão prática: para esta frente, o gargalo provável de tokens tende a ser
+  volume de áudio e paralelismo, não comprimento do texto retornado
+
 ---
 
 ### 4.3 Reclassificação pós-transcrição
@@ -391,6 +406,17 @@ Output estimado: 400 a 700 tokens
 ### Observação importante
 
 A taxonomia enviada no prompt pode aumentar muito o input.
+
+No caso da transcrição, porém, o cuidado principal não é o tamanho do prompt
+textual. O ponto mais importante é que a entrada dominante é o próprio áudio.
+Portanto:
+
+- classificação e reclassificação escalam com texto
+- transcrição escala primeiro com minutos de áudio
+- o transcript final adiciona custo, mas normalmente pesa menos que o áudio de
+  entrada
+- para estimativa operacional rápida, usar minutos de áudio por lote como
+  proxy primária de `TPM`
 
 Para controlar TPM:
 
