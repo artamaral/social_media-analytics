@@ -137,6 +137,18 @@ FENABRAVE_ITEM8_PERIOD_TYPE = "monthly"
 FENABRAVE_ITEM8_MARKET_SCOPE = "Brasil"
 FENABRAVE_ITEM8_SALES_CHANNEL = "all"
 
+FENABRAVE_ITEM11_CODE = "fenabrave_item_11_participacao_venda_direta_varejo_mes"
+FENABRAVE_ITEM11_LABEL = "Participacao de venda direta e varejo mes"
+FENABRAVE_ITEM11_PAGE = 24
+FENABRAVE_ITEM11_PERIOD_TYPE = "monthly"
+FENABRAVE_ITEM11_MARKET_SCOPE = "Brasil"
+
+FENABRAVE_ITEM12_CODE = "fenabrave_item_12_participacao_venda_direta_varejo_acumulado"
+FENABRAVE_ITEM12_LABEL = "Participacao de venda direta e varejo acumulado"
+FENABRAVE_ITEM12_PAGE = 25
+FENABRAVE_ITEM12_PERIOD_TYPE = "accumulated"
+FENABRAVE_ITEM12_MARKET_SCOPE = "Brasil"
+
 FENABRAVE_ELECTRIFIED_PAGE_MAP = {
     20: "automoveis",
     21: "comerciais_leves",
@@ -148,6 +160,11 @@ FENABRAVE_ELECTRIFIED_MARKET_LABELS = {
     "b eletricos": "electric",
     "tot eletrificados": "total_electrified",
 }
+FENABRAVE_SALES_CHANNEL_BLOCKS = [
+    ("automoveis", (180, 130, 380, 220)),
+    ("comerciais_leves", (180, 345, 380, 435)),
+    ("autos_comerciais_leves", (180, 555, 380, 630)),
+]
 
 FENABRAVE_MODEL_RANKING_ITEMS = {
     FENABRAVE_ITEM1_CODE: {
@@ -225,11 +242,29 @@ FENABRAVE_ELECTRIFIED_ITEMS = {
     },
 }
 
+FENABRAVE_SALES_CHANNEL_ITEMS = {
+    FENABRAVE_ITEM11_CODE: {
+        "code": FENABRAVE_ITEM11_CODE,
+        "label": FENABRAVE_ITEM11_LABEL,
+        "page": FENABRAVE_ITEM11_PAGE,
+        "published_period_type": FENABRAVE_ITEM11_PERIOD_TYPE,
+        "market_scope": FENABRAVE_ITEM11_MARKET_SCOPE,
+    },
+    FENABRAVE_ITEM12_CODE: {
+        "code": FENABRAVE_ITEM12_CODE,
+        "label": FENABRAVE_ITEM12_LABEL,
+        "page": FENABRAVE_ITEM12_PAGE,
+        "published_period_type": FENABRAVE_ITEM12_PERIOD_TYPE,
+        "market_scope": FENABRAVE_ITEM12_MARKET_SCOPE,
+    },
+}
+
 FENABRAVE_ITEM_DEFINITIONS = {}
 FENABRAVE_ITEM_DEFINITIONS.update(FENABRAVE_MODEL_RANKING_ITEMS)
 FENABRAVE_ITEM_DEFINITIONS.update(FENABRAVE_BRAND_RANKING_ITEMS)
 FENABRAVE_ITEM_DEFINITIONS.update(FENABRAVE_SUBSEGMENT_ITEMS)
 FENABRAVE_ITEM_DEFINITIONS.update(FENABRAVE_ELECTRIFIED_ITEMS)
+FENABRAVE_ITEM_DEFINITIONS.update(FENABRAVE_SALES_CHANNEL_ITEMS)
 
 
 def infer_reference_period_from_path(storage_path):
@@ -482,6 +517,35 @@ def parse_decimal_br(value):
         return None
 
     text = text.replace("%", "").replace(".", "").replace(",", ".")
+    return float(text)
+
+
+def parse_percent_flexible(value):
+    """
+    Converte percentual com separador decimal `.` ou `,` para `float`.
+
+    Resultado esperado:
+    - `47.3%` vira `47.3`.
+    - `47,3%` vira `47.3`.
+    """
+    if value is None:
+        return None
+
+    text = normalize_text(value)
+
+    if not text or text in {"-", "--"}:
+        return None
+
+    text = text.replace("%", "").strip()
+
+    if "," in text and "." in text:
+        if text.rfind(",") > text.rfind("."):
+            text = text.replace(".", "").replace(",", ".")
+        else:
+            text = text.replace(",", "")
+    elif "," in text:
+        text = text.replace(",", ".")
+
     return float(text)
 
 
@@ -1393,6 +1457,91 @@ def extract_item8_electrified_electric_brands(pdf_bytes):
     return electric_brand_rows
 
 
+def extract_sales_channel_mix(pdf_bytes, item_code):
+    """
+    Extrai participacao de venda direta e varejo das paginas 24 e 25.
+
+    As paginas sao graficos com tres blocos fixos. O parser usa recorte
+    posicional por bloco e le apenas os dois percentuais publicados em cada um.
+    """
+    try:
+        import pdfplumber
+    except ImportError as error:
+        raise RuntimeError(
+            "Dependencia ausente: pdfplumber. Execute `pip install -r requirements.txt` "
+            "em scripts/fenabrave_ingestion."
+        ) from error
+
+    item_definition = FENABRAVE_SALES_CHANNEL_ITEMS[item_code]
+
+    with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
+        page_number = item_definition["page"]
+
+        if len(pdf.pages) < page_number:
+            raise RuntimeError(
+                f"PDF sem pagina {page_number} para {item_definition['code']}."
+            )
+
+        page = pdf.pages[page_number - 1]
+
+        rows = []
+
+        for vehicle_category, bbox in FENABRAVE_SALES_CHANNEL_BLOCKS:
+            text = page.crop(bbox).extract_text(x_tolerance=1, y_tolerance=3) or ""
+            percent_matches = re.findall(r"\d+(?:[.,]\d+)?%", text)
+
+            if len(percent_matches) < 2:
+                percent_matches = re.findall(r"\d+(?:[.,]\d+)?", text)
+
+            direct_share = (
+                parse_percent_flexible(percent_matches[0])
+                if len(percent_matches) >= 1
+                else None
+            )
+            retail_share = (
+                parse_percent_flexible(percent_matches[1])
+                if len(percent_matches) >= 2
+                else None
+            )
+
+            rows.extend(
+                [
+                    {
+                        "page_number": page_number,
+                        "vehicle_category": vehicle_category,
+                        "sales_channel": "direct",
+                        "share_pct": direct_share,
+                        "raw_label": f"{vehicle_category}_direct",
+                        "raw_text": text,
+                    },
+                    {
+                        "page_number": page_number,
+                        "vehicle_category": vehicle_category,
+                        "sales_channel": "retail",
+                        "share_pct": retail_share,
+                        "raw_label": f"{vehicle_category}_retail",
+                        "raw_text": text,
+                    },
+                ]
+            )
+
+    return rows
+
+
+def extract_item11_sales_channel_mix(pdf_bytes):
+    """
+    Extrai o item 11 da fase 2: participacao de venda direta e varejo mensal.
+    """
+    return extract_sales_channel_mix(pdf_bytes, FENABRAVE_ITEM11_CODE)
+
+
+def extract_item12_sales_channel_mix(pdf_bytes):
+    """
+    Extrai o item 12 da fase 2: participacao de venda direta e varejo acumulado.
+    """
+    return extract_sales_channel_mix(pdf_bytes, FENABRAVE_ITEM12_CODE)
+
+
 def normalize_model_ranking_rows(raw_rows, source_file_id, reference_period, item_code):
     """
     Normaliza linhas de ranking Fenabrave para `market_vehicle_model_rankings`.
@@ -1621,6 +1770,55 @@ def normalize_item8_rows(raw_rows, source_file_id, reference_period):
         )
 
     return normalized
+
+
+def normalize_sales_channel_mix_rows(raw_rows, source_file_id, reference_period, item_code):
+    """
+    Normaliza linhas de participacao por canal de venda para preview e validacao.
+    """
+    normalized = []
+    item_definition = FENABRAVE_SALES_CHANNEL_ITEMS[item_code]
+
+    for row in raw_rows:
+        normalized.append(
+            {
+                "source_file_id": source_file_id,
+                "reference_period": reference_period,
+                "item_code": item_definition["code"],
+                "published_period_type": item_definition["published_period_type"],
+                "market_scope": item_definition["market_scope"],
+                "vehicle_category": row["vehicle_category"],
+                "sales_channel": row["sales_channel"],
+                "share_pct": row["share_pct"],
+                "raw_label": row["raw_label"],
+            }
+        )
+
+    return normalized
+
+
+def normalize_item11_rows(raw_rows, source_file_id, reference_period):
+    """
+    Normaliza linhas do item 11 para preview/validacao.
+    """
+    return normalize_sales_channel_mix_rows(
+        raw_rows,
+        source_file_id,
+        reference_period,
+        FENABRAVE_ITEM11_CODE,
+    )
+
+
+def normalize_item12_rows(raw_rows, source_file_id, reference_period):
+    """
+    Normaliza linhas do item 12 para preview/validacao.
+    """
+    return normalize_sales_channel_mix_rows(
+        raw_rows,
+        source_file_id,
+        reference_period,
+        FENABRAVE_ITEM12_CODE,
+    )
 
 
 def normalize_rows(raw_rows, source_file_id, reference_period):
@@ -2482,6 +2680,93 @@ def validate_electrified_brand_rows(item_rows, item6_rows=None, powertrain_type=
     return checks
 
 
+def validate_sales_channel_mix_rows(item_rows):
+    """
+    Valida participacao de venda direta e varejo das paginas 24 e 25.
+    """
+    checks = []
+    expected_categories = [
+        "automoveis",
+        "comerciais_leves",
+        "autos_comerciais_leves",
+    ]
+    expected_channels = {"direct", "retail"}
+
+    checks.append(
+        {
+            "check_name": "sales_channel_total_row_count",
+            "calculated_value": len(item_rows),
+            "expected_value": 6,
+            "difference": len(item_rows) - 6,
+            "passed": len(item_rows) == 6,
+            "severity": "error",
+            "notes": None,
+        }
+    )
+
+    for vehicle_category in expected_categories:
+        rows = [
+            row for row in item_rows if row.get("vehicle_category") == vehicle_category
+        ]
+        channels = {row.get("sales_channel") for row in rows}
+        invalid_shares = sum(
+            1
+            for row in rows
+            if row.get("share_pct") is None
+            or row.get("share_pct") < 0
+            or row.get("share_pct") > 100
+        )
+        total_share = round(sum((row.get("share_pct") or 0) for row in rows), 4)
+
+        checks.extend(
+            [
+                {
+                    "check_name": f"{vehicle_category}_sales_channel_pair",
+                    "calculated_value": len(rows),
+                    "expected_value": 2,
+                    "difference": len(rows) - 2,
+                    "passed": len(rows) == 2 and channels == expected_channels,
+                    "severity": "error",
+                    "notes": None,
+                },
+                {
+                    "check_name": f"{vehicle_category}_sales_channel_share_range",
+                    "calculated_value": invalid_shares,
+                    "expected_value": 0,
+                    "difference": invalid_shares,
+                    "passed": invalid_shares == 0,
+                    "severity": "error",
+                    "notes": None,
+                },
+                {
+                    "check_name": f"{vehicle_category}_sales_channel_close_100",
+                    "calculated_value": total_share,
+                    "expected_value": 100,
+                    "difference": round(total_share - 100, 4),
+                    "passed": abs(total_share - 100) <= 0.5,
+                    "severity": "warning",
+                    "notes": "Grafico publicado pode variar ligeiramente por arredondamento.",
+                },
+            ]
+        )
+
+    return checks
+
+
+def validate_item11_rows(item11_rows):
+    """
+    Valida o item 11 da fase 2.
+    """
+    return validate_sales_channel_mix_rows(item11_rows)
+
+
+def validate_item12_rows(item12_rows):
+    """
+    Valida o item 12 da fase 2.
+    """
+    return validate_sales_channel_mix_rows(item12_rows)
+
+
 def print_preview(raw_rows, normalized_rows, checks, pdf_bytes):
     """
     Imprime uma pre-visualizacao da extracao no terminal.
@@ -2843,10 +3128,35 @@ def print_item8_preview(item8_rows, item8_checks):
             )
 
     print("")
+
+
+def print_sales_channel_mix_preview(item_rows, item_checks, item_code):
+    """
+    Imprime preview da participacao de venda direta e varejo.
+    """
+    item_definition = FENABRAVE_SALES_CHANNEL_ITEMS[item_code]
+    print(
+        f"{item_definition['label']} (pagina {item_definition['page']}, "
+        f"{item_definition['published_period_type']})"
+    )
+    print("-" * 96)
+    print(f"{'categoria':24} {'canal':12} {'share':>8}")
+    print("-" * 96)
+
+    for row in item_rows:
+        share_value = row.get("share_pct")
+        share_label = "None" if share_value is None else f"{share_value:.2f}%"
+        print(
+            f"{row['vehicle_category'][:24]:24} "
+            f"{row['sales_channel'][:12]:12} "
+            f"{share_label:>8}"
+        )
+
+    print("")
     print(f"Validacoes locais de {item_definition['code']}")
     print("-" * 96)
 
-    for check in item8_checks:
+    for check in item_checks:
         print(
             f"{check['check_name']:42} "
             f"calc={check['calculated_value']} "
@@ -2860,6 +3170,28 @@ def print_item8_preview(item8_rows, item8_checks):
             print(f"{'':42} notes={check['notes']}")
 
     print("")
+
+
+def print_item11_preview(item11_rows, item11_checks):
+    """
+    Imprime preview do item 11.
+    """
+    print_sales_channel_mix_preview(
+        item11_rows,
+        item11_checks,
+        FENABRAVE_ITEM11_CODE,
+    )
+
+
+def print_item12_preview(item12_rows, item12_checks):
+    """
+    Imprime preview do item 12.
+    """
+    print_sales_channel_mix_preview(
+        item12_rows,
+        item12_checks,
+        FENABRAVE_ITEM12_CODE,
+    )
 
 
 def delete_existing_rows(base_url, headers, source_file_id):
@@ -2970,6 +3302,28 @@ def delete_electrified_rows(base_url, headers, source_file_id, item_code):
     if response.status_code not in {200, 204}:
         raise RuntimeError(
             "Falha ao limpar market_vehicle_electrified_registrations: "
+            f"status={response.status_code} body={response.text[:500]}"
+        )
+
+
+def delete_sales_channel_mix_rows(base_url, headers, source_file_id, item_code):
+    """
+    Remove apenas linhas de participacao por canal de venda para um arquivo e item.
+    """
+    params = {
+        "source_file_id": f"eq.{source_file_id}",
+        "item_code": f"eq.{item_code}",
+    }
+    response = requests.delete(
+        rest_url(base_url, "market_vehicle_sales_channel_mix"),
+        headers=headers,
+        params=params,
+        timeout=60,
+    )
+
+    if response.status_code not in {200, 204}:
+        raise RuntimeError(
+            "Falha ao limpar market_vehicle_sales_channel_mix: "
             f"status={response.status_code} body={response.text[:500]}"
         )
 
@@ -3123,6 +3477,10 @@ def write_results(
     item7_checks=None,
     item8_rows=None,
     item8_checks=None,
+    item11_rows=None,
+    item11_checks=None,
+    item12_rows=None,
+    item12_checks=None,
 ):
     """
     Persiste normalizado e status no Supabase.
@@ -3501,6 +3859,96 @@ def write_results(
                 "Item 8 Fenabrave validado e gravado pela rotina mensal.",
             )
 
+    if item11_rows is not None:
+        if replace:
+            delete_sales_channel_mix_rows(
+                base_url,
+                headers,
+                source_file_id,
+                FENABRAVE_ITEM11_CODE,
+            )
+
+        item11_has_error = any(
+            not check["passed"] and check["severity"] == "error"
+            for check in (item11_checks or [])
+        )
+
+        if item11_has_error:
+            upsert_fenabrave_item_status(
+                base_url,
+                headers,
+                source_file_id,
+                normalized_rows[0]["reference_period"],
+                FENABRAVE_ITEM11_CODE,
+                "failed",
+                len(item11_rows),
+                "failed",
+                "Item 11 Fenabrave falhou em validacoes locais.",
+            )
+        else:
+            insert_rows(
+                base_url,
+                headers,
+                "market_vehicle_sales_channel_mix",
+                item11_rows,
+            )
+            upsert_fenabrave_item_status(
+                base_url,
+                headers,
+                source_file_id,
+                normalized_rows[0]["reference_period"],
+                FENABRAVE_ITEM11_CODE,
+                "validated",
+                len(item11_rows),
+                "passed",
+                "Item 11 Fenabrave validado e gravado pela rotina mensal.",
+            )
+
+    if item12_rows is not None:
+        if replace:
+            delete_sales_channel_mix_rows(
+                base_url,
+                headers,
+                source_file_id,
+                FENABRAVE_ITEM12_CODE,
+            )
+
+        item12_has_error = any(
+            not check["passed"] and check["severity"] == "error"
+            for check in (item12_checks or [])
+        )
+
+        if item12_has_error:
+            upsert_fenabrave_item_status(
+                base_url,
+                headers,
+                source_file_id,
+                normalized_rows[0]["reference_period"],
+                FENABRAVE_ITEM12_CODE,
+                "failed",
+                len(item12_rows),
+                "failed",
+                "Item 12 Fenabrave falhou em validacoes locais.",
+            )
+        else:
+            insert_rows(
+                base_url,
+                headers,
+                "market_vehicle_sales_channel_mix",
+                item12_rows,
+            )
+            upsert_fenabrave_item_status(
+                base_url,
+                headers,
+                source_file_id,
+                normalized_rows[0]["reference_period"],
+                FENABRAVE_ITEM12_CODE,
+                "validated",
+                len(item12_rows),
+                "passed",
+                "Item 12 Fenabrave validado e gravado pela rotina mensal.",
+            )
+
     has_error = any(
         not check["passed"] and check["severity"] == "error" for check in checks
     )
@@ -3798,6 +4246,22 @@ def parse_args():
             "por padrao o item 8 passa a fazer parte da inclusao mensal Fenabrave."
         ),
     )
+    parser.add_argument(
+        "--skip-phase2-item11",
+        action="store_true",
+        help=(
+            "Nao executa o item 11 da fase 2. Use apenas para contingencia; "
+            "por padrao o item 11 passa a fazer parte da validacao mensal Fenabrave."
+        ),
+    )
+    parser.add_argument(
+        "--skip-phase2-item12",
+        action="store_true",
+        help=(
+            "Nao executa o item 12 da fase 2. Use apenas para contingencia; "
+            "por padrao o item 12 passa a fazer parte da validacao mensal Fenabrave."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -3883,6 +4347,10 @@ def main():
     item7_checks = None
     item8_rows = None
     item8_checks = None
+    item11_rows = None
+    item11_checks = None
+    item12_rows = None
+    item12_checks = None
 
     if not args.skip_phase2_item1:
         print("Extraindo item 1 da fase 2 na pagina 6...")
@@ -3964,6 +4432,26 @@ def main():
         )
         item8_checks = validate_item8_rows(item8_rows, item6_rows)
 
+    if not args.skip_phase2_item11:
+        print("Extraindo item 11 da fase 2 na pagina 24...")
+        item11_raw_rows = extract_item11_sales_channel_mix(pdf_bytes)
+        item11_rows = normalize_item11_rows(
+            item11_raw_rows,
+            source_file_id_for_preview,
+            reference_period,
+        )
+        item11_checks = validate_item11_rows(item11_rows)
+
+    if not args.skip_phase2_item12:
+        print("Extraindo item 12 da fase 2 na pagina 25...")
+        item12_raw_rows = extract_item12_sales_channel_mix(pdf_bytes)
+        item12_rows = normalize_item12_rows(
+            item12_raw_rows,
+            source_file_id_for_preview,
+            reference_period,
+        )
+        item12_checks = validate_item12_rows(item12_rows)
+
     print_preview(raw_rows, normalized_rows, checks, pdf_bytes)
 
     if item1_rows is not None:
@@ -3989,6 +4477,12 @@ def main():
 
     if item8_rows is not None:
         print_item8_preview(item8_rows, item8_checks)
+
+    if item11_rows is not None:
+        print_item11_preview(item11_rows, item11_checks)
+
+    if item12_rows is not None:
+        print_item12_preview(item12_rows, item12_checks)
 
     if args.dry_run:
         print("Dry-run concluido. Nenhum dado foi gravado.")
@@ -4038,6 +4532,10 @@ def main():
         item7_checks=item7_checks,
         item8_rows=item8_rows,
         item8_checks=item8_checks,
+        item11_rows=item11_rows,
+        item11_checks=item11_checks,
+        item12_rows=item12_rows,
+        item12_checks=item12_checks,
     )
     print("Carga concluida.")
 

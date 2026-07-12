@@ -69,8 +69,8 @@ Persistencia:
 | 6 | Mercado de eletrificados | 20 e 21 | mes | automoveis e comerciais leves | sim |
 | 7 | Total por marca mes hibrido | 20 e 21 | mes | automoveis e comerciais leves hibridos | sim |
 | 8 | Total por marca mes eletrico | 20 e 21 | mes | automoveis e comerciais leves eletricos | sim |
-| 9 | Total por modelo leves hibrido | 20 | mes | leves hibridos | sim |
-| 10 | Total por modelo leves eletrico | 20 | mes | leves eletricos | sim |
+| 9 | Total por modelo leves hibrido | 20 | mes | leves hibridos | nao, fora do escopo ativo |
+| 10 | Total por modelo leves eletrico | 20 | mes | leves eletricos | nao, fora do escopo ativo |
 | 11 | Participacao de venda direta e varejo | 24 | mes | canal de venda | sim |
 | 12 | Participacao de venda direta e varejo | 25 | acumulado | canal de venda | sim |
 | 13 | Ranking por marca de emplacamento varejo | 26 | mes | varejo | sim |
@@ -96,7 +96,7 @@ Ordem recomendada:
 | 2.3 | 11 e 12 | canal de venda direta/varejo, importante para separar comportamento de mercado |
 | 2.4 | 13 a 16 | rankings por marca separados por canal |
 | 2.5 | 17 a 20 | rankings por modelo separados por canal |
-| 2.6 | 6 a 10 | eletrificados, com taxonomia propria de combustivel/propulsao |
+| 2.6 | 6 a 8 | eletrificados efetivamente publicados no bloco de mercado e marcas das paginas 20 e 21 |
 | 2.7 | 5 | emplacamentos por subsegmento, com colunas de periodos `n` e `n-1` e cuidado adicional no contrato temporal |
 
 A ordem pode mudar se a extracao de uma pagina se mostrar mais estavel que
@@ -269,8 +269,6 @@ Itens cobertos:
 - 6
 - 7
 - 8
-- 9
-- 10
 
 Nome proposto:
 
@@ -321,12 +319,36 @@ Observacao operacional refinada para os itens `6`, `7` e `8`:
 - no item `6`, o campo `powertrain_type` precisa suportar tambem a linha
   consolidada `total_electrified`, alem de `hybrid` e `electric`
 
+Decisao de escopo para os itens `9` e `10`:
+
+- a revisao operacional da pagina `20` confirmou que o bloco efetivamente
+  publicado pela Fenabrave cobre mercado consolidado e rankings por `marca`,
+  nao rankings por `modelo`
+- por isso, os itens `9` e `10` nao representam um dado realmente disponivel
+  no PDF atual e devem ser tratados como desejo analitico, nao como backlog
+  tecnico de extracao da fase 2
+- esses itens saem do escopo ativo da fase 2 enquanto nao houver evidencia de
+  publicacao explicita por modelo em PDFs futuros
+
 ### 6. Participacao por canal de venda
 
 Itens cobertos:
 
 - 11
 - 12
+
+Decisao tecnica registrada:
+
+- apesar de as paginas `24` e `25` serem apresentadas como graficos no PDF, a
+  Fenabrave publica os percentuais de `Venda Direta` e `Varejo` como texto
+  extraivel em regioes estaveis da pagina
+- a implementacao deve usar parser por regioes fixas, com recorte por bloco de
+  categoria (`automoveis`, `comerciais_leves`, `autos_comerciais_leves`),
+  evitando OCR
+- a validacao precisa confirmar sempre `2` canais por categoria e soma
+  aproximada de `100%`, aceitando pequena variacao por arredondamento grafico
+- o parser deve tratar tanto percentual com virgula quanto percentual com ponto,
+  pois os artefatos de extracao podem variar conforme a camada de texto do PDF
 
 Nome proposto:
 
@@ -344,7 +366,6 @@ item_code
 published_period_type        -- monthly ou accumulated
 sales_channel                -- retail ou direct
 vehicle_category             -- autos_comerciais_leves ou total publicado
-units
 share_pct
 raw_label
 created_at
@@ -548,7 +569,7 @@ Aplicar aos itens 11 a 20:
 
 ### Validacoes de eletrificados
 
-Aplicar aos itens 6 a 10:
+Aplicar aos itens 6 a 8:
 
 - `powertrain_type` deve ser `hybrid`, `electric` ou `total_electrified`
   quando o item for o bloco de mercado consolidado
@@ -832,8 +853,14 @@ Estado consolidado apos o backfill:
 - itens `6`, `7` e `8` concluídos no historico atualmente disponivel
 - parser, preview, persistencia, controle por item e backfill historico todos
   validados no banco
-- a proxima frente da fase 2 pode avancar para os itens `9` e `10`, caso a
-  decisao de escopo os mantenha ativos
+- itens `11` e `12` confirmados como viaveis sem OCR, usando extracao textual
+  por regiao fixa nas paginas `24` e `25`; a proxima etapa operacional e ligar
+  a persistencia em `market_vehicle_sales_channel_mix` e executar o backfill
+- foi confirmada a retirada dos itens `9` e `10` do escopo ativo, porque a
+  pagina `20` nao publica o dado por modelo; esse ponto passa a ser tratado
+  como desejo analitico, nao como dado disponivel
+- com isso, a proxima frente real da fase 2 avanca para os itens `11` e `12`,
+  referentes a participacao de venda direta e varejo nas paginas `24` e `25`
 
 ## Proximo passo apos aprovacao do plano
 

@@ -1954,6 +1954,12 @@ def load_fenabrave_preview_from_storage(
     item8_raw_rows = module.extract_item8_electrified_electric_brands(pdf_bytes)
     item8_rows = module.normalize_item8_rows(item8_raw_rows, source_file_id, reference_period_label)
     item8_checks = module.validate_item8_rows(item8_rows, item6_rows)
+    item11_raw_rows = module.extract_item11_sales_channel_mix(pdf_bytes)
+    item11_rows = module.normalize_item11_rows(item11_raw_rows, source_file_id, reference_period_label)
+    item11_checks = module.validate_item11_rows(item11_rows)
+    item12_raw_rows = module.extract_item12_sales_channel_mix(pdf_bytes)
+    item12_rows = module.normalize_item12_rows(item12_raw_rows, source_file_id, reference_period_label)
+    item12_checks = module.validate_item12_rows(item12_rows)
     return {
         "pdf_size_bytes": len(pdf_bytes),
         "pdf_sha256": hashlib.sha256(pdf_bytes).hexdigest(),
@@ -1984,6 +1990,12 @@ def load_fenabrave_preview_from_storage(
         "item8_raw_rows": item8_raw_rows,
         "item8_rows": item8_rows,
         "item8_checks": item8_checks,
+        "item11_raw_rows": item11_raw_rows,
+        "item11_rows": item11_rows,
+        "item11_checks": item11_checks,
+        "item12_raw_rows": item12_raw_rows,
+        "item12_rows": item12_rows,
+        "item12_checks": item12_checks,
     }
 
 
@@ -5804,6 +5816,10 @@ def render_fenabrave_intake_page() -> None:
                     item7_checks = preview_payload.get("item7_checks") or []
                     item8_rows = preview_payload.get("item8_rows") or []
                     item8_checks = preview_payload.get("item8_checks") or []
+                    item11_rows = preview_payload.get("item11_rows") or []
+                    item11_checks = preview_payload.get("item11_checks") or []
+                    item12_rows = preview_payload.get("item12_rows") or []
+                    item12_checks = preview_payload.get("item12_checks") or []
                     if item1_rows:
                         st.markdown("#### Item 1 fase 2 - Ranking dos emplacamentos mes")
                         item1_df = pd.DataFrame(item1_rows)
@@ -5970,6 +5986,46 @@ def render_fenabrave_intake_page() -> None:
                             use_container_width=True,
                             hide_index=True,
                         )
+                    if item11_rows:
+                        st.markdown("#### Item 11 fase 2 - Participacao venda direta e varejo mes")
+                        item11_df = pd.DataFrame(item11_rows)
+                        item11_preview_columns = [
+                            column
+                            for column in ["vehicle_category", "sales_channel", "share_pct"]
+                            if column in item11_df.columns
+                        ]
+                        st.dataframe(
+                            item11_df[item11_preview_columns],
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+                    if item11_checks:
+                        st.markdown("#### Checks item 11 fase 2")
+                        st.dataframe(
+                            pd.DataFrame(item11_checks),
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+                    if item12_rows:
+                        st.markdown("#### Item 12 fase 2 - Participacao venda direta e varejo acumulado")
+                        item12_df = pd.DataFrame(item12_rows)
+                        item12_preview_columns = [
+                            column
+                            for column in ["vehicle_category", "sales_channel", "share_pct"]
+                            if column in item12_df.columns
+                        ]
+                        st.dataframe(
+                            item12_df[item12_preview_columns],
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+                    if item12_checks:
+                        st.markdown("#### Checks item 12 fase 2")
+                        st.dataframe(
+                            pd.DataFrame(item12_checks),
+                            use_container_width=True,
+                            hide_index=True,
+                        )
 
                 if current_record is not None and st.button("Marcar preview real como revisado", use_container_width=False):
                     notes = (
@@ -6018,6 +6074,10 @@ def render_fenabrave_intake_page() -> None:
                                 item7_checks=preview_payload.get("item7_checks"),
                                 item8_rows=preview_payload.get("item8_rows"),
                                 item8_checks=preview_payload.get("item8_checks"),
+                                item11_rows=preview_payload.get("item11_rows"),
+                                item11_checks=preview_payload.get("item11_checks"),
+                                item12_rows=preview_payload.get("item12_rows"),
+                                item12_checks=preview_payload.get("item12_checks"),
                             )
                         except Exception as exc:
                             st.error(f"Falha ao gravar os dados analiticos: {exc}")
@@ -6026,7 +6086,7 @@ def render_fenabrave_intake_page() -> None:
                             st.session_state["fenabrave_validated"] = True
                             st.success(
                                 "Dados analiticos gravados em market_vehicle_registrations_segment "
-                                "e itens 1, 2, 3, 4, 5, 6, 7 e 8 da fase 2 gravados nas tabelas Fenabrave."
+                                "e itens 1, 2, 3, 4, 5, 6, 7, 8, 11 e 12 da fase 2 gravados nas tabelas Fenabrave."
                             )
                             st.rerun()
             elif preview_error:
