@@ -1246,3 +1246,33 @@ Leitura operacional:
 - a auditoria de suporte continua sendo a query de integridade entre creators e
   posts, com `creator_without_recent_discovery` como sinal de alerta e nao como
   bloqueio automatico
+
+---
+
+## Fenabrave: rankings por marca com suporte a share sem unidades
+
+Data:
+
+- 2026-07-12
+
+Decisao:
+
+- manter `market_vehicle_brand_rankings` como tabela unica para rankings por
+  marca da Fenabrave
+- permitir que `units` seja nulo quando o PDF publicar apenas percentual de
+  participacao, como nos itens `13` a `16`
+- exigir que pelo menos um entre `units` e `market_share_pct` esteja
+  preenchido
+
+Motivo:
+
+- os itens `3` e `4` publicam volume absoluto e share
+- os itens `13` e `14` publicam apenas share por marca no breakdown de varejo
+- criar uma tabela paralela para o mesmo conceito aumentaria custo de consumo,
+  duplicacao de views e complexidade de backfill
+
+Impacto esperado:
+
+- reuso da mesma tabela para rankings por marca totais e por canal
+- persistencia mensal dos itens `13` e `14` sem gambiarra no parser
+- base pronta para estender o mesmo contrato aos itens `15` e `16`

@@ -76,6 +76,9 @@ considerada incompleta.
 ### Fenabrave
 
 - [23_FENABRAVE_PHASE1_INGESTION_SPEC.md](/C:/social_media-analytics/docs/external_data/23_FENABRAVE_PHASE1_INGESTION_SPEC.md)
+- [24_FENABRAVE_PHASE2_EXTENDED_DATA_PLAN.md](/C:/social_media-analytics/docs/external_data/24_FENABRAVE_PHASE2_EXTENDED_DATA_PLAN.md)
+- [25_FENABRAVE_PHASE2_ITEM1_RANKING_EMPLACAMENTOS_MES_PLAN.md](/C:/social_media-analytics/docs/external_data/25_FENABRAVE_PHASE2_ITEM1_RANKING_EMPLACAMENTOS_MES_PLAN.md)
+- [26_FENABRAVE_PHASE2_ITEMS13_18_TECHNICAL_PLAN.md](/C:/social_media-analytics/docs/external_data/26_FENABRAVE_PHASE2_ITEMS13_18_TECHNICAL_PLAN.md)
 
 ### Carros na Web
 

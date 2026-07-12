@@ -34,7 +34,7 @@ Itens ja concluidos ficam consolidados no historico ao fim do arquivo.
 
 ## Visualizacao / Estudos de mercado
 
-- [ ] [analise] ATIVIDADE ATUAL E PRIORITARIA: iniciar os itens 13 a 16 da fase 2 Fenabrave, cobrindo os rankings por marca separados por canal de venda nas paginas 26 a 29, agora que os itens 11 e 12 foram concluidos com parser, persistencia e backfill historico validado no Supabase.
+- [ ] [analise] ATIVIDADE ATUAL E PRIORITARIA: iniciar os itens 13 a 16 da fase 2 Fenabrave, cobrindo os rankings por marca separados por canal de venda nas paginas 26 a 29, e preparar na sequencia imediata os novos itens 17 e 18 das paginas 3 e 4, que passam a representar o consolidado de participacao de mercado por marca com parser posicional.
 - [ ] [melhoria] Evoluir o ranking de creators para tratar frequencia como criterio explicito, porque a base atual e a tela ja cobrem views e engajamento pela `v_dashboard_creator_summary`, mas a cadencia ainda nao entra como ordenacao ou leitura principal do comparativo.
 - [ ] [melhoria] Alinhar a lista de videos do criador individual ao mesmo padrao visual de `YouTube > Melhores videos 7d`, porque a tela atual do criador ainda usa tabela simples para os videos e nao a mesma hierarquia visual, colunas e leitura comparavel do ranking semanal.
 - [ ] [analise] Rechecar a regra fina de desempate do ranking `YouTube > Melhores videos 7d` apos avaliacao visual da tela em uso real, antes de consolidar a ordenacao como contrato definitivo.

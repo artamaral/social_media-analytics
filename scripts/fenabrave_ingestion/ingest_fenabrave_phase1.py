@@ -149,6 +149,20 @@ FENABRAVE_ITEM12_PAGE = 25
 FENABRAVE_ITEM12_PERIOD_TYPE = "accumulated"
 FENABRAVE_ITEM12_MARKET_SCOPE = "Brasil"
 
+FENABRAVE_ITEM13_CODE = "fenabrave_item_13_ranking_marca_emplacamento_varejo_mes"
+FENABRAVE_ITEM13_LABEL = "Ranking por marca de emplacamento varejo mes"
+FENABRAVE_ITEM13_PAGE = 26
+FENABRAVE_ITEM13_PERIOD_TYPE = "monthly"
+FENABRAVE_ITEM13_MARKET_SCOPE = "Brasil"
+FENABRAVE_ITEM13_SALES_CHANNEL = "retail"
+
+FENABRAVE_ITEM14_CODE = "fenabrave_item_14_ranking_marca_emplacamento_varejo_acumulado"
+FENABRAVE_ITEM14_LABEL = "Ranking por marca de emplacamento varejo acumulado"
+FENABRAVE_ITEM14_PAGE = 27
+FENABRAVE_ITEM14_PERIOD_TYPE = "accumulated"
+FENABRAVE_ITEM14_MARKET_SCOPE = "Brasil"
+FENABRAVE_ITEM14_SALES_CHANNEL = "retail"
+
 FENABRAVE_ELECTRIFIED_PAGE_MAP = {
     20: "automoveis",
     21: "comerciais_leves",
@@ -164,6 +178,11 @@ FENABRAVE_SALES_CHANNEL_BLOCKS = [
     ("automoveis", (180, 130, 380, 220)),
     ("comerciais_leves", (180, 345, 380, 435)),
     ("autos_comerciais_leves", (180, 555, 380, 630)),
+]
+FENABRAVE_BRAND_SHARE_BLOCKS = [
+    ("automoveis", (155, 145, 435, 310)),
+    ("comerciais_leves", (155, 345, 435, 520)),
+    ("autos_comerciais_leves", (155, 560, 435, 730)),
 ]
 
 FENABRAVE_MODEL_RANKING_ITEMS = {
@@ -201,6 +220,25 @@ FENABRAVE_BRAND_RANKING_ITEMS = {
         "published_period_type": FENABRAVE_ITEM4_PERIOD_TYPE,
         "market_scope": FENABRAVE_ITEM4_MARKET_SCOPE,
         "sales_channel": FENABRAVE_ITEM4_SALES_CHANNEL,
+    },
+}
+
+FENABRAVE_BRAND_SHARE_ITEMS = {
+    FENABRAVE_ITEM13_CODE: {
+        "code": FENABRAVE_ITEM13_CODE,
+        "label": FENABRAVE_ITEM13_LABEL,
+        "page": FENABRAVE_ITEM13_PAGE,
+        "published_period_type": FENABRAVE_ITEM13_PERIOD_TYPE,
+        "market_scope": FENABRAVE_ITEM13_MARKET_SCOPE,
+        "sales_channel": FENABRAVE_ITEM13_SALES_CHANNEL,
+    },
+    FENABRAVE_ITEM14_CODE: {
+        "code": FENABRAVE_ITEM14_CODE,
+        "label": FENABRAVE_ITEM14_LABEL,
+        "page": FENABRAVE_ITEM14_PAGE,
+        "published_period_type": FENABRAVE_ITEM14_PERIOD_TYPE,
+        "market_scope": FENABRAVE_ITEM14_MARKET_SCOPE,
+        "sales_channel": FENABRAVE_ITEM14_SALES_CHANNEL,
     },
 }
 
@@ -262,6 +300,7 @@ FENABRAVE_SALES_CHANNEL_ITEMS = {
 FENABRAVE_ITEM_DEFINITIONS = {}
 FENABRAVE_ITEM_DEFINITIONS.update(FENABRAVE_MODEL_RANKING_ITEMS)
 FENABRAVE_ITEM_DEFINITIONS.update(FENABRAVE_BRAND_RANKING_ITEMS)
+FENABRAVE_ITEM_DEFINITIONS.update(FENABRAVE_BRAND_SHARE_ITEMS)
 FENABRAVE_ITEM_DEFINITIONS.update(FENABRAVE_SUBSEGMENT_ITEMS)
 FENABRAVE_ITEM_DEFINITIONS.update(FENABRAVE_ELECTRIFIED_ITEMS)
 FENABRAVE_ITEM_DEFINITIONS.update(FENABRAVE_SALES_CHANNEL_ITEMS)
@@ -1542,6 +1581,200 @@ def extract_item12_sales_channel_mix(pdf_bytes):
     return extract_sales_channel_mix(pdf_bytes, FENABRAVE_ITEM12_CODE)
 
 
+def is_fenabrave_share_token(value):
+    """
+    Identifica tokens que representam participacao percentual.
+    """
+    text = normalize_text(value)
+
+    if not text:
+        return False
+
+    if "%" in text:
+        return True
+
+    if not re.fullmatch(r"\d{1,3}(?:[.,]\d+)?", text):
+        return False
+
+    try:
+        parsed = parse_percent_flexible(text)
+    except Exception:
+        return False
+
+    return parsed is not None and 0 <= parsed <= 100
+
+
+def is_fenabrave_rank_token(value):
+    """
+    Identifica marcadores de posicao, como `1º`.
+    """
+    text = normalize_text(value)
+    return bool(re.fullmatch(r"\d+\s*[ºo]?", text, flags=re.IGNORECASE))
+
+
+def reverse_pdf_token_text(value):
+    """
+    Corrige texto invertido token a token sem inverter a ordem das palavras.
+    """
+    text = normalize_text(value)
+
+    if not text:
+        return text
+
+    return " ".join(part[::-1] for part in text.split())
+
+
+def group_words_by_row(words, tolerance=4):
+    """
+    Agrupa palavras pela coordenada vertical para reconstruir linhas visuais.
+    """
+    rows = []
+
+    for word in sorted(words, key=lambda item: (round(item["top"], 2), item["x0"])):
+        current_top = float(word["top"])
+
+        if not rows or abs(rows[-1]["top"] - current_top) > tolerance:
+            rows.append({"top": current_top, "words": [word]})
+        else:
+            rows[-1]["words"].append(word)
+
+    return rows
+
+
+def extract_brand_share_chart(pdf_bytes, item_code):
+    """
+    Extrai rankings graficos por participacao de mercado das paginas 26 e 27.
+
+    O parser usa recortes fixos por categoria e reconstrucao por linha visual.
+    """
+    try:
+        import pdfplumber
+    except ImportError as error:
+        raise RuntimeError(
+            "Dependencia ausente: pdfplumber. Execute `pip install -r requirements.txt` "
+            "em scripts/fenabrave_ingestion."
+        ) from error
+
+    item_definition = FENABRAVE_BRAND_SHARE_ITEMS[item_code]
+
+    with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
+        page_number = item_definition["page"]
+
+        if len(pdf.pages) < page_number:
+            raise RuntimeError(
+                f"PDF sem pagina {page_number} para {item_definition['code']}."
+            )
+
+        page = pdf.pages[page_number - 1]
+        rows = []
+
+        for vehicle_category, bbox in FENABRAVE_BRAND_SHARE_BLOCKS:
+            block = page.crop(bbox)
+            words = block.extract_words(
+                x_tolerance=1,
+                y_tolerance=3,
+                keep_blank_chars=False,
+                use_text_flow=False,
+            )
+            share_words = sorted(
+                [
+                    word
+                    for word in words
+                    if is_fenabrave_share_token(word["text"])
+                ],
+                key=lambda item: item["x0"],
+            )
+            brand_words = sorted(
+                [
+                    word
+                    for word in words
+                    if normalize_text(word["text"])
+                    and not is_fenabrave_share_token(word["text"])
+                    and not is_fenabrave_rank_token(word["text"])
+                ],
+                key=lambda item: item["x0"],
+            )
+
+            merged_brand_groups = []
+
+            for word in brand_words:
+                if (
+                    merged_brand_groups
+                    and (float(word["x0"]) - merged_brand_groups[-1]["x1"]) <= 6
+                ):
+                    merged_brand_groups[-1]["words"].append(word)
+                    merged_brand_groups[-1]["x1"] = float(word["x1"])
+                else:
+                    merged_brand_groups.append(
+                        {
+                            "words": [word],
+                            "x0": float(word["x0"]),
+                            "x1": float(word["x1"]),
+                        }
+                    )
+
+            pair_count = min(len(merged_brand_groups), len(share_words))
+            layout_error = None
+
+            if len(merged_brand_groups) != len(share_words):
+                layout_error = (
+                    "brand_count_mismatch"
+                    if len(merged_brand_groups) > len(share_words)
+                    else "share_count_mismatch"
+                )
+
+            for index in range(pair_count):
+                brand_group = merged_brand_groups[index]
+                share_word = share_words[index]
+                raw_brand_text = " ".join(
+                    normalize_text(word["text"]) for word in brand_group["words"]
+                )
+                raw_share_token = normalize_text(share_word["text"])
+                fixed_brand_text = reverse_pdf_token_text(raw_brand_text)
+                fixed_share_token = reverse_pdf_token_text(raw_share_token)
+
+                rows.append(
+                    {
+                        "page_number": page_number,
+                        "vehicle_category": vehicle_category,
+                        "rank_position": index + 1,
+                        "brand_name_raw": fixed_brand_text,
+                        "market_share_pct": parse_percent_flexible(fixed_share_token),
+                        "raw_label": fixed_brand_text,
+                        "raw_brand_text": raw_brand_text,
+                        "raw_row_text": f"{raw_brand_text} {raw_share_token}",
+                        "share_token_raw": raw_share_token,
+                        "brand_x_center": round(
+                            (brand_group["x0"] + brand_group["x1"]) / 2,
+                            2,
+                        ),
+                        "share_x_center": round(
+                            (float(share_word["x0"]) + float(share_word["x1"])) / 2,
+                            2,
+                        ),
+                        "reversed_text_fixed": normalize_text(raw_brand_text)
+                        != normalize_text(fixed_brand_text),
+                        "layout_error": layout_error,
+                    }
+                )
+
+    return rows
+
+
+def extract_item13_brand_share_rankings(pdf_bytes):
+    """
+    Extrai o item 13 da fase 2: ranking por marca de varejo mensal da pagina 26.
+    """
+    return extract_brand_share_chart(pdf_bytes, FENABRAVE_ITEM13_CODE)
+
+
+def extract_item14_brand_share_rankings(pdf_bytes):
+    """
+    Extrai o item 14 da fase 2: ranking por marca de varejo acumulado da pagina 27.
+    """
+    return extract_brand_share_chart(pdf_bytes, FENABRAVE_ITEM14_CODE)
+
+
 def normalize_model_ranking_rows(raw_rows, source_file_id, reference_period, item_code):
     """
     Normaliza linhas de ranking Fenabrave para `market_vehicle_model_rankings`.
@@ -1652,6 +1885,65 @@ def normalize_item4_rows(raw_rows, source_file_id, reference_period):
         )
 
     return normalized
+
+
+def normalize_brand_share_rows(raw_rows, source_file_id, reference_period, item_code):
+    """
+    Normaliza rankings de participacao por marca para preview e controle de item.
+    """
+    normalized = []
+    item_definition = FENABRAVE_BRAND_SHARE_ITEMS[item_code]
+
+    for row in raw_rows:
+        normalized.append(
+            {
+                "source_file_id": source_file_id,
+                "reference_period": reference_period,
+                "item_code": item_definition["code"],
+                "published_period_type": item_definition["published_period_type"],
+                "market_scope": item_definition["market_scope"],
+                "vehicle_category": row["vehicle_category"],
+                "sales_channel": item_definition["sales_channel"],
+                "rank_position": row["rank_position"],
+                "brand_name_raw": row["brand_name_raw"],
+                "units": None,
+                "market_share_pct": row["market_share_pct"],
+                "raw_label": row["raw_label"],
+                "raw_brand_text": row.get("raw_brand_text"),
+                "raw_row_text": row.get("raw_row_text"),
+                "share_token_raw": row.get("share_token_raw"),
+                "brand_x_center": row.get("brand_x_center"),
+                "share_x_center": row.get("share_x_center"),
+                "reversed_text_fixed": row.get("reversed_text_fixed", False),
+                "layout_error": row.get("layout_error"),
+            }
+        )
+
+    return normalized
+
+
+def normalize_item13_rows(raw_rows, source_file_id, reference_period):
+    """
+    Normaliza linhas do item 13 para preview e controle de persistencia.
+    """
+    return normalize_brand_share_rows(
+        raw_rows,
+        source_file_id,
+        reference_period,
+        FENABRAVE_ITEM13_CODE,
+    )
+
+
+def normalize_item14_rows(raw_rows, source_file_id, reference_period):
+    """
+    Normaliza linhas do item 14 para preview e controle de persistencia.
+    """
+    return normalize_brand_share_rows(
+        raw_rows,
+        source_file_id,
+        reference_period,
+        FENABRAVE_ITEM14_CODE,
+    )
 
 
 def normalize_item5_rows(raw_rows, source_file_id, reference_period):
@@ -2316,6 +2608,173 @@ def validate_item4_rows(item4_rows, item3_rows=None):
     return checks
 
 
+def validate_brand_share_rows(item_rows, item_code, comparison_rows=None):
+    """
+    Valida rankings por share sem volume absoluto.
+    """
+    checks = []
+    expected_categories = [
+        "automoveis",
+        "comerciais_leves",
+        "autos_comerciais_leves",
+    ]
+
+    found_categories = {
+        row.get("vehicle_category") for row in item_rows if row.get("vehicle_category")
+    }
+    checks.append(
+        {
+            "check_name": f"{item_code}_category_count",
+            "calculated_value": len(found_categories),
+            "expected_value": 3,
+            "difference": len(found_categories) - 3,
+            "passed": len(found_categories) == 3,
+            "severity": "error",
+            "notes": None,
+        }
+    )
+
+    for category in expected_categories:
+        rows = [row for row in item_rows if row.get("vehicle_category") == category]
+        ranks = [row.get("rank_position") for row in rows]
+        shares = [row.get("market_share_pct") for row in rows]
+        distinct_ranks = len({rank for rank in ranks if rank is not None})
+        invalid_shares = sum(
+            1 for value in shares if value is None or value < 0 or value > 100
+        )
+        missing_brands = sum(
+            1 for row in rows if not normalize_text(row.get("brand_name_raw"))
+        )
+        descending_violations = sum(
+            1
+            for previous, current in zip(
+                sorted(rows, key=lambda row: row.get("rank_position") or 999),
+                sorted(rows, key=lambda row: row.get("rank_position") or 999)[1:],
+            )
+            if normalize_key(previous.get("brand_name_raw")) != "outros"
+            and normalize_key(current.get("brand_name_raw")) != "outros"
+            and (previous.get("market_share_pct") or 0)
+            < (current.get("market_share_pct") or 0)
+        )
+        invalid_alignment = sum(
+            1
+            for row in rows
+            if row.get("brand_x_center") is None
+            or row.get("share_x_center") is None
+            or abs(row.get("brand_x_center") - row.get("share_x_center")) > 2
+        )
+        reversed_fixed_count = sum(
+            1 for row in rows if bool(row.get("reversed_text_fixed"))
+        )
+        compare_count = None
+
+        if comparison_rows is not None:
+            compare_count = len(
+                [
+                    row
+                    for row in comparison_rows
+                    if row.get("vehicle_category") == category
+                ]
+            )
+
+        checks.extend(
+            [
+                {
+                    "check_name": f"{category}_brand_share_row_count",
+                    "calculated_value": len(rows),
+                    "expected_value": None,
+                    "difference": None,
+                    "passed": len(rows) > 0,
+                    "severity": "error",
+                    "notes": "Cada bloco do grafico precisa gerar ao menos uma linha.",
+                },
+                {
+                    "check_name": f"{category}_brand_share_distinct_ranks",
+                    "calculated_value": distinct_ranks,
+                    "expected_value": len(rows),
+                    "difference": distinct_ranks - len(rows),
+                    "passed": distinct_ranks == len(rows),
+                    "severity": "error",
+                    "notes": None,
+                },
+                {
+                    "check_name": f"{category}_brand_share_names",
+                    "calculated_value": missing_brands,
+                    "expected_value": 0,
+                    "difference": missing_brands,
+                    "passed": missing_brands == 0,
+                    "severity": "error",
+                    "notes": None,
+                },
+                {
+                    "check_name": f"{category}_brand_share_range",
+                    "calculated_value": invalid_shares,
+                    "expected_value": 0,
+                    "difference": invalid_shares,
+                    "passed": invalid_shares == 0,
+                    "severity": "error",
+                    "notes": None,
+                },
+                {
+                    "check_name": f"{category}_brand_share_descending",
+                    "calculated_value": descending_violations,
+                    "expected_value": 0,
+                    "difference": descending_violations,
+                    "passed": descending_violations == 0,
+                    "severity": "error",
+                    "notes": "O ranking visual deve manter shares decrescentes.",
+                },
+                {
+                    "check_name": f"{category}_brand_share_alignment",
+                    "calculated_value": invalid_alignment,
+                    "expected_value": 0,
+                    "difference": invalid_alignment,
+                    "passed": invalid_alignment == 0,
+                    "severity": "error",
+                    "notes": "Marca deve aparecer antes do percentual dentro do bloco.",
+                },
+                {
+                    "check_name": f"{category}_brand_share_reversed_fixed_rows",
+                    "calculated_value": reversed_fixed_count,
+                    "expected_value": None,
+                    "difference": None,
+                    "passed": True,
+                    "severity": "warning",
+                    "notes": "Diagnostico local de texto invertido corrigido pelo parser.",
+                },
+                {
+                    "check_name": f"{category}_brand_share_compare_row_count",
+                    "calculated_value": len(rows),
+                    "expected_value": compare_count,
+                    "difference": None if compare_count is None else len(rows) - compare_count,
+                    "passed": compare_count is None or abs(len(rows) - compare_count) <= 2,
+                    "severity": "warning",
+                    "notes": "Comparacao com item pareado aceita pequena variacao de top N.",
+                },
+            ]
+        )
+
+    return checks
+
+
+def validate_item13_rows(item13_rows):
+    """
+    Valida o item 13 da fase 2.
+    """
+    return validate_brand_share_rows(item13_rows, FENABRAVE_ITEM13_CODE)
+
+
+def validate_item14_rows(item14_rows, item13_rows=None):
+    """
+    Valida o item 14 da fase 2.
+    """
+    return validate_brand_share_rows(
+        item14_rows,
+        FENABRAVE_ITEM14_CODE,
+        comparison_rows=item13_rows,
+    )
+
+
 def validate_item5_rows(item5_rows, item5_raw_rows=None):
     """
     Valida shares por subsegmento da pagina 17.
@@ -2972,6 +3431,90 @@ def print_item4_preview(item4_rows, item4_checks):
     print("")
 
 
+def print_brand_share_preview(item_rows, item_checks, item_code):
+    """
+    Imprime preview de ranking por participacao de mercado.
+    """
+    item_definition = FENABRAVE_BRAND_SHARE_ITEMS[item_code]
+    print(
+        f"{item_definition['label']} (pagina {item_definition['page']}, "
+        f"{item_definition['published_period_type']})"
+    )
+    print("-" * 120)
+    print(
+        f"{'categoria':24} {'rank':>4} {'marca':28} {'share':>8} "
+        f"{'fix':>5} {'x_marca':>9} {'x_share':>9}"
+    )
+    print("-" * 120)
+
+    for category in [
+        "automoveis",
+        "comerciais_leves",
+        "autos_comerciais_leves",
+    ]:
+        category_rows = sorted(
+            [row for row in item_rows if row["vehicle_category"] == category],
+            key=lambda row: row["rank_position"],
+        )[:10]
+
+        for row in category_rows:
+            share_label = (
+                "None"
+                if row.get("market_share_pct") is None
+                else f"{row['market_share_pct']:.2f}%"
+            )
+            print(
+                f"{category[:24]:24} "
+                f"{row['rank_position']:>4} "
+                f"{row['brand_name_raw'][:28]:28} "
+                f"{share_label:>8} "
+                f"{'sim' if row.get('reversed_text_fixed') else 'nao':>5} "
+                f"{str(row.get('brand_x_center')):>9} "
+                f"{str(row.get('share_x_center')):>9}"
+            )
+
+    print("")
+    print(f"Validacoes locais de {item_definition['code']}")
+    print("-" * 120)
+
+    for check in item_checks:
+        print(
+            f"{check['check_name']:42} "
+            f"calc={check['calculated_value']} "
+            f"expected={check['expected_value']} "
+            f"diff={check['difference']} "
+            f"passed={check['passed']} "
+            f"severity={check['severity']}"
+        )
+
+        if check["notes"]:
+            print(f"{'':42} notes={check['notes']}")
+
+    print("")
+
+
+def print_item13_preview(item13_rows, item13_checks):
+    """
+    Imprime preview do item 13.
+    """
+    print_brand_share_preview(
+        item13_rows,
+        item13_checks,
+        FENABRAVE_ITEM13_CODE,
+    )
+
+
+def print_item14_preview(item14_rows, item14_checks):
+    """
+    Imprime preview do item 14.
+    """
+    print_brand_share_preview(
+        item14_rows,
+        item14_checks,
+        FENABRAVE_ITEM14_CODE,
+    )
+
+
 def print_item5_preview(item5_rows, item5_checks):
     """
     Imprime preview do item 5 na pagina 17.
@@ -3481,6 +4024,10 @@ def write_results(
     item11_checks=None,
     item12_rows=None,
     item12_checks=None,
+    item13_rows=None,
+    item13_checks=None,
+    item14_rows=None,
+    item14_checks=None,
 ):
     """
     Persiste normalizado e status no Supabase.
@@ -3949,6 +4496,96 @@ def write_results(
                 "Item 12 Fenabrave validado e gravado pela rotina mensal.",
             )
 
+    if item13_rows is not None:
+        if replace:
+            delete_brand_ranking_rows(
+                base_url,
+                headers,
+                source_file_id,
+                FENABRAVE_ITEM13_CODE,
+            )
+
+        item13_has_error = any(
+            not check["passed"] and check["severity"] == "error"
+            for check in (item13_checks or [])
+        )
+
+        if item13_has_error:
+            upsert_fenabrave_item_status(
+                base_url,
+                headers,
+                source_file_id,
+                normalized_rows[0]["reference_period"],
+                FENABRAVE_ITEM13_CODE,
+                "failed",
+                len(item13_rows),
+                "failed",
+                "Item 13 Fenabrave falhou em validacoes locais.",
+            )
+        else:
+            insert_rows(
+                base_url,
+                headers,
+                "market_vehicle_brand_rankings",
+                item13_rows,
+            )
+            upsert_fenabrave_item_status(
+                base_url,
+                headers,
+                source_file_id,
+                normalized_rows[0]["reference_period"],
+                FENABRAVE_ITEM13_CODE,
+                "validated",
+                len(item13_rows),
+                "passed",
+                "Item 13 Fenabrave validado e gravado pela rotina mensal.",
+            )
+
+    if item14_rows is not None:
+        if replace:
+            delete_brand_ranking_rows(
+                base_url,
+                headers,
+                source_file_id,
+                FENABRAVE_ITEM14_CODE,
+            )
+
+        item14_has_error = any(
+            not check["passed"] and check["severity"] == "error"
+            for check in (item14_checks or [])
+        )
+
+        if item14_has_error:
+            upsert_fenabrave_item_status(
+                base_url,
+                headers,
+                source_file_id,
+                normalized_rows[0]["reference_period"],
+                FENABRAVE_ITEM14_CODE,
+                "failed",
+                len(item14_rows),
+                "failed",
+                "Item 14 Fenabrave falhou em validacoes locais.",
+            )
+        else:
+            insert_rows(
+                base_url,
+                headers,
+                "market_vehicle_brand_rankings",
+                item14_rows,
+            )
+            upsert_fenabrave_item_status(
+                base_url,
+                headers,
+                source_file_id,
+                normalized_rows[0]["reference_period"],
+                FENABRAVE_ITEM14_CODE,
+                "validated",
+                len(item14_rows),
+                "passed",
+                "Item 14 Fenabrave validado e gravado pela rotina mensal.",
+            )
+
     has_error = any(
         not check["passed"] and check["severity"] == "error" for check in checks
     )
@@ -4262,6 +4899,22 @@ def parse_args():
             "por padrao o item 12 passa a fazer parte da validacao mensal Fenabrave."
         ),
     )
+    parser.add_argument(
+        "--skip-phase2-item13",
+        action="store_true",
+        help=(
+            "Nao executa o item 13 da fase 2. Use apenas para contingencia; "
+            "por padrao o item 13 passa a fazer parte da validacao mensal Fenabrave."
+        ),
+    )
+    parser.add_argument(
+        "--skip-phase2-item14",
+        action="store_true",
+        help=(
+            "Nao executa o item 14 da fase 2. Use apenas para contingencia; "
+            "por padrao o item 14 passa a fazer parte da validacao mensal Fenabrave."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -4351,6 +5004,10 @@ def main():
     item11_checks = None
     item12_rows = None
     item12_checks = None
+    item13_rows = None
+    item13_checks = None
+    item14_rows = None
+    item14_checks = None
 
     if not args.skip_phase2_item1:
         print("Extraindo item 1 da fase 2 na pagina 6...")
@@ -4452,6 +5109,26 @@ def main():
         )
         item12_checks = validate_item12_rows(item12_rows)
 
+    if not args.skip_phase2_item13:
+        print("Extraindo item 13 da fase 2 na pagina 26...")
+        item13_raw_rows = extract_item13_brand_share_rankings(pdf_bytes)
+        item13_rows = normalize_item13_rows(
+            item13_raw_rows,
+            source_file_id_for_preview,
+            reference_period,
+        )
+        item13_checks = validate_item13_rows(item13_rows)
+
+    if not args.skip_phase2_item14:
+        print("Extraindo item 14 da fase 2 na pagina 27...")
+        item14_raw_rows = extract_item14_brand_share_rankings(pdf_bytes)
+        item14_rows = normalize_item14_rows(
+            item14_raw_rows,
+            source_file_id_for_preview,
+            reference_period,
+        )
+        item14_checks = validate_item14_rows(item14_rows, item13_rows)
+
     print_preview(raw_rows, normalized_rows, checks, pdf_bytes)
 
     if item1_rows is not None:
@@ -4483,6 +5160,12 @@ def main():
 
     if item12_rows is not None:
         print_item12_preview(item12_rows, item12_checks)
+
+    if item13_rows is not None:
+        print_item13_preview(item13_rows, item13_checks)
+
+    if item14_rows is not None:
+        print_item14_preview(item14_rows, item14_checks)
 
     if args.dry_run:
         print("Dry-run concluido. Nenhum dado foi gravado.")
@@ -4536,6 +5219,10 @@ def main():
         item11_checks=item11_checks,
         item12_rows=item12_rows,
         item12_checks=item12_checks,
+        item13_rows=item13_rows,
+        item13_checks=item13_checks,
+        item14_rows=item14_rows,
+        item14_checks=item14_checks,
     )
     print("Carga concluida.")
 

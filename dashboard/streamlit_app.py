@@ -1960,6 +1960,12 @@ def load_fenabrave_preview_from_storage(
     item12_raw_rows = module.extract_item12_sales_channel_mix(pdf_bytes)
     item12_rows = module.normalize_item12_rows(item12_raw_rows, source_file_id, reference_period_label)
     item12_checks = module.validate_item12_rows(item12_rows)
+    item13_raw_rows = module.extract_item13_brand_share_rankings(pdf_bytes)
+    item13_rows = module.normalize_item13_rows(item13_raw_rows, source_file_id, reference_period_label)
+    item13_checks = module.validate_item13_rows(item13_rows)
+    item14_raw_rows = module.extract_item14_brand_share_rankings(pdf_bytes)
+    item14_rows = module.normalize_item14_rows(item14_raw_rows, source_file_id, reference_period_label)
+    item14_checks = module.validate_item14_rows(item14_rows, item13_rows)
     return {
         "pdf_size_bytes": len(pdf_bytes),
         "pdf_sha256": hashlib.sha256(pdf_bytes).hexdigest(),
@@ -1996,6 +2002,12 @@ def load_fenabrave_preview_from_storage(
         "item12_raw_rows": item12_raw_rows,
         "item12_rows": item12_rows,
         "item12_checks": item12_checks,
+        "item13_raw_rows": item13_raw_rows,
+        "item13_rows": item13_rows,
+        "item13_checks": item13_checks,
+        "item14_raw_rows": item14_raw_rows,
+        "item14_rows": item14_rows,
+        "item14_checks": item14_checks,
     }
 
 
@@ -5820,6 +5832,10 @@ def render_fenabrave_intake_page() -> None:
                     item11_checks = preview_payload.get("item11_checks") or []
                     item12_rows = preview_payload.get("item12_rows") or []
                     item12_checks = preview_payload.get("item12_checks") or []
+                    item13_rows = preview_payload.get("item13_rows") or []
+                    item13_checks = preview_payload.get("item13_checks") or []
+                    item14_rows = preview_payload.get("item14_rows") or []
+                    item14_checks = preview_payload.get("item14_checks") or []
                     if item1_rows:
                         st.markdown("#### Item 1 fase 2 - Ranking dos emplacamentos mes")
                         item1_df = pd.DataFrame(item1_rows)
@@ -6026,6 +6042,88 @@ def render_fenabrave_intake_page() -> None:
                             use_container_width=True,
                             hide_index=True,
                         )
+                    if item13_rows:
+                        st.markdown("#### Item 13 fase 2 - Ranking por marca de emplacamento varejo mes")
+                        st.caption("Parser posicional com persistencia pronta para ranking por share sem unidades.")
+                        item13_df = pd.DataFrame(item13_rows)
+                        item13_preview_columns = [
+                            column
+                            for column in [
+                                "vehicle_category",
+                                "rank_position",
+                                "brand_name_raw",
+                                "market_share_pct",
+                                "reversed_text_fixed",
+                                "brand_x_center",
+                                "share_x_center",
+                            ]
+                            if column in item13_df.columns
+                        ]
+                        st.dataframe(
+                            item13_df[item13_preview_columns].head(40),
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+                    if item13_checks:
+                        st.markdown("#### Checks item 13 fase 2")
+                        item13_checks_df = pd.DataFrame(item13_checks)
+                        st.dataframe(
+                            item13_checks_df,
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+                        item13_errors = item13_checks_df[
+                            (~item13_checks_df["passed"]) & (item13_checks_df["severity"] == "error")
+                        ]
+                        if not item13_errors.empty:
+                            first_error = item13_errors.iloc[0]
+                            st.error(
+                                "Falha na extracao do item Fenabrave. O parser identificou inconsistencias de layout, alinhamento ou texto invertido e a persistencia foi bloqueada para este item. "
+                                f"item_code=fenabrave_item_13 pagina=26 erro={first_error['check_name']}"
+                            )
+                    if item14_rows:
+                        st.markdown("#### Item 14 fase 2 - Ranking por marca de emplacamento varejo acumulado")
+                        st.caption("Parser posicional com persistencia pronta para ranking por share sem unidades.")
+                        item14_df = pd.DataFrame(item14_rows)
+                        item14_preview_columns = [
+                            column
+                            for column in [
+                                "vehicle_category",
+                                "rank_position",
+                                "brand_name_raw",
+                                "market_share_pct",
+                                "reversed_text_fixed",
+                                "brand_x_center",
+                                "share_x_center",
+                            ]
+                            if column in item14_df.columns
+                        ]
+                        st.dataframe(
+                            item14_df[item14_preview_columns].head(40),
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+                    if item14_checks:
+                        st.markdown("#### Checks item 14 fase 2")
+                        item14_checks_df = pd.DataFrame(item14_checks)
+                        st.dataframe(
+                            item14_checks_df,
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+                        item14_errors = item14_checks_df[
+                            (~item14_checks_df["passed"]) & (item14_checks_df["severity"] == "error")
+                        ]
+                        if not item14_errors.empty:
+                            first_error = item14_errors.iloc[0]
+                            st.error(
+                                "Falha na extracao do item Fenabrave. O parser identificou inconsistencias de layout, alinhamento ou texto invertido e a persistencia foi bloqueada para este item. "
+                                f"item_code=fenabrave_item_14 pagina=27 erro={first_error['check_name']}"
+                            )
+                    if item13_rows or item14_rows:
+                        st.info(
+                            "Itens 13 e 14 agora usam a mesma modelagem de ranking por marca, com suporte a linhas publicadas apenas com share."
+                        )
 
                 if current_record is not None and st.button("Marcar preview real como revisado", use_container_width=False):
                     notes = (
@@ -6078,6 +6176,10 @@ def render_fenabrave_intake_page() -> None:
                                 item11_checks=preview_payload.get("item11_checks"),
                                 item12_rows=preview_payload.get("item12_rows"),
                                 item12_checks=preview_payload.get("item12_checks"),
+                                item13_rows=preview_payload.get("item13_rows"),
+                                item13_checks=preview_payload.get("item13_checks"),
+                                item14_rows=preview_payload.get("item14_rows"),
+                                item14_checks=preview_payload.get("item14_checks"),
                             )
                         except Exception as exc:
                             st.error(f"Falha ao gravar os dados analiticos: {exc}")
@@ -6086,7 +6188,7 @@ def render_fenabrave_intake_page() -> None:
                             st.session_state["fenabrave_validated"] = True
                             st.success(
                                 "Dados analiticos gravados em market_vehicle_registrations_segment "
-                                "e itens 1, 2, 3, 4, 5, 6, 7, 8, 11 e 12 da fase 2 gravados nas tabelas Fenabrave."
+                                "e itens 1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13 e 14 da fase 2 gravados nas tabelas Fenabrave."
                             )
                             st.rerun()
             elif preview_error:

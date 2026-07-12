@@ -77,10 +77,12 @@ Persistencia:
 | 14 | Ranking por marca de emplacamento varejo | 27 | acumulado | varejo | sim |
 | 15 | Ranking por marca de emplacamento direta | 28 | mes | venda direta | sim |
 | 16 | Ranking por marca de emplacamento direta | 29 | acumulado | venda direta | sim |
-| 17 | Modelos mais emplacados venda direta | 30 | mes | venda direta | sim |
-| 18 | Modelos mais emplacados venda varejo | 31 | mes | varejo | sim |
-| 19 | Modelos mais emplacados venda direta | 32 | acumulado | venda direta | sim |
-| 20 | Modelos mais emplacados venda varejo | 33 | acumulado | varejo | sim |
+| 17 | Participacao de mercado consolidada por marca | 3 | mes | automoveis, comerciais leves e autos + comerciais leves | sim |
+| 18 | Participacao de mercado consolidada por marca | 4 | acumulado | automoveis, comerciais leves e autos + comerciais leves | sim |
+| 19 | Modelos mais emplacados venda direta | 30 | mes | venda direta | sim |
+| 20 | Modelos mais emplacados venda varejo | 31 | mes | varejo | sim |
+| 21 | Modelos mais emplacados venda direta | 32 | acumulado | venda direta | sim |
+| 22 | Modelos mais emplacados venda varejo | 33 | acumulado | varejo | sim |
 
 ## Ordem de implantacao por item
 
@@ -95,9 +97,10 @@ Ordem recomendada:
 | 2.2 | 3 e 4 | ranking por marca de autos e comerciais leves |
 | 2.3 | 11 e 12 | canal de venda direta/varejo, importante para separar comportamento de mercado |
 | 2.4 | 13 a 16 | rankings por marca separados por canal |
-| 2.5 | 17 a 20 | rankings por modelo separados por canal |
-| 2.6 | 6 a 8 | eletrificados efetivamente publicados no bloco de mercado e marcas das paginas 20 e 21 |
-| 2.7 | 5 | emplacamentos por subsegmento, com colunas de periodos `n` e `n-1` e cuidado adicional no contrato temporal |
+| 2.5 | 17 e 18 | consolidado de participacao de mercado por marca nas paginas 3 e 4 |
+| 2.6 | 19 a 22 | rankings por modelo separados por canal |
+| 2.7 | 6 a 8 | eletrificados efetivamente publicados no bloco de mercado e marcas das paginas 20 e 21 |
+| 2.8 | 5 | emplacamentos por subsegmento, com colunas de periodos `n` e `n-1` e cuidado adicional no contrato temporal |
 
 A ordem pode mudar se a extracao de uma pagina se mostrar mais estavel que
 outra, mas a regra continua: liberar um bloco somente depois de backfill,
@@ -208,7 +211,7 @@ sales_channel                -- all, retail, direct
 vehicle_category             -- autos_comerciais_leves
 rank_position
 brand_name
-units
+units                        -- nullable para itens publicados apenas com share
 market_share_pct
 raw_label
 created_at
@@ -219,6 +222,18 @@ Chave unica sugerida:
 ```text
 source_file_id, item_code, published_period_type, sales_channel, rank_position, brand_name
 ```
+
+Decisao de modelagem aplicada em 2026-07-12:
+
+- `market_vehicle_brand_rankings` passa a suportar dois contratos no mesmo
+  schema:
+  - rankings com `units` e `market_share_pct`, como os itens `3` e `4`
+  - rankings apenas com `market_share_pct`, como os itens `13` a `16`
+- para isso, `units` deixa de ser obrigatorio na tabela, mas a modelagem passa
+  a exigir que pelo menos um entre `units` e `market_share_pct` esteja
+  preenchido
+- essa decisao preserva reuso da tabela por item e evita criar uma tabela
+  paralela apenas para o breakdown por canal
 
 ### 4. Rankings por modelo
 
@@ -377,6 +392,61 @@ Chave unica sugerida:
 source_file_id, item_code, published_period_type, sales_channel, vehicle_category
 ```
 
+### 7. Participacao de mercado consolidada por marca
+
+Itens cobertos:
+
+- 17
+- 18
+
+Decisao tecnica registrada:
+
+- as paginas `3` e `4` passam a fazer parte do escopo ativo porque funcionam
+  como consolidado total do bloco de participacao de mercado cujo breakdown por
+  canal esta nas paginas `26` a `29`
+- o parser deve ser posicional, por regioes fixas, da mesma forma adotada para
+  os graficos de canal de venda das paginas `24` e `25`
+- este bloco nao substitui os itens `3` e `4`, porque aqui o foco publicado e
+  `participacao por marca` em graficos percentuais e com terceira visao
+  `autos + comerciais leves`
+- os itens `17` e `18` devem preservar separadamente as tres categorias
+  publicadas: `automoveis`, `comerciais_leves` e
+  `autos_comerciais_leves`
+
+Nome proposto:
+
+```text
+market_vehicle_brand_market_share
+```
+
+Campos conceituais:
+
+```text
+id
+source_file_id
+reference_period
+item_code
+published_period_type        -- monthly ou accumulated
+market_scope
+vehicle_category             -- automoveis, comerciais_leves, autos_comerciais_leves
+rank_position
+brand_name_raw
+share_pct
+raw_label
+created_at
+```
+
+Chave unica sugerida:
+
+```text
+source_file_id, item_code, published_period_type, vehicle_category, rank_position
+```
+
+Referencia de implementacao:
+
+- ver plano tecnico detalhado em
+  `docs/external_data/26_FENABRAVE_PHASE2_ITEMS13_18_TECHNICAL_PLAN.md`
+
 ## Processo mensal atualizado
 
 O processo mensal deve continuar com o mesmo inicio da fase 1:
@@ -490,7 +560,7 @@ Ordem recomendada:
 6. Validar item 1 em todos os periodos
 7. Executar backfill do item 2 para todos os PDFs
 8. Validar item 2 em todos os periodos
-9. Repetir ate o item 20
+9. Repetir ate o item 22
 10. Gerar relatorio final de cobertura
 ```
 
@@ -525,7 +595,7 @@ Aplicar a todos os itens:
 
 ### Validacoes de ranking
 
-Aplicar aos itens 1, 2, 3, 4, 13, 14, 15, 16, 17, 18, 19 e 20:
+Aplicar aos itens 1, 2, 3, 4, 13, 14, 15, 16, 17, 18, 19, 20, 21 e 22:
 
 - ranking deve iniciar em 1
 - ranking nao deve ter posicoes duplicadas dentro do item
@@ -543,8 +613,9 @@ Aplicar aos pares:
 - item 11 contra item 12
 - item 13 contra item 14
 - item 15 contra item 16
-- item 17 contra item 19
-- item 18 contra item 20
+- item 17 contra item 18
+- item 19 contra item 21
+- item 20 contra item 22
 
 Checks:
 
@@ -558,7 +629,7 @@ Checks:
 
 ### Validacoes de canal de venda
 
-Aplicar aos itens 11 a 20:
+Aplicar aos itens 11 a 22:
 
 - `retail + direct` deve bater com o total comparavel quando o PDF trouxer a
   base
