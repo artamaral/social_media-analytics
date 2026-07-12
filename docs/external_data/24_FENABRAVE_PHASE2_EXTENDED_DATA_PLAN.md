@@ -604,6 +604,17 @@ Aplicar aos itens 1, 2, 3, 4, 13, 14, 15, 16, 17, 18, 19, 20, 21 e 22:
 - total das linhas do ranking nao deve exceder o total do segmento/canal
   correspondente quando houver base comparavel
 
+Nota operacional refinada em 2026-07-12 para os itens `19` e `20`:
+
+- o breakdown por canal das paginas `30` e `31` segue o mesmo contrato de
+  ranking por modelo do bloco geral, mas o `top N` publicado pode variar por
+  categoria dentro da propria pagina
+- no piloto de `06/2026`, a pagina `30` publicou `50` linhas para
+  `automoveis` e `41` para `comerciais_leves` em `venda direta`
+- por isso, a validacao desses itens deve exigir ranks continuos de `1` ate a
+  ultima linha publicada em cada categoria, sem assumir `50` linhas fixas como
+  regra universal do breakdown por canal
+
 ### Validacoes de mensal versus acumulado
 
 Aplicar aos pares:
@@ -781,6 +792,17 @@ Diretriz:
   dezembro/2025
 - nao apagar automaticamente registros legados sem antes confirmar impactos em
   tabelas dependentes
+
+Atualizacao operacional de 2026-07-12:
+
+- a duplicidade residual de `12/2025` em
+  `market_vehicle_registrations_segment`, causada pela carga antiga no
+  `source_file_id = 8`, foi removida do banco
+- a tabela de segmentos do periodo voltou a manter apenas o conjunto canonico
+  ligado ao `source_file_id = 17`
+- o registro `id = 8` segue preservado em `market_source_files` apenas como
+  duplicidade historica rastreavel, sem permanecer como fonte valida de linhas
+  analiticas
 
 ## Status atual
 
@@ -1013,6 +1035,32 @@ Atualizacao complementar de 2026-07-12 para os itens 16, 17 e 18:
 - com isso, a proxima frente prioritaria da fase 2 passa a ser o bloco de
   rankings por modelo separado por canal, iniciando pelos itens `19` e `20`
   nas paginas `30` e `31`
+
+Atualizacao complementar de 2026-07-12 para os itens 19 e 20:
+
+- os itens `19` e `20` foram concluidos no historico atualmente disponivel,
+  reaproveitando o mesmo contrato estrutural do ranking geral por modelo em
+  `market_vehicle_model_rankings`
+- o parser das paginas `30` e `31` foi integrado a rotina mensal automatica da
+  Fenabrave e ao preview operacional no Streamlit
+- o piloto de `06/2026` foi executado com sucesso no banco real e liberou o
+  backfill historico oficial dos itens `19` e `20`
+- o backfill oficial dos itens `19` e `20` foi concluido para `12/2025` a
+  `06/2026`, usando os `source_file_id` canonicos `17`, `5`, `4`, `3`, `2`,
+  `6` e `13`
+- todos os periodos carregados dos itens `19` e `20` ficaram com
+  `status = validated` e `validation_status = passed` em
+  `market_fenabrave_extraction_items`
+- o item `20` manteve `row_count = 100` em todos os meses do historico
+  atualmente disponivel
+- o item `19` confirmou comportamento de `top N` variavel em
+  `comerciais_leves`, com `row_count` entre `85` e `92` conforme o PDF
+  publicado em cada mes
+- no banco final, o item `19` manteve `50` linhas de `automoveis` em todos os
+  meses e variou nas linhas de `comerciais_leves`, enquanto o item `20`
+  manteve `50 + 50` no historico carregado
+- com isso, a proxima frente prioritaria da fase 2 passa para os itens `21` e
+  `22`, acumulados por canal nas paginas `32` e `33`
 
 ## Proximo passo apos aprovacao do plano
 
