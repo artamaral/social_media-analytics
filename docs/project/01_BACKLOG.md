@@ -34,7 +34,7 @@ Itens ja concluidos ficam consolidados no historico ao fim do arquivo.
 
 ## Visualizacao / Estudos de mercado
 
-- [ ] [analise] ATIVIDADE ATUAL E PRIORITARIA: fechar a governanca final da Fenabrave apos a revisao formal de cobertura e o saneamento de `12/2025`, definindo o que ainda precisa virar contrato explicito de `ingestion_runs`, persistencia adicional de validacoes e lembrete operacional mensal.
+- [ ] [analise] ATIVIDADE ATUAL E PRIORITARIA: manter a frente documental do contrato de governanca final da Fenabrave como pendente, apos a revisao formal de cobertura e o saneamento de `12/2025`, para definir o que ainda precisa virar contrato explicito de `ingestion_runs`, persistencia adicional de validacoes e lembrete operacional mensal.
 - [ ] [melhoria] Evoluir o ranking de creators para tratar frequencia como criterio explicito, porque a base atual e a tela ja cobrem views e engajamento pela `v_dashboard_creator_summary`, mas a cadencia ainda nao entra como ordenacao ou leitura principal do comparativo.
 - [ ] [melhoria] Alinhar a lista de videos do criador individual ao mesmo padrao visual de `YouTube > Melhores videos 7d`, porque a tela atual do criador ainda usa tabela simples para os videos e nao a mesma hierarquia visual, colunas e leitura comparavel do ranking semanal.
 - [ ] [analise] Rechecar a regra fina de desempate do ranking `YouTube > Melhores videos 7d` apos avaliacao visual da tela em uso real, antes de consolidar a ordenacao como contrato definitivo.
