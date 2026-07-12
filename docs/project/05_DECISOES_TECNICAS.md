@@ -1285,3 +1285,50 @@ Aplicacao operacional ja confirmada:
   `06/2026` nesse contrato
 - o item `15` passa a nascer sobre a mesma base tecnica, sem criar nova tabela
   nem novo formato de persistencia
+
+---
+
+## Fenabrave: fechamento canonico de 12/2025 e revisao formal da fase 2 ativa
+
+Data:
+
+- 2026-07-12
+
+Decisao:
+
+- tratar `source_file_id = 17` como unica referencia canonica de `12/2025`
+- remover o cadastro legado `source_file_id = 8` de `market_source_files`
+  depois de confirmar ausencia de dependencias analiticas e de auditoria
+- considerar a fase 2 ativa formalmente consolidada no historico `12/2025` a
+  `06/2026` para os itens `1..8` e `11..22`
+- mover a discussao remanescente da frente Fenabrave do eixo "parser/backfill"
+  para o eixo de governanca final:
+  - `ingestion_runs`
+  - persistencia adicional de validacoes
+  - lembrete operacional mensal
+
+Motivo:
+
+- a revisao formal de cobertura confirmou presenca e validacao completa dos
+  itens ativos em todos os meses canonicos
+- o unico ruido operacional remanescente estava na duplicidade cadastral de
+  `12/2025`, que podia distorcer selecao de periodo, auditoria e leituras da UI
+- manter o cadastro legado sem dependencias reais deixaria a documentacao e a
+  operacao mais confusas do que auditaveis
+
+Impacto esperado:
+
+- dezembro/2025 passa a existir com um unico cadastro oficial no fluxo
+  Fenabrave
+- auditorias, views e telas deixam de competir entre `2025-12-01` e
+  `2025-12-02` para o mesmo PDF
+- a frente externa fica pronta para discutir governanca final em vez de seguir
+  tratando pendencias historicas ja saneadas
+
+Aplicacao operacional ja confirmada:
+
+- o `source_file_id = 8` foi removido de `market_source_files`
+- o Streamlit passou a priorizar `match` exato de `reference_period` antes do
+  fallback por normalizacao mensal
+- a RPC `list_fenabrave_source_files` voltou a expor `12/2025` apenas uma vez,
+  ligada ao `source_file_id = 17`

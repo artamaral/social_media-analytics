@@ -306,7 +306,7 @@ Proxima avaliacao:
 
 ### 2.1 Fenabrave
 
-- Status: implementacao inicial pronta para uso local controlado
+- Status: rotina mensal estruturada e historico validado no banco para a fase 2 ativa
 - Implementacao principal: `scripts/fenabrave_ingestion/ingest_fenabrave_phase1.py`
 - Documento operacional principal: `scripts/fenabrave_ingestion/README.md`
 - Papel na arquitetura: ingestao estruturada de emplacamentos e leitura mensal
@@ -319,31 +319,40 @@ Proxima avaliacao:
 - o caminho do arquivo deve respeitar o padrao `fenabrave/{ano}/{mes}/`
 - o registro em `market_source_files` continua guiado pela rotina operacional
   do app
-- o script executa leitura do PDF, extracao da primeira tabela, normalizacao e
-  validacao dos totais
+- o script executa leitura do PDF, extracao por item, normalizacao, validacoes
+  por bloco e persistencia nas tabelas analiticas da frente
 - o fluxo suporta `dry-run`, `write`, `replace` e revisao interativa
 
 #### Estado atual
 
-- a frente ja possui script, setup local e runbook de execucao mensal
-- o processo ainda e local e controlado, nao um pipeline automatico completo
-- a estrutura minima de ingestao e validacao ja esta desenhada
-- a modelagem inicial ja existe no repositorio com:
+- a frente ja possui rotina mensal guiada por UI, script versionado, setup
+  local, runbook e backfill historico validado no Supabase
+- a fase 2 ativa foi consolidada para o historico `12/2025` a `06/2026`,
+  cobrindo os itens `1..8` e `11..22`
+- a revisao formal de 2026-07-12 confirmou cobertura canonica completa nos
+  `source_file_id` `17`, `5`, `4`, `3`, `2`, `6` e `13`
+- a duplicidade residual de `12/2025` foi saneada, mantendo apenas o
+  `source_file_id = 17` como cadastro canonico em `market_source_files`
+- a modelagem operacional ja existe no repositorio com:
   - `market_data_sources`
   - `market_source_files`
   - `market_vehicle_registrations_segment`
+  - `market_fenabrave_extraction_items`
+  - `market_vehicle_model_rankings`
+  - `market_vehicle_brand_rankings`
+  - `market_vehicle_subsegment_shares`
+  - `market_vehicle_electrified_registrations`
+  - `market_vehicle_sales_channel_mix`
   - `v_dashboard_fenabrave_monthly_segments`
 
 #### O que ainda falta nesta frente
 
-- decidir se a modelagem atual por segmento permanece como fase suficiente por
-  mais tempo ou se deve expandir para `marca` e `modelo`
-- decidir se a camada `raw` sera persistida formalmente no banco ou se
-  continuara apenas como etapa transitiva de extracao
-- decidir se a frente passa a ter tabela formal de `ingestion_runs` e de
-  validacoes persistidas
-- consolidar a rotina mensal como processo repetivel, e nao apenas execucao
-  local controlada
+- consolidar a governanca final da frente agora que a expansao para `marca`,
+  `modelo`, `subsegmento`, `eletrificados` e `canais de venda` ja esta ativa
+- decidir se a frente passa a ter tabela formal de `ingestion_runs` e
+  persistencia adicional de validacoes operacionais
+- transformar a rotina mensal guiada por UI em processo com lembrete
+  operacional explicito e criterio de acompanhamento recorrente
 
 ### 2.2 Carros na Web
 
@@ -458,28 +467,43 @@ Proxima avaliacao:
 - social media no YouTube esta operacional
 - worker de metricas esta operacional
 - backfill legado fase 1 foi concluido
-- Fenabrave ja tem implementacao local inicial e runbook
+- Fenabrave opera com rotina mensal estruturada, preview no Streamlit e
+  historico validado da fase 2 ativa
 - dashboard ja tem base SQL e direcao tecnica definidas
 
 ### 4.2 O que ainda esta em execucao controlada
 
 - score hibrido `v2`
 - guarda de cobertura minima
-- consolidacao da rotina Fenabrave
+- fechamento da governanca final de Fenabrave
 - avaliacao de viabilidade do Carros na Web sob captcha
 - estudo de granularidade para SENATRAN / RENAVAM
-- implementacao do app Streamlit
+- expansao funcional do app Streamlit
 
 ### 4.3 O que bloqueia a proxima etapa
 
 - evolucao do social media depende principalmente de analisar se a regra de
   `next_check` esta priorizando corretamente a base conforme ela cresce, alem
   de consolidar cobertura minima e validacoes de historico
-- evolucao das fontes externas depende de transformar planos em ingestao
-  repetivel
-- evolucao do dashboard depende de app inicial e integracao segura com as views
+- evolucao das fontes externas depende principalmente de fechar a governanca
+  final da Fenabrave e destravar a viabilidade de Carros na Web e
+  SENATRAN/RENAVAM
+- evolucao do dashboard depende de expandir a cobertura funcional do app sobre
+  as views ja operacionais
 
 ### 4.4 Ultima verificacao manual consolidada
+
+- Data de referencia deste status: `2026-07-12`
+- Resultado:
+  - a revisao formal da frente Fenabrave confirmou cobertura canonica completa
+    da fase 2 ativa para `12/2025` a `06/2026`
+  - os itens `1..8` e `11..22` ficaram presentes e validados em todos os meses
+    canonicos
+  - a duplicidade cadastral de `12/2025` foi saneada em
+    `market_source_files`, mantendo apenas `source_file_id = 17`
+  - permanece como proxima decisao estrutural fechar a governanca final da
+    frente, especialmente `ingestion_runs`, persistencia adicional de
+    validacoes e lembrete operacional mensal
 
 - Data de referencia deste status: `2026-06-16`
 - Resultado:

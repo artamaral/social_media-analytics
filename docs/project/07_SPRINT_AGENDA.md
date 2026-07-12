@@ -3240,8 +3240,14 @@ Consolidar dados externos sem comprometer governanca, rastreabilidade ou qualida
 - Validar rotina mensal.
 - Implementar upload do PDF pela view `Cadastro Fenabrave` com pasta
   obrigatoria por `ano/mes` para suportar historico.
-- Decidir se modelagem por segmento e suficiente por enquanto.
-- Avaliar necessidade de `ingestion_runs` e validacoes persistidas.
+- Expandir a fase 2 por item do PDF com parser, preview, persistencia e
+  backfill historico controlado.
+- Fechar a revisao formal de cobertura do historico `12/2025` a `06/2026`.
+- Saneamento da duplicidade cadastral de `12/2025`.
+- Deixar como proxima decisao apenas a governanca final:
+  - `ingestion_runs`
+  - persistencia adicional de validacoes
+  - lembrete operacional mensal
 
 ### Atividades Carros na Web
 
@@ -3258,7 +3264,8 @@ Consolidar dados externos sem comprometer governanca, rastreabilidade ou qualida
 
 ### Entregas
 
-- Fenabrave com rotina mensal clara.
+- Fenabrave com rotina mensal clara, historico canonico validado e fase 2 ativa
+  consolidada para os itens `1..8` e `11..22`.
 - Decisao objetiva sobre Carros na Web: continuar, pausar ou limitar escopo.
 - Proximas necessidades de modelagem externa registradas.
 

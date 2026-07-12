@@ -840,8 +840,9 @@ Observacoes operacionais:
 - todos os periodos acima ficaram com `row_count = 100` no controle do item
 - a extracao de segmentos continua emitindo apenas o warning conhecido de
   ausencia da linha `total` no PDF extraido, sem bloquear a carga
-- o registro legado `source_file_id = 8` permaneceu fora da carga analitica e
-  deve continuar sendo tratado apenas como duplicidade historica rastreavel
+- o registro legado `source_file_id = 8` ja estava fora da carga analitica e,
+  apos a revisao formal de 2026-07-12, tambem foi removido de
+  `market_source_files`, deixando `12/2025` apenas no cadastro canonico `17`
 
 Atualizacao consolidada de 2026-07-08:
 
@@ -855,8 +856,8 @@ Atualizacao consolidada de 2026-07-08:
   usando os `source_file_id` canônicos `17`, `5`, `4`, `3`, `2`, `6` e `13`
 - todos os periodos do item `4` ficaram com `status = validated`,
   `validation_status = passed` e `row_count = 42`
-- o registro legado `source_file_id = 8` continua fora da carga analitica e deve
-  permanecer apenas como duplicidade historica rastreavel
+- o saneamento final de `12/2025` passou a deixar apenas o cadastro canonico
+  `source_file_id = 17` para esse PDF
 
 Pendencias para a fase 2 a partir deste ponto:
 
@@ -942,8 +943,9 @@ Atualizacao final de 2026-07-09 para os itens `6`, `7` e `8`:
   `validation_status = passed` e com contagem de linhas coerente por item:
   `item 6` com `6` linhas em todos os meses, `item 7` entre `18` e `19`
   linhas, e `item 8` entre `18` e `24` linhas
-- o `source_file_id = 8` continua fora da carga analitica e deve permanecer
-  apenas como duplicidade historica rastreavel de `12/2025`
+- o fechamento final de `12/2025` removeu o `source_file_id = 8` tambem do
+  cadastro de `market_source_files`, mantendo somente o `17` como referencia
+  oficial
 
 Estado consolidado apos o backfill:
 

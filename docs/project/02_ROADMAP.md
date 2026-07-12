@@ -72,7 +72,7 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 ### Prioridade media - definicao de escopo
 
 - [x] Delimitar Fenabrave e SENATRAN/RENAVAM como fontes estruturadas prioritarias no Supabase, deixando as demais fontes apenas como contexto textual.
-- [ ] Consolidar a modelagem final de Fenabrave, decidindo se a fase inicial por segmento permanece temporariamente suficiente ou se a frente deve expandir para marca, modelo, runs de ingestao e validacoes persistidas.
+- [ ] Consolidar a governanca final de Fenabrave apos a expansao da fase 2 ja operada em `segmento`, `marca`, `modelo`, `subsegmento`, `eletrificados` e `canais de venda`, definindo o contrato restante de `ingestion_runs`, persistencia adicional de validacoes e auditoria recorrente da rotina mensal.
 - [ ] Definir a modelagem final de SENATRAN/RENAVAM, incluindo dataset real, granularidade util, rotulagem correta de frota e tabela normalizada final.
 
 ### Prioridade operacional - rotina de fonte
@@ -82,6 +82,7 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 ### Itens concluidos nesta frente
 
 - [x] Implementar a modelagem inicial de Fenabrave com cadastro de fontes, arquivos rastreaveis, tabela normalizada por segmento e view analitica inicial para dashboard.
+- [x] Consolidar a fase 2 ativa da Fenabrave no historico `12/2025` a `06/2026`, com parser, preview, persistencia e backfill validados para os itens `1..8` e `11..22`, alem de revisao formal de cobertura e saneamento da duplicidade cadastral de `12/2025`.
 
 ## Frente 3. Dashboard
 

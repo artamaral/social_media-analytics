@@ -14,7 +14,9 @@ Este plano tambem define uma fronteira importante:
 
 ## Status consolidado da frente
 
-- Fenabrave: ja possui modelagem inicial e processo local controlado
+- Fenabrave: ja opera com rotina mensal estruturada, preview no Streamlit,
+  persistencia no Supabase e historico da fase 2 ativa validado para
+  `12/2025` a `06/2026`, cobrindo os itens `1..8` e `11..22`
 - SENATRAN/RENAVAM: continua em estudo de granularidade, dataset e schema final
 - Carros na Web: tem papel analitico claro como catalogo tecnico, mas esta
   bloqueado por captcha e nao deve ser tratado como pipeline estruturado nem
