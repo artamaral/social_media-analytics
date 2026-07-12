@@ -5377,15 +5377,23 @@ def render_creator_detail_page() -> None:
         active_errors = [error for error in [summary_error, weekly_error, weekly_audience_error, top_videos_error] if error]
         st.warning(" | ".join(active_errors))
 
-    chart_left, chart_right = st.columns(2)
-    with chart_left:
-        st.markdown(f"#### Distribuicao de engajamento | {selected_video_type_label}")
-        st.caption("Participacao normalizada pelo score: views x1, likes x10 e comentarios x20, respeitando o tipo de video escolhido.")
-        st.plotly_chart(donut_fig, use_container_width=True, config={"displayModeBar": False})
-    with chart_right:
-        st.markdown(f"#### Crescimento semanal | {selected_video_type_label}")
-        st.caption("Views em barras; likes e comentarios em linhas com base em snapshots semanais. Semanas sem base suficiente nao entram no grafico.")
-        st.plotly_chart(weekly_fig, use_container_width=True, config={"displayModeBar": False})
+    show_interactive_creator_charts = st.checkbox(
+        "Mostrar graficos interativos do criador",
+        value=False,
+        help="Desligado por padrao para evitar segfaults intermitentes do Streamlit Cloud ao renderizar componentes nativos.",
+    )
+    if show_interactive_creator_charts:
+        chart_left, chart_right = st.columns(2)
+        with chart_left:
+            st.markdown(f"#### Distribuicao de engajamento | {selected_video_type_label}")
+            st.caption("Participacao normalizada pelo score: views x1, likes x10 e comentarios x20, respeitando o tipo de video escolhido.")
+            st.plotly_chart(donut_fig, use_container_width=True, config={"displayModeBar": False})
+        with chart_right:
+            st.markdown(f"#### Crescimento semanal | {selected_video_type_label}")
+            st.caption("Views em barras; likes e comentarios em linhas com base em snapshots semanais. Semanas sem base suficiente nao entram no grafico.")
+            st.plotly_chart(weekly_fig, use_container_width=True, config={"displayModeBar": False})
+    else:
+        st.info("Graficos interativos desativados por padrao enquanto isolamos o segfault nativo no Streamlit Cloud.")
 
     video_scope_weekly = st.checkbox("Mostrar videos da semana selecionada", value=False)
     videos_source_df = filtered_posts_df.copy() if video_scope_weekly else top_videos_df.copy()
@@ -5427,7 +5435,26 @@ def render_creator_detail_page() -> None:
 
     st.markdown("#### Videos")
     st.caption("Desmarcado exibe o historico completo; marcado exibe apenas os videos da semana selecionada.")
-    st.dataframe(top_videos_display, use_container_width=True, hide_index=True)
+    if top_videos_display.empty:
+        st.info("Sem videos para o filtro selecionado.")
+    else:
+        video_cards_html = ['<div class="creator-gap-list">']
+        for _, video_row in top_videos_display.head(10).iterrows():
+            title = str(video_row.get("Titulo") or "Video sem titulo")
+            views = str(video_row.get("Views") or "--")
+            likes = str(video_row.get("Likes") or "--")
+            comments = str(video_row.get("Comentarios") or "--")
+            video_type = str(video_row.get("Tipo") or "--")
+            video_cards_html.append(
+                (
+                    '<div class="creator-gap-item">'
+                    f'<strong>{escape(title)}</strong>'
+                    f'<span>Views: {escape(views)} | Likes: {escape(likes)} | Comentarios: {escape(comments)} | Tipo: {escape(video_type)}</span>'
+                    "</div>"
+                )
+            )
+        video_cards_html.append("</div>")
+        st.markdown("".join(video_cards_html), unsafe_allow_html=True)
 
     st.markdown("#### Leitura do criador em foco")
     st.markdown(
@@ -5461,49 +5488,13 @@ def render_creator_detail_page() -> None:
     )
 
     with st.expander("Campos usados no mockup", expanded=False):
-        st.dataframe(
-            pd.DataFrame(
-                [
-                    {"campo": "entity_name", "origem": "v_dashboard_creator_summary", "uso": "titulo e ranking"},
-                    {"campo": "niche", "origem": "v_dashboard_creator_summary", "uso": "filtro"},
-                    {"campo": "creator_type", "origem": "v_dashboard_creator_summary", "uso": "painel lateral"},
-                    {"campo": "platform", "origem": "v_dashboard_creator_summary", "uso": "filtro e detalhe"},
-                    {"campo": "username", "origem": "v_dashboard_creator_summary", "uso": "identificacao"},
-                    {"campo": "channel_id", "origem": "v_dashboard_creator_summary", "uso": "identificacao tecnica"},
-                    {"campo": "followers", "origem": "v_dashboard_creator_summary", "uso": "kpi e ranking"},
-                    {"campo": "post_count", "origem": "v_dashboard_creator_summary", "uso": "ranking e fallback"},
-                    {"campo": "total_views", "origem": "v_dashboard_creator_summary", "uso": "ranking e fallback"},
-                    {"campo": "total_likes", "origem": "v_dashboard_creator_summary", "uso": "ranking e fallback"},
-                    {"campo": "total_comments", "origem": "v_dashboard_creator_summary", "uso": "ranking e fallback"},
-                    {"campo": "engagement_rate_pct", "origem": "v_dashboard_creator_summary", "uso": "ranking e fallback"},
-                    {"campo": "latest_post_date", "origem": "v_dashboard_creator_summary", "uso": "detalhe"},
-                    {"campo": "latest_collected_at", "origem": "v_dashboard_creator_summary", "uso": "detalhe operacional"},
-                    {"campo": "is_active", "origem": "v_dashboard_creator_summary", "uso": "status"},
-                    {"campo": "snapshots_na_semana", "origem": "v_dashboard_creator_weekly_audience", "uso": "auditoria da cobertura semanal"},
-                    {"campo": "snapshots_com_followers", "origem": "v_dashboard_creator_weekly_audience", "uso": "auditoria da cobertura semanal"},
-                    {"campo": "followers_first", "origem": "v_dashboard_creator_weekly_audience", "uso": "auditoria semanal de audiencia"},
-                    {"campo": "followers_last", "origem": "v_dashboard_creator_weekly_audience", "uso": "auditoria semanal de audiencia"},
-                    {"campo": "followers_delta_vs_prev_week", "origem": "v_dashboard_creator_weekly_audience", "uso": "card semanal de seguidores"},
-                    {"campo": "followers_weekly_status", "origem": "v_dashboard_creator_weekly_audience", "uso": "status executivo da audiencia"},
-                    {"campo": "followers_latest_collected_at", "origem": "v_dashboard_creator_weekly_audience", "uso": "frescor da audiencia"},
-                    {"campo": "week_label", "origem": "v_dashboard_creator_weekly_activity", "uso": "periodo semanal selecionado"},
-                    {"campo": "week_end", "origem": "v_dashboard_creator_weekly_activity", "uso": "ordem e semana completa"},
-                    {"campo": "video_type", "origem": "v_dashboard_creator_weekly_activity", "uso": "cards e graficos semanais conforme tipo selecionado"},
-                    {"campo": "videos_publicados", "origem": "v_dashboard_creator_weekly_activity", "uso": "card semanal de videos"},
-                    {"campo": "views_novas", "origem": "v_dashboard_creator_weekly_activity", "uso": "card e grafico semanal de views"},
-                    {"campo": "likes_novos", "origem": "v_dashboard_creator_weekly_activity", "uso": "card semanal de likes"},
-                    {"campo": "comentarios_novos", "origem": "v_dashboard_creator_weekly_activity", "uso": "card semanal de comentarios"},
-                    {"campo": "views_growth_pct_vs_prev_week", "origem": "v_dashboard_creator_weekly_activity", "uso": "comparativo semanal de views"},
-                    {"campo": "title", "origem": "public.posts", "uso": "tabela de top videos"},
-                    {"campo": "post_date", "origem": "public.posts", "uso": "tabela editorial e filtro de videos da semana"},
-                    {"campo": "views", "origem": "public.posts", "uso": "cards totais filtrados e tabela de top videos"},
-                    {"campo": "likes", "origem": "public.posts", "uso": "cards totais filtrados e distribuicao"},
-                    {"campo": "comments", "origem": "public.posts", "uso": "cards filtrados, distribuicao e tabela"},
-                    {"campo": "video_type", "origem": "public.posts", "uso": "filtro long/short/todos e classificacao visual dos top videos"},
-                ]
-            ),
-            use_container_width=True,
-            hide_index=True,
+        st.markdown(
+            """
+- `v_dashboard_creator_summary`: titulo, ranking, filtros, KPIs totais e detalhe operacional.
+- `v_dashboard_creator_weekly_audience`: auditoria semanal de seguidores e curva de audiencia.
+- `v_dashboard_creator_weekly_activity`: semana selecionada, cards semanais e serie temporal.
+- `public.posts`: titulo, tipo, views, likes e comentarios dos videos exibidos.
+"""
         )
 
 
