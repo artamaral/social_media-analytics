@@ -1487,7 +1487,6 @@ def is_creator_onboarding_configured() -> bool:
     return bool(get_secret("CREATOR_ONBOARDING_WORKER_URL") and get_secret("ONBOARDING_WORKER_TOKEN"))
 
 
-@st.cache_resource(show_spinner=False)
 def get_supabase_client():
     from supabase import create_client
 
@@ -1498,7 +1497,6 @@ def get_supabase_client():
     return create_client(supabase_url, supabase_anon_key)
 
 
-@st.cache_resource(show_spinner=False)
 def get_supabase_upload_client():
     from supabase import create_client
 
