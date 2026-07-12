@@ -1589,10 +1589,14 @@ def load_filtered_rows(
 
 def get_single_row_view(view_name: str) -> tuple[dict[str, Any] | None, str | None]:
     if not is_supabase_configured():
+        trace_startup(f"get_single_row_view skipped: {view_name} (not configured)")
         return None, "Supabase ainda nao configurado. Adicione SUPABASE_URL e SUPABASE_ANON_KEY nos secrets."
 
     try:
-        return load_single_row_view(view_name), None
+        trace_startup(f"get_single_row_view start: {view_name}")
+        row = load_single_row_view(view_name)
+        trace_startup(f"get_single_row_view end: {view_name} found={row is not None}")
+        return row, None
     except Exception as exc:
         return None, f"Falha ao consultar {view_name}: {exc}"
 
@@ -2402,7 +2406,19 @@ def render_data_quality_raw_tables(
     dead_posts: dict[str, Any] | None,
     queue_rows: list[dict[str, Any]],
 ) -> None:
+    trace_startup("render_data_quality_raw_tables start")
     with st.expander("Detalhamento tecnico", expanded=False):
+        should_render_tables = st.checkbox(
+            "Carregar tabelas tecnicas",
+            value=False,
+            key="data_quality_render_raw_tables",
+        )
+        if not should_render_tables:
+            st.caption("As tabelas tecnicas ficam sob demanda para manter a abertura da pagina leve.")
+            trace_startup("render_data_quality_raw_tables skipped")
+            return
+
+        trace_startup("render_data_quality_raw_tables rendering")
         if guardrail_rows:
             guardrail_rows = sorted(
                 guardrail_rows,
@@ -2428,6 +2444,7 @@ def render_data_quality_raw_tables(
             st.write("")
             st.markdown("### Gargalo da fila por banda")
             st.dataframe(queue_rows, use_container_width=True, hide_index=True)
+    trace_startup("render_data_quality_raw_tables end")
 
 
 def render_overview() -> None:
@@ -3447,13 +3464,20 @@ def render_youtube_hot_now_page() -> None:
 
 
 def render_data_quality_page() -> None:
+    trace_startup("render_data_quality start")
     guardrail_rows, dead_posts, queue_rows, queue_error, errors = load_data_quality_context()
+    trace_startup("render_data_quality context loaded")
     page_header("Data quality", "Confiabilidade operacional antes das análises")
     render_connection_notice(errors[0] if errors else None)
+    trace_startup("render_data_quality cards start")
     render_data_quality_cards(guardrail_rows, dead_posts, errors)
+    trace_startup("render_data_quality queue start")
     render_queue_bottleneck_section(queue_rows, queue_error)
+    trace_startup("render_data_quality collection start")
     render_collection_integrity_section()
+    trace_startup("render_data_quality raw tables start")
     render_data_quality_raw_tables(guardrail_rows, dead_posts, queue_rows)
+    trace_startup("render_data_quality end")
 
 
 def format_int(value: Any) -> str:
@@ -3990,6 +4014,7 @@ def render_fenabrave_dashboard_page() -> None:
 
 
 def render_collection_integrity_section() -> None:
+    trace_startup("render_collection_integrity start")
     worker_status, error = get_single_row_view("v_dashboard_worker_health_status")
     discovery_status, discovery_error = get_single_row_view("v_dashboard_new_post_discovery_status")
     operational_signals, operational_signals_error = get_single_row_view("v_dashboard_post_update_operational_signals")
@@ -4156,7 +4181,7 @@ def render_collection_integrity_section() -> None:
     worker_panel_grid(panels)
 
     st.write("")
-    with st.expander("Passo a passo enxuto de implementacao", expanded=True):
+    with st.expander("Passo a passo enxuto de implementacao", expanded=False):
         st.markdown(
             """
 1. Consolidar no Supabase uma unica view `v_dashboard_worker_health_status`.
@@ -4173,6 +4198,7 @@ Para economizar tokens nas proximas sessoes:
 4. Usar prompts curtos do tipo: `ajuste apenas o bloco Integridade da coleta, sem ler outros arquivos`.
 """
         )
+    trace_startup("render_collection_integrity end")
 
 
 def get_external_intake_mock_state() -> dict[str, Any]:
