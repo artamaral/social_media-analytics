@@ -1984,6 +1984,12 @@ def load_fenabrave_preview_from_storage(
     item20_raw_rows = module.extract_item20_model_rankings(pdf_bytes)
     item20_rows = module.normalize_item20_rows(item20_raw_rows, source_file_id, reference_period_label)
     item20_checks = module.validate_item20_rows(item20_rows, normalized_rows)
+    item21_raw_rows = module.extract_item21_model_rankings(pdf_bytes)
+    item21_rows = module.normalize_item21_rows(item21_raw_rows, source_file_id, reference_period_label)
+    item21_checks = module.validate_item21_rows(item21_rows, item19_rows)
+    item22_raw_rows = module.extract_item22_model_rankings(pdf_bytes)
+    item22_rows = module.normalize_item22_rows(item22_raw_rows, source_file_id, reference_period_label)
+    item22_checks = module.validate_item22_rows(item22_rows, item20_rows)
     return {
         "pdf_size_bytes": len(pdf_bytes),
         "pdf_sha256": hashlib.sha256(pdf_bytes).hexdigest(),
@@ -2044,6 +2050,12 @@ def load_fenabrave_preview_from_storage(
         "item20_raw_rows": item20_raw_rows,
         "item20_rows": item20_rows,
         "item20_checks": item20_checks,
+        "item21_raw_rows": item21_raw_rows,
+        "item21_rows": item21_rows,
+        "item21_checks": item21_checks,
+        "item22_raw_rows": item22_raw_rows,
+        "item22_rows": item22_rows,
+        "item22_checks": item22_checks,
     }
 
 
@@ -5884,6 +5896,10 @@ def render_fenabrave_intake_page() -> None:
                     item19_checks = preview_payload.get("item19_checks") or []
                     item20_rows = preview_payload.get("item20_rows") or []
                     item20_checks = preview_payload.get("item20_checks") or []
+                    item21_rows = preview_payload.get("item21_rows") or []
+                    item21_checks = preview_payload.get("item21_checks") or []
+                    item22_rows = preview_payload.get("item22_rows") or []
+                    item22_checks = preview_payload.get("item22_checks") or []
                     if item1_rows:
                         st.markdown("#### Item 1 fase 2 - Ranking dos emplacamentos mes")
                         item1_df = pd.DataFrame(item1_rows)
@@ -6364,6 +6380,46 @@ def render_fenabrave_intake_page() -> None:
                             use_container_width=True,
                             hide_index=True,
                         )
+                    if item21_rows:
+                        st.markdown("#### Item 21 fase 2 - Modelos mais emplacados venda direta acumulado")
+                        item21_df = pd.DataFrame(item21_rows)
+                        item21_preview_columns = [
+                            column
+                            for column in ["vehicle_category", "rank_position", "model_label_raw", "monthly_units"]
+                            if column in item21_df.columns
+                        ]
+                        st.dataframe(
+                            item21_df[item21_preview_columns].head(20),
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+                    if item21_checks:
+                        st.markdown("#### Checks item 21 fase 2")
+                        st.dataframe(
+                            pd.DataFrame(item21_checks),
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+                    if item22_rows:
+                        st.markdown("#### Item 22 fase 2 - Modelos mais emplacados venda varejo acumulado")
+                        item22_df = pd.DataFrame(item22_rows)
+                        item22_preview_columns = [
+                            column
+                            for column in ["vehicle_category", "rank_position", "model_label_raw", "monthly_units"]
+                            if column in item22_df.columns
+                        ]
+                        st.dataframe(
+                            item22_df[item22_preview_columns].head(20),
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+                    if item22_checks:
+                        st.markdown("#### Checks item 22 fase 2")
+                        st.dataframe(
+                            pd.DataFrame(item22_checks),
+                            use_container_width=True,
+                            hide_index=True,
+                        )
                     if item13_rows or item14_rows or item15_rows or item16_rows or item17_rows or item18_rows:
                         st.info(
                             "Itens 13 a 18 agora usam a mesma modelagem de ranking por marca, com suporte a linhas publicadas apenas com share."
@@ -6436,6 +6492,10 @@ def render_fenabrave_intake_page() -> None:
                                 item19_checks=preview_payload.get("item19_checks"),
                                 item20_rows=preview_payload.get("item20_rows"),
                                 item20_checks=preview_payload.get("item20_checks"),
+                                item21_rows=preview_payload.get("item21_rows"),
+                                item21_checks=preview_payload.get("item21_checks"),
+                                item22_rows=preview_payload.get("item22_rows"),
+                                item22_checks=preview_payload.get("item22_checks"),
                             )
                         except Exception as exc:
                             st.error(f"Falha ao gravar os dados analiticos: {exc}")
@@ -6444,7 +6504,7 @@ def render_fenabrave_intake_page() -> None:
                             st.session_state["fenabrave_validated"] = True
                             st.success(
                                 "Dados analiticos gravados em market_vehicle_registrations_segment "
-                                "e itens 1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17, 18, 19 e 20 da fase 2 gravados nas tabelas Fenabrave."
+                                "e itens 1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21 e 22 da fase 2 gravados nas tabelas Fenabrave."
                             )
                             st.rerun()
             elif preview_error:

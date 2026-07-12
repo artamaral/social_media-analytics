@@ -1062,6 +1062,45 @@ Atualizacao complementar de 2026-07-12 para os itens 19 e 20:
 - com isso, a proxima frente prioritaria da fase 2 passa para os itens `21` e
   `22`, acumulados por canal nas paginas `32` e `33`
 
+Atualizacao complementar de 2026-07-12 para o item 21:
+
+- o item `21` foi concluido no historico atualmente disponivel, reaproveitando
+  o mesmo contrato estrutural do item `19` em
+  `market_vehicle_model_rankings`
+- o parser da pagina `32` foi integrado a rotina mensal automatica da
+  Fenabrave e ao preview operacional no Streamlit
+- o piloto real de `06/2026` foi executado com sucesso no banco e liberou o
+  backfill historico oficial do item `21`
+- o backfill oficial do item `21` foi concluido para `12/2025` a `06/2026`,
+  usando os `source_file_id` canonicos `17`, `5`, `4`, `3`, `2`, `6` e `13`
+- todos os periodos carregados do item `21` passaram nos checks locais e foram
+  gravados no mesmo fluxo operacional dos demais itens da fase `2`
+- no banco final, o item `21` manteve `50` linhas de `automoveis` em todos os
+  meses e confirmou `top N` variavel em `comerciais_leves`, com contagens
+  entre `37` e `50` conforme o PDF publicado em cada periodo
+- com isso, a proxima frente prioritaria da fase 2 passa a ser o item `22`,
+  `Modelos mais emplacados venda varejo acumulado`, pagina `33`
+
+Atualizacao complementar de 2026-07-12 para o item 22:
+
+- o item `22` foi concluido no historico atualmente disponivel, reaproveitando
+  o mesmo contrato estrutural do item `20` em
+  `market_vehicle_model_rankings`
+- o parser da pagina `33` foi integrado a rotina mensal automatica da
+  Fenabrave e ao preview operacional no Streamlit
+- o piloto real de `06/2026` foi executado com sucesso no banco e liberou o
+  backfill historico oficial do item `22`
+- o backfill oficial do item `22` foi concluido para `12/2025` a `06/2026`,
+  usando os `source_file_id` canonicos `17`, `5`, `4`, `3`, `2`, `6` e `13`
+- todos os periodos carregados do item `22` passaram nos checks locais e foram
+  gravados no mesmo fluxo operacional dos demais itens da fase `2`
+- no banco final, o item `22` manteve `50` linhas de `automoveis` e `50`
+  linhas de `comerciais_leves` em todos os meses do historico atualmente
+  disponivel
+- com isso, o bloco `19` a `22` da fase `2` fica concluido no historico
+  carregado e a proxima etapa passa a ser a revisao da fila prioritaria da
+  Fenabrave apos o fechamento desse bloco
+
 ## Proximo passo apos aprovacao do plano
 
 Depois da aprovacao deste plano, a execucao deve comecar pelo item 1:
