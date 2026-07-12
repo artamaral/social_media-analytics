@@ -957,6 +957,63 @@ Atualizacao consolidada de 2026-07-12:
   `Ranking por marca de emplacamento direta`, pagina `28`, reaproveitando o
   mesmo parser posicional e a mesma modelagem de share por marca
 
+Atualizacao complementar de 2026-07-12:
+
+- o item `15` foi concluido no historico atualmente disponivel seguindo o
+  mesmo contrato dos itens `13` e `14`: parser posicional, preview
+  operacional no Streamlit, validacoes locais, persistencia no banco e
+  backfill historico por PDF existente
+- a correcao canonica de marca `ITSUBISHI -> MITSUBISHI` ficou incorporada ao
+  parser de share por marca, preservando o texto bruto para auditoria local
+- o backfill oficial do item `15` foi concluido para `12/2025` a `06/2026`,
+  usando os `source_file_id` canonicos `17`, `5`, `4`, `3`, `2`, `6` e `13`
+- todos os periodos carregados ficaram com `status = validated`,
+  `validation_status = passed` e `row_count = 30` em
+  `market_fenabrave_extraction_items`
+- no banco final, cada periodo passou a ter `10` linhas por categoria
+  (`automoveis`, `comerciais_leves` e `autos_comerciais_leves`) para o item
+  `15`
+- com isso, a proxima frente prioritaria da fase 2 passa a ser o item `16`,
+  `Ranking por marca de emplacamento direta acumulado`, pagina `29`
+
+Atualizacao complementar de 2026-07-12 para os itens 16, 17 e 18:
+
+- o item `16` foi concluido no historico atualmente disponivel seguindo o
+  mesmo contrato do item `15`: parser posicional, preview operacional no
+  Streamlit, validacoes locais, persistencia no banco e backfill historico por
+  PDF existente
+- o backfill oficial do item `16` foi concluido para `12/2025` a `06/2026`,
+  usando os `source_file_id` canonicos `17`, `5`, `4`, `3`, `2`, `6` e `13`
+- todos os periodos carregados do item `16` ficaram com
+  `status = validated`, `validation_status = passed` e `row_count = 30` em
+  `market_fenabrave_extraction_items`
+- no banco final, cada periodo do item `16` passou a ter `10` linhas por
+  categoria (`automoveis`, `comerciais_leves` e
+  `autos_comerciais_leves`)
+- os itens `17` e `18`, referentes ao consolidado de participacao de mercado
+  por marca nas paginas `3` e `4`, passaram a reutilizar a mesma tabela
+  `market_vehicle_brand_rankings`
+- para esse consolidado, o contrato adotado e `sales_channel = all`,
+  `units = null` e `market_share_pct` como medida principal
+- o piloto local de `06/2026` confirmou que as paginas `3` e `4` respondem ao
+  mesmo parser posicional ja estabilizado nas paginas `26` a `29`
+- o piloto de `06/2026` foi executado com sucesso no banco real e liberou o
+  backfill historico oficial dos itens `17` e `18`
+- o backfill oficial dos itens `17` e `18` foi concluido para `12/2025` a
+  `06/2026`, usando os `source_file_id` canonicos `17`, `5`, `4`, `3`, `2`,
+  `6` e `13`
+- todos os periodos carregados dos itens `17` e `18` ficaram com
+  `status = validated`, `validation_status = passed` e `row_count = 33` em
+  `market_fenabrave_extraction_items`
+- no banco final, cada periodo passou a ter `11` linhas por categoria
+  (`automoveis`, `comerciais_leves` e `autos_comerciais_leves`) para o item
+  `17` e para o item `18`; essa diferenca em relacao aos rankings por canal,
+  que publicam `10` linhas, passa a ser tratada como comportamento esperado do
+  bloco consolidado por marca
+- com isso, a proxima frente prioritaria da fase 2 passa a ser o bloco de
+  rankings por modelo separado por canal, iniciando pelos itens `19` e `20`
+  nas paginas `30` e `31`
+
 ## Proximo passo apos aprovacao do plano
 
 Depois da aprovacao deste plano, a execucao deve comecar pelo item 1:

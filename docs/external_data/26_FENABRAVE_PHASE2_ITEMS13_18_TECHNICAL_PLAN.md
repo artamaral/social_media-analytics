@@ -166,10 +166,10 @@ Observacao:
 
 ### Itens 17 e 18
 
-Tabela-alvo prevista:
+Tabela-alvo adotada:
 
 ```text
-market_vehicle_brand_market_share
+market_vehicle_brand_rankings
 ```
 
 Campos logicos principais:
@@ -180,10 +180,19 @@ Campos logicos principais:
 - `published_period_type`
 - `market_scope`
 - `vehicle_category`
+- `sales_channel = all`
 - `rank_position`
 - `brand_name_raw`
-- `share_pct`
+- `units = null`
+- `market_share_pct`
 - `raw_label`
+
+Observacao:
+
+- o consolidado de participacao de mercado por marca das paginas `3` e `4`
+  reaproveita o mesmo contrato dos itens `13` a `16`
+- isso evita uma tabela paralela para o mesmo conceito de ranking por marca e
+  simplifica preview, persistencia e backfill
 
 ## Validacoes minimas
 
@@ -294,6 +303,7 @@ Exemplos de tipo de erro:
 ## Status consolidado em 2026-07-12
 
 - os itens `13` e `14` estao concluidos no historico atualmente disponivel
+- o item `15` tambem esta concluido no historico atualmente disponivel
 - o parser posicional ficou estabilizado para `12/2025` e `06/2026`, com
   diagnostico local de texto invertido e pareamento por alinhamento `x`
 - o preview operacional no Streamlit passou a exibir as linhas extraidas, os
@@ -307,9 +317,26 @@ Exemplos de tipo de erro:
 - o backfill historico oficial dos itens `13` e `14` foi concluido para os
   `source_file_id` `17`, `5`, `4`, `3`, `2`, `6` e `13`, cobrindo `12/2025`
   a `06/2026`
-- a atividade corrente a partir deste ponto passa a ser o item `15`, pagina
-  `28`, `Ranking por marca de emplacamento venda direta` no periodo `mes`,
-  reaproveitando o mesmo contrato posicional dos itens `13` e `14`
+- o backfill historico oficial do item `15` tambem foi concluido para os
+  `source_file_id` `17`, `5`, `4`, `3`, `2`, `6` e `13`, cobrindo `12/2025`
+  a `06/2026`
+- o item `16` tambem foi concluido no historico atualmente disponivel
+- os itens `17` e `18` tambem foram concluidos no historico atualmente
+  disponivel
+- o piloto local de `06/2026` e a gravacao real no banco confirmaram que os
+  itens `17` e `18` respondem bem ao mesmo parser posicional
+- o backfill historico oficial dos itens `16`, `17` e `18` foi concluido para
+  os `source_file_id` `17`, `5`, `4`, `3`, `2`, `6` e `13`, cobrindo
+  `12/2025` a `06/2026`
+- os itens `16`, `17` e `18` ficaram com `status = validated` e
+  `validation_status = passed` em todo o historico disponivel
+- o item `16` ficou com `row_count = 30`, enquanto os itens `17` e `18`
+  ficaram com `row_count = 33` por periodo
+- no banco final, o item `16` passou a ter `10` linhas por categoria e os
+  itens `17` e `18` passaram a ter `11` linhas por categoria; esse
+  comportamento fica documentado como contrato esperado do consolidado total
+- com isso, o escopo deste plano tecnico fica concluido e a frente seguinte da
+  fase 2 passa para os itens `19` a `22`, fora deste documento
 
 ## Criterio de aceite
 
@@ -321,3 +348,9 @@ quando:
 - o Streamlit mostrar mensagem clara de erro quando houver falha
 - a persistencia estiver bloqueada em caso de erro real
 - o backfill historico do intervalo disponivel estiver validado
+
+Status de aceite em 2026-07-12:
+
+- todos os criterios acima foram atendidos para os itens `13` a `18`
+- os seis itens passam a integrar a rotina mensal automatica da Fenabrave no
+  contrato corrente do projeto

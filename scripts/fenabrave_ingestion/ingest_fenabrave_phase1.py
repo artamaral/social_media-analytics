@@ -170,6 +170,27 @@ FENABRAVE_ITEM15_PERIOD_TYPE = "monthly"
 FENABRAVE_ITEM15_MARKET_SCOPE = "Brasil"
 FENABRAVE_ITEM15_SALES_CHANNEL = "direct"
 
+FENABRAVE_ITEM16_CODE = "fenabrave_item_16_ranking_marca_emplacamento_direta_acumulado"
+FENABRAVE_ITEM16_LABEL = "Ranking por marca de emplacamento direta acumulado"
+FENABRAVE_ITEM16_PAGE = 29
+FENABRAVE_ITEM16_PERIOD_TYPE = "accumulated"
+FENABRAVE_ITEM16_MARKET_SCOPE = "Brasil"
+FENABRAVE_ITEM16_SALES_CHANNEL = "direct"
+
+FENABRAVE_ITEM17_CODE = "fenabrave_item_17_participacao_mercado_marca_mes"
+FENABRAVE_ITEM17_LABEL = "Participacao de mercado por marca mes"
+FENABRAVE_ITEM17_PAGE = 3
+FENABRAVE_ITEM17_PERIOD_TYPE = "monthly"
+FENABRAVE_ITEM17_MARKET_SCOPE = "Brasil"
+FENABRAVE_ITEM17_SALES_CHANNEL = "all"
+
+FENABRAVE_ITEM18_CODE = "fenabrave_item_18_participacao_mercado_marca_acumulado"
+FENABRAVE_ITEM18_LABEL = "Participacao de mercado por marca acumulado"
+FENABRAVE_ITEM18_PAGE = 4
+FENABRAVE_ITEM18_PERIOD_TYPE = "accumulated"
+FENABRAVE_ITEM18_MARKET_SCOPE = "Brasil"
+FENABRAVE_ITEM18_SALES_CHANNEL = "all"
+
 FENABRAVE_ELECTRIFIED_PAGE_MAP = {
     20: "automoveis",
     21: "comerciais_leves",
@@ -257,6 +278,30 @@ FENABRAVE_BRAND_SHARE_ITEMS = {
         "published_period_type": FENABRAVE_ITEM15_PERIOD_TYPE,
         "market_scope": FENABRAVE_ITEM15_MARKET_SCOPE,
         "sales_channel": FENABRAVE_ITEM15_SALES_CHANNEL,
+    },
+    FENABRAVE_ITEM16_CODE: {
+        "code": FENABRAVE_ITEM16_CODE,
+        "label": FENABRAVE_ITEM16_LABEL,
+        "page": FENABRAVE_ITEM16_PAGE,
+        "published_period_type": FENABRAVE_ITEM16_PERIOD_TYPE,
+        "market_scope": FENABRAVE_ITEM16_MARKET_SCOPE,
+        "sales_channel": FENABRAVE_ITEM16_SALES_CHANNEL,
+    },
+    FENABRAVE_ITEM17_CODE: {
+        "code": FENABRAVE_ITEM17_CODE,
+        "label": FENABRAVE_ITEM17_LABEL,
+        "page": FENABRAVE_ITEM17_PAGE,
+        "published_period_type": FENABRAVE_ITEM17_PERIOD_TYPE,
+        "market_scope": FENABRAVE_ITEM17_MARKET_SCOPE,
+        "sales_channel": FENABRAVE_ITEM17_SALES_CHANNEL,
+    },
+    FENABRAVE_ITEM18_CODE: {
+        "code": FENABRAVE_ITEM18_CODE,
+        "label": FENABRAVE_ITEM18_LABEL,
+        "page": FENABRAVE_ITEM18_PAGE,
+        "published_period_type": FENABRAVE_ITEM18_PERIOD_TYPE,
+        "market_scope": FENABRAVE_ITEM18_MARKET_SCOPE,
+        "sales_channel": FENABRAVE_ITEM18_SALES_CHANNEL,
     },
 }
 
@@ -1810,6 +1855,27 @@ def extract_item15_brand_share_rankings(pdf_bytes):
     return extract_brand_share_chart(pdf_bytes, FENABRAVE_ITEM15_CODE)
 
 
+def extract_item16_brand_share_rankings(pdf_bytes):
+    """
+    Extrai o item 16 da fase 2: ranking por marca de venda direta acumulado da pagina 29.
+    """
+    return extract_brand_share_chart(pdf_bytes, FENABRAVE_ITEM16_CODE)
+
+
+def extract_item17_brand_share_rankings(pdf_bytes):
+    """
+    Extrai o item 17 da fase 2: consolidado mensal de participacao de mercado por marca na pagina 3.
+    """
+    return extract_brand_share_chart(pdf_bytes, FENABRAVE_ITEM17_CODE)
+
+
+def extract_item18_brand_share_rankings(pdf_bytes):
+    """
+    Extrai o item 18 da fase 2: consolidado acumulado de participacao de mercado por marca na pagina 4.
+    """
+    return extract_brand_share_chart(pdf_bytes, FENABRAVE_ITEM18_CODE)
+
+
 def normalize_model_ranking_rows(raw_rows, source_file_id, reference_period, item_code):
     """
     Normaliza linhas de ranking Fenabrave para `market_vehicle_model_rankings`.
@@ -2015,6 +2081,42 @@ def normalize_item15_rows(raw_rows, source_file_id, reference_period):
         source_file_id,
         reference_period,
         FENABRAVE_ITEM15_CODE,
+    )
+
+
+def normalize_item16_rows(raw_rows, source_file_id, reference_period):
+    """
+    Normaliza linhas do item 16 para preview e controle de persistencia.
+    """
+    return normalize_brand_share_rows(
+        raw_rows,
+        source_file_id,
+        reference_period,
+        FENABRAVE_ITEM16_CODE,
+    )
+
+
+def normalize_item17_rows(raw_rows, source_file_id, reference_period):
+    """
+    Normaliza linhas do item 17 para preview e controle de persistencia.
+    """
+    return normalize_brand_share_rows(
+        raw_rows,
+        source_file_id,
+        reference_period,
+        FENABRAVE_ITEM17_CODE,
+    )
+
+
+def normalize_item18_rows(raw_rows, source_file_id, reference_period):
+    """
+    Normaliza linhas do item 18 para preview e controle de persistencia.
+    """
+    return normalize_brand_share_rows(
+        raw_rows,
+        source_file_id,
+        reference_period,
+        FENABRAVE_ITEM18_CODE,
     )
 
 
@@ -2854,6 +2956,35 @@ def validate_item15_rows(item15_rows):
     return validate_brand_share_rows(item15_rows, FENABRAVE_ITEM15_CODE)
 
 
+def validate_item16_rows(item16_rows, item15_rows=None):
+    """
+    Valida o item 16 da fase 2.
+    """
+    return validate_brand_share_rows(
+        item16_rows,
+        FENABRAVE_ITEM16_CODE,
+        comparison_rows=item15_rows,
+    )
+
+
+def validate_item17_rows(item17_rows):
+    """
+    Valida o item 17 da fase 2.
+    """
+    return validate_brand_share_rows(item17_rows, FENABRAVE_ITEM17_CODE)
+
+
+def validate_item18_rows(item18_rows, item17_rows=None):
+    """
+    Valida o item 18 da fase 2.
+    """
+    return validate_brand_share_rows(
+        item18_rows,
+        FENABRAVE_ITEM18_CODE,
+        comparison_rows=item17_rows,
+    )
+
+
 def validate_item5_rows(item5_rows, item5_raw_rows=None):
     """
     Valida shares por subsegmento da pagina 17.
@@ -3605,6 +3736,39 @@ def print_item15_preview(item15_rows, item15_checks):
     )
 
 
+def print_item16_preview(item16_rows, item16_checks):
+    """
+    Imprime preview do item 16.
+    """
+    print_brand_share_preview(
+        item16_rows,
+        item16_checks,
+        FENABRAVE_ITEM16_CODE,
+    )
+
+
+def print_item17_preview(item17_rows, item17_checks):
+    """
+    Imprime preview do item 17.
+    """
+    print_brand_share_preview(
+        item17_rows,
+        item17_checks,
+        FENABRAVE_ITEM17_CODE,
+    )
+
+
+def print_item18_preview(item18_rows, item18_checks):
+    """
+    Imprime preview do item 18.
+    """
+    print_brand_share_preview(
+        item18_rows,
+        item18_checks,
+        FENABRAVE_ITEM18_CODE,
+    )
+
+
 def print_item5_preview(item5_rows, item5_checks):
     """
     Imprime preview do item 5 na pagina 17.
@@ -4120,6 +4284,12 @@ def write_results(
     item14_checks=None,
     item15_rows=None,
     item15_checks=None,
+    item16_rows=None,
+    item16_checks=None,
+    item17_rows=None,
+    item17_checks=None,
+    item18_rows=None,
+    item18_checks=None,
 ):
     """
     Persiste normalizado e status no Supabase.
@@ -4726,6 +4896,144 @@ def write_results(
                 "Item 15 Fenabrave validado e gravado pela rotina mensal.",
             )
 
+    if item16_rows is not None:
+        if replace:
+            delete_brand_ranking_rows(
+                base_url,
+                headers,
+                source_file_id,
+                FENABRAVE_ITEM16_CODE,
+            )
+
+        item16_has_error = any(
+            not check["passed"] and check["severity"] == "error"
+            for check in (item16_checks or [])
+        )
+
+        if item16_has_error:
+            upsert_fenabrave_item_status(
+                base_url,
+                headers,
+                source_file_id,
+                normalized_rows[0]["reference_period"],
+                FENABRAVE_ITEM16_CODE,
+                "failed",
+                len(item16_rows),
+                "failed",
+                "Item 16 Fenabrave falhou em validacoes locais.",
+            )
+        else:
+            item16_persist_rows = build_brand_share_persist_rows(item16_rows)
+            insert_rows(
+                base_url,
+                headers,
+                "market_vehicle_brand_rankings",
+                item16_persist_rows,
+            )
+            upsert_fenabrave_item_status(
+                base_url,
+                headers,
+                source_file_id,
+                normalized_rows[0]["reference_period"],
+                FENABRAVE_ITEM16_CODE,
+                "validated",
+                len(item16_rows),
+                "passed",
+                "Item 16 Fenabrave validado e gravado pela rotina mensal.",
+            )
+
+    if item17_rows is not None:
+        if replace:
+            delete_brand_ranking_rows(
+                base_url,
+                headers,
+                source_file_id,
+                FENABRAVE_ITEM17_CODE,
+            )
+
+        item17_has_error = any(
+            not check["passed"] and check["severity"] == "error"
+            for check in (item17_checks or [])
+        )
+
+        if item17_has_error:
+            upsert_fenabrave_item_status(
+                base_url,
+                headers,
+                source_file_id,
+                normalized_rows[0]["reference_period"],
+                FENABRAVE_ITEM17_CODE,
+                "failed",
+                len(item17_rows),
+                "failed",
+                "Item 17 Fenabrave falhou em validacoes locais.",
+            )
+        else:
+            item17_persist_rows = build_brand_share_persist_rows(item17_rows)
+            insert_rows(
+                base_url,
+                headers,
+                "market_vehicle_brand_rankings",
+                item17_persist_rows,
+            )
+            upsert_fenabrave_item_status(
+                base_url,
+                headers,
+                source_file_id,
+                normalized_rows[0]["reference_period"],
+                FENABRAVE_ITEM17_CODE,
+                "validated",
+                len(item17_rows),
+                "passed",
+                "Item 17 Fenabrave validado e gravado pela rotina mensal.",
+            )
+
+    if item18_rows is not None:
+        if replace:
+            delete_brand_ranking_rows(
+                base_url,
+                headers,
+                source_file_id,
+                FENABRAVE_ITEM18_CODE,
+            )
+
+        item18_has_error = any(
+            not check["passed"] and check["severity"] == "error"
+            for check in (item18_checks or [])
+        )
+
+        if item18_has_error:
+            upsert_fenabrave_item_status(
+                base_url,
+                headers,
+                source_file_id,
+                normalized_rows[0]["reference_period"],
+                FENABRAVE_ITEM18_CODE,
+                "failed",
+                len(item18_rows),
+                "failed",
+                "Item 18 Fenabrave falhou em validacoes locais.",
+            )
+        else:
+            item18_persist_rows = build_brand_share_persist_rows(item18_rows)
+            insert_rows(
+                base_url,
+                headers,
+                "market_vehicle_brand_rankings",
+                item18_persist_rows,
+            )
+            upsert_fenabrave_item_status(
+                base_url,
+                headers,
+                source_file_id,
+                normalized_rows[0]["reference_period"],
+                FENABRAVE_ITEM18_CODE,
+                "validated",
+                len(item18_rows),
+                "passed",
+                "Item 18 Fenabrave validado e gravado pela rotina mensal.",
+            )
+
     has_error = any(
         not check["passed"] and check["severity"] == "error" for check in checks
     )
@@ -5063,6 +5371,30 @@ def parse_args():
             "por padrao o item 15 passa a fazer parte da validacao mensal Fenabrave."
         ),
     )
+    parser.add_argument(
+        "--skip-phase2-item16",
+        action="store_true",
+        help=(
+            "Nao executa o item 16 da fase 2. Use apenas para contingencia; "
+            "por padrao o item 16 passa a fazer parte da validacao mensal Fenabrave."
+        ),
+    )
+    parser.add_argument(
+        "--skip-phase2-item17",
+        action="store_true",
+        help=(
+            "Nao executa o item 17 da fase 2. Use apenas para contingencia; "
+            "por padrao o item 17 passa a fazer parte da validacao mensal Fenabrave."
+        ),
+    )
+    parser.add_argument(
+        "--skip-phase2-item18",
+        action="store_true",
+        help=(
+            "Nao executa o item 18 da fase 2. Use apenas para contingencia; "
+            "por padrao o item 18 passa a fazer parte da validacao mensal Fenabrave."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -5158,6 +5490,12 @@ def main():
     item14_checks = None
     item15_rows = None
     item15_checks = None
+    item16_rows = None
+    item16_checks = None
+    item17_rows = None
+    item17_checks = None
+    item18_rows = None
+    item18_checks = None
 
     if not args.skip_phase2_item1:
         print("Extraindo item 1 da fase 2 na pagina 6...")
@@ -5289,6 +5627,36 @@ def main():
         )
         item15_checks = validate_item15_rows(item15_rows)
 
+    if not args.skip_phase2_item16:
+        print("Extraindo item 16 da fase 2 na pagina 29...")
+        item16_raw_rows = extract_item16_brand_share_rankings(pdf_bytes)
+        item16_rows = normalize_item16_rows(
+            item16_raw_rows,
+            source_file_id,
+            reference_period,
+        )
+        item16_checks = validate_item16_rows(item16_rows, item15_rows)
+
+    if not args.skip_phase2_item17:
+        print("Extraindo item 17 da fase 2 na pagina 3...")
+        item17_raw_rows = extract_item17_brand_share_rankings(pdf_bytes)
+        item17_rows = normalize_item17_rows(
+            item17_raw_rows,
+            source_file_id,
+            reference_period,
+        )
+        item17_checks = validate_item17_rows(item17_rows)
+
+    if not args.skip_phase2_item18:
+        print("Extraindo item 18 da fase 2 na pagina 4...")
+        item18_raw_rows = extract_item18_brand_share_rankings(pdf_bytes)
+        item18_rows = normalize_item18_rows(
+            item18_raw_rows,
+            source_file_id,
+            reference_period,
+        )
+        item18_checks = validate_item18_rows(item18_rows, item17_rows)
+
     print_preview(raw_rows, normalized_rows, checks, pdf_bytes)
 
     if item1_rows is not None:
@@ -5329,6 +5697,15 @@ def main():
 
     if item15_rows is not None:
         print_item15_preview(item15_rows, item15_checks)
+
+    if item16_rows is not None:
+        print_item16_preview(item16_rows, item16_checks)
+
+    if item17_rows is not None:
+        print_item17_preview(item17_rows, item17_checks)
+
+    if item18_rows is not None:
+        print_item18_preview(item18_rows, item18_checks)
 
     if args.dry_run:
         print("Dry-run concluido. Nenhum dado foi gravado.")
@@ -5388,6 +5765,12 @@ def main():
         item14_checks=item14_checks,
         item15_rows=item15_rows,
         item15_checks=item15_checks,
+        item16_rows=item16_rows,
+        item16_checks=item16_checks,
+        item17_rows=item17_rows,
+        item17_checks=item17_checks,
+        item18_rows=item18_rows,
+        item18_checks=item18_checks,
     )
     print("Carga concluida.")
 

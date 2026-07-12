@@ -1969,6 +1969,15 @@ def load_fenabrave_preview_from_storage(
     item15_raw_rows = module.extract_item15_brand_share_rankings(pdf_bytes)
     item15_rows = module.normalize_item15_rows(item15_raw_rows, source_file_id, reference_period_label)
     item15_checks = module.validate_item15_rows(item15_rows)
+    item16_raw_rows = module.extract_item16_brand_share_rankings(pdf_bytes)
+    item16_rows = module.normalize_item16_rows(item16_raw_rows, source_file_id, reference_period_label)
+    item16_checks = module.validate_item16_rows(item16_rows, item15_rows)
+    item17_raw_rows = module.extract_item17_brand_share_rankings(pdf_bytes)
+    item17_rows = module.normalize_item17_rows(item17_raw_rows, source_file_id, reference_period_label)
+    item17_checks = module.validate_item17_rows(item17_rows)
+    item18_raw_rows = module.extract_item18_brand_share_rankings(pdf_bytes)
+    item18_rows = module.normalize_item18_rows(item18_raw_rows, source_file_id, reference_period_label)
+    item18_checks = module.validate_item18_rows(item18_rows, item17_rows)
     return {
         "pdf_size_bytes": len(pdf_bytes),
         "pdf_sha256": hashlib.sha256(pdf_bytes).hexdigest(),
@@ -2014,6 +2023,15 @@ def load_fenabrave_preview_from_storage(
         "item15_raw_rows": item15_raw_rows,
         "item15_rows": item15_rows,
         "item15_checks": item15_checks,
+        "item16_raw_rows": item16_raw_rows,
+        "item16_rows": item16_rows,
+        "item16_checks": item16_checks,
+        "item17_raw_rows": item17_raw_rows,
+        "item17_rows": item17_rows,
+        "item17_checks": item17_checks,
+        "item18_raw_rows": item18_raw_rows,
+        "item18_rows": item18_rows,
+        "item18_checks": item18_checks,
     }
 
 
@@ -5844,6 +5862,12 @@ def render_fenabrave_intake_page() -> None:
                     item14_checks = preview_payload.get("item14_checks") or []
                     item15_rows = preview_payload.get("item15_rows") or []
                     item15_checks = preview_payload.get("item15_checks") or []
+                    item16_rows = preview_payload.get("item16_rows") or []
+                    item16_checks = preview_payload.get("item16_checks") or []
+                    item17_rows = preview_payload.get("item17_rows") or []
+                    item17_checks = preview_payload.get("item17_checks") or []
+                    item18_rows = preview_payload.get("item18_rows") or []
+                    item18_checks = preview_payload.get("item18_checks") or []
                     if item1_rows:
                         st.markdown("#### Item 1 fase 2 - Ranking dos emplacamentos mes")
                         item1_df = pd.DataFrame(item1_rows)
@@ -6167,9 +6191,126 @@ def render_fenabrave_intake_page() -> None:
                                 "Falha na extracao do item Fenabrave. O parser identificou inconsistencias de layout, alinhamento ou texto invertido e a persistencia foi bloqueada para este item. "
                                 f"item_code=fenabrave_item_15 pagina=28 erro={first_error['check_name']}"
                             )
-                    if item13_rows or item14_rows or item15_rows:
+                    if item16_rows:
+                        st.markdown("#### Item 16 fase 2 - Ranking por marca de emplacamento direta acumulado")
+                        st.caption("Parser posicional com persistencia pronta para ranking por share sem unidades.")
+                        item16_df = pd.DataFrame(item16_rows)
+                        item16_preview_columns = [
+                            column
+                            for column in [
+                                "vehicle_category",
+                                "rank_position",
+                                "brand_name_raw",
+                                "market_share_pct",
+                                "reversed_text_fixed",
+                                "brand_x_center",
+                                "share_x_center",
+                            ]
+                            if column in item16_df.columns
+                        ]
+                        st.dataframe(
+                            item16_df[item16_preview_columns].head(40),
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+                    if item16_checks:
+                        st.markdown("#### Checks item 16 fase 2")
+                        item16_checks_df = pd.DataFrame(item16_checks)
+                        st.dataframe(
+                            item16_checks_df,
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+                        item16_errors = item16_checks_df[
+                            (~item16_checks_df["passed"]) & (item16_checks_df["severity"] == "error")
+                        ]
+                        if not item16_errors.empty:
+                            first_error = item16_errors.iloc[0]
+                            st.error(
+                                "Falha na extracao do item Fenabrave. O parser identificou inconsistencias de layout, alinhamento ou texto invertido e a persistencia foi bloqueada para este item. "
+                                f"item_code=fenabrave_item_16 pagina=29 erro={first_error['check_name']}"
+                            )
+                    if item17_rows:
+                        st.markdown("#### Item 17 fase 2 - Participacao de mercado por marca mes")
+                        st.caption("Parser posicional do consolidado total por marca com persistencia pronta em ranking por share.")
+                        item17_df = pd.DataFrame(item17_rows)
+                        item17_preview_columns = [
+                            column
+                            for column in [
+                                "vehicle_category",
+                                "rank_position",
+                                "brand_name_raw",
+                                "market_share_pct",
+                                "reversed_text_fixed",
+                                "brand_x_center",
+                                "share_x_center",
+                            ]
+                            if column in item17_df.columns
+                        ]
+                        st.dataframe(
+                            item17_df[item17_preview_columns].head(40),
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+                    if item17_checks:
+                        st.markdown("#### Checks item 17 fase 2")
+                        item17_checks_df = pd.DataFrame(item17_checks)
+                        st.dataframe(
+                            item17_checks_df,
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+                        item17_errors = item17_checks_df[
+                            (~item17_checks_df["passed"]) & (item17_checks_df["severity"] == "error")
+                        ]
+                        if not item17_errors.empty:
+                            first_error = item17_errors.iloc[0]
+                            st.error(
+                                "Falha na extracao do item Fenabrave. O parser identificou inconsistencias de layout, alinhamento ou texto invertido e a persistencia foi bloqueada para este item. "
+                                f"item_code=fenabrave_item_17 pagina=3 erro={first_error['check_name']}"
+                            )
+                    if item18_rows:
+                        st.markdown("#### Item 18 fase 2 - Participacao de mercado por marca acumulado")
+                        st.caption("Parser posicional do consolidado total por marca com persistencia pronta em ranking por share.")
+                        item18_df = pd.DataFrame(item18_rows)
+                        item18_preview_columns = [
+                            column
+                            for column in [
+                                "vehicle_category",
+                                "rank_position",
+                                "brand_name_raw",
+                                "market_share_pct",
+                                "reversed_text_fixed",
+                                "brand_x_center",
+                                "share_x_center",
+                            ]
+                            if column in item18_df.columns
+                        ]
+                        st.dataframe(
+                            item18_df[item18_preview_columns].head(40),
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+                    if item18_checks:
+                        st.markdown("#### Checks item 18 fase 2")
+                        item18_checks_df = pd.DataFrame(item18_checks)
+                        st.dataframe(
+                            item18_checks_df,
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+                        item18_errors = item18_checks_df[
+                            (~item18_checks_df["passed"]) & (item18_checks_df["severity"] == "error")
+                        ]
+                        if not item18_errors.empty:
+                            first_error = item18_errors.iloc[0]
+                            st.error(
+                                "Falha na extracao do item Fenabrave. O parser identificou inconsistencias de layout, alinhamento ou texto invertido e a persistencia foi bloqueada para este item. "
+                                f"item_code=fenabrave_item_18 pagina=4 erro={first_error['check_name']}"
+                            )
+                    if item13_rows or item14_rows or item15_rows or item16_rows or item17_rows or item18_rows:
                         st.info(
-                            "Itens 13, 14 e 15 agora usam a mesma modelagem de ranking por marca, com suporte a linhas publicadas apenas com share."
+                            "Itens 13 a 18 agora usam a mesma modelagem de ranking por marca, com suporte a linhas publicadas apenas com share."
                         )
 
                 if current_record is not None and st.button("Marcar preview real como revisado", use_container_width=False):
@@ -6229,6 +6370,12 @@ def render_fenabrave_intake_page() -> None:
                                 item14_checks=preview_payload.get("item14_checks"),
                                 item15_rows=preview_payload.get("item15_rows"),
                                 item15_checks=preview_payload.get("item15_checks"),
+                                item16_rows=preview_payload.get("item16_rows"),
+                                item16_checks=preview_payload.get("item16_checks"),
+                                item17_rows=preview_payload.get("item17_rows"),
+                                item17_checks=preview_payload.get("item17_checks"),
+                                item18_rows=preview_payload.get("item18_rows"),
+                                item18_checks=preview_payload.get("item18_checks"),
                             )
                         except Exception as exc:
                             st.error(f"Falha ao gravar os dados analiticos: {exc}")
@@ -6237,7 +6384,7 @@ def render_fenabrave_intake_page() -> None:
                             st.session_state["fenabrave_validated"] = True
                             st.success(
                                 "Dados analiticos gravados em market_vehicle_registrations_segment "
-                                "e itens 1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14 e 15 da fase 2 gravados nas tabelas Fenabrave."
+                                "e itens 1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17 e 18 da fase 2 gravados nas tabelas Fenabrave."
                             )
                             st.rerun()
             elif preview_error:
