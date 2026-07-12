@@ -1332,3 +1332,39 @@ Aplicacao operacional ja confirmada:
   fallback por normalizacao mensal
 - a RPC `list_fenabrave_source_files` voltou a expor `12/2025` apenas uma vez,
   ligada ao `source_file_id = 17`
+
+---
+
+## Runtime do Streamlit fixado em Python 3.12
+
+Data:
+
+- 2026-07-12
+
+Decisao:
+
+- fixar o runtime do deploy do Streamlit em `python-3.12.12` via
+  `runtime.txt`
+- evitar a execucao padrao em Python 3.14 no Streamlit Cloud enquanto houver
+  sinais de instabilidade nativa no startup
+
+Motivo:
+
+- o log de startup do app mostrou o ambiente do Streamlit Cloud usando
+  Python 3.14.6
+- o processo chegou a subir dependencias e depois encerrou com
+  `Segmentation fault` no wrapper de execucao
+- o repositorio nao possuía pin de runtime, entao o deploy estava herdando a
+  versao padrao mais nova do ambiente
+
+Impacto esperado:
+
+- reduzir risco de crash nativo no startup
+- manter previsibilidade da combinacao `streamlit` + `pandas` + `numpy`
+- deixar o deploy alinhado com o interpretador local moderno ja validado na
+  maquina de trabalho
+
+Aplicacao operacional:
+
+- arquivo adicionado: `runtime.txt`
+- versao travada: `python-3.12.12`

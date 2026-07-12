@@ -3563,7 +3563,7 @@ def summarize_overview_recent_activity(
             errors="coerce",
             utc=True,
         )
-        cutoff = pd.Timestamp.now(tz="UTC") - pd.Timedelta(days=7)
+        cutoff = pd.Timestamp.now(tz="UTC") - pd.to_timedelta(7, unit="D")
         recent_collectors = int((latest_collected >= cutoff).fillna(False).sum())
 
     if not weekly_rows:
@@ -5348,7 +5348,7 @@ def render_creator_detail_page() -> None:
         if pd.notna(week_start) and pd.notna(week_end):
             videos_source_df = videos_source_df[
                 (videos_source_df["post_date"] >= week_start)
-                & (videos_source_df["post_date"] < (week_end + pd.Timedelta(days=1)))
+                & (videos_source_df["post_date"] < (week_end + pd.to_timedelta(1, unit="D")))
             ]
     videos_source_df = videos_source_df.sort_values(by="views", ascending=False, na_position="last") if "views" in videos_source_df.columns else videos_source_df
     top_videos_display = videos_source_df.copy()
