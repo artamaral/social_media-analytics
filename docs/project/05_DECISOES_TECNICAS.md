@@ -1368,3 +1368,60 @@ Aplicacao operacional:
 
 - arquivos adicionados: `runtime.txt` e `.python-version`
 - versao travada: `3.12.12`
+
+---
+
+## Incidente de `Segmentation fault` no Streamlit Cloud
+
+Data:
+
+- 2026-07-12
+
+Achado:
+
+- o erro observado no Streamlit Cloud nao apresentou traceback Python; o
+  processo encerrou com `Segmentation fault` no wrapper de execucao do
+  Streamlit
+- a troca para Python 3.12 reduziu o risco de incompatibilidade com o runtime
+  mais novo, mas nao eliminou o crash durante interacoes na UI
+- os traces de startup mostraram que as consultas ao Supabase concluiam antes
+  da queda
+- no caso confirmado de `Criadores > Criador individual`, a tela carregou:
+  - `v_dashboard_creator_weekly_activity`
+  - `v_dashboard_creator_weekly_audience`
+  - `posts`
+- a queda ocorreu depois das queries e junto da fase de renderizacao, com
+  avisos de `use_container_width`
+
+Leitura tecnica:
+
+- a falha mais provavel esta na renderizacao/serializacao nativa de
+  componentes do Streamlit Cloud, especialmente `st.plotly_chart`,
+  `st.dataframe` ou a combinacao deles com `streamlit`, `pyarrow`, `numpy`,
+  `pandas`, `plotly` e Python 3.12
+- nao ha evidencia de erro funcional nas views do Supabase ou na regra de
+  negocio da pagina afetada
+- enquanto a causa exata nao for isolada, componentes pesados devem ser
+  evitados no caminho padrao das telas criticas
+
+Mitigacao aplicada:
+
+- remover cache do cliente Supabase para evitar reutilizacao de recurso de
+  conexao entre reruns
+- manter cache apenas nos dados retornados pelas queries
+- desativar por padrao os graficos interativos do criador individual
+- substituir a tabela de videos do criador por renderizacao HTML simples
+- substituir o dataframe tecnico do expander por texto markdown
+
+Resultado observado:
+
+- apos a mitigacao da pagina de criador individual, o app deixou de cair no
+  teste manual informado pelo usuario
+
+Pendencias:
+
+- isolar se o culpado principal e `st.plotly_chart`, `st.dataframe` ou a
+  combinacao de componentes/dependencias
+- avaliar pinagem conservadora das dependencias do dashboard
+- reintroduzir a experiencia visual completa apenas depois de teste controlado
+  no Streamlit Cloud

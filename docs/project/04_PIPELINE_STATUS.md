@@ -451,10 +451,24 @@ Proxima avaliacao:
   - `Sinais operacionais`
 - o principal uso atual do Data Quality e orientar a analise da regra de
   `next_check` e da cobertura operacional do worker
+- incidente de estabilidade do Streamlit Cloud em 2026-07-12:
+  - sintomas: app encerrava com `Segmentation fault` sem traceback Python
+  - runtime fixado em Python 3.12 via `runtime.txt` e `.python-version`
+  - traces indicaram que a queda ocorria apos as queries e durante a
+    renderizacao de componentes
+  - pagina confirmada no log: `Criadores > Criador individual`
+  - mitigacao aplicada: graficos interativos desligados por padrao, videos
+    renderizados em HTML simples e dataframe tecnico trocado por markdown
+  - resultado informado pelo usuario: app deixou de cair apos a mitigacao
+  - pendencia: isolar componente/dependencia exata antes de reintroduzir a
+    experiencia interativa completa
 
 ### 3.4 Proximos checkpoints desta frente
 
-- implementar overview, creators e crescimento semanal
+- estabilizar a renderizacao do dashboard no Streamlit Cloud antes de ampliar
+  UX interativa com graficos e dataframes pesados
+- implementar overview, creators e crescimento semanal quando a frente de
+  estabilidade estiver encerrada
 - expor indicadores de qualidade dos dados antes dos rankings
 - manter consumo sob demanda do Supabase sem expor `service role key`
 

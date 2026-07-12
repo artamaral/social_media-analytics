@@ -35,8 +35,11 @@ Itens ja concluidos ficam consolidados no historico ao fim do arquivo.
 ## Visualizacao / Estudos de mercado
 
 - [ ] [analise] ATIVIDADE ATUAL E PRIORITARIA: manter a frente documental do contrato de governanca final da Fenabrave como pendente, apos a revisao formal de cobertura e o saneamento de `12/2025`, para definir o que ainda precisa virar contrato explicito de `ingestion_runs`, persistencia adicional de validacoes e lembrete operacional mensal.
+- [ ] [bug] Isolar o componente exato que causa `Segmentation fault` no Streamlit Cloud ao interagir com o dashboard, partindo do achado de 2026-07-12 em `Criadores > Criador individual`: queries concluem, mas a renderizacao com componentes interativos/tabelas pode derrubar o processo nativo.
+- [ ] [melhoria] Reintroduzir os graficos interativos do criador individual de forma controlada, testando `st.plotly_chart` separadamente de `st.dataframe` e mantendo fallback HTML estavel ate confirmar que a combinacao de runtime e dependencias nao volta a cair.
+- [ ] [ops] Pinagem conservadora de dependencias do dashboard Streamlit, avaliando travar `streamlit`, `pyarrow`, `numpy`, `pandas` e `plotly` em combinacao validada no Cloud para reduzir regressao nativa em deploys futuros.
 - [ ] [melhoria] Evoluir o ranking de creators para tratar frequencia como criterio explicito, porque a base atual e a tela ja cobrem views e engajamento pela `v_dashboard_creator_summary`, mas a cadencia ainda nao entra como ordenacao ou leitura principal do comparativo.
-- [ ] [melhoria] Alinhar a lista de videos do criador individual ao mesmo padrao visual de `YouTube > Melhores videos 7d`, porque a tela atual do criador ainda usa tabela simples para os videos e nao a mesma hierarquia visual, colunas e leitura comparavel do ranking semanal.
+- [ ] [melhoria] Alinhar a lista de videos do criador individual ao mesmo padrao visual de `YouTube > Melhores videos 7d`, preservando renderizacao estavel sem `st.dataframe` ate o incidente de `Segmentation fault` do Streamlit Cloud estar definitivamente isolado.
 - [ ] [analise] Rechecar a regra fina de desempate do ranking `YouTube > Melhores videos 7d` apos avaliacao visual da tela em uso real, antes de consolidar a ordenacao como contrato definitivo.
 - [ ] [feat] Incluir thumbnail real e link clicavel no titulo e na thumbnail de `YouTube > Melhores videos 7d`, com fallback seguro para ausencia de imagem ou URL.
 - [ ] [feat] Filtros por plataforma, creator, nicho e subnicho
