@@ -3,6 +3,7 @@ import importlib.util
 from html import escape
 from datetime import date
 from pathlib import Path
+import time
 from typing import Any
 import unicodedata
 import re
@@ -16,6 +17,10 @@ import streamlit as st
 
 CREATOR_WEEKLY_ACTIVITY_CUTOFF = pd.Timestamp("2026-05-04")
 OVERVIEW_RECENT_ACTIVITY_WINDOW_WEEKS = 8
+
+
+def trace_startup(message: str) -> None:
+    print(f"[streamlit-startup] {message}", flush=True)
 
 
 st.set_page_config(
@@ -1537,10 +1542,15 @@ def load_single_row_view(view_name: str) -> dict[str, Any] | None:
 def load_view_rows(view_name: str) -> list[dict[str, Any]]:
     client = get_supabase_client()
     if client is None:
+        trace_startup(f"load_view_rows skipped: {view_name} (no client)")
         return []
 
+    started_at = time.perf_counter()
+    trace_startup(f"load_view_rows start: {view_name}")
     response = client.table(view_name).select("*").execute()
-    return response.data or []
+    rows = response.data or []
+    trace_startup(f"load_view_rows end: {view_name} rows={len(rows)} elapsed={time.perf_counter() - started_at:.2f}s")
+    return rows
 
 
 @st.cache_data(ttl=300, show_spinner=False)
@@ -1554,8 +1564,13 @@ def load_filtered_rows(
 ) -> list[dict[str, Any]]:
     client = get_supabase_client()
     if client is None:
+        trace_startup(f"load_filtered_rows skipped: {source_name} (no client)")
         return []
 
+    started_at = time.perf_counter()
+    trace_startup(
+        f"load_filtered_rows start: {source_name} filters={len(filters)} order_by={order_by} limit={limit}"
+    )
     query = client.table(source_name).select("*")
     for column_name, column_value in filters:
         query = query.eq(column_name, column_value)
@@ -1567,7 +1582,9 @@ def load_filtered_rows(
     if limit is not None:
         query = query.limit(limit)
     response = query.execute()
-    return response.data or []
+    rows = response.data or []
+    trace_startup(f"load_filtered_rows end: {source_name} rows={len(rows)} elapsed={time.perf_counter() - started_at:.2f}s")
+    return rows
 
 
 def get_single_row_view(view_name: str) -> tuple[dict[str, Any] | None, str | None]:
@@ -1582,6 +1599,7 @@ def get_single_row_view(view_name: str) -> tuple[dict[str, Any] | None, str | No
 
 def get_view_rows(view_name: str) -> tuple[list[dict[str, Any]], str | None]:
     if not is_supabase_configured():
+        trace_startup(f"get_view_rows skipped: {view_name} (not configured)")
         return [], "Supabase ainda nao configurado. Adicione SUPABASE_URL e SUPABASE_ANON_KEY nos secrets."
 
     try:
@@ -1599,6 +1617,7 @@ def get_filtered_rows(
     limit: int | None = None,
 ) -> tuple[list[dict[str, Any]], str | None]:
     if not is_supabase_configured():
+        trace_startup(f"get_filtered_rows skipped: {source_name} (not configured)")
         return [], "Supabase ainda nao configurado. Adicione SUPABASE_URL e SUPABASE_ANON_KEY nos secrets."
 
     try:
@@ -2412,6 +2431,7 @@ def render_data_quality_raw_tables(
 
 
 def render_overview() -> None:
+    trace_startup("render_overview start")
     creator_rows, creator_error = get_view_rows("v_dashboard_creator_summary")
     weekly_rows, weekly_error = get_filtered_rows(
         "v_dashboard_creator_weekly_activity",
@@ -2578,6 +2598,7 @@ def render_overview() -> None:
     st.caption(
         "Os numeros desta tela descrevem a base monitorada e o estado geral do monitoramento, nao o universo completo de videos de cada creator."
     )
+    trace_startup("render_overview end")
 
 
 def render_placeholder_page(title: str, description: str) -> None:
@@ -2586,6 +2607,7 @@ def render_placeholder_page(title: str, description: str) -> None:
 
 
 def render_youtube_best_7d_page() -> None:
+    trace_startup("render_youtube_best_7d start")
     page_header("Ranking semanal de crescimento")
 
     st.markdown(
@@ -2986,6 +3008,7 @@ def render_youtube_best_7d_page() -> None:
 
 
 def render_youtube_hot_now_page() -> None:
+    trace_startup("render_youtube_hot_now start")
     page_header("Hot now", "Videos ganhando tracao agora por velocidade recente e aceleracao")
 
     st.markdown(
@@ -5056,6 +5079,7 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
 
 
 def render_creator_detail_page() -> None:
+    trace_startup("render_creator_detail start")
     summary_rows, summary_error = get_view_rows("v_dashboard_creator_summary")
     rows = summary_rows or get_creator_mock_rows()
     selected_name = st.session_state.get("creator_selected_name", rows[0]["entity_name"])
@@ -5460,6 +5484,7 @@ def render_creator_detail_page() -> None:
 
 
 def render_creator_overview_page() -> None:
+    trace_startup("render_creator_overview start")
     rows, connection_error = get_view_rows("v_dashboard_creator_summary")
     page_header("Visao geral de criadores")
 
@@ -6898,6 +6923,10 @@ page = st.session_state["nav_page"]
 youtube_subpage = st.session_state.get("youtube_subpage", "Melhores videos 7d")
 creators_subpage = st.session_state.get("creators_subpage", "Visao geral")
 cadastro_subpage = st.session_state.get("cadastro_subpage", "Criadores")
+
+trace_startup(
+    f"dispatch page={page} youtube={youtube_subpage} creators={creators_subpage} cadastro={cadastro_subpage}"
+)
 
 if page == "Overview":
     render_overview()
