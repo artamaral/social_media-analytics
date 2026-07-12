@@ -4204,17 +4204,22 @@ def get_fenabrave_record_for_period(
     reference_period: date,
 ) -> dict[str, Any] | None:
     target_label = pd.Timestamp(normalize_fenabrave_reference_period(reference_period)).strftime("%Y-%m-%d")
+    normalized_candidates: list[dict[str, Any]] = []
     for row in records:
         row_period_raw = row.get("reference_period")
         if row_period_raw in (None, ""):
             continue
         try:
-            row_period = pd.Timestamp(normalize_fenabrave_reference_period(row_period_raw)).strftime("%Y-%m-%d")
+            row_period_timestamp = pd.Timestamp(row_period_raw)
         except Exception:
             continue
-        if row_period == target_label:
+        row_period_exact = row_period_timestamp.strftime("%Y-%m-%d")
+        if row_period_exact == target_label:
             return row
-    return None
+        row_period_normalized = row_period_timestamp.to_period("M").to_timestamp().strftime("%Y-%m-%d")
+        if row_period_normalized == target_label:
+            normalized_candidates.append(row)
+    return normalized_candidates[0] if normalized_candidates else None
 
 
 def get_fenabrave_preview_rows(reference_period: date) -> list[dict[str, Any]]:

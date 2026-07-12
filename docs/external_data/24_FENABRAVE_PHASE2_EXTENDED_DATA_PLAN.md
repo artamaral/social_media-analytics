@@ -800,9 +800,13 @@ Atualizacao operacional de 2026-07-12:
   `source_file_id = 8`, foi removida do banco
 - a tabela de segmentos do periodo voltou a manter apenas o conjunto canonico
   ligado ao `source_file_id = 17`
-- o registro `id = 8` segue preservado em `market_source_files` apenas como
-  duplicidade historica rastreavel, sem permanecer como fonte valida de linhas
-  analiticas
+- o registro `id = 8` foi mantido temporariamente em `market_source_files`
+  apenas como duplicidade historica rastreavel, sem permanecer como fonte
+  valida de linhas analiticas
+- em 2026-07-12 a duplicidade cadastral tambem foi saneada em
+  `market_source_files`, com remocao do `id = 8` depois de confirmar ausencia
+  de dependencias nas tabelas analiticas e de auditoria; a referencia canonica
+  de `12/2025` passa a ser apenas o `source_file_id = 17`
 
 ## Status atual
 
