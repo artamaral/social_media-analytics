@@ -1344,7 +1344,7 @@ Data:
 Decisao:
 
 - fixar o runtime do deploy do Streamlit em `python-3.12.12` via
-  `runtime.txt`
+  `runtime.txt` e `.python-version`
 - evitar a execucao padrao em Python 3.14 no Streamlit Cloud enquanto houver
   sinais de instabilidade nativa no startup
 
@@ -1366,5 +1366,5 @@ Impacto esperado:
 
 Aplicacao operacional:
 
-- arquivo adicionado: `runtime.txt`
-- versao travada: `python-3.12.12`
+- arquivos adicionados: `runtime.txt` e `.python-version`
+- versao travada: `3.12.12`
