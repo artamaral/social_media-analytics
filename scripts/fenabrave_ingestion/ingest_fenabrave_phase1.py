@@ -163,6 +163,13 @@ FENABRAVE_ITEM14_PERIOD_TYPE = "accumulated"
 FENABRAVE_ITEM14_MARKET_SCOPE = "Brasil"
 FENABRAVE_ITEM14_SALES_CHANNEL = "retail"
 
+FENABRAVE_ITEM15_CODE = "fenabrave_item_15_ranking_marca_emplacamento_direta_mes"
+FENABRAVE_ITEM15_LABEL = "Ranking por marca de emplacamento direta mes"
+FENABRAVE_ITEM15_PAGE = 28
+FENABRAVE_ITEM15_PERIOD_TYPE = "monthly"
+FENABRAVE_ITEM15_MARKET_SCOPE = "Brasil"
+FENABRAVE_ITEM15_SALES_CHANNEL = "direct"
+
 FENABRAVE_ELECTRIFIED_PAGE_MAP = {
     20: "automoveis",
     21: "comerciais_leves",
@@ -184,6 +191,9 @@ FENABRAVE_BRAND_SHARE_BLOCKS = [
     ("comerciais_leves", (155, 345, 435, 520)),
     ("autos_comerciais_leves", (155, 560, 435, 730)),
 ]
+FENABRAVE_CANONICAL_BRAND_MAP = {
+    "ITSUBISHI": "MITSUBISHI",
+}
 
 FENABRAVE_MODEL_RANKING_ITEMS = {
     FENABRAVE_ITEM1_CODE: {
@@ -239,6 +249,14 @@ FENABRAVE_BRAND_SHARE_ITEMS = {
         "published_period_type": FENABRAVE_ITEM14_PERIOD_TYPE,
         "market_scope": FENABRAVE_ITEM14_MARKET_SCOPE,
         "sales_channel": FENABRAVE_ITEM14_SALES_CHANNEL,
+    },
+    FENABRAVE_ITEM15_CODE: {
+        "code": FENABRAVE_ITEM15_CODE,
+        "label": FENABRAVE_ITEM15_LABEL,
+        "page": FENABRAVE_ITEM15_PAGE,
+        "published_period_type": FENABRAVE_ITEM15_PERIOD_TYPE,
+        "market_scope": FENABRAVE_ITEM15_MARKET_SCOPE,
+        "sales_channel": FENABRAVE_ITEM15_SALES_CHANNEL,
     },
 }
 
@@ -1624,6 +1642,14 @@ def reverse_pdf_token_text(value):
     return " ".join(part[::-1] for part in text.split())
 
 
+def canonicalize_fenabrave_brand_name(value):
+    """
+    Aplica correcoes canonicas para marcas conhecidas apos a reversao do texto.
+    """
+    normalized = normalize_text(value)
+    return FENABRAVE_CANONICAL_BRAND_MAP.get(normalized, normalized)
+
+
 def group_words_by_row(words, tolerance=4):
     """
     Agrupa palavras pela coordenada vertical para reconstruir linhas visuais.
@@ -1730,7 +1756,9 @@ def extract_brand_share_chart(pdf_bytes, item_code):
                     normalize_text(word["text"]) for word in brand_group["words"]
                 )
                 raw_share_token = normalize_text(share_word["text"])
-                fixed_brand_text = reverse_pdf_token_text(raw_brand_text)
+                fixed_brand_text = canonicalize_fenabrave_brand_name(
+                    reverse_pdf_token_text(raw_brand_text)
+                )
                 fixed_share_token = reverse_pdf_token_text(raw_share_token)
 
                 rows.append(
@@ -1773,6 +1801,13 @@ def extract_item14_brand_share_rankings(pdf_bytes):
     Extrai o item 14 da fase 2: ranking por marca de varejo acumulado da pagina 27.
     """
     return extract_brand_share_chart(pdf_bytes, FENABRAVE_ITEM14_CODE)
+
+
+def extract_item15_brand_share_rankings(pdf_bytes):
+    """
+    Extrai o item 15 da fase 2: ranking por marca de venda direta mensal da pagina 28.
+    """
+    return extract_brand_share_chart(pdf_bytes, FENABRAVE_ITEM15_CODE)
 
 
 def normalize_model_ranking_rows(raw_rows, source_file_id, reference_period, item_code):
@@ -1922,6 +1957,31 @@ def normalize_brand_share_rows(raw_rows, source_file_id, reference_period, item_
     return normalized
 
 
+def build_brand_share_persist_rows(item_rows):
+    """
+    Remove campos de diagnostico local antes de persistir rankings por share.
+    """
+    allowed_columns = [
+        "source_file_id",
+        "reference_period",
+        "item_code",
+        "published_period_type",
+        "market_scope",
+        "vehicle_category",
+        "sales_channel",
+        "rank_position",
+        "brand_name_raw",
+        "units",
+        "market_share_pct",
+        "raw_label",
+    ]
+
+    return [
+        {column: row.get(column) for column in allowed_columns}
+        for row in item_rows
+    ]
+
+
 def normalize_item13_rows(raw_rows, source_file_id, reference_period):
     """
     Normaliza linhas do item 13 para preview e controle de persistencia.
@@ -1943,6 +2003,18 @@ def normalize_item14_rows(raw_rows, source_file_id, reference_period):
         source_file_id,
         reference_period,
         FENABRAVE_ITEM14_CODE,
+    )
+
+
+def normalize_item15_rows(raw_rows, source_file_id, reference_period):
+    """
+    Normaliza linhas do item 15 para preview e controle de persistencia.
+    """
+    return normalize_brand_share_rows(
+        raw_rows,
+        source_file_id,
+        reference_period,
+        FENABRAVE_ITEM15_CODE,
     )
 
 
@@ -2775,6 +2847,13 @@ def validate_item14_rows(item14_rows, item13_rows=None):
     )
 
 
+def validate_item15_rows(item15_rows):
+    """
+    Valida o item 15 da fase 2.
+    """
+    return validate_brand_share_rows(item15_rows, FENABRAVE_ITEM15_CODE)
+
+
 def validate_item5_rows(item5_rows, item5_raw_rows=None):
     """
     Valida shares por subsegmento da pagina 17.
@@ -3515,6 +3594,17 @@ def print_item14_preview(item14_rows, item14_checks):
     )
 
 
+def print_item15_preview(item15_rows, item15_checks):
+    """
+    Imprime preview do item 15.
+    """
+    print_brand_share_preview(
+        item15_rows,
+        item15_checks,
+        FENABRAVE_ITEM15_CODE,
+    )
+
+
 def print_item5_preview(item5_rows, item5_checks):
     """
     Imprime preview do item 5 na pagina 17.
@@ -4028,6 +4118,8 @@ def write_results(
     item13_checks=None,
     item14_rows=None,
     item14_checks=None,
+    item15_rows=None,
+    item15_checks=None,
 ):
     """
     Persiste normalizado e status no Supabase.
@@ -4523,11 +4615,12 @@ def write_results(
                 "Item 13 Fenabrave falhou em validacoes locais.",
             )
         else:
+            item13_persist_rows = build_brand_share_persist_rows(item13_rows)
             insert_rows(
                 base_url,
                 headers,
                 "market_vehicle_brand_rankings",
-                item13_rows,
+                item13_persist_rows,
             )
             upsert_fenabrave_item_status(
                 base_url,
@@ -4568,11 +4661,12 @@ def write_results(
                 "Item 14 Fenabrave falhou em validacoes locais.",
             )
         else:
+            item14_persist_rows = build_brand_share_persist_rows(item14_rows)
             insert_rows(
                 base_url,
                 headers,
                 "market_vehicle_brand_rankings",
-                item14_rows,
+                item14_persist_rows,
             )
             upsert_fenabrave_item_status(
                 base_url,
@@ -4584,6 +4678,52 @@ def write_results(
                 len(item14_rows),
                 "passed",
                 "Item 14 Fenabrave validado e gravado pela rotina mensal.",
+            )
+
+    if item15_rows is not None:
+        if replace:
+            delete_brand_ranking_rows(
+                base_url,
+                headers,
+                source_file_id,
+                FENABRAVE_ITEM15_CODE,
+            )
+
+        item15_has_error = any(
+            not check["passed"] and check["severity"] == "error"
+            for check in (item15_checks or [])
+        )
+
+        if item15_has_error:
+            upsert_fenabrave_item_status(
+                base_url,
+                headers,
+                source_file_id,
+                normalized_rows[0]["reference_period"],
+                FENABRAVE_ITEM15_CODE,
+                "failed",
+                len(item15_rows),
+                "failed",
+                "Item 15 Fenabrave falhou em validacoes locais.",
+            )
+        else:
+            item15_persist_rows = build_brand_share_persist_rows(item15_rows)
+            insert_rows(
+                base_url,
+                headers,
+                "market_vehicle_brand_rankings",
+                item15_persist_rows,
+            )
+            upsert_fenabrave_item_status(
+                base_url,
+                headers,
+                source_file_id,
+                normalized_rows[0]["reference_period"],
+                FENABRAVE_ITEM15_CODE,
+                "validated",
+                len(item15_rows),
+                "passed",
+                "Item 15 Fenabrave validado e gravado pela rotina mensal.",
             )
 
     has_error = any(
@@ -4915,6 +5055,14 @@ def parse_args():
             "por padrao o item 14 passa a fazer parte da validacao mensal Fenabrave."
         ),
     )
+    parser.add_argument(
+        "--skip-phase2-item15",
+        action="store_true",
+        help=(
+            "Nao executa o item 15 da fase 2. Use apenas para contingencia; "
+            "por padrao o item 15 passa a fazer parte da validacao mensal Fenabrave."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -5008,6 +5156,8 @@ def main():
     item13_checks = None
     item14_rows = None
     item14_checks = None
+    item15_rows = None
+    item15_checks = None
 
     if not args.skip_phase2_item1:
         print("Extraindo item 1 da fase 2 na pagina 6...")
@@ -5129,6 +5279,16 @@ def main():
         )
         item14_checks = validate_item14_rows(item14_rows, item13_rows)
 
+    if not args.skip_phase2_item15:
+        print("Extraindo item 15 da fase 2 na pagina 28...")
+        item15_raw_rows = extract_item15_brand_share_rankings(pdf_bytes)
+        item15_rows = normalize_item15_rows(
+            item15_raw_rows,
+            source_file_id,
+            reference_period,
+        )
+        item15_checks = validate_item15_rows(item15_rows)
+
     print_preview(raw_rows, normalized_rows, checks, pdf_bytes)
 
     if item1_rows is not None:
@@ -5166,6 +5326,9 @@ def main():
 
     if item14_rows is not None:
         print_item14_preview(item14_rows, item14_checks)
+
+    if item15_rows is not None:
+        print_item15_preview(item15_rows, item15_checks)
 
     if args.dry_run:
         print("Dry-run concluido. Nenhum dado foi gravado.")
@@ -5223,6 +5386,8 @@ def main():
         item13_checks=item13_checks,
         item14_rows=item14_rows,
         item14_checks=item14_checks,
+        item15_rows=item15_rows,
+        item15_checks=item15_checks,
     )
     print("Carga concluida.")
 

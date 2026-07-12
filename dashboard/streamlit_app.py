@@ -1966,6 +1966,9 @@ def load_fenabrave_preview_from_storage(
     item14_raw_rows = module.extract_item14_brand_share_rankings(pdf_bytes)
     item14_rows = module.normalize_item14_rows(item14_raw_rows, source_file_id, reference_period_label)
     item14_checks = module.validate_item14_rows(item14_rows, item13_rows)
+    item15_raw_rows = module.extract_item15_brand_share_rankings(pdf_bytes)
+    item15_rows = module.normalize_item15_rows(item15_raw_rows, source_file_id, reference_period_label)
+    item15_checks = module.validate_item15_rows(item15_rows)
     return {
         "pdf_size_bytes": len(pdf_bytes),
         "pdf_sha256": hashlib.sha256(pdf_bytes).hexdigest(),
@@ -2008,6 +2011,9 @@ def load_fenabrave_preview_from_storage(
         "item14_raw_rows": item14_raw_rows,
         "item14_rows": item14_rows,
         "item14_checks": item14_checks,
+        "item15_raw_rows": item15_raw_rows,
+        "item15_rows": item15_rows,
+        "item15_checks": item15_checks,
     }
 
 
@@ -5836,6 +5842,8 @@ def render_fenabrave_intake_page() -> None:
                     item13_checks = preview_payload.get("item13_checks") or []
                     item14_rows = preview_payload.get("item14_rows") or []
                     item14_checks = preview_payload.get("item14_checks") or []
+                    item15_rows = preview_payload.get("item15_rows") or []
+                    item15_checks = preview_payload.get("item15_checks") or []
                     if item1_rows:
                         st.markdown("#### Item 1 fase 2 - Ranking dos emplacamentos mes")
                         item1_df = pd.DataFrame(item1_rows)
@@ -6120,9 +6128,48 @@ def render_fenabrave_intake_page() -> None:
                                 "Falha na extracao do item Fenabrave. O parser identificou inconsistencias de layout, alinhamento ou texto invertido e a persistencia foi bloqueada para este item. "
                                 f"item_code=fenabrave_item_14 pagina=27 erro={first_error['check_name']}"
                             )
-                    if item13_rows or item14_rows:
+                    if item15_rows:
+                        st.markdown("#### Item 15 fase 2 - Ranking por marca de emplacamento direta mes")
+                        st.caption("Parser posicional com persistencia pronta para ranking por share sem unidades.")
+                        item15_df = pd.DataFrame(item15_rows)
+                        item15_preview_columns = [
+                            column
+                            for column in [
+                                "vehicle_category",
+                                "rank_position",
+                                "brand_name_raw",
+                                "market_share_pct",
+                                "reversed_text_fixed",
+                                "brand_x_center",
+                                "share_x_center",
+                            ]
+                            if column in item15_df.columns
+                        ]
+                        st.dataframe(
+                            item15_df[item15_preview_columns].head(40),
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+                    if item15_checks:
+                        st.markdown("#### Checks item 15 fase 2")
+                        item15_checks_df = pd.DataFrame(item15_checks)
+                        st.dataframe(
+                            item15_checks_df,
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+                        item15_errors = item15_checks_df[
+                            (~item15_checks_df["passed"]) & (item15_checks_df["severity"] == "error")
+                        ]
+                        if not item15_errors.empty:
+                            first_error = item15_errors.iloc[0]
+                            st.error(
+                                "Falha na extracao do item Fenabrave. O parser identificou inconsistencias de layout, alinhamento ou texto invertido e a persistencia foi bloqueada para este item. "
+                                f"item_code=fenabrave_item_15 pagina=28 erro={first_error['check_name']}"
+                            )
+                    if item13_rows or item14_rows or item15_rows:
                         st.info(
-                            "Itens 13 e 14 agora usam a mesma modelagem de ranking por marca, com suporte a linhas publicadas apenas com share."
+                            "Itens 13, 14 e 15 agora usam a mesma modelagem de ranking por marca, com suporte a linhas publicadas apenas com share."
                         )
 
                 if current_record is not None and st.button("Marcar preview real como revisado", use_container_width=False):
@@ -6180,6 +6227,8 @@ def render_fenabrave_intake_page() -> None:
                                 item13_checks=preview_payload.get("item13_checks"),
                                 item14_rows=preview_payload.get("item14_rows"),
                                 item14_checks=preview_payload.get("item14_checks"),
+                                item15_rows=preview_payload.get("item15_rows"),
+                                item15_checks=preview_payload.get("item15_checks"),
                             )
                         except Exception as exc:
                             st.error(f"Falha ao gravar os dados analiticos: {exc}")
@@ -6188,7 +6237,7 @@ def render_fenabrave_intake_page() -> None:
                             st.session_state["fenabrave_validated"] = True
                             st.success(
                                 "Dados analiticos gravados em market_vehicle_registrations_segment "
-                                "e itens 1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13 e 14 da fase 2 gravados nas tabelas Fenabrave."
+                                "e itens 1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14 e 15 da fase 2 gravados nas tabelas Fenabrave."
                             )
                             st.rerun()
             elif preview_error:

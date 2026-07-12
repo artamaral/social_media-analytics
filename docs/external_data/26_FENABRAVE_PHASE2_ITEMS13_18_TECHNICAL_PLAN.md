@@ -291,6 +291,26 @@ Exemplos de tipo de erro:
 7. validar em `12/2025`
 8. executar backfill historico dos meses disponiveis
 
+## Status consolidado em 2026-07-12
+
+- os itens `13` e `14` estao concluidos no historico atualmente disponivel
+- o parser posicional ficou estabilizado para `12/2025` e `06/2026`, com
+  diagnostico local de texto invertido e pareamento por alinhamento `x`
+- o preview operacional no Streamlit passou a exibir as linhas extraidas, os
+  checks estruturais e a mensagem explicita de bloqueio quando houver erro
+- a persistencia mensal ficou ativa em `market_vehicle_brand_rankings`, usando
+  `units = null` e `market_share_pct` como medida principal para rankings de
+  share puro
+- o parser passou a aceitar correcoes canonicas pontuais de marca apos a
+  reversao do texto, como `ITSUBISHI -> MITSUBISHI`, mantendo o bruto para
+  auditoria local
+- o backfill historico oficial dos itens `13` e `14` foi concluido para os
+  `source_file_id` `17`, `5`, `4`, `3`, `2`, `6` e `13`, cobrindo `12/2025`
+  a `06/2026`
+- a atividade corrente a partir deste ponto passa a ser o item `15`, pagina
+  `28`, `Ranking por marca de emplacamento venda direta` no periodo `mes`,
+  reaproveitando o mesmo contrato posicional dos itens `13` e `14`
+
 ## Criterio de aceite
 
 Os itens `13` a `18` so devem ser promovidos para a rotina mensal automatica

@@ -1276,3 +1276,12 @@ Impacto esperado:
 - reuso da mesma tabela para rankings por marca totais e por canal
 - persistencia mensal dos itens `13` e `14` sem gambiarra no parser
 - base pronta para estender o mesmo contrato aos itens `15` e `16`
+- suporte explicito a `autos_comerciais_leves` quando o PDF publicar o bloco
+  combinado de participacao por canal
+
+Aplicacao operacional ja confirmada:
+
+- os itens `13` e `14` ja foram gravados e retrocarregados de `12/2025` a
+  `06/2026` nesse contrato
+- o item `15` passa a nascer sobre a mesma base tecnica, sem criar nova tabela
+  nem novo formato de persistencia

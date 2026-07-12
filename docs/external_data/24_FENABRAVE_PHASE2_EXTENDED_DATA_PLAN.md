@@ -933,6 +933,30 @@ Estado consolidado apos o backfill:
 - com isso, a proxima frente real da fase 2 avanca para os itens `11` e `12`,
   referentes a participacao de venda direta e varejo nas paginas `24` e `25`
 
+Atualizacao consolidada de 2026-07-12:
+
+- os itens `13` e `14` foram concluidos no mesmo contrato incremental da fase
+  2: parser posicional, preview operacional no Streamlit, validacoes locais,
+  persistencia no banco e backfill historico por PDF existente
+- `market_vehicle_brand_rankings` passou a aceitar dois contratos na mesma
+  tabela: rankings por marca com `units + market_share_pct` e rankings por
+  participacao com `units = null` e `market_share_pct` preenchido
+- o mesmo ajuste de modelagem passou a aceitar explicitamente a categoria
+  `autos_comerciais_leves`, necessaria para os blocos combinados das paginas
+  `26` a `29`
+- o backfill oficial dos itens `13` e `14` foi concluido para `12/2025` a
+  `06/2026`, usando os `source_file_id` canonicos `17`, `5`, `4`, `3`, `2`,
+  `6` e `13`
+- todos os periodos carregados ficaram com `status = validated`,
+  `validation_status = passed` e `row_count = 30` em
+  `market_fenabrave_extraction_items`
+- no banco final, cada periodo passou a ter `10` linhas por categoria
+  (`automoveis`, `comerciais_leves` e `autos_comerciais_leves`) para o item
+  `13` e para o item `14`
+- a proxima frente prioritaria da fase 2 passa a ser o item `15`,
+  `Ranking por marca de emplacamento direta`, pagina `28`, reaproveitando o
+  mesmo parser posicional e a mesma modelagem de share por marca
+
 ## Proximo passo apos aprovacao do plano
 
 Depois da aprovacao deste plano, a execucao deve comecar pelo item 1:

@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS public.market_vehicle_brand_rankings (
     published_period_type IN ('monthly', 'accumulated')
   ),
   CONSTRAINT market_vehicle_brand_rankings_category_check CHECK (
-    vehicle_category IN ('automoveis', 'comerciais_leves')
+    vehicle_category IN ('automoveis', 'comerciais_leves', 'autos_comerciais_leves')
   ),
   CONSTRAINT market_vehicle_brand_rankings_sales_channel_check CHECK (
     sales_channel IN ('all', 'retail', 'direct')
