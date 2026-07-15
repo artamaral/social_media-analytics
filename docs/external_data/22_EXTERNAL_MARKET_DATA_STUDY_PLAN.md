@@ -355,6 +355,16 @@ public.market_source_files
 public.market_ingestion_runs
 ```
 
+Nota Fenabrave em 2026-07-15:
+
+- para a rotina mensal atual da Fenabrave, `market_ingestion_runs` permanece
+  como conceito de governanca e nao como tabela fisica obrigatoria
+- o run mensal canonico e representado por `market_source_files`
+- o status por item da fase 2 e persistido em
+  `market_fenabrave_extraction_items`
+- a tabela fisica dedicada deve ser retomada apenas se a operacao evoluir para
+  automacao de agenda, retries, SLA, alertas ou monitoramento multi-fonte
+
 Objetivo:
 
 - registrar origem

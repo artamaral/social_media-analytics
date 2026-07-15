@@ -34,7 +34,6 @@ Itens ja concluidos ficam consolidados no historico ao fim do arquivo.
 
 ## Visualizacao / Estudos de mercado
 
-- [ ] [analise] ATIVIDADE ATUAL E PRIORITARIA: manter a frente documental do contrato de governanca final da Fenabrave como pendente, apos a revisao formal de cobertura e o saneamento de `12/2025`, para definir o que ainda precisa virar contrato explicito de `ingestion_runs`, persistencia adicional de validacoes e lembrete operacional mensal.
 - [ ] [ops] Monitorar estabilidade do Streamlit Cloud apos a correcao do incidente de `Segmentation fault`, mantendo atencao a novos deploys que alterem a combinacao `streamlit`, `pyarrow`, `numpy`, `pandas` e `plotly`.
 - [ ] [melhoria] Evoluir o ranking de creators para tratar frequencia como criterio explicito, porque a base atual e a tela ja cobrem views e engajamento pela `v_dashboard_creator_summary`, mas a cadencia ainda nao entra como ordenacao ou leitura principal do comparativo.
 - [ ] [melhoria] Alinhar a lista de videos do criador individual ao mesmo padrao visual de `YouTube > Melhores videos 7d`, preservando o padrao estavel de renderizacao validado apos o incidente de `Segmentation fault` do Streamlit Cloud.
@@ -52,6 +51,7 @@ Itens ja concluidos ficam consolidados no historico ao fim do arquivo.
 
 ## Historico
 
+- [x] Fechar a frente documental do contrato de governanca final da Fenabrave. Fechado em 2026-07-15: o contrato operacional passa a tratar cada mes como um `ingestion_run` logico composto por `market_source_files` + `market_fenabrave_extraction_items`; as validacoes persistidas minimas sao status do arquivo, status/row_count/validation_status por item, cobertura dos itens ativos e rastreabilidade do PDF no Storage; o lembrete mensal fica registrado no calendario offline para execucao apos o 5o dia util.
 - [x] Validar se todos posts possuem historico. Fechado com a auditoria da Sprint 1: posts ativos sem snapshot = `0`; os casos restantes eram `unavailable` confirmados.
 - [x] Checar consistencia de collected_at. Fechado com a auditoria da Sprint 1: nao houve evidencia de `collected_at` nulo ou defasado em posts ativos.
 - [x] Validar duplicidade de coleta. Fechado porque existe regra hard coded no fluxo que impede duplicidade de gravacao no snapshot operacional; o historico com mais de uma linha por post continua sendo comportamento esperado e nao foi tratado como issue.

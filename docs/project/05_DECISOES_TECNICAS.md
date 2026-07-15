@@ -1335,6 +1335,59 @@ Aplicacao operacional ja confirmada:
 
 ---
 
+## Fenabrave: contrato final de governanca mensal
+
+Data:
+
+- 2026-07-15
+
+Decisao:
+
+- fechar a governanca final da Fenabrave como contrato operacional mensal, sem
+  criar uma tabela fisica obrigatoria de `ingestion_runs` nesta etapa
+- tratar cada registro canonico de `market_source_files` como o `ingestion_run`
+  logico do periodo
+- usar `market_fenabrave_extraction_items` como persistencia oficial do status
+  por item da fase 2, incluindo `item_code`, `status`, `row_count` e
+  `validation_status`
+- manter como validacoes persistidas minimas:
+  - existencia de um unico arquivo canonico por `reference_period`
+  - PDF preservado no Storage em `fenabrave/{ano}/{mes}/`
+  - status validado da fase 1
+  - status por item ativo da fase 2
+  - contagem de linhas por item
+  - revisao de cobertura dos itens `1..8` e `11..22`
+  - comparacao de coerencia entre mensal, acumulado do ano e acumulado do ano
+    anterior quando o item publicar essas dimensoes
+- manter o lembrete operacional mensal no calendario offline, com execucao apos
+  o 5o dia util e processamento do mes anterior
+- retomar uma tabela fisica dedicada de `ingestion_runs` apenas se a rotina
+  passar a exigir automacao de agenda, retries, SLA, alertas ou monitoramento
+  multi-fonte
+
+Motivo:
+
+- o volume da Fenabrave e mensal e pequeno, com confirmacao humana da fonte e
+  upload guiado pela UI
+- a rastreabilidade principal ja esta coberta por `market_source_files`,
+  Storage e itens de extracao
+- criar nova tabela agora aumentaria superficie operacional sem resolver uma
+  lacuna real da fase 2 ativa
+- a decisao mantem a rotina repetivel e auditavel sem transformar a frente em
+  automacao prematura
+
+Impacto esperado:
+
+- a frente Fenabrave deixa de ter pendencia estrutural de governanca no Sprint
+  5
+- novos meses seguem um criterio claro de fechamento operacional
+- parser e backfill permanecem encerrados para o historico `12/2025` a
+  `06/2026`, salvo mudanca real no PDF publicado
+- a proxima discussao de fontes externas pode focar Carros na Web e
+  SENATRAN/RENAVAM
+
+---
+
 ## Runtime do Streamlit fixado em Python 3.12
 
 Data:

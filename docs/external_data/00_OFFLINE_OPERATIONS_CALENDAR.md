@@ -45,6 +45,23 @@ Etapas:
 6. Quando a tabela normalizada estiver disponivel, rodar em `--write`.
 7. Na caixa de dialogo, conferir o PDF aberto e marcar `OK` ou `NOK`.
 8. Conferir validacoes.
+9. Fechar o `ingestion_run` logico do mes verificando:
+   - um unico registro canonico em `market_source_files` para o periodo;
+   - PDF preservado em `market-source-files/fenabrave/{ano}/{mes}/`;
+   - fase 1 validada;
+   - itens ativos da fase 2 (`1..8` e `11..22`) com status concluido ou
+     warning aceito em `market_fenabrave_extraction_items`;
+   - `row_count` e `validation_status` revisados por item;
+   - coerencia mensal/acumulado revisada quando o item publicar essas dimensoes.
+
+Contrato de lembrete operacional:
+
+- revisar esta rotina uma vez por mes, apos o 5o dia util;
+- processar sempre o mes anterior;
+- nao abrir novo parser ou backfill se o PDF publicado mantiver o contrato dos
+  itens ativos;
+- considerar nova tabela fisica de `ingestion_runs` apenas se houver automacao
+  futura de agenda, retries, SLA, alertas ou monitoramento multi-fonte.
 
 Comando PowerShell - setup inicial:
 

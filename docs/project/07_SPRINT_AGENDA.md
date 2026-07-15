@@ -3237,17 +3237,30 @@ Consolidar dados externos sem comprometer governanca, rastreabilidade ou qualida
 
 ### Atividades Fenabrave
 
-- Validar rotina mensal.
-- Implementar upload do PDF pela view `Cadastro Fenabrave` com pasta
+- [x] Validar rotina mensal.
+- [x] Implementar upload do PDF pela view `Cadastro Fenabrave` com pasta
   obrigatoria por `ano/mes` para suportar historico.
-- Expandir a fase 2 por item do PDF com parser, preview, persistencia e
+- [x] Expandir a fase 2 por item do PDF com parser, preview, persistencia e
   backfill historico controlado.
-- Fechar a revisao formal de cobertura do historico `12/2025` a `06/2026`.
-- Saneamento da duplicidade cadastral de `12/2025`.
-- Deixar como proxima decisao apenas a governanca final:
+- [x] Fechar a revisao formal de cobertura do historico `12/2025` a `06/2026`.
+- [x] Saneamento da duplicidade cadastral de `12/2025`.
+- [x] Fechar a governanca final:
   - `ingestion_runs`
   - persistencia adicional de validacoes
   - lembrete operacional mensal
+
+Status em 2026-07-15:
+
+- governanca final da Fenabrave fechada como contrato operacional documentado,
+  sem nova tabela fisica obrigatoria nesta etapa
+- cada mes carregado passa a ser tratado como um `ingestion_run` logico,
+  identificado pelo registro canonico em `market_source_files` e detalhado por
+  item em `market_fenabrave_extraction_items`
+- a rotina mensal deve ser acompanhada pelo calendario offline apos o 5o dia
+  util, processando sempre o mes anterior
+- uma tabela formal de `ingestion_runs` fica fora do escopo imediato e so deve
+  ser retomada se a automacao futura exigir historico independente de execucao,
+  retries ou multiplas fontes no mesmo contrato de monitoramento
 
 ### Atividades Carros na Web
 
@@ -3265,7 +3278,7 @@ Consolidar dados externos sem comprometer governanca, rastreabilidade ou qualida
 ### Entregas
 
 - Fenabrave com rotina mensal clara, historico canonico validado e fase 2 ativa
-  consolidada para os itens `1..8` e `11..22`.
+  consolidada para os itens `1..8` e `11..22`, com governanca mensal fechada.
 - Decisao objetiva sobre Carros na Web: continuar, pausar ou limitar escopo.
 - Proximas necessidades de modelagem externa registradas.
 

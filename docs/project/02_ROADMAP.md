@@ -72,12 +72,12 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 ### Prioridade media - definicao de escopo
 
 - [x] Delimitar Fenabrave e SENATRAN/RENAVAM como fontes estruturadas prioritarias no Supabase, deixando as demais fontes apenas como contexto textual.
-- [ ] Consolidar a governanca final de Fenabrave apos a expansao da fase 2 ja operada em `segmento`, `marca`, `modelo`, `subsegmento`, `eletrificados` e `canais de venda`, definindo o contrato restante de `ingestion_runs`, persistencia adicional de validacoes e auditoria recorrente da rotina mensal.
+- [x] Consolidar a governanca final de Fenabrave apos a expansao da fase 2 ja operada em `segmento`, `marca`, `modelo`, `subsegmento`, `eletrificados` e `canais de venda`, definindo o contrato restante de `ingestion_runs`, persistencia adicional de validacoes e auditoria recorrente da rotina mensal.
 - [ ] Definir a modelagem final de SENATRAN/RENAVAM, incluindo dataset real, granularidade util, rotulagem correta de frota e tabela normalizada final.
 
 ### Prioridade operacional - rotina de fonte
 
-- [ ] Open point: avaliar como gerar lembrete futuro e/ou incluir em uma agenda a rotina mensal da Fenabrave descrita em `00_OFFLINE_OPERATIONS_CALENDAR.md`.
+- [x] Open point: avaliar como gerar lembrete futuro e/ou incluir em uma agenda a rotina mensal da Fenabrave descrita em `00_OFFLINE_OPERATIONS_CALENDAR.md`. Fechado como rotina operacional mensal documentada no calendario offline: executar apos o 5o dia util, processar o mes anterior e registrar a auditoria pelo contrato de `market_source_files` + `market_fenabrave_extraction_items`.
 
 ### Itens concluidos nesta frente
 

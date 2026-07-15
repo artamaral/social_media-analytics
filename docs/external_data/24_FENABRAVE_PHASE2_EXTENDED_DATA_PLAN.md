@@ -1104,22 +1104,22 @@ Atualizacao complementar de 2026-07-12 para o item 22:
   linhas de `comerciais_leves` em todos os meses do historico atualmente
   disponivel
 - com isso, o bloco `19` a `22` da fase `2` fica concluido no historico
-  carregado e a proxima etapa passa a ser a revisao da fila prioritaria da
-  Fenabrave apos o fechamento desse bloco
+  carregado e a etapa remanescente deixa de ser parser/backfill
 
-## Proximo passo apos aprovacao do plano
+## Status atual e governanca apos conclusao da fase 2 ativa
 
-Depois da aprovacao deste plano, a execucao deve comecar pelo item 1:
+Atualizacao de 2026-07-15:
 
-```text
-Ranking dos emplacamentos mes, pagina 6, automoveis e comerciais leves
-```
-
-O entregavel do item 1 deve incluir:
-
-- DDL proposta
-- parser especifico da pagina 6
-- preview operacional
-- validacoes do item
-- carga de todos os PDFs existentes aplicaveis
-- relatorio de cobertura historica
+- a fase 2 ativa esta concluida no historico `12/2025` a `06/2026` para os
+  itens `1..8` e `11..22`
+- a rotina mensal futura deve manter esses itens como inclusao padrao sempre
+  que o PDF publicado preservar o contrato atual
+- cada mes deve ser tratado como um `ingestion_run` logico identificado pelo
+  registro canonico em `market_source_files`
+- o status por item deve continuar persistido em
+  `market_fenabrave_extraction_items`
+- uma tabela fisica dedicada de `ingestion_runs` nao e obrigatoria nesta etapa;
+  a decisao deve ser retomada apenas se houver automacao de agenda, retries,
+  SLA, alertas ou monitoramento multi-fonte
+- o lembrete mensal oficial fica no calendario offline, com execucao apos o 5o
+  dia util e processamento do mes anterior

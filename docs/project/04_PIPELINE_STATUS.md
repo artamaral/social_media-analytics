@@ -306,7 +306,8 @@ Proxima avaliacao:
 
 ### 2.1 Fenabrave
 
-- Status: rotina mensal estruturada e historico validado no banco para a fase 2 ativa
+- Status: rotina mensal estruturada, historico validado no banco e governanca
+  final fechada para a fase 2 ativa
 - Implementacao principal: `scripts/fenabrave_ingestion/ingest_fenabrave_phase1.py`
 - Documento operacional principal: `scripts/fenabrave_ingestion/README.md`
 - Papel na arquitetura: ingestao estruturada de emplacamentos e leitura mensal
@@ -345,14 +346,33 @@ Proxima avaliacao:
   - `market_vehicle_sales_channel_mix`
   - `v_dashboard_fenabrave_monthly_segments`
 
+#### Governanca operacional fechada
+
+- cada execucao mensal da Fenabrave passa a ser tratada como um
+  `ingestion_run` logico, sem exigir nova tabela fisica nesta etapa
+- o identificador operacional do run e o registro canonico em
+  `market_source_files`, com `reference_period` no primeiro dia do mes e PDF
+  preservado em `market-source-files/fenabrave/{ano}/{mes}/`
+- a granularidade de status por bloco fica em
+  `market_fenabrave_extraction_items`, com `item_code`, `status`, `row_count` e
+  `validation_status`
+- a carga mensal so deve ser considerada fechada quando:
+  - o arquivo mensal estiver cadastrado e rastreavel no Storage
+  - a fase 1 estiver persistida e validada
+  - todos os itens ativos da fase 2 (`1..8` e `11..22`) estiverem com status
+    concluido ou warning aceito
+  - as validacoes de cobertura, linhas esperadas e coerencia mensal/acumulado
+    tiverem sido revisadas
+- a criacao de uma tabela fisica dedicada de `ingestion_runs` deixa de ser
+  obrigatoria no Sprint 5 e deve ser retomada apenas se houver necessidade de
+  orquestracao automatica, retries, SLA operacional ou monitoramento
+  multi-fonte
+
 #### O que ainda falta nesta frente
 
-- consolidar a governanca final da frente agora que a expansao para `marca`,
-  `modelo`, `subsegmento`, `eletrificados` e `canais de venda` ja esta ativa
-- decidir se a frente passa a ter tabela formal de `ingestion_runs` e
-  persistencia adicional de validacoes operacionais
-- transformar a rotina mensal guiada por UI em processo com lembrete
-  operacional explicito e criterio de acompanhamento recorrente
+- manter a execucao mensal conforme calendario offline, apos o 5o dia util
+- avaliar futuramente se a rotina precisa evoluir para automacao de agenda,
+  alerta ou tabela fisica de runs quando houver operacao recorrente suficiente
 
 ### 2.2 Carros na Web
 
@@ -495,7 +515,6 @@ Proxima avaliacao:
 
 - score hibrido `v2`
 - guarda de cobertura minima
-- fechamento da governanca final de Fenabrave
 - avaliacao de viabilidade do Carros na Web sob captcha
 - estudo de granularidade para SENATRAN / RENAVAM
 - expansao funcional do app Streamlit
@@ -505,9 +524,9 @@ Proxima avaliacao:
 - evolucao do social media depende principalmente de analisar se a regra de
   `next_check` esta priorizando corretamente a base conforme ela cresce, alem
   de consolidar cobertura minima e validacoes de historico
-- evolucao das fontes externas depende principalmente de fechar a governanca
-  final da Fenabrave e destravar a viabilidade de Carros na Web e
-  SENATRAN/RENAVAM
+- evolucao das fontes externas depende principalmente de destravar a viabilidade
+  de Carros na Web e SENATRAN/RENAVAM; Fenabrave ja tem governanca mensal
+  fechada para a fase 2 ativa
 - evolucao do dashboard depende de expandir a cobertura funcional do app sobre
   as views ja operacionais
 
@@ -521,9 +540,16 @@ Proxima avaliacao:
     canonicos
   - a duplicidade cadastral de `12/2025` foi saneada em
     `market_source_files`, mantendo apenas `source_file_id = 17`
-  - permanece como proxima decisao estrutural fechar a governanca final da
-    frente, especialmente `ingestion_runs`, persistencia adicional de
-    validacoes e lembrete operacional mensal
+- Data de referencia deste status: `2026-07-15`
+- Resultado:
+  - a governanca final da Fenabrave foi fechada como contrato operacional:
+    `market_source_files` representa o run mensal canonico e
+    `market_fenabrave_extraction_items` persiste o status por item
+  - a rotina mensal deve seguir o calendario offline apos o 5o dia util,
+    processando sempre o mes anterior
+  - uma tabela fisica dedicada de `ingestion_runs` nao e obrigatoria nesta
+    etapa e fica condicionada a automacao futura, retries, SLA ou monitoramento
+    multi-fonte
 
 - Data de referencia deste status: `2026-06-16`
 - Resultado:
