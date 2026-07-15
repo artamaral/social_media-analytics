@@ -5128,26 +5128,42 @@ def render_creator_detail_page() -> None:
     page_header("Criador individual")
 
     filter_col1, filter_col2, filter_col3, filter_col4 = st.columns([1.45, 1.05, 0.95, 1.0])
-    creator_options = sorted(rows, key=lambda row: float(row["engagement_rate_pct"]), reverse=True)
+    with filter_col2:
+        selected_platform = st.selectbox("Plataforma", ["todas", "youtube", "instagram", "tiktok"], index=1)
+    working_rows = rows
+    if selected_platform != "todas":
+        working_rows = [
+            row
+            for row in working_rows
+            if str(row.get("platform") or "").strip().lower() == selected_platform
+        ]
+    working_rows = sorted(working_rows, key=lambda row: float(row["engagement_rate_pct"]), reverse=True)
+
+    if not working_rows:
+        with filter_col1:
+            st.selectbox("Criador em foco", ["Sem criador para a plataforma"], index=0, disabled=True)
+        with filter_col3:
+            st.selectbox("Tipo de video", ["todos", "long", "short"], index=0, disabled=True)
+        with filter_col4:
+            st.selectbox("Semana fechada", ["Sem base semanal"], index=0, disabled=True)
+        st.info(f"Nenhum criador da view v_dashboard_creator_summary corresponde ao filtro de plataforma {selected_platform}.")
+        trace_startup("render_creator_detail end: no creators for platform")
+        return
+
+    creator_options = working_rows
     selected_default = next((row for row in creator_options if row["entity_name"] == selected_name), creator_options[0])
+    creator_option_names = [row["entity_name"] for row in creator_options]
     with filter_col1:
         selected_creator_name = st.selectbox(
             "Criador em foco",
-            [row["entity_name"] for row in creator_options],
-            index=[row["entity_name"] for row in creator_options].index(selected_default["entity_name"]),
+            creator_option_names,
+            index=creator_option_names.index(selected_default["entity_name"]),
         )
-    with filter_col2:
-        selected_platform = st.selectbox("Plataforma", ["todas", "youtube", "instagram", "tiktok"], index=1)
     with filter_col3:
         selected_video_type = st.selectbox("Tipo de video", ["todos", "long", "short"], index=0)
 
     st.session_state["creator_selected_name"] = selected_creator_name
-    working_rows = rows
-    if selected_platform != "todas":
-        working_rows = [row for row in working_rows if row["platform"] == selected_platform]
-    working_rows = sorted(working_rows, key=lambda row: float(row["engagement_rate_pct"]), reverse=True)
-
-    selected_row = next((row for row in working_rows if row["entity_name"] == selected_creator_name), working_rows[0] if working_rows else rows[0])
+    selected_row = next((row for row in working_rows if row["entity_name"] == selected_creator_name), working_rows[0])
 
     weekly_filters = [("creator_id", selected_row["creator_id"])]
     weekly_rows, weekly_error = get_filtered_rows(
