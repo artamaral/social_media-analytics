@@ -5934,7 +5934,9 @@ def render_fenabrave_intake_page() -> None:
                     for column in ["segment_code", "segment_label", "monthly_units"]
                     if column in normalized_df.columns
                 ]
-                st.dataframe(normalized_df[preview_columns], use_container_width=True, hide_index=True)
+                trace_startup("render_fenabrave_preview normalized_dataframe before")
+                st.dataframe(normalized_df[preview_columns], width="stretch", hide_index=True)
+                trace_startup("render_fenabrave_preview normalized_dataframe after")
 
                 if preview_payload.get("checks"):
                     checks_df = pd.DataFrame(preview_payload["checks"]).rename(
@@ -5949,7 +5951,9 @@ def render_fenabrave_intake_page() -> None:
                         }
                     )
                     st.markdown("#### Checks estruturais")
-                    st.dataframe(checks_df, use_container_width=True, hide_index=True)
+                    trace_startup("render_fenabrave_preview checks_dataframe before")
+                    st.dataframe(checks_df, width="stretch", hide_index=True)
+                    trace_startup("render_fenabrave_preview checks_dataframe after")
 
                     item1_rows = preview_payload.get("item1_rows") or []
                     item1_checks = preview_payload.get("item1_checks") or []
