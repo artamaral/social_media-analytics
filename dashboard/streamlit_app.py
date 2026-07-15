@@ -2552,7 +2552,9 @@ def render_overview() -> None:
         recent_focus = summarize_overview_recent_focus(recent_chart_filtered, recent_summary)
         recent_fig = build_overview_recent_activity_chart(recent_chart_filtered)
         if recent_fig is not None:
-            st.plotly_chart(recent_fig, use_container_width=True, config={"displayModeBar": False})
+            trace_startup("render_overview recent_chart before")
+            st.plotly_chart(recent_fig, width="stretch", config={"displayModeBar": False})
+            trace_startup("render_overview recent_chart after")
         else:
             placeholder_card(
                 "Atividade recente",
@@ -3993,7 +3995,9 @@ def render_fenabrave_dashboard_page() -> None:
         },
     )
     apply_plotly_theme(fig)
-    st.plotly_chart(fig, use_container_width=True)
+    trace_startup("render_fenabrave_monthly bar_chart before")
+    st.plotly_chart(fig, width="stretch")
+    trace_startup("render_fenabrave_monthly bar_chart after")
 
     st.write("")
     st.markdown("### Evolucao mensal por categoria")
@@ -4014,7 +4018,9 @@ def render_fenabrave_dashboard_page() -> None:
     )
     apply_plotly_theme(line_fig)
     line_fig.update_traces(line_width=3, marker_size=8)
-    st.plotly_chart(line_fig, use_container_width=True)
+    trace_startup("render_fenabrave_monthly line_chart before")
+    st.plotly_chart(line_fig, width="stretch")
+    trace_startup("render_fenabrave_monthly line_chart after")
 
 
 def render_collection_integrity_section() -> None:
@@ -5401,13 +5407,13 @@ def render_creator_detail_page() -> None:
             st.markdown(f"#### Distribuicao de engajamento | {selected_video_type_label}")
             st.caption("Participacao normalizada pelo score: views x1, likes x10 e comentarios x20, respeitando o tipo de video escolhido.")
             trace_startup("render_creator_detail donut_chart before")
-            st.plotly_chart(donut_fig, use_container_width=True, config={"displayModeBar": False})
+            st.plotly_chart(donut_fig, width="stretch", config={"displayModeBar": False})
             trace_startup("render_creator_detail donut_chart after")
         with chart_right:
             st.markdown(f"#### Crescimento semanal | {selected_video_type_label}")
             st.caption("Views em barras; likes e comentarios em linhas com base em snapshots semanais. Semanas sem base suficiente nao entram no grafico.")
             trace_startup("render_creator_detail weekly_chart before")
-            st.plotly_chart(weekly_fig, use_container_width=True, config={"displayModeBar": False})
+            st.plotly_chart(weekly_fig, width="stretch", config={"displayModeBar": False})
             trace_startup("render_creator_detail weekly_chart after")
         trace_startup("render_creator_detail charts end")
     else:
