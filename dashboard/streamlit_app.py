@@ -5503,14 +5503,39 @@ def render_creator_detail_page() -> None:
     )
 
     with st.expander("Campos usados no mockup", expanded=False):
-        st.markdown(
-            """
-- `v_dashboard_creator_summary`: titulo, ranking, filtros, KPIs totais e detalhe operacional.
-- `v_dashboard_creator_weekly_audience`: auditoria semanal de seguidores e curva de audiencia.
-- `v_dashboard_creator_weekly_activity`: semana selecionada, cards semanais e serie temporal.
-- `public.posts`: titulo, tipo, views, likes e comentarios dos videos exibidos.
-"""
+        creator_mockup_fields_df = pd.DataFrame(
+            [
+                {"campo": "entity_name", "origem": "v_dashboard_creator_summary", "uso": "titulo e ranking"},
+                {"campo": "niche", "origem": "v_dashboard_creator_summary", "uso": "filtro"},
+                {"campo": "creator_type", "origem": "v_dashboard_creator_summary", "uso": "painel lateral"},
+                {"campo": "platform", "origem": "v_dashboard_creator_summary", "uso": "filtro e detalhe"},
+                {"campo": "username", "origem": "v_dashboard_creator_summary", "uso": "identificacao"},
+                {"campo": "channel_id", "origem": "v_dashboard_creator_summary", "uso": "identificacao tecnica"},
+                {"campo": "followers", "origem": "v_dashboard_creator_summary", "uso": "kpi e ranking"},
+                {"campo": "post_count", "origem": "v_dashboard_creator_summary", "uso": "ranking e fallback"},
+                {"campo": "total_views", "origem": "v_dashboard_creator_summary", "uso": "ranking e fallback"},
+                {"campo": "total_likes", "origem": "v_dashboard_creator_summary", "uso": "ranking e fallback"},
+                {"campo": "total_comments", "origem": "v_dashboard_creator_summary", "uso": "ranking e fallback"},
+                {"campo": "engagement_rate_pct", "origem": "v_dashboard_creator_summary", "uso": "ranking e fallback"},
+                {"campo": "latest_post_date", "origem": "v_dashboard_creator_summary", "uso": "detalhe"},
+                {"campo": "latest_collected_at", "origem": "v_dashboard_creator_summary", "uso": "detalhe operacional"},
+                {"campo": "is_active", "origem": "v_dashboard_creator_summary", "uso": "status"},
+                {"campo": "followers_delta_vs_prev_week", "origem": "v_dashboard_creator_weekly_audience", "uso": "card semanal de seguidores"},
+                {"campo": "followers_weekly_status", "origem": "v_dashboard_creator_weekly_audience", "uso": "status executivo da audiencia"},
+                {"campo": "week_label", "origem": "v_dashboard_creator_weekly_activity", "uso": "periodo semanal selecionado"},
+                {"campo": "video_type", "origem": "v_dashboard_creator_weekly_activity", "uso": "cards e graficos semanais conforme tipo selecionado"},
+                {"campo": "views_novas", "origem": "v_dashboard_creator_weekly_activity", "uso": "card e grafico semanal de views"},
+                {"campo": "likes_novos", "origem": "v_dashboard_creator_weekly_activity", "uso": "card semanal de likes"},
+                {"campo": "comentarios_novos", "origem": "v_dashboard_creator_weekly_activity", "uso": "card semanal de comentarios"},
+                {"campo": "title", "origem": "public.posts", "uso": "tabela de top videos"},
+                {"campo": "views", "origem": "public.posts", "uso": "cards totais filtrados e tabela de top videos"},
+                {"campo": "likes", "origem": "public.posts", "uso": "cards totais filtrados e distribuicao"},
+                {"campo": "comments", "origem": "public.posts", "uso": "cards filtrados, distribuicao e tabela"},
+            ]
         )
+        trace_startup("render_creator_detail mockup_fields_dataframe before")
+        st.dataframe(creator_mockup_fields_df, width="stretch", hide_index=True)
+        trace_startup("render_creator_detail mockup_fields_dataframe after")
 
 
 def render_creator_overview_page() -> None:
