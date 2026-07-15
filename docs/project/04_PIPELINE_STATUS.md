@@ -457,16 +457,22 @@ Proxima avaliacao:
   - traces indicaram que a queda ocorria apos as queries e durante a
     renderizacao de componentes
   - pagina confirmada no log: `Criadores > Criador individual`
-  - mitigacao aplicada: graficos interativos desligados por padrao, videos
-    renderizados em HTML simples e dataframe tecnico trocado por markdown
-  - resultado informado pelo usuario: app deixou de cair apos a mitigacao
-  - pendencia: isolar componente/dependencia exata antes de reintroduzir a
-    experiencia interativa completa
+  - mitigacao inicial aplicada: remover cache do cliente Supabase e aliviar o
+    caminho padrao de renderizacao
+  - fechamento operacional em 2026-07-15: graficos e dataframes foram
+    reintroduzidos por lotes controlados em `Criador individual`,
+    `Data Quality`, `Cadastro de Criadores` e Fenabrave sem nova queda
+    reportada pelo usuario
+  - padrao adotado: `st.dataframe` e `st.plotly_chart` usam `width="stretch"`
+    nos pontos estabilizados, evitando o padrao antigo com
+    `use_container_width=True`
+  - leitura atual: incidente estabilizado; manter monitoramento em novos
+    deploys e evitar reintroduzir componentes pesados sem teste controlado
 
 ### 3.4 Proximos checkpoints desta frente
 
-- estabilizar a renderizacao do dashboard no Streamlit Cloud antes de ampliar
-  UX interativa com graficos e dataframes pesados
+- manter observacao da estabilidade do dashboard no Streamlit Cloud apos a
+  reintroducao controlada dos componentes interativos
 - implementar overview, creators e crescimento semanal quando a frente de
   estabilidade estiver encerrada
 - expor indicadores de qualidade dos dados antes dos rankings

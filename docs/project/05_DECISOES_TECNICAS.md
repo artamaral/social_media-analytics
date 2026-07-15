@@ -1418,10 +1418,36 @@ Resultado observado:
 - apos a mitigacao da pagina de criador individual, o app deixou de cair no
   teste manual informado pelo usuario
 
+Fechamento operacional:
+
+- em 2026-07-15, os componentes foram reintroduzidos por lotes controlados no
+  Streamlit Cloud
+- a sequencia validada pelo usuario incluiu:
+  - `Criadores > Criador individual`: graficos Plotly, tabela de videos e
+    tabela tecnica
+  - `Data Quality`: tabelas tecnicas do detalhamento
+  - `Cadastro Fenabrave`: preview inicial, itens `1..8`, itens `11..22` e
+    tabela persistida
+  - `Cadastro de Criadores`: tabelas de correspondencia, criador cadastrado e
+    detalhe tecnico da revisao
+  - graficos Plotly remanescentes do dashboard
+- os dataframes e graficos passaram a usar `width="stretch"` nos pontos
+  estabilizados, substituindo o uso anterior de `use_container_width=True`
+- nao houve nova queda reportada durante os testes manuais apos a reintroducao
+  completa desses componentes
+
+Decisao atual:
+
+- considerar o incidente estabilizado do ponto de vista operacional
+- manter a remocao de cache do cliente Supabase
+- manter `width="stretch"` para novos `st.dataframe` e `st.plotly_chart`
+- reintroduzir qualquer componente pesado futuro em lote pequeno, com traces
+  temporarios quando houver risco de regressao
+
 Pendencias:
 
-- isolar se o culpado principal e `st.plotly_chart`, `st.dataframe` ou a
-  combinacao de componentes/dependencias
-- avaliar pinagem conservadora das dependencias do dashboard
-- reintroduzir a experiencia visual completa apenas depois de teste controlado
-  no Streamlit Cloud
+- seguir monitorando novos deploys do Streamlit Cloud, especialmente quando
+  houver mudanca indireta de `streamlit`, `pyarrow`, `numpy`, `pandas` ou
+  `plotly`
+- avaliar pinagem conservadora de dependencias apenas se houver nova regressao
+  nativa ou diferenca relevante entre ambiente local e Cloud
