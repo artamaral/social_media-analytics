@@ -5461,6 +5461,15 @@ def render_creator_detail_page() -> None:
             )
         video_cards_html.append("</div>")
         st.markdown("".join(video_cards_html), unsafe_allow_html=True)
+        show_creator_video_dataframe = st.checkbox(
+            "Mostrar tabela interativa de videos",
+            value=True,
+            help="Reintroducao controlada do st.dataframe para isolar o incidente de Segmentation fault no Streamlit Cloud.",
+        )
+        if show_creator_video_dataframe:
+            trace_startup("render_creator_detail video_dataframe before")
+            st.dataframe(top_videos_display, width="stretch", hide_index=True)
+            trace_startup("render_creator_detail video_dataframe after")
 
     st.markdown("#### Leitura do criador em foco")
     st.markdown(
