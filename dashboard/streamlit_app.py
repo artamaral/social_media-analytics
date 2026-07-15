@@ -6620,7 +6620,9 @@ def render_fenabrave_intake_page() -> None:
                     if column in persisted_df.columns
                 ]
                 st.markdown("#### Dados persistidos da view analitica")
-                st.dataframe(persisted_df[persisted_columns], use_container_width=True, hide_index=True)
+                trace_startup("render_fenabrave_persisted_dataframe before")
+                st.dataframe(persisted_df[persisted_columns], width="stretch", hide_index=True)
+                trace_startup("render_fenabrave_persisted_dataframe after")
 
         with right:
             st.markdown("### Leitura da rotina")
