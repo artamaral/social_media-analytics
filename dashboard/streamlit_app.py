@@ -2408,7 +2408,7 @@ def render_data_quality_raw_tables(
     with st.expander("Detalhamento tecnico", expanded=False):
         should_render_tables = st.checkbox(
             "Carregar tabelas tecnicas",
-            value=False,
+            value=True,
             key="data_quality_render_raw_tables",
         )
         if not should_render_tables:
@@ -2423,9 +2423,10 @@ def render_data_quality_raw_tables(
                 key=lambda row: (int(row.get("bucket_sort") or 0), int(row.get("total_checagens") or 0)),
             )
             st.markdown("### Legado guardrail")
+            trace_startup("render_data_quality_raw_tables guardrail before")
             st.dataframe(
                 guardrail_rows,
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
                 column_order=["intervalo_video", "total_checagens", "total_posts"],
                 column_config={
@@ -2434,14 +2435,19 @@ def render_data_quality_raw_tables(
                     "total_posts": "Total de posts",
                 },
             )
+            trace_startup("render_data_quality_raw_tables guardrail after")
         if dead_posts:
             st.write("")
             st.markdown("### Posts mortos e validacao humana")
-            st.dataframe([dead_posts], use_container_width=True)
+            trace_startup("render_data_quality_raw_tables dead_posts before")
+            st.dataframe([dead_posts], width="stretch")
+            trace_startup("render_data_quality_raw_tables dead_posts after")
         if queue_rows:
             st.write("")
             st.markdown("### Gargalo da fila por banda")
-            st.dataframe(queue_rows, use_container_width=True, hide_index=True)
+            trace_startup("render_data_quality_raw_tables queue before")
+            st.dataframe(queue_rows, width="stretch", hide_index=True)
+            trace_startup("render_data_quality_raw_tables queue after")
     trace_startup("render_data_quality_raw_tables end")
 
 
