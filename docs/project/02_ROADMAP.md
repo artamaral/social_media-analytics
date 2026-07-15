@@ -64,10 +64,10 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 
 ### Prioridade alta - novos blocos estruturados
 
-- [ ] Consolidar o fluxo operacional do Carros na Web em camadas persistidas: `fabricantes -> modelos -> fichas -> parser -> atualizacao incremental`, usando a etapa por ano como subetapa tecnica quando o catalogo exigir.
-- [ ] Validar a etapa intermediaria do Carros na Web: gerar e revisar `anos_modelo_validos.csv` a partir de `anos_modelo.csv`, classificando cada URL de ano como `valid_year_page`, `no_ficha_links`, `site_error`, `http_error` ou `unexpected_page`.
-- [ ] Se houver paginas de ano validas, retomar a descoberta de fichas tecnicas a partir de `anos_modelo_validos.csv`, mantendo discovery por links reais do catalogo, sem enumeracao sequencial de IDs e sem bypass de captcha.
-- [ ] Manter Carros na Web fora de schema definitivo no Supabase ate provar captura etica, repetivel e com cobertura suficiente. Usar `docs/external_data/27_CARROSNAWEB_VEHICLE_SPECS_INGESTION_PLAN.md` como referencia obrigatoria.
+- [ ] Consolidar o fluxo operacional do Carros na Web por CSVs recorrentes: baixar periodicamente os arquivos de catalogo ja existentes, detectar novas entradas, persistir em tabelas no Supabase e expor uma view de consumo para o Streamlit.
+- [ ] Definir a modelagem inicial do Carros na Web no banco para fabricantes, modelos e anos do modelo, preservando origem do CSV, data de download, hash/versao do arquivo e status de validacao.
+- [ ] Criar view analitica inicial do Carros na Web para consumo no Streamlit, focada em cobertura de catalogo, novas entradas e consulta por fabricante/modelo/ano.
+- [ ] Manter fichas tecnicas do Carros na Web em `on_hold`: scraping de fichas nao e viavel nesta etapa e nao deve bloquear a ingestao recorrente dos CSVs de catalogo.
 
 ### Prioridade media - definicao de escopo
 

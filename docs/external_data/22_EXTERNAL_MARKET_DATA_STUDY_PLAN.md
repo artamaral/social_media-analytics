@@ -8,7 +8,8 @@ Definir quais dados externos automotivos serao usados no projeto, por que eles i
 
 Este plano tambem define uma fronteira importante:
 
-- dados estruturados no Supabase: apenas Fenabrave e SENATRAN/RENAVAM
+- dados estruturados no Supabase: Fenabrave, SENATRAN/RENAVAM e CSVs de
+  catalogo do Carros na Web
 - contexto para textos e interpretacao: estudos e dados atuais de outras fontes setoriais ou macroeconomicas
 - fora do plano atual: fontes pagas ou restritas, como SERPRO/SENATRAN
 
@@ -18,9 +19,9 @@ Este plano tambem define uma fronteira importante:
   persistencia no Supabase e historico da fase 2 ativa validado para
   `12/2025` a `06/2026`, cobrindo os itens `1..8` e `11..22`
 - SENATRAN/RENAVAM: continua em estudo de granularidade, dataset e schema final
-- Carros na Web: tem papel analitico claro como catalogo tecnico, mas esta
-  bloqueado por captcha e nao deve ser tratado como pipeline estruturado nem
-  como modelagem final neste momento
+- Carros na Web: CSVs de catalogo ja existem fora desta maquina e devem ser
+  baixados regularmente, persistidos no Supabase e consumidos por view no
+  Streamlit; scraping de fichas tecnicas fica em `on_hold`
 
 ## Principio central
 
@@ -45,12 +46,18 @@ O projeto nao deve confundir:
 
 1. Fenabrave
 2. SENATRAN / RENAVAM
+3. Carros na Web, limitado aos CSVs recorrentes de catalogo
 
 ### Dados fora do Supabase no escopo atual
 
 SERPRO/SENATRAN fica fora do plano atual porque e uma fonte paga/restrita.
 
-MDIC/Comex Stat, Inmetro/PBE Veicular, ABVE, ANFAVEA, Banco Central, ABLA e outras fontes podem ser usadas como contexto para elaboracao de textos, interpretacao de movimentos de mercado e enriquecimento editorial, mas nao devem virar pipeline nem tabelas estruturadas neste momento.
+Fichas tecnicas do Carros na Web por scraping ficam fora do Supabase no escopo
+atual e em `on_hold`, porque nao sao viaveis de capturar de forma repetivel
+sem risco operacional. MDIC/Comex Stat, Inmetro/PBE Veicular, ABVE, ANFAVEA,
+Banco Central, ABLA e outras fontes podem ser usadas como contexto para
+elaboracao de textos, interpretacao de movimentos de mercado e enriquecimento
+editorial, mas nao devem virar pipeline nem tabelas estruturadas neste momento.
 
 ## Perguntas que o estudo precisa responder
 
@@ -140,21 +147,45 @@ Referencias:
 - https://www.gov.br/transportes/pt-br/assuntos/transito/senatran/estatisticas-senatran
 - https://dados.transportes.gov.br/dataset/registro-nacional-de-veiculos-automotores-renavam
 
+### 3. Carros na Web
+
+Papel no projeto:
+
+- fonte estruturada de catalogo automotivo para fabricantes, modelos e anos do
+  modelo
+- apoio a leitura de oferta de produto e enriquecimento do dashboard
+- complemento tecnico ao cruzamento futuro entre social media, Fenabrave e
+  SENATRAN/RENAVAM
+
+Uso esperado no Supabase:
+
+- tabelas de catalogo carregadas a partir de CSVs recorrentes
+- controle de arquivo com origem, data de download, hash/versao e status de
+  validacao
+- view analitica inicial para Streamlit, com cobertura, novas entradas e
+  consulta por fabricante/modelo/ano
+
+Estado atual:
+
+- CSVs de catalogo existem fora desta maquina
+- rotina de download recorrente, modelagem de banco e view do Streamlit ainda
+  precisam ser definidas
+- fichas tecnicas por scraping estao em `on_hold`
+
 ## Fontes fora do pipeline atual
 
-### Carros na Web
+### Fichas tecnicas do Carros na Web por scraping
 
 Status:
 
-- fonte desejada para catalogo tecnico
-- bloqueada por captcha no momento
+- `on_hold`
 
-Uso permitido agora:
+Motivo:
 
-- manter apenas como plano e referencia de produto
-- nao assumir captura repetivel
-- nao criar schema definitivo no Supabase antes de validar viabilidade etica e
-  operacional da coleta
+- o usuario confirmou que as fichas tecnicas nao sao viaveis de scrape nesta
+  etapa
+- captcha, erro 500 e validacao impedem rotina repetivel
+- essa frente nao deve bloquear a ingestao dos CSVs de catalogo
 
 ### 3. SERPRO / SENATRAN
 
@@ -513,7 +544,8 @@ Para fontes contextuais:
 
 1. Matriz de Fenabrave e SENATRAN/RENAVAM.
 2. Decisao de granularidade por fonte estruturada.
-3. Modelo inicial de tabelas no Supabase apenas para essas duas fontes.
+3. Modelo inicial de tabelas no Supabase para Fenabrave, SENATRAN/RENAVAM e
+   CSVs recorrentes do Carros na Web.
 4. Query de validacao por fonte estruturada.
 5. Processo de ingestao para Fenabrave.
 6. Processo de avaliacao de dados abertos SENATRAN/RENAVAM.
@@ -531,8 +563,10 @@ Para fontes contextuais:
 6. Criar primeira view de consumo para Streamlit.
 7. Criar prompt/funcao do ChatGPT para responder usando apenas dados carregados.
 8. Expandir Fenabrave para marca/modelo.
-9. Avaliar dados abertos SENATRAN/RENAVAM.
-10. Documentar regra de uso contextual para fontes #4 em diante.
+9. Definir rotina de CSV recorrente do Carros na Web, tabelas de catalogo e
+   primeira view de consumo no Streamlit.
+10. Avaliar dados abertos SENATRAN/RENAVAM.
+11. Documentar regra de uso contextual para fontes restantes.
 
 ## Criterio de sucesso
 

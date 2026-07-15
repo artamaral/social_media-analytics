@@ -1,32 +1,25 @@
-# Plano de ingestao Carros na Web - modelos e ficha tecnica
+# Plano de ingestao Carros na Web - catalogo por CSV e fichas em on hold
 
 Data: 2026-05-19
 
 ## Objetivo
 
 Planejar a inclusao dos dados do Carros na Web no projeto como base estruturada
-de catalogo automotivo, modelos e ficha tecnica.
+de catalogo automotivo a partir de CSVs recorrentes. Fichas tecnicas por
+scraping ficam em `on_hold`.
 
 ## Status atual consolidado
 
 - a fonte continua relevante como catalogo tecnico
-- a descoberta inicial de fabricantes funcionou e encontrou aproximadamente
-  `127` fabricantes
-- a descoberta de modelos funcionou melhor quando passou a considerar links
-  `catalogomodelo.asp?` e `catalogo.asp?`, com sessao aquecida e CSV
-  persistido
-- a nova camada descoberta no fluxo e `anos_modelo.csv`: modelos levam para
-  anos, e anos podem levar para fichas
-- algumas URLs de ano nao contem links de ficha e podem retornar pagina de erro
-- a captura direta de fichas continua sujeita a erro 500, pagina de erro,
-  validacao/captcha e ambiente Python incorreto
-- o diagnostico de acesso ja conseguiu retornar `success` para fichas reais
-  como `44763`, `22547` e `4801`
-- o parser de tabela dentro do HTML ja conseguiu extrair linhas tecnicas a
-  partir de tags `table` / `tr` / `td`
-- por isso, a frente deve validar primeiro `anos_modelo.csv` e gerar
-  `anos_modelo_validos.csv` antes de qualquer parser final ou schema definitivo
-  no Supabase
+- o usuario confirmou em 2026-07-15 que os CSVs de catalogo ja existem fora
+  desta maquina
+- esses CSVs devem ser baixados regularmente para detectar novas entradas
+- os dados devem ser persistidos no Supabase e consumidos por uma view no
+  Streamlit
+- fichas tecnicas por scraping nao sao viaveis nesta etapa e ficam em
+  `on_hold`
+- diagnosticos antigos de ficha e parser exploratorio permanecem apenas como
+  historico tecnico, nao como caminho operacional ativo
 
 Esta fonte e importante porque complementa as bases de mercado com detalhes de
 produto:
@@ -73,32 +66,35 @@ Renault Kardian Evolution 1.0 AT 2026
 
 ## Decisao operacional principal
 
-Nao enumerar IDs sequenciais.
+Usar CSVs recorrentes como fonte operacional.
 
-O scraper deve usar somente URLs reais descobertas por paginas publicas do
-catalogo:
+O fluxo ativo da frente passa a ser:
 
 ```text
-fabricantes -> modelos -> anos do modelo -> fichas validas -> HTML bruto -> parser -> CSV/tabelas
+download recorrente dos CSVs
+  -> armazenamento bruto/rastreavel
+  -> validacao de schema, duplicidade e novas entradas
+  -> persistencia no Supabase
+  -> view analitica
+  -> consumo no Streamlit
 ```
 
 Motivo:
 
-- chamadas diretas com sessao e headers completos funcionaram para uma ficha
-  valida
-- headers simples podem causar erro 500
-- tentativa de alterar manualmente o codigo acionou fluxo de captcha
-- enumeracao massiva de IDs aumenta risco de bloqueio e gera chamadas inuteis
-- no estado atual, o captcha esta bloqueando a captura consistente e impede
-  tratar esta fonte como pipeline repetivel
+- os CSVs ja existem como artefatos de catalogo e nao dependem desta maquina
+- baixar CSV regularmente e comparar versoes e mais repetivel do que tentar
+  scrapear fichas tecnicas
+- a necessidade analitica imediata e enxergar catalogo, cobertura e novas
+  entradas no dashboard
+- scraping de fichas tecnicas nao e viavel agora e nao deve travar a frente
 
 Regra:
 
 ```text
-Nao usar range(44763, 50000)
-Nao tentar descobrir fichas por forca bruta
-Nao tentar burlar captcha
-Usar apenas URLs publicadas no catalogo
+Baixar CSVs recorrentes da fonte acordada
+Persistir no banco com rastreabilidade
+Criar view para Streamlit
+Manter fichas tecnicas por scraping em on_hold
 ```
 
 ## Posicao na arquitetura do projeto
@@ -117,110 +113,100 @@ O fluxo segue o padrao do projeto:
 Aplicado ao Carros na Web:
 
 ```text
-Discovery de catalogo
-  -> CSVs de controle local
-  -> validacao das paginas de ano
-  -> HTML bruto das fichas
-  -> parser de tabelas HTML
-  -> dados tecnicos em formato longo
-  -> normalizacao futura no Supabase
+Download recorrente dos CSVs de catalogo
+  -> armazenamento bruto/rastreavel
+  -> validacao de schema e novas entradas
+  -> persistencia no Supabase
+  -> view analitica
   -> consumo por Streamlit e ChatGPT
 ```
 
 Resumo operacional consolidado para a frente:
 
 ```text
-fabricantes -> modelos -> fichas -> parser -> atualizacao incremental
+CSVs de catalogo -> staging/rastreabilidade -> tabelas normalizadas -> view Streamlit
 ```
 
 Observacao importante:
 
-- esse fluxo resume a direcao do produto
-- quando o catalogo do site exigir uma etapa intermediaria por ano, ela continua
-  valida como subetapa tecnica entre `modelos` e `fichas`
+- fichas tecnicas por scraping ficam em `on_hold`
+- qualquer codigo antigo de discovery/scraping deve ser tratado como
+  diagnostico historico, nao como caminho ativo do sprint
 
 ## Escopo da fase 1
 
 Objetivo da fase 1:
 
-- provar discovery de fabricantes, modelos, anos e fichas
-- validar URLs de ano antes de procurar fichas
-- baixar HTML apenas de fichas validas descobertas no catalogo
-- parsear tabelas de ficha tecnica
-- salvar dados em CSV para reuso e auditoria
-- manter logs simples de debug para entender cada etapa
+- definir origem e rotina de download dos CSVs existentes
+- preservar cada CSV baixado com rastreabilidade de origem, data e hash/versao
+- validar schema, duplicidades, campos obrigatorios e novas entradas
+- persistir catalogo no Supabase
+- criar view de consumo para Streamlit
 
 Formato inicial:
 
-- CSV local
-- HTML bruto local
-- Python com `requests`, `BeautifulSoup` e `pandas`
+- CSV recorrente baixado da fonte acordada
+- staging local ou Storage para arquivo bruto
+- Supabase para consumo analitico
 
-Motivo para comecar em CSV:
+Motivo para usar CSV:
 
-- reduz complexidade antes de criar schema definitivo
-- facilita inspecao manual dos resultados
-- preserva os passos intermediarios do discovery
-- permite validar qualidade antes de levar para Supabase
+- os arquivos ja existem fora desta maquina
+- facilita comparacao de versoes e deteccao de novas entradas
+- reduz risco operacional em relacao a scraping de ficha tecnica
+- cria caminho direto para view no Streamlit
 
 Pre-condicao real para executar esta fase:
 
-- confirmar que a captura consegue ocorrer de forma etica, repetivel e sem
-  bypass de protecao
-- se essa pre-condicao nao for atendida, a frente deve permanecer em espera
-  antes de qualquer decisao de schema
+- definir de onde os CSVs serao baixados e qual frequencia sera usada
+- confirmar colunas reais e contrato minimo dos arquivos
 
 Fora do escopo da fase 1:
 
+- scraping de fichas tecnicas
 - Playwright como caminho principal de coleta
 - OCR obrigatorio
 - captcha solving
 - proxy rotation
 - alta concorrencia
-- scheduler incremental
-- schema definitivo no Supabase
+- parser de HTML de ficha
 
 ## Estrutura de pastas recomendada no repo
 
 Como o repositorio ja organiza aquisicoes em `scripts/<fonte>`, a implementacao
 deve adaptar a estrutura sugerida para ficar consistente com os codigos atuais.
 
-Estrutura alvo:
+Estrutura alvo para o fluxo ativo por CSV recorrente:
 
 ```text
 scripts/carrosnaweb_ingestion/
   data/
-    discovery/
+    raw_csv/
       fabricantes.csv
       modelos.csv
       anos_modelo.csv
-      anos_modelo_validos.csv
-      fichas.csv
-      test_fichas_15.csv
-      fichas_scrape_status.csv
-    debug_html/
-    raw_html/
-      fichas/
+    staging/
+      download_manifest.csv
+      validation_status.csv
     processed/
-      ficha_tecnica.csv
+      carrosnaweb_catalogo.csv
   src/
-    carrosnaweb_client.py
-    discovery.py
-    parser.py
+    downloader.py
+    validator.py
     utils.py
-  01_discover_fabricantes.py
-  02_discover_modelos.py
-  03_discover_anos.py
-  04_validate_anos.py
-  05_discover_fichas.py
-  06_scrape_fichas.py
-  07_parse_fichas.py
-  diagnostics/
-    debug_url.py
-    test_playwright.py
+  01_download_catalog_csvs.py
+  02_validate_catalog_csvs.py
+  03_prepare_catalog_load.py
   README.md
   requirements.txt
 ```
+
+Estrutura historica de scraping de fichas:
+
+- scripts e diagnosticos ligados a `fichas.csv`, HTML bruto e parser de ficha
+  tecnica ficam como legado tecnico
+- nao sao caminho ativo do Sprint 5
+- nao devem ser usados para destravar a modelagem por CSV
 
 O estudo inicial sugeria uma pasta raiz `carrosweb/`. Para este projeto, a
 adaptacao para `scripts/carrosnaweb_ingestion/` evita criar uma ilha fora do
@@ -259,6 +245,13 @@ Estado atual de codigo versionado no repo:
   partir de `table/tr/td`
 - `scripts/carrosnaweb_ingestion/07_parse_fichas.py` para converter HTML bruto
   em CSV estruturado
+
+Leitura operacional:
+
+- o codigo acima permanece como historico exploratorio
+- a implementacao ativa deve criar a rotina de download/validacao/carga dos
+  CSVs recorrentes
+- fichas tecnicas seguem em `on_hold`
 
 ## Cliente HTTP
 
@@ -1008,26 +1001,31 @@ Regra:
 
 ## Proximo passo recomendado
 
-Antes de continuar para parser final de ficha tecnica, corrigir e validar a
-etapa `anos_modelo.csv`.
+Antes de implementar SQL ou Streamlit, fechar o contrato dos CSVs recorrentes:
 
 Tarefa imediata:
 
 ```text
-Criar validacao de url_ano:
-- abrir cada url_ano
-- registrar status HTTP
-- registrar final_url
-- verificar se contem fichadetalhe.asp
-- verificar se contem Ocorreu um erro
-- salvar apenas URLs validas em anos_modelo_validos.csv
+Definir rotina de CSV:
+- origem/caminho de download
+- frequencia de verificacao
+- lista de arquivos esperados
+- colunas obrigatorias por arquivo
+- regra de hash/versao
+- destino bruto
+- tabelas normalizadas
+- view inicial para Streamlit
 ```
 
 Essa tarefa agora tambem esta refletida no roadmap do projeto.
 
 ## Parser validado no HTML
 
-O comportamento validado na ficha atual e:
+Status:
+
+- legado tecnico / `on_hold`
+
+O comportamento validado na ficha atual permanece como evidencia historica:
 
 - os dados tecnicos estao dentro de estruturas `table` no HTML
 - a extracao precisa percorrer `tr` e `td`
@@ -1038,92 +1036,47 @@ O comportamento validado na ficha atual e:
 
 Direcao atual do parser:
 
-- salvar HTML bruto localmente
-- extrair pares `field` e `value`
-- manter `group`
-- preservar `image_urls` quando houver imagem embutida no valor
-- produzir formato longo para futura normalizacao
+- nao executar no Sprint 5
+- nao bloquear a ingestao por CSV
+- retomar apenas se surgir fonte viavel e repetivel sem scraping fragil
 
 ## Roadmap de implementacao
 
-### Prioridade 1 - estrutura
+### Prioridade 1 - contrato dos CSVs
 
-Criar estrutura:
-
-```text
-scripts/carrosnaweb_ingestion/src/
-scripts/carrosnaweb_ingestion/data/discovery/
-scripts/carrosnaweb_ingestion/data/debug_html/
-scripts/carrosnaweb_ingestion/data/raw_html/fichas/
-scripts/carrosnaweb_ingestion/data/processed/
-scripts/carrosnaweb_ingestion/diagnostics/
-```
-
-Criar arquivos base:
+Definir:
 
 ```text
-scripts/carrosnaweb_ingestion/src/carrosnaweb_client.py
-scripts/carrosnaweb_ingestion/requirements.txt
-scripts/carrosnaweb_ingestion/README.md
+origem dos CSVs
+frequencia de download
+campos obrigatorios
+chave natural de fabricante/modelo/ano
+regra de hash/versao
+criterio de nova entrada
 ```
 
-### Prioridade 2 - primeiro discovery
-
-Implementar e testar:
+### Prioridade 2 - banco
 
 ```text
-scripts/carrosnaweb_ingestion/src/carrosnaweb_client.py
-scripts/carrosnaweb_ingestion/01_discover_fabricantes.py
+tabela de arquivos fonte
+tabelas de catalogo normalizadas
+validacoes de carga
+upsert incremental
 ```
 
-Resultado esperado:
+### Prioridade 3 - Streamlit
 
 ```text
-scripts/carrosnaweb_ingestion/data/discovery/fabricantes.csv
+view analitica inicial
+tela ou bloco de consulta no dashboard
+indicadores de cobertura e novas entradas
 ```
 
-Com aproximadamente:
+### Prioridade 4 - fichas tecnicas
 
-```text
-127 fabricantes
-```
+Status: `on_hold`.
 
-### Prioridade 3 - modelos e fichas
-
-Implementar:
-
-```text
-scripts/carrosnaweb_ingestion/02_discover_modelos.py
-scripts/carrosnaweb_ingestion/03_discover_anos.py
-scripts/carrosnaweb_ingestion/04_validate_anos.py
-```
-
-Resultado esperado:
-
-```text
-scripts/carrosnaweb_ingestion/data/discovery/modelos.csv
-scripts/carrosnaweb_ingestion/data/discovery/anos_modelo.csv
-scripts/carrosnaweb_ingestion/data/discovery/anos_modelo_validos.csv
-```
-
-### Prioridade 4 - fichas, HTML bruto e parser
-
-Implementar:
-
-```text
-scripts/carrosnaweb_ingestion/05_discover_fichas.py
-scripts/carrosnaweb_ingestion/06_scrape_fichas.py
-scripts/carrosnaweb_ingestion/src/parser.py
-scripts/carrosnaweb_ingestion/07_parse_fichas.py
-```
-
-Resultado esperado:
-
-```text
-scripts/carrosnaweb_ingestion/data/discovery/fichas.csv
-scripts/carrosnaweb_ingestion/data/raw_html/fichas/<codigo>.html
-scripts/carrosnaweb_ingestion/data/processed/ficha_tecnica.csv
-```
+Nao implementar scraping de ficha tecnica nesta etapa.
 
 ## Evolucao futura
 
@@ -1165,30 +1118,27 @@ Performance social -> YouTube
 
 A fase 1 estara pronta quando:
 
-- `fabricantes.csv` existir e tiver fabricantes unicos
-- `modelos.csv` existir e nao tiver `url_modelo` duplicadas relevantes
-- `anos_modelo.csv` existir e tiver anos extraidos por fabricante/modelo
-- `anos_modelo_validos.csv` existir e separar `valid_year_page`,
-  `no_ficha_links`, `site_error`, `http_error` e `unexpected_page`
-- `fichas.csv` existir e tiver codigos unicos descobertos por catalogo
-- `fichas_scrape_status.csv` registrar status de coleta
-- HTML bruto de uma amostra limitada estiver salvo localmente
-- `ficha_tecnica.csv` tiver registros em formato longo
-- campos com imagens estiverem preservando `image_urls`
-- nenhuma coleta tiver dependido de enumeracao sequencial de IDs
-- captcha, bloqueio ou erro 500 estiverem registrados como status operacional
+- origem dos CSVs recorrentes estiver documentada
+- rotina de download estiver definida com frequencia, responsavel, destino e
+  regra de substituicao/versao
+- arquivos baixados preservarem hash/versao, data de download e status de
+  validacao
+- tabelas iniciais no Supabase persistirem fabricantes, modelos e anos do
+  modelo
+- validacoes cobrirem schema esperado, duplicidades, campos obrigatorios e
+  deteccao de novas entradas
+- view analitica inicial estiver criada para Streamlit
+- fichas tecnicas por scraping estiverem explicitamente em `on_hold`
 
-## Regra de decisao antes de schema definitivo
+## Regra de decisao para fichas tecnicas
 
-Antes de criar qualquer modelagem final no Supabase para esta fonte, o projeto
-deve concluir:
+Fichas tecnicas por scraping ficam em `on_hold`.
 
-- se a captura e viavel sem bypass de protecao
-- se a cobertura obtida justifica a frente como base estruturada
-- se a coleta consegue ser repetivel com risco operacional aceitavel
+So retomar essa frente se surgir fonte viavel, repetivel e sem bypass fragil.
+Essa pendencia nao bloqueia o catalogo por CSV nem a view do Streamlit.
 
 ## Commit sugerido
 
 ```text
-docs(scraper): documenta aprendizado do pipeline carrosweb
+docs(carrosnaweb): define contrato de catalogo por csv
 ```

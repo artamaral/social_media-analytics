@@ -3264,9 +3264,24 @@ Status em 2026-07-15:
 
 ### Atividades Carros na Web
 
-- Validar `anos_modelo_validos.csv`.
-- Confirmar se captura e etica, repetivel e sem bypass.
-- Decidir se a fonte segue em CSV/local, pausa ou evolui para schema.
+- [ ] Definir rotina de download recorrente dos CSVs existentes do Carros na Web.
+- [ ] Persistir os dados de catalogo no Supabase com rastreabilidade de arquivo,
+  data de download, hash/versao e status de validacao.
+- [ ] Criar view inicial para consumo no Streamlit.
+- [x] Colocar scraping de fichas tecnicas em `on_hold`.
+
+Status em 2026-07-15:
+
+- confirmado pelo usuario que os CSVs de catalogo ja existem, mas nao nesta
+  maquina
+- esses CSVs passam a ser a fonte operacional da frente, devendo ser baixados
+  regularmente para detectar novas entradas
+- a visao contratual correta passa a ser: CSV recorrente -> persistencia no
+  banco -> view analitica -> consumo no Streamlit
+- fichas tecnicas por scraping nao sao viaveis nesta etapa e ficam em
+  `on_hold`, sem bloquear a ingestao dos CSVs de catalogo
+- a decisao pendente deixa de ser "scraping ou schema" e passa a ser o desenho
+  da modelagem inicial, rotina de download e contrato da view do Streamlit
 
 ### Documentacao relacionada
 
@@ -3279,7 +3294,8 @@ Status em 2026-07-15:
 
 - Fenabrave com rotina mensal clara, historico canonico validado e fase 2 ativa
   consolidada para os itens `1..8` e `11..22`, com governanca mensal fechada.
-- Decisao objetiva sobre Carros na Web: continuar, pausar ou limitar escopo.
+- Decisao objetiva sobre Carros na Web: CSVs de catalogo continuam como fonte
+  estruturada; scraping de fichas tecnicas fica em `on_hold`.
 - Proximas necessidades de modelagem externa registradas.
 
 ### Estimativa

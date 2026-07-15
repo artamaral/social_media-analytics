@@ -126,3 +126,30 @@ Leitura:
 - nao ha evidencia de vazamento de videos `unavailable` na fila operacional
 - a fila do worker e a fila exibida no dashboard estao coerentes com a regra de isolamento
 - a validacao de views analiticas de ranking, crescimento e cobertura deve continuar separada desta auditoria operacional
+
+## Carros na Web - CSVs recorrentes de catalogo
+
+Status:
+
+- contrato definido em 2026-07-15
+- fichas tecnicas por scraping ficam em `on_hold`
+
+Antes de publicar dados do Carros na Web em view consumida pelo Streamlit,
+validar:
+
+- origem/caminho de download dos CSVs
+- data de download e hash/versao de cada arquivo
+- schema esperado por CSV
+- campos obrigatorios de fabricante, modelo e ano do modelo
+- duplicidades pela chave natural definida para o catalogo
+- novas entradas em relacao ao ultimo arquivo validado
+- registros removidos ou alterados em relacao a versao anterior
+- status de validacao da carga antes de expor a view analitica
+
+Regra:
+
+- a view do Streamlit so deve consumir dados com carga validada
+- novas entradas devem ser destacadas como mudanca de catalogo, nao como venda
+  ou emplacamento
+- dados do Carros na Web devem ser rotulados como catalogo/oferta tecnica,
+  separados de Fenabrave e SENATRAN/RENAVAM

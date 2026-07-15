@@ -1388,6 +1388,43 @@ Impacto esperado:
 
 ---
 
+## Carros na Web: CSV recorrente no banco e fichas tecnicas em on hold
+
+Data:
+
+- 2026-07-15
+
+Decisao:
+
+- tratar os CSVs existentes do Carros na Web como a fonte operacional da frente
+  nesta etapa
+- baixar os CSVs regularmente para identificar novas entradas de catalogo
+- persistir os dados no Supabase com rastreabilidade de arquivo, data de
+  download, hash/versao e status de validacao
+- criar uma view analitica inicial para consumo no Streamlit
+- colocar fichas tecnicas por scraping em `on_hold`
+
+Motivo:
+
+- o usuario confirmou que os CSVs ja existem, mas nao estao nesta maquina
+- o caminho por CSV e mais repetivel e auditavel do que tentar scraping de
+  fichas tecnicas
+- as fichas tecnicas nao sao viaveis de scrape nesta etapa
+- manter a frente parada por causa das fichas impediria usar um catalogo que ja
+  pode gerar valor analitico no dashboard
+
+Impacto esperado:
+
+- Carros na Web passa a ter escopo estruturado limitado a catalogo por CSV
+- a proxima implementacao deve focar download, staging, tabela normalizada e
+  view para Streamlit
+- scripts de scraping de ficha, parser de HTML e discovery por ficha deixam de
+  guiar o sprint ativo
+- futuras discussoes de ficha tecnica so devem voltar se surgir fonte viavel
+  sem scraping fragil
+
+---
+
 ## Runtime do Streamlit fixado em Python 3.12
 
 Data:

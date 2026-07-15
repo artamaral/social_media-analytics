@@ -376,32 +376,32 @@ Proxima avaliacao:
 
 ### 2.2 Carros na Web
 
-- Status: bloqueado por captcha; ainda em avaliacao de viabilidade de ingestao
+- Status: CSVs de catalogo seguem como frente estruturada a modelar; scraping
+  de fichas tecnicas em `on_hold`
 - Documento principal: `docs/external_data/27_CARROSNAWEB_VEHICLE_SPECS_INGESTION_PLAN.md`
-- Papel na arquitetura: base estruturada de catalogo automotivo, versoes e
-  ficha tecnica
+- Papel na arquitetura: base estruturada de catalogo automotivo, fabricantes,
+  modelos e anos do modelo, com consumo futuro no Streamlit
 
 #### Estado atual
 
-- existe plano detalhado para discovery por links reais do catalogo
-- ja existe codigo versionado para diagnostico de acesso, parser exploratorio
-  de tabela e discovery de modelos em `scripts/carrosnaweb_ingestion/`
-- o diagnostico recente conseguiu retornar `success` para fichas reais como
-  `44763`, `22547` e `4801`
-- a captura real ainda encontra captcha em alguns padroes e por isso os dados
-  ainda nao estao sendo obtidos com confiabilidade suficiente
-- por isso, a frente ainda nao deve ser tratada como schema definitivo nem como
-  pipeline estruturado
-- ja existe parser de `table/tr/td` funcionando sobre HTML bruto, mas o fluxo
-  completo ainda nao foi consolidado como rotina repetivel
+- o usuario confirmou em 2026-07-15 que os CSVs de catalogo ja existem fora
+  desta maquina e devem ser baixados regularmente
+- a frente deixa de depender de scraping de fichas para avancar
+- o contrato operacional passa a ser baixar os CSVs, detectar novas entradas,
+  persistir no Supabase e consumir por uma view no Streamlit
+- fichas tecnicas por scraping nao sao viaveis nesta etapa e ficam em
+  `on_hold`
+- diagnosticos antigos de ficha e parser exploratorio permanecem como evidencia
+  historica, mas nao guiam a execucao atual
 
 #### O que ainda falta nesta frente
 
-- validar se existe caminho etico e repetivel para captura sem bypass de
-  protecao
-- confirmar se a cobertura obtida justificaria manter a frente como fonte
-  estruturada
-- somente depois disso decidir se faz sentido criar schema proprio no Supabase
+- definir origem/caminho de download dos CSVs recorrentes
+- criar modelagem inicial no Supabase para catalogo, com rastreabilidade de
+  arquivo, hash/versao, data de download e status de validacao
+- criar view inicial para Streamlit, priorizando cobertura, novas entradas e
+  consulta por fabricante/modelo/ano
+- manter fichas tecnicas em `on_hold` ate surgir fonte viavel sem scraping
 
 ### 2.3 SENATRAN / RENAVAM
 
@@ -427,8 +427,7 @@ Proxima avaliacao:
 ### 2.4 Proximos checkpoints desta frente
 
 - consolidar Fenabrave como rotina mensal repetivel
-- tratar Carros na Web primeiro como problema de viabilidade de captura antes de
-  retomar schema e pipeline
+- modelar Carros na Web por CSV recorrente, com banco e view para Streamlit
 - fechar a avaliacao de granularidade util para SENATRAN / RENAVAM
 - harmonizar futuramente marcas e modelos entre social media, Fenabrave,
   catalogo tecnico e frota registrada
@@ -515,7 +514,7 @@ Proxima avaliacao:
 
 - score hibrido `v2`
 - guarda de cobertura minima
-- avaliacao de viabilidade do Carros na Web sob captcha
+- modelagem inicial do Carros na Web por CSV recorrente
 - estudo de granularidade para SENATRAN / RENAVAM
 - expansao funcional do app Streamlit
 
@@ -524,9 +523,9 @@ Proxima avaliacao:
 - evolucao do social media depende principalmente de analisar se a regra de
   `next_check` esta priorizando corretamente a base conforme ela cresce, alem
   de consolidar cobertura minima e validacoes de historico
-- evolucao das fontes externas depende principalmente de destravar a viabilidade
-  de Carros na Web e SENATRAN/RENAVAM; Fenabrave ja tem governanca mensal
-  fechada para a fase 2 ativa
+- evolucao das fontes externas depende principalmente de modelar Carros na Web
+  por CSV recorrente e definir SENATRAN/RENAVAM; Fenabrave ja tem governanca
+  mensal fechada para a fase 2 ativa
 - evolucao do dashboard depende de expandir a cobertura funcional do app sobre
   as views ja operacionais
 
@@ -551,6 +550,14 @@ Proxima avaliacao:
     etapa e fica condicionada a automacao futura, retries, SLA ou monitoramento
     multi-fonte
 
+- Data de referencia deste status: `2026-07-15`
+- Resultado:
+  - a frente Carros na Web foi redefinida para CSVs recorrentes de catalogo,
+    persistencia no Supabase e view de consumo no Streamlit
+  - fichas tecnicas por scraping ficaram em `on_hold`
+  - a proxima execucao deve definir origem dos CSVs, modelagem inicial,
+    validacoes de download e contrato da view
+
 - Data de referencia deste status: `2026-06-16`
 - Resultado:
   - Sprint 1 validou que videos `unavailable` nao aparecem na fila operacional
@@ -568,8 +575,8 @@ Proxima avaliacao:
 - Resultado:
   - frente social media segue como base operacional principal
   - frente Fenabrave ja saiu de estudo e entrou em implementacao local
-  - frente Carros na Web esta bloqueada por captcha e ainda nao deve ser
-    tratada como pipeline estruturado
+  - leitura antiga sobre Carros na Web foi substituida em 2026-07-15 pelo
+    contrato de CSV recorrente com fichas tecnicas em `on_hold`
   - frente SENATRAN / RENAVAM segue em estudo
   - frente dashboard esta com estrategia pronta e aguarda implementacao do app
 
