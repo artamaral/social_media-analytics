@@ -4776,7 +4776,9 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
             if channel_error:
                 st.warning(channel_error)
             if channel_matches:
-                st.dataframe(pd.DataFrame(channel_matches), use_container_width=True, hide_index=True)
+                trace_startup("render_creator_intake channel_matches_dataframe before")
+                st.dataframe(pd.DataFrame(channel_matches), width="stretch", hide_index=True)
+                trace_startup("render_creator_intake channel_matches_dataframe after")
 
             st.markdown("### 3. Associar nichos")
             linked_entity_name = str(resolved_entity["entity_name"]) if resolved_entity else raw_name
@@ -4998,6 +5000,7 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
 
             if creator_created:
                 st.markdown("### Criador cadastrado")
+                trace_startup("render_creator_intake created_creator_dataframe before")
                 st.dataframe(
                     pd.DataFrame(
                         [
@@ -5014,9 +5017,10 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
                             }
                         ]
                     ),
-                    use_container_width=True,
+                    width="stretch",
                     hide_index=True,
                 )
+                trace_startup("render_creator_intake created_creator_dataframe after")
 
             onboarding_result = st.session_state.get("creator_intake_onboarding_result")
             onboarding_error = st.session_state.get("creator_intake_onboarding_error")
@@ -5063,7 +5067,9 @@ def render_external_intake_page(page_title: str = "Cadastro de Criadores") -> No
             sorted_review_rows = sorted(review_rows, key=lambda row: str(row.get("created_at") or ""), reverse=True)
             review_card_grid(sorted_review_rows[:12])
             with st.expander("Detalhe tecnico da revisao", expanded=False):
-                st.dataframe(pd.DataFrame(sorted_review_rows), use_container_width=True, hide_index=True)
+                trace_startup("render_creator_intake review_dataframe before")
+                st.dataframe(pd.DataFrame(sorted_review_rows), width="stretch", hide_index=True)
+                trace_startup("render_creator_intake review_dataframe after")
         else:
             st.info("Nenhum registro encontrado em v_entity_intake_review.")
 
