@@ -5995,6 +5995,7 @@ def render_fenabrave_intake_page() -> None:
                     item21_checks = preview_payload.get("item21_checks") or []
                     item22_rows = preview_payload.get("item22_rows") or []
                     item22_checks = preview_payload.get("item22_checks") or []
+                    trace_startup("render_fenabrave_preview items_1_8 start")
                     if item1_rows:
                         st.markdown("#### Item 1 fase 2 - Ranking dos emplacamentos mes")
                         item1_df = pd.DataFrame(item1_rows)
@@ -6005,14 +6006,14 @@ def render_fenabrave_intake_page() -> None:
                         ]
                         st.dataframe(
                             item1_df[item1_preview_columns].head(20),
-                            use_container_width=True,
+                            width="stretch",
                             hide_index=True,
                         )
                     if item1_checks:
                         st.markdown("#### Checks item 1 fase 2")
                         st.dataframe(
                             pd.DataFrame(item1_checks),
-                            use_container_width=True,
+                            width="stretch",
                             hide_index=True,
                         )
                     if item2_rows:
@@ -6025,14 +6026,14 @@ def render_fenabrave_intake_page() -> None:
                         ]
                         st.dataframe(
                             item2_df[item2_preview_columns].head(20),
-                            use_container_width=True,
+                            width="stretch",
                             hide_index=True,
                         )
                     if item2_checks:
                         st.markdown("#### Checks item 2 fase 2")
                         st.dataframe(
                             pd.DataFrame(item2_checks),
-                            use_container_width=True,
+                            width="stretch",
                             hide_index=True,
                         )
                     if item3_rows:
@@ -6045,14 +6046,14 @@ def render_fenabrave_intake_page() -> None:
                         ]
                         st.dataframe(
                             item3_df[item3_preview_columns].head(25),
-                            use_container_width=True,
+                            width="stretch",
                             hide_index=True,
                         )
                     if item3_checks:
                         st.markdown("#### Checks item 3 fase 2")
                         st.dataframe(
                             pd.DataFrame(item3_checks),
-                            use_container_width=True,
+                            width="stretch",
                             hide_index=True,
                         )
                     if item4_rows:
@@ -6065,14 +6066,14 @@ def render_fenabrave_intake_page() -> None:
                         ]
                         st.dataframe(
                             item4_df[item4_preview_columns].head(25),
-                            use_container_width=True,
+                            width="stretch",
                             hide_index=True,
                         )
                     if item4_checks:
                         st.markdown("#### Checks item 4 fase 2")
                         st.dataframe(
                             pd.DataFrame(item4_checks),
-                            use_container_width=True,
+                            width="stretch",
                             hide_index=True,
                         )
                     if item5_rows:
@@ -6090,14 +6091,14 @@ def render_fenabrave_intake_page() -> None:
                         ]
                         st.dataframe(
                             item5_df[item5_preview_columns],
-                            use_container_width=True,
+                            width="stretch",
                             hide_index=True,
                         )
                     if item5_checks:
                         st.markdown("#### Checks item 5 fase 2")
                         st.dataframe(
                             pd.DataFrame(item5_checks),
-                            use_container_width=True,
+                            width="stretch",
                             hide_index=True,
                         )
                     if item6_rows:
@@ -6111,14 +6112,14 @@ def render_fenabrave_intake_page() -> None:
                         ]
                         st.dataframe(
                             item6_df[item6_preview_columns],
-                            use_container_width=True,
+                            width="stretch",
                             hide_index=True,
                         )
                     if item6_checks:
                         st.markdown("#### Checks item 6 fase 2")
                         st.dataframe(
                             pd.DataFrame(item6_checks),
-                            use_container_width=True,
+                            width="stretch",
                             hide_index=True,
                         )
                     if item7_rows:
@@ -6131,14 +6132,14 @@ def render_fenabrave_intake_page() -> None:
                         ]
                         st.dataframe(
                             item7_df[item7_preview_columns].head(30),
-                            use_container_width=True,
+                            width="stretch",
                             hide_index=True,
                         )
                     if item7_checks:
                         st.markdown("#### Checks item 7 fase 2")
                         st.dataframe(
                             pd.DataFrame(item7_checks),
-                            use_container_width=True,
+                            width="stretch",
                             hide_index=True,
                         )
                     if item8_rows:
@@ -6151,16 +6152,17 @@ def render_fenabrave_intake_page() -> None:
                         ]
                         st.dataframe(
                             item8_df[item8_preview_columns].head(30),
-                            use_container_width=True,
+                            width="stretch",
                             hide_index=True,
                         )
                     if item8_checks:
                         st.markdown("#### Checks item 8 fase 2")
                         st.dataframe(
                             pd.DataFrame(item8_checks),
-                            use_container_width=True,
+                            width="stretch",
                             hide_index=True,
                         )
+                    trace_startup("render_fenabrave_preview items_1_8 end")
                     if item11_rows:
                         st.markdown("#### Item 11 fase 2 - Participacao venda direta e varejo mes")
                         item11_df = pd.DataFrame(item11_rows)
