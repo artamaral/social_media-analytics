@@ -5379,21 +5379,27 @@ def render_creator_detail_page() -> None:
 
     show_interactive_creator_charts = st.checkbox(
         "Mostrar graficos interativos do criador",
-        value=False,
-        help="Desligado por padrao para evitar segfaults intermitentes do Streamlit Cloud ao renderizar componentes nativos.",
+        value=True,
+        help="Religado em teste controlado. Se houver instabilidade no Streamlit Cloud, desligue para manter o fallback HTML.",
     )
     if show_interactive_creator_charts:
+        trace_startup("render_creator_detail charts start")
         chart_left, chart_right = st.columns(2)
         with chart_left:
             st.markdown(f"#### Distribuicao de engajamento | {selected_video_type_label}")
             st.caption("Participacao normalizada pelo score: views x1, likes x10 e comentarios x20, respeitando o tipo de video escolhido.")
+            trace_startup("render_creator_detail donut_chart before")
             st.plotly_chart(donut_fig, use_container_width=True, config={"displayModeBar": False})
+            trace_startup("render_creator_detail donut_chart after")
         with chart_right:
             st.markdown(f"#### Crescimento semanal | {selected_video_type_label}")
             st.caption("Views em barras; likes e comentarios em linhas com base em snapshots semanais. Semanas sem base suficiente nao entram no grafico.")
+            trace_startup("render_creator_detail weekly_chart before")
             st.plotly_chart(weekly_fig, use_container_width=True, config={"displayModeBar": False})
+            trace_startup("render_creator_detail weekly_chart after")
+        trace_startup("render_creator_detail charts end")
     else:
-        st.info("Graficos interativos desativados por padrao enquanto isolamos o segfault nativo no Streamlit Cloud.")
+        st.info("Graficos interativos desativados nesta sessao. O restante da pagina segue em fallback HTML estavel.")
 
     video_scope_weekly = st.checkbox("Mostrar videos da semana selecionada", value=False)
     videos_source_df = filtered_posts_df.copy() if video_scope_weekly else top_videos_df.copy()
