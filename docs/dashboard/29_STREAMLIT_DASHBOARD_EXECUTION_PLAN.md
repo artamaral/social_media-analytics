@@ -615,6 +615,11 @@ Regra operacional:
 - heartbeat operacional do `youtube_main_scraper` passa a ser persistido em
   `youtube_discovery_heartbeats`, permitindo separar `rodou sem novidades`,
   `falhou antes de gerar resultado` e ausencia de execucao recente
+- o KPI visual `Snapshots canal 24h` deixa de aparecer no card de discovery do
+  Streamlit, porque a leitura executiva passa a priorizar heartbeat, posts
+  tocados e erros
+- ponto aberto: avaliar remocao futura do campo legado tambem na
+  `v_dashboard_new_post_discovery_status`
 - validacao inicial em `2026-07-16`:
   - Cloud Run confirmou o caso `success` com posts novos
   - o bloco `Integridade da coleta` no Streamlit mostrou texto coerente para o

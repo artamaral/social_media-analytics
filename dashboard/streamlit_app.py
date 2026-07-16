@@ -4084,7 +4084,6 @@ def render_collection_integrity_section() -> None:
             or "--"
         )
         discovery_evidence_source = str(discovery_status.get("fonte_ultima_evidencia") or "--")
-        discovery_checked_creators = format_int(discovery_status.get("creators_avaliados_24h"))
         discovery_new_posts = format_int(discovery_status.get("novos_posts_24h"))
         discovery_new_posts_6h = format_int(discovery_status.get("novos_posts_6h"))
         discovery_processed_creators = format_int(discovery_status.get("heartbeat_processed_creators"))
@@ -4100,7 +4099,6 @@ def render_collection_integrity_section() -> None:
         discovery_snapshot_value = "--"
         discovery_latest_post = "--"
         discovery_evidence_source = "--"
-        discovery_checked_creators = "--"
         discovery_new_posts = "--"
         discovery_new_posts_6h = "--"
         discovery_processed_creators = "--"
@@ -4158,7 +4156,6 @@ def render_collection_integrity_section() -> None:
                         f"Creators processados: {discovery_processed_creators} | "
                         f"Posts tocados: {discovery_inserted_or_updated_posts} | "
                         f"Erros: {discovery_heartbeat_errors} | "
-                        f"Snapshots canal 24h: {discovery_checked_creators} | "
                         f"Novos posts 6h: {discovery_new_posts_6h} | "
                         f"Novos posts 24h: {discovery_new_posts} | "
                         f"Ultima descoberta: {discovery_latest_post}"

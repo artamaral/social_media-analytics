@@ -84,6 +84,12 @@ Leitura operacional:
   - ausencia de execucao recente
 - a view `v_dashboard_new_post_discovery_status` passa a priorizar heartbeat e
   usa `posts.created_at` e `creator_metrics_history` apenas como fallback
+- o KPI visual `Snapshots canal 24h` foi removido do Streamlit em
+  `2026-07-16`, porque o numero estava confuso para leitura executiva e nao era
+  mais evidencia principal do discovery
+- ponto aberto: avaliar remocao futura desse campo tambem da
+  `v_dashboard_new_post_discovery_status` quando o fallback legado deixar de
+  ser util para diagnostico
 
 Validacao real mais recente do heartbeat:
 

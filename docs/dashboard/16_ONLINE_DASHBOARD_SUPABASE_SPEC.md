@@ -350,6 +350,10 @@ Contrato atual:
   - `rodou sem novidades`
   - `falhou antes de gerar resultado`
   - fallback por evidencia indireta quando ainda nao houver heartbeat recente
+- o card do Streamlit nao deve mais exibir o KPI visual `Snapshots canal 24h`,
+  porque esse sinal legado nao e mais a leitura executiva principal
+- ponto aberto: o campo legado permanece na view SQL como apoio tecnico e sua
+  remocao futura deve ser avaliada separadamente
 - validacao inicial em producao em `2026-07-16`:
   - caso `success` com posts novos confirmado no Cloud Run
   - leitura correspondente confirmada no Streamlit

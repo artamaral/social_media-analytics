@@ -62,6 +62,10 @@ Uso do heartbeat no dashboard:
   em `failed`
 - manter `posts.created_at` e `creator_metrics_history` apenas como fallback
   quando nao houver heartbeat recente disponivel
+- o indicador visual `Snapshots canal 24h` deixa de ser exibido no Streamlit,
+  porque nao representa mais a evidencia principal do worker de discovery
+- ponto aberto: revisar remocao futura do campo legado tambem na view SQL se o
+  fallback deixar de ter valor diagnostico
 
 Validacao inicial em producao:
 

@@ -196,6 +196,12 @@ Contrato atual:
   - `heartbeat`
   - `post_insert`
   - `channel_snapshot_legacy`
+- o KPI visual derivado de `creators_avaliados_24h` deixa de aparecer no
+  Streamlit, porque o heartbeat passou a ser a leitura principal e o numero
+  legado gerava interpretacao ambigua quando vinha `0`
+- ponto aberto: manter `creators_avaliados_24h` na
+  `v_dashboard_new_post_discovery_status` apenas como fallback tecnico por
+  enquanto e revisar remocao futura do campo no SQL
 
 Leitura esperada no dashboard:
 
