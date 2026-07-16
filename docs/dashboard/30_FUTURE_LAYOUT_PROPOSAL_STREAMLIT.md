@@ -1,135 +1,145 @@
 # Proposta de Layout Futuro do Streamlit
 
-Referência visual registrada a partir do mockup enviado em 2026-05-20.
+Referencia visual registrada a partir do mockup enviado em 2026-05-20.
 
-Este documento pertence à branch `codex/dashboard-streamlit-mvp` enquanto a proposta visual ainda não estiver implementada. Ele deve ir para a `main` somente quando deixar de ser ideia de design e virar contrato real do dashboard.
+Este documento pertence a branch `codex/dashboard-streamlit-mvp` enquanto a
+proposta visual ainda nao estiver implementada como contrato estavel. Ele deve
+ir para a `main` somente quando deixar de ser ideia de design e virar contrato
+real do dashboard.
 
 ## Objetivo
 
-Registrar a direção visual futura do dashboard e organizar a implementação de forma faseada, usando o stack atual:
+Registrar a direcao visual futura do dashboard e organizar a implementacao de
+forma faseada, usando o stack atual:
 
-- `streamlit` para estrutura de páginas, navegação, filtros e tabelas
-- `plotly` para gráficos de barras, linhas, rosca e séries temporais
-- `pandas` para transformação e modelagem dos dados no app
-- CSS customizado via `st.markdown(..., unsafe_allow_html=True)` para aproximar a identidade visual
+- `streamlit` para estrutura de paginas, navegacao, filtros e tabelas
+- `plotly` para graficos de barras, linhas, rosca e series temporais
+- `pandas` para transformacao e modelagem dos dados no app
+- CSS customizado via `st.markdown(..., unsafe_allow_html=True)` para
+  aproximar a identidade visual
 
 ## Veredito de Viabilidade
 
-É viável seguir a direção do mockup com Streamlit, desde que ele seja tratado como referência de alta fidelidade, não como requisito pixel-perfect imediato.
+E viavel seguir a direcao do mockup com Streamlit, desde que ele seja tratado
+como referencia de alta fidelidade, e nao como requisito pixel-perfect
+imediato.
 
-O stack atual já cobre o necessário para:
+O stack atual ja cobre o necessario para:
 
 - sidebar escura
 - cards de KPI
 - grids visuais
 - filtros globais
 - tabelas interativas
-- gráficos com Plotly
-- estados de erro, vazio e conexão
+- graficos com Plotly
+- estados de erro, vazio e conexao
 - blocos futuros de insights
 
-## Limitações Práticas
+## Limitacoes Praticas
 
-- Streamlit não oferece liberdade total de layout como React.
-- CSS global precisa ser controlado para não afetar componentes nativos.
-- Paginação rica, animações e interações complexas podem exigir componentes customizados.
-- Algumas páginas do mockup dependem de views SQL que ainda não existem.
+- Streamlit nao oferece liberdade total de layout como React.
+- CSS global precisa ser controlado para nao afetar componentes nativos.
+- Paginacao rica, animacoes e interacoes complexas podem exigir componentes
+  customizados.
+- Algumas paginas do mockup ainda dependem de contratos SQL adicionais ou de
+  evolucao de metricas que nao fazem parte do estado atual do app.
 
 ## Mapeamento do Mockup
 
 ### 1. Sidebar Fixa
 
-Viável com `st.sidebar` e navegação por `radio` ou multipage nativo.
+Viavel com `st.sidebar` e navegacao por `radio` ou multipage nativo.
 
 Uso recomendado agora:
 
-- manter navegação simples
-- destacar apenas páginas com dado real ou placeholder explícito
-- evitar excesso de páginas antes dos contratos SQL
+- manter navegacao simples
+- destacar apenas paginas com dado real ou placeholder explicito
+- evitar excesso de paginas antes dos contratos SQL
 
 ### 2. Barra Superior com Filtros
 
-Viável com `st.columns`, `selectbox`, `multiselect`, `date_input` e botões.
+Viavel com `st.columns`, `selectbox`, `multiselect`, `date_input` e botoes.
 
 Uso recomendado agora:
 
-- filtros por página, não uma barra global ainda
-- filtros globais só quando mais de uma página usar o mesmo período/nicho
+- filtros por pagina, nao uma barra global ainda
+- filtros globais so quando mais de uma pagina usar o mesmo periodo ou nicho
 
 ### 3. Cards de KPI
 
-Viável com HTML/CSS customizado, já iniciado no app atual.
+Viavel com HTML e CSS customizado, ja iniciado no app atual.
 
 Uso recomendado agora:
 
-- criar helper único para cards
-- padronizar título, valor, legenda, picto e cor
-- evitar HTML duplicado por página
+- criar helper unico para cards
+- padronizar titulo, valor, legenda, picto e cor
+- evitar HTML duplicado por pagina
 
 ### 4. Tabelas de Ranking e Outliers
 
-Viável com `st.dataframe`.
+Viavel com `st.dataframe`.
 
 Uso recomendado agora:
 
 - usar tabelas nativas
 - formatar colunas
-- adiar paginação customizada
+- adiar paginacao customizada
 
-### 5. Gráficos
+### 5. Graficos
 
-Viável com Plotly.
+Viavel com Plotly.
 
 Uso recomendado agora:
 
-- criar função comum de tema Plotly
+- criar funcao comum de tema Plotly
 - aplicar fundo, fonte, grid e margens de forma consistente
-- não repetir `fig.update_layout` em cada página
+- nao repetir `fig.update_layout` em cada pagina
 
 ### 6. Blocos de IA Insights
 
-Viável, mas fora do MVP visual imediato.
+Viavel, mas fora do MVP visual imediato.
 
-Pré-condições:
+Pre-condicoes:
 
 - definir quais views podem alimentar o contexto
-- impedir SQL arbitrário
-- montar `context packet` por página
-- registrar data de referência e filtros usados
+- impedir SQL arbitrario
+- montar `context packet` por pagina
+- registrar data de referencia e filtros usados
 
 ### 7. Data Health
 
-Viável e já alinhado ao app atual.
+Viavel e ja alinhado ao app atual.
 
 Contrato inicial:
 
 - `v_dashboard_guardrail_coverage_status`
 - `v_dashboard_dead_post_validation_status`
 
-## Métricas Visíveis no Mockup
+## Metricas Visiveis no Mockup
 
-Os valores abaixo foram lidos visualmente da referência e são exemplos de layout, não contrato de negócio.
+Os valores abaixo foram lidos visualmente da referencia e sao exemplos de
+layout, nao contrato de negocio.
 
 ### Overview
 
-- Creators ativos
-- Novos vídeos
-- Crescimento médio
-- Engajamento médio
-- Creators em aceleração
-- Nicho em alta
-- evolução temporal
+- creators ativos
+- novos videos
+- crescimento medio
+- engajamento medio
+- creators em aceleracao
+- nicho em alta
+- evolucao temporal
 - top movers
-- insights rápidos
+- insights rapidos
 
 ### Creator Ranking
 
 - creator
 - subnicho
 - subscribers
-- variação de views
+- variacao de views
 - engajamento
-- vídeos
+- videos
 - score
 
 ### Creator Detail
@@ -137,15 +147,15 @@ Os valores abaixo foram lidos visualmente da referência e são exemplos de layo
 - subscribers
 - crescimento de views
 - engajamento
-- vídeos no período
-- frequência
+- videos no periodo
+- frequencia
 - desde quando o creator existe
-- top vídeos
-- distribuição de conteúdo
+- top videos
+- distribuicao de conteudo
 
 ### Content Analytics
 
-- desempenho por conteúdo
+- desempenho por conteudo
 - growth
 - engajamento
 - outlier score
@@ -156,22 +166,22 @@ Os valores abaixo foram lidos visualmente da referência e são exemplos de layo
 - growth observado
 - valor esperado
 - outlier score
-- baseline por vídeo
+- baseline por video
 
 ### Niche Trends
 
 - creators por subnicho
-- vídeos
-- crescimento médio
+- videos
+- crescimento medio
 - engajamento
-- aceleração
+- aceleracao
 
 ### AI Insights
 
-- tendência
+- tendencia
 - oportunidade
 - alerta
-- recomendação
+- recomendacao
 - resumo executivo
 
 ### Data Health
@@ -179,91 +189,96 @@ Os valores abaixo foram lidos visualmente da referência e são exemplos de layo
 - status de pipeline
 - gaps de coleta
 - qualidade dos dados
-- cobertura por creators/posts/histórico
+- cobertura por creators, posts e historico
 
-## Alinhamento com a Documentação Atual
+## Alinhamento com a Documentacao Atual
 
 ### Alinhado
 
-- Overview com KPIs e visão operacional
-- Ranking de creators e crescimento semanal
-- Data Quality antes de análises fortes
+- Overview com KPIs e visao operacional
+- ranking de creators e crescimento semanal
+- Data Quality antes de analises fortes
 - linguagem visual escura, com cards e pictos
 - uso de Supabase sob demanda
+- `Hot now` como ranking separado da logica operacional da fila
 
 ### Parcialmente Alinhado
 
-- AI Insights ainda precisa virar escopo funcional.
-- Niche Trends e Outliers precisam de contrato SQL.
-- Creator Detail avançado está acima do MVP inicial.
+- AI Insights ainda precisa virar escopo funcional
+- Niche Trends e Outliers precisam de contrato SQL
+- Creator Detail avancado esta acima do MVP atual
 
-## Plano de Implementação Proposto
+## Plano de Implementacao Proposto
 
-### Decisão de Escopo
+### Decisao de Escopo
 
-Implementar primeiro uma base visual reutilizável e páginas conectadas apenas quando já existir view SQL estável.
+Implementar primeiro uma base visual reutilizavel e paginas conectadas apenas
+quando ja existir view SQL estavel.
 
-Não implementar ainda:
+Nao implementar ainda:
 
 - AI Insights completo
-- Creator Detail avançado
+- Creator Detail avancado
 - Niche Trends completo
 - Outliers dedicado
-- paginação customizada
+- paginacao customizada
 - componentes Streamlit customizados
 
-Esses itens dependem de contrato de dados, definição de métricas e validação de valor analítico antes de virar UI.
+Esses itens dependem de contrato de dados, definicao de metricas e validacao de
+valor analitico antes de virar UI.
 
-## Fase 0 - Preparação Visual
+## Fase 0 - Preparacao Visual
 
 Objetivo:
 
-- criar uma base visual consistente para todas as páginas atuais
-- reduzir HTML/CSS duplicado no app
+- criar uma base visual consistente para todas as paginas atuais
+- reduzir HTML e CSS duplicado no app
 - aproximar o layout do mockup sem buscar pixel-perfect
 
 Tarefas:
 
-- criar helpers de UI para título, subtítulo, card, grid, seção, estado vazio e aviso de erro
+- criar helpers de UI para titulo, subtitulo, card, grid, secao, estado vazio
+  e aviso de erro
 - centralizar tokens de design no bloco de tema
 - padronizar estilo Plotly
-- revisar a sidebar atual e manter navegação controlada
+- revisar a sidebar atual e manter navegacao controlada
 - aplicar os helpers em `Overview`, `Data quality` e `Fenabrave`
 
-Critério de pronto:
+Criterio de pronto:
 
-- páginas atuais usam os mesmos componentes base
-- não há HTML renderizado como texto
+- paginas atuais usam os mesmos componentes base
+- nao ha HTML renderizado como texto
 - app compila sem erro
-- layout não quebra em desktop estreito
-- não há mudança de SQL
+- layout nao quebra em desktop estreito
+- nao ha mudanca de SQL
 
 ## Fase 1 - MVP Visual Conectado
 
 Objetivo:
 
-- transformar o app atual em uma primeira experiência navegável com dados reais.
+- transformar o app atual em uma primeira experiencia navegavel com dados reais
 
-Páginas no escopo:
+Paginas no escopo:
 
 1. `Overview`
    - KPIs de Data Quality
    - bloco Fenabrave resumido
-   - placeholders explícitos para creators e crescimento
+   - placeholders explicitos apenas onde ainda nao houver leitura consolidada
 
 2. `Data quality`
    - KPI guardrail legado
-   - KPI posts mortos/validação
+   - KPI posts mortos e validacao
    - tabelas brutas das views atuais
 
 3. `Fenabrave`
    - blocos por categoria
-   - seletor de mês
-   - acumulado do ano sempre baseado no último mês disponível
-   - gráfico de barras mensal por categoria
+   - seletor de mes
+   - acumulado do ano sempre baseado no ultimo mes disponivel
+   - grafico de barras mensal por categoria
 
 4. `Sanitizacao operacional`
-   - tabela de vídeos indisponíveis quando `v_dashboard_unavailable_video_review` estiver validada
+   - tabela de videos indisponiveis baseada em
+     `v_dashboard_unavailable_video_review`
 
 Views usadas:
 
@@ -272,12 +287,12 @@ Views usadas:
 - `v_dashboard_fenabrave_monthly_segments`
 - `v_dashboard_unavailable_video_review`
 
-Critério de pronto:
+Criterio de pronto:
 
-- toda página do MVP consome apenas views aprovadas
-- erros de secrets/view aparecem como aviso amigável
+- toda pagina do MVP consome apenas views aprovadas
+- erros de secrets ou view aparecem como aviso amigavel
 - carregamento usa cache com TTL documentado
-- não há escrita no Supabase
+- nao ha escrita no Supabase
 
 Direcionamento atualizado para `Overview`:
 
@@ -286,50 +301,58 @@ Direcionamento atualizado para `Overview`:
   atividade recente em janela curta e estado macro da operacao
 - `Data Quality` continua importante, mas deve entrar como contexto secundario,
   CTA ou pagina dedicada
-- evitar totais que possam sugerir cobertura integral de todos os videos de cada
-  creator quando a base monitorada nao representa o universo completo
+- evitar totais que possam sugerir cobertura integral de todos os videos de
+  cada creator quando a base monitorada nao representa o universo completo
 
 ## Fase 2 - Analytics Social Media
 
 Objetivo:
 
-- conectar telas de creators e vídeos depois de validar os contratos de dados.
+- consolidar as telas sociais sobre contratos SQL ja existentes e priorizar as
+  evolucoes que ainda sao de UX, leitura e acabamento
 
-Páginas no escopo:
+Paginas no escopo:
 
 1. `Creators`
    - ranking de creators
-   - subscribers/views/posts quando disponíveis
+   - subscribers, views e posts quando disponiveis
    - filtros simples
 
-2. `Vídeos em crescimento`
+2. `Videos em crescimento`
    - ranking por crescimento 7d
-   - link do vídeo
+   - link do video
    - creator
    - views atuais e delta
 
 3. `Hot now`
-   - somente após criação de `v_dashboard_hot_now`
-   - separar velocidade analítica da lógica operacional da fila
+   - usar `v_dashboard_hot_now` no contrato `Hot now 24h`
+   - separar velocidade analitica da logica operacional da fila
 
 Views usadas:
 
 - `v_dashboard_creator_summary`
 - `v_dashboard_post_growth_7d`
-- `v_dashboard_hot_now` ainda pendente
+- `v_dashboard_hot_now`
 
-Critério de pronto:
+Criterio de pronto:
 
-- cada tabela tem ordenação padrão
-- números são formatados consistentemente
-- filtros não disparam consultas desnecessárias
-- Data Quality segue visível antes de conclusões analíticas fortes
+- cada tabela tem ordenacao padrao
+- numeros sao formatados consistentemente
+- filtros nao disparam consultas desnecessarias
+- Data Quality segue visivel antes de conclusoes analiticas fortes
 
-## Fase 3 - Mockup Avançado
+Leitura de status desta fase:
+
+- `v_dashboard_post_growth_7d` ja sustenta `YouTube > Melhores videos 7d`
+- `v_dashboard_hot_now` ja foi criada e ligada ao Streamlit
+- as proximas iteracoes nao devem tratar essas views como pendentes de criacao,
+  e sim como base entregue para refinamento visual e analitico
+
+## Fase 3 - Mockup Avancado
 
 Objetivo:
 
-- aproximar as telas restantes do mockup depois de provar valor no MVP.
+- aproximar as telas restantes do mockup depois de provar valor no MVP
 
 Itens candidatos:
 
@@ -338,35 +361,37 @@ Itens candidatos:
 - Outliers
 - Niche Trends
 - AI Insights
-- exportação CSV por página
+- exportacao CSV por pagina
 - resumo executivo gerado por GPT com `context packet`
 
-Pré-condição:
+Pre-condicao:
 
-- cada página deve ter contrato de dados documentado antes da implementação
-- nenhuma página deve depender de SQL arbitrário gerado pelo app
-- prompts/contextos de GPT devem citar views usadas e data de referência
+- cada pagina deve ter contrato de dados documentado antes da implementacao
+- nenhuma pagina deve depender de SQL arbitrario gerado pelo app
+- prompts e contextos de GPT devem citar views usadas e data de referencia
 
-## Ordem Recomendada de Execução Imediata
+## Ordem Recomendada de Execucao Imediata
 
 1. Refatorar componentes visuais comuns no `dashboard/streamlit_app.py`.
 2. Ajustar `Overview` para usar os componentes e mostrar somente blocos reais.
 3. Padronizar `Data quality` com os mesmos cards e tabelas.
-4. Manter `Fenabrave` como primeira página de referência visual conectada.
-5. Implementar `Sanitizacao operacional` com `v_dashboard_unavailable_video_review`.
-6. Depois disso, iniciar `Creators` e `Vídeos em crescimento`.
+4. Manter `Fenabrave` como primeira pagina de referencia visual conectada.
+5. Consolidar `Sanitizacao operacional` e demais telas sociais no mesmo padrao
+   visual.
+6. Depois disso, priorizar evolucoes de `Creators`, `Videos em crescimento` e
+   `Hot now` sem reabrir a discussao de views ja entregues.
 
 ## Regra de Controle
 
-Não criar página nova apenas porque ela existe no mockup.
+Nao criar pagina nova apenas porque ela existe no mockup.
 
-Criar página nova somente quando pelo menos uma destas condições for verdadeira:
+Criar pagina nova somente quando pelo menos uma destas condicoes for verdadeira:
 
-- a view SQL já existe e foi validada
-- a página é necessária para validar uma view em desenvolvimento
-- a página é um placeholder temporário explicitamente marcado como pendente
+- a view SQL ja existe e foi validada
+- a pagina e necessaria para validar uma view em desenvolvimento
+- a pagina e um placeholder temporario explicitamente marcado como pendente
 
-## Primeiro Pacote de Implementação
+## Primeiro Pacote de Implementacao
 
 Commit alvo:
 
@@ -374,7 +399,7 @@ Commit alvo:
 refactor(dashboard): padroniza componentes visuais
 ```
 
-Arquivos prováveis:
+Arquivos provaveis:
 
 - `dashboard/streamlit_app.py`
 - `docs/dashboard/30_FUTURE_LAYOUT_PROPOSAL_STREAMLIT.md`
@@ -382,6 +407,6 @@ Arquivos prováveis:
 Resultado esperado:
 
 - base visual mais limpa
-- menos duplicação
-- componentes prontos para receber as próximas views
-- nenhuma mudança de banco
+- menos duplicacao
+- componentes prontos para receber as proximas views
+- nenhuma mudanca de banco
