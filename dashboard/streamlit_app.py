@@ -4087,6 +4087,12 @@ def render_collection_integrity_section() -> None:
         discovery_checked_creators = format_int(discovery_status.get("creators_avaliados_24h"))
         discovery_new_posts = format_int(discovery_status.get("novos_posts_24h"))
         discovery_new_posts_6h = format_int(discovery_status.get("novos_posts_6h"))
+        discovery_processed_creators = format_int(discovery_status.get("heartbeat_processed_creators"))
+        discovery_inserted_or_updated_posts = format_int(
+            discovery_status.get("heartbeat_inserted_or_updated_posts")
+        )
+        discovery_heartbeat_errors = format_int(discovery_status.get("heartbeat_errors"))
+        discovery_heartbeat_status = str(discovery_status.get("heartbeat_status") or "--")
     else:
         discovery_status_code = "neutral"
         discovery_status_label = "Aguardando view"
@@ -4097,6 +4103,10 @@ def render_collection_integrity_section() -> None:
         discovery_checked_creators = "--"
         discovery_new_posts = "--"
         discovery_new_posts_6h = "--"
+        discovery_processed_creators = "--"
+        discovery_inserted_or_updated_posts = "--"
+        discovery_heartbeat_errors = "--"
+        discovery_heartbeat_status = "--"
 
     if operational_signals:
         operational_status_code = str(operational_signals.get("status_code") or "atencao").lower()
@@ -4144,6 +4154,10 @@ def render_collection_integrity_section() -> None:
                     discovery_snapshot_value,
                     (
                         f"Fonte: {discovery_evidence_source} | "
+                        f"Heartbeat: {discovery_heartbeat_status} | "
+                        f"Creators processados: {discovery_processed_creators} | "
+                        f"Posts tocados: {discovery_inserted_or_updated_posts} | "
+                        f"Erros: {discovery_heartbeat_errors} | "
                         f"Snapshots canal 24h: {discovery_checked_creators} | "
                         f"Novos posts 6h: {discovery_new_posts_6h} | "
                         f"Novos posts 24h: {discovery_new_posts} | "

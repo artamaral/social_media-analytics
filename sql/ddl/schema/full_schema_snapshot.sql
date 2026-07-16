@@ -35,6 +35,23 @@ CREATE TABLE public.pipeline_state (
   value text,
   CONSTRAINT pipeline_state_pkey PRIMARY KEY (id)
 );
+CREATE TABLE public.youtube_discovery_heartbeats (
+  id bigint NOT NULL DEFAULT nextval('youtube_discovery_heartbeats_id_seq'::regclass),
+  started_at timestamp without time zone NOT NULL DEFAULT now(),
+  finished_at timestamp without time zone,
+  status text NOT NULL CHECK (status = ANY (ARRAY['running'::text, 'success'::text, 'partial_error'::text, 'failed'::text, 'no_creators'::text])),
+  processed_creators integer NOT NULL DEFAULT 0,
+  attempted_creators integer NOT NULL DEFAULT 0,
+  inserted_or_updated_posts integer NOT NULL DEFAULT 0,
+  errors integer NOT NULL DEFAULT 0,
+  total_creators integer,
+  batch_size integer,
+  cursor_start integer,
+  cursor_end integer,
+  error_summary text,
+  CONSTRAINT youtube_discovery_heartbeats_pkey PRIMARY KEY (id)
+);
+ALTER TABLE public.youtube_discovery_heartbeats DISABLE ROW LEVEL SECURITY;
 CREATE TABLE public.post_metrics_history (
   id integer NOT NULL DEFAULT nextval('post_metrics_history_id_seq'::regclass),
   post_id text NOT NULL,

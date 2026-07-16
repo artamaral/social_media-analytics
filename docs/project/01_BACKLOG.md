@@ -29,7 +29,7 @@ Itens ja concluidos ficam consolidados no historico ao fim do arquivo.
 
 ## Operacional / Monitoramento
 
-- [ ] [feat] Implementar heartbeat operacional do `youtube_main_scraper` para comprovar execucoes sem posts novos e separar "rodou sem novidades" de "nao rodou".
+- [x] [feat] Implementar heartbeat operacional do `youtube_main_scraper` para comprovar execucoes sem posts novos e separar "rodou sem novidades" de "nao rodou". Fechado em 2026-07-16 com persistencia em `youtube_discovery_heartbeats`, prioridade na view `v_dashboard_new_post_discovery_status` e leitura explicita no Streamlit para execucao sem novidades, falha e ausencia de execucao.
 - [ ] [ops] Monitorar o cleanup temporario do guardrail ate `warm_8_30d` e `old_30d_plus` chegarem a `3` checagens, e `new_0_3d` e `recent_4_7d` chegarem a `2`.
 
 ## Visualizacao / Estudos de mercado

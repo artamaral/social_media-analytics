@@ -340,15 +340,21 @@ Regra importante:
 Essa separacao evita falso alerta quando o worker roda dentro da janela de 3
 horas, mas os creators processados nao possuem posts novos para inserir.
 
-Limite conhecido:
+Contrato atual:
 
-- sem um heartbeat persistido pelo `youtube_main_scraper`, o banco nao comprova
-  uma execucao que rodou sem encontrar posts novos
-- nesse caso, a confirmacao da execucao fica nos logs do Cloud Run/Scheduler,
-  enquanto o dashboard so consegue provar resultado quando `posts.created_at`
-  avanca
-- heartbeat do discovery deve ser tratado como melhoria futura para diferenciar
-  "worker rodou sem novidades" de "worker nao rodou"
+- `youtube_main_scraper` persiste heartbeat em
+  `public.youtube_discovery_heartbeats`
+- `v_dashboard_new_post_discovery_status` prioriza heartbeat sobre
+  `posts.created_at` e `creator_metrics_history`
+- o dashboard deve diferenciar:
+  - `rodou sem novidades`
+  - `falhou antes de gerar resultado`
+  - fallback por evidencia indireta quando ainda nao houver heartbeat recente
+- validacao inicial em producao em `2026-07-16`:
+  - caso `success` com posts novos confirmado no Cloud Run
+  - leitura correspondente confirmada no Streamlit
+  - cenarios `partial_error`, `failed` e `rodou sem novidades` ainda aguardam
+    evidencia operacional real
 
 Para o worker de `Atualizacao de posts`, o subtipo `Sinais operacionais` deve
 priorizar KPIs de fluxo e risco de cobertura, nao volume bruto de lote:

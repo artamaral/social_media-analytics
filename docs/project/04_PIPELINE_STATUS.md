@@ -77,6 +77,35 @@ Leitura operacional:
 
 - essa frente cobre o review humano dos videos indisponiveis e nao deve ser lida como sinal de duplicidade de coleta
 - o papel dela e separar confirmados/monitorados de candidatos em aberto e manter visibilidade operacional do fluxo
+- o worker de discovery agora persiste heartbeat em
+  `youtube_discovery_heartbeats`, permitindo separar no dashboard:
+  - `rodou sem novidades`
+  - `falhou antes de gerar resultado`
+  - ausencia de execucao recente
+- a view `v_dashboard_new_post_discovery_status` passa a priorizar heartbeat e
+  usa `posts.created_at` e `creator_metrics_history` apenas como fallback
+
+Validacao real mais recente do heartbeat:
+
+- data de referencia: `2026-07-16`
+- resultado observado no Cloud Run:
+  - `heartbeat_id = 2`
+  - `cursor = 3`
+  - `next_cursor = 6`
+  - `processed = 3`
+  - `errors = 0`
+  - `inserted_or_updated_posts = 150`
+- confirmacoes operacionais:
+  - `Heartbeat create: 201`
+  - `Cursor status: 200`
+  - `Creators status: 200`
+  - retorno final com payload coerente para o batch executado
+- confirmacao visual:
+  - o Streamlit mostrou coleta recente e texto coerente para o caso validado
+- cobertura de cenarios ainda pendente:
+  - `partial_error`
+  - `failed`
+  - `success` sem posts novos (`rodou sem novidades`)
 
 #### Open point principal - regra de `next_check`
 

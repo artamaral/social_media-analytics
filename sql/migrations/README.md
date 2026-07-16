@@ -51,3 +51,7 @@ YYYY-MM-DD_NNN_descricao_down.sql
   - Ajusta o status do discovery para usar `posts.created_at` como evidencia de resultado, mantendo `creator_metrics_history` como fallback legado.
 - `2026-06-20_009_discovery_status_posts_evidence_down.sql`
   - Restaura a regra anterior de discovery baseada apenas em `creator_metrics_history`.
+- `2026-07-16_010_discovery_heartbeat_up.sql`
+  - Cria a tabela `youtube_discovery_heartbeats` e passa a priorizar heartbeat na view `v_dashboard_new_post_discovery_status`.
+- `2026-07-16_010_discovery_heartbeat_down.sql`
+  - Remove a tabela `youtube_discovery_heartbeats` e restaura a view anterior baseada em `posts.created_at` e `creator_metrics_history`.

@@ -26,7 +26,7 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 ### Prioridade alta - funcionamento e confiabilidade
 
 - [x] Implementar monitoramento executivo no Streamlit para acompanhar integridade da coleta, evidencia de processamento e sinais operacionais dos 2 workers.
-- [ ] Consolidar a analise de confiabilidade operacional dos posts atualizados com base no monitoramento do Streamlit e nas evidencias do banco.
+- [ ] Consolidar a analise de confiabilidade operacional dos posts atualizados com base no monitoramento do Streamlit e nas evidencias do banco. Em `2026-07-16`, o heartbeat do `youtube_main_scraper` foi validado em producao para o caso `success` com posts novos (`processed = 3`, `errors = 0`, `inserted_or_updated_posts = 150`, `cursor 3 -> 6`, `heartbeat_id = 2`) e a leitura do Streamlit ficou coerente; ainda faltam evidencias reais para `partial_error`, `failed` e `rodou sem novidades`.
 - [x] Confirmar que posts nao estavam sendo atualizados e que o novo codigo esta rodando.
 - [x] Implementar e operar a view `Posts mortos e validacao humana` no Streamlit, tratando os `13` posts detectados e zerando as pendencias humanas.
 - [ ] Confirmar se toda a camada analitica ja exclui corretamente posts `unavailable` fora dos contextos de auditoria.

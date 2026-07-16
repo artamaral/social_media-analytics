@@ -155,51 +155,75 @@ Validacao operacional:
 
 ---
 
-## Status do discovery com dados existentes e open point de heartbeat
+## Status do discovery com heartbeat operacional persistido
 
 Data:
 
-- 2026-06-20
+- 2026-07-16
 
 Decisao:
 
-- nao alterar o worker `youtube_main_scraper` neste momento
-- ajustar a leitura do dashboard para usar `posts.created_at` como evidencia de
-  resultado do discovery
-- manter `creator_metrics_history` apenas como evidencia legada/auxiliar de
-  snapshot de canal
-- nao marcar o discovery como `nok` quando houver posts inseridos nas ultimas
-  24 horas
+- persistir heartbeat dedicado do `youtube_main_scraper` em
+  `youtube_discovery_heartbeats`
+- registrar por execucao `started_at`, `finished_at`, `status`,
+  `processed_creators`, `attempted_creators`, `inserted_or_updated_posts`,
+  `errors`, `cursor_start`, `cursor_end` e `error_summary`
+- atualizar a view `v_dashboard_new_post_discovery_status` para priorizar o
+  heartbeat como evidencia principal do discovery
+- manter `posts.created_at` e `creator_metrics_history` apenas como fallbacks
+  de compatibilidade e degradacao controlada
+- expor no Streamlit a diferenca entre `rodou sem novidades`, `nao rodou` e
+  `falhou antes de gerar resultado`
 
 Motivo:
 
-- logs do Cloud Run confirmaram execucao bem-sucedida do worker, com `POST 200`,
-  creators processados, `Upsert 200`, `Erros: 0` e cursor salvo
-- a view antiga marcava `nok` porque dependia de `creator_metrics_history`,
-  que nao representa a evidencia principal do fluxo atual de discovery
-- `posts.created_at` comprova resultado de discovery quando posts novos entram
-  no banco
+- o fallback por `posts.created_at` evitava falso `nok` quando havia posts
+  novos, mas ainda nao comprovava uma execucao valida sem novidades
+- a operacao precisava distinguir de forma persistida entre execucao sem novos
+  posts, falha fatal e ausencia de execucao recente
+- o novo contrato fecha essa lacuna sem generalizar prematuramente para um
+  framework amplo de `ingestion_runs`
 
-Limite conhecido:
+Contrato atual:
 
-- sem heartbeat persistido pelo worker, o banco nao comprova uma execucao que
-  rodou sem encontrar posts novos
-- quando nao ha posts novos, a evidencia de execucao fica apenas nos logs do
-  Cloud Run/Scheduler
-- por isso, a leitura atual separa:
-  - resultado observado no banco por `posts.created_at`
-  - snapshot legado de canal por `creator_metrics_history`
-  - execucao comprovada apenas fora do banco pelos logs
+- `heartbeat` passa a ser a fonte principal para classificar a saude do worker
+  dentro da janela operacional de `6h` e do limite de atencao de `12h`
+- `posts.created_at` segue como evidencia de resultado recente quando ainda nao
+  houver heartbeat valido
+- `creator_metrics_history` permanece apenas como evidencia legada/auxiliar de
+  snapshot de canal
+- a view do dashboard deve aceitar `fonte_ultima_evidencia` em:
+  - `heartbeat`
+  - `post_insert`
+  - `channel_snapshot_legacy`
 
-Open point futuro:
+Leitura esperada no dashboard:
 
-- implementar heartbeat operacional do `youtube_main_scraper`
-- registrar `started_at`, `finished_at`, `processed_creators`,
-  `inserted_or_updated_posts`, `errors` e `status`
-- usar o heartbeat para diferenciar de forma confiavel:
-  - worker rodou e nao encontrou posts novos
-  - worker nao rodou
-  - worker falhou antes de gerar resultado
+- `ok`: heartbeat recente com posts tocados ou execucao confirmada sem
+  novidades
+- `atencao`: heartbeat parcial, heartbeat acima da janela ideal ou fallback sem
+  heartbeat por `posts.created_at` / `creator_metrics_history`
+- `nok`: ultimo heartbeat em `failed` dentro da janela de atencao ou ausencia
+  total de evidencia recente
+
+Validacao inicial em producao:
+
+- data de validacao: `2026-07-16`
+- execucao observada no Cloud Run:
+  - `heartbeat_id = 2`
+  - `cursor = 3`
+  - `next_cursor = 6`
+  - `processed = 3`
+  - `errors = 0`
+  - `inserted_or_updated_posts = 150`
+- comportamento confirmado:
+  - criacao do heartbeat com `201`
+  - leitura de cursor e creators com `200`
+  - status correto no Streamlit para o caso `success` com posts novos
+- cenarios ainda nao observados em producao:
+  - `partial_error`
+  - `failed`
+  - `success` sem posts novos
 
 ---
 

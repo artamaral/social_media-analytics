@@ -3262,6 +3262,18 @@ Status em 2026-07-15:
   ser retomada se a automacao futura exigir historico independente de execucao,
   retries ou multiplas fontes no mesmo contrato de monitoramento
 
+Observacao fora do Sprint 5:
+
+- em `2026-07-16`, por solicitacao explicita do usuario, foi executada fora do
+  escopo automatico do Sprint 5 a implantacao e validacao inicial do heartbeat
+  do `youtube_main_scraper`
+- a frente social media confirmou em producao o caso `success` com posts novos
+  (`processed = 3`, `errors = 0`, `inserted_or_updated_posts = 150`,
+  `cursor 3 -> 6`, `heartbeat_id = 2`) e validou a leitura correspondente no
+  Streamlit
+- o Sprint ativo permanece `Sprint 5 - Fontes externas`; a evidência acima nao
+  reabre Sprint 3 nem muda a prioridade automatica do roadmap
+
 ### Atividades Carros na Web
 
 - [ ] Definir rotina de download recorrente dos CSVs existentes do Carros na Web.

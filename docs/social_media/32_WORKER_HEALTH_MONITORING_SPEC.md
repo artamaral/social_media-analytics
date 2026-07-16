@@ -36,23 +36,47 @@ Confiar principalmente em:
 Essa configuracao permite aumentar a cadencia sem duplicar workers nem misturar
 discovery com atualizacao de metricas.
 
-### Limite conhecido do discovery sem heartbeat
+### Contrato atual do discovery com heartbeat
 
-O worker `youtube_main_scraper` atualmente comprova resultado no banco quando
-insere ou atualiza posts em `public.posts`.
+O worker `youtube_main_scraper` comprova resultado no banco quando insere ou
+atualiza posts em `public.posts`, mas agora tambem persiste heartbeat em
+`public.youtube_discovery_heartbeats`.
 
-Sem heartbeat persistido, o banco nao comprova uma execucao que rodou sem
-encontrar posts novos. Nesses casos, a evidencia de execucao fica apenas nos
-logs do Cloud Run/Scheduler.
+Contrato minimo persistido por execucao:
 
-Open point futuro:
+- `started_at`
+- `finished_at`
+- `status`
+- `processed_creators`
+- `attempted_creators`
+- `inserted_or_updated_posts`
+- `errors`
+- `cursor_start`
+- `cursor_end`
+- `error_summary`
 
-- persistir um heartbeat do `youtube_main_scraper` em tabela operacional
-- registrar ao menos `started_at`, `finished_at`, `processed_creators`,
-  `inserted_or_updated_posts`, `errors` e `status`
-- usar esse heartbeat no dashboard para diferenciar:
-  - worker rodou e nao encontrou posts novos
-  - worker nao rodou ou falhou antes de produzir evidencia
+Uso do heartbeat no dashboard:
+
+- diferenciar `rodou sem novidades` de `nao rodou`
+- sinalizar `falhou antes de gerar resultado` quando o ultimo heartbeat ficar
+  em `failed`
+- manter `posts.created_at` e `creator_metrics_history` apenas como fallback
+  quando nao houver heartbeat recente disponivel
+
+Validacao inicial em producao:
+
+- data: `2026-07-16`
+- resultado observado:
+  - `heartbeat_id = 2`
+  - `processed = 3`
+  - `errors = 0`
+  - `inserted_or_updated_posts = 150`
+  - `cursor 3 -> 6`
+- a leitura do Streamlit ficou coerente para o caso `success` com posts novos
+- permanecem sem evidencia real ate o momento:
+  - `partial_error`
+  - `failed`
+  - `success` sem novos posts
 
 ### 1. Evidencia de snapshot novo
 

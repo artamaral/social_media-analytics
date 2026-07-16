@@ -612,8 +612,15 @@ Regra operacional:
   ultimas 24h
 - `posts.created_at` nao comprova que o worker rodou quando nao houve post novo
   inserido
-- open point futuro: persistir heartbeat do `youtube_main_scraper` para separar
-  "rodou sem novidades" de "nao rodou"
+- heartbeat operacional do `youtube_main_scraper` passa a ser persistido em
+  `youtube_discovery_heartbeats`, permitindo separar `rodou sem novidades`,
+  `falhou antes de gerar resultado` e ausencia de execucao recente
+- validacao inicial em `2026-07-16`:
+  - Cloud Run confirmou o caso `success` com posts novos
+  - o bloco `Integridade da coleta` no Streamlit mostrou texto coerente para o
+    caso validado
+  - a cobertura de `partial_error`, `failed` e `rodou sem novidades` ainda
+    depende de ocorrencia real
 
 Escopo revisado para `Sinais operacionais` do worker de metricas:
 
