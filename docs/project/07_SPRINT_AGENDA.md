@@ -3369,6 +3369,12 @@ Premissas ja fechadas para o inicio do sprint:
 - [x] Selecionar a amostra inicial de `10` videos com mistura de casos claros e
   ambiguos, seguindo a composicao metodologica definida na spec de nichos e
   subnichos.
+- [x] Publicar workbook unico em Excel para a rodada humana:
+  - aba `taxonomias`
+  - aba `execucao_humana`
+  - links clicaveis
+  - dropdowns editaveis
+  - `sub_niche` com preenchimento multiplo no mesmo campo
 - [ ] Registrar a classificacao humana dos `10` videos como baseline de
   calibracao.
 - [ ] Definir o contrato da classificacao inicial por IA usando somente
@@ -3418,6 +3424,32 @@ Premissas ja fechadas para o inicio do sprint:
   - validacao metodologica
   - implementacao de pipeline
   - consumo analitico no dashboard
+
+#### Atividade 4 - Workbook unico para execucao humana
+
+Status: concluida em 2026-07-16.
+
+Objetivo:
+
+- consolidar taxonomia, dimensoes complementares e amostra piloto em um unico
+  arquivo Excel para facilitar a rodada humana
+- reduzir friccao operacional da classificacao manual, mantendo rastreabilidade
+  com os artefatos canonicos anteriores
+
+Resultado publicado:
+
+- `docs/external_data/34_WORKBOOK_EXECUCAO_HUMANA_PILOTO_VIDEO_V1.xlsm`
+- `docs/external_data/34_WORKBOOK_EXECUCAO_HUMANA_PILOTO_VIDEO_V1.md`
+- `scripts/external_data/build_pilot_human_workbook.ps1`
+
+Contrato operacional da v1:
+
+- a aba `taxonomias` consolida os CSVs canonicos dos docs `31` e `32`
+- a aba `execucao_humana` traz os `10` videos primarios da amostra do doc `33`
+- `video_url` e publicado com link clicavel para o video
+- os campos de classificacao usam dropdowns sugeridos sem bloquear valor novo
+- `sub_niche` pode receber mais de um valor no mesmo campo usando separacao por
+  `, `
 
 ### Criterio de saida do planejamento
 

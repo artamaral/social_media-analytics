@@ -91,6 +91,7 @@ considerada incompleta.
 - [31_TAXONOMIA_PILOTO_VIDEO_V1.md](/C:/social_media-analytics/docs/external_data/31_TAXONOMIA_PILOTO_VIDEO_V1.md)
 - [32_DIMENSOES_COMPLEMENTARES_PILOTO_VIDEO_V1.md](/C:/social_media-analytics/docs/external_data/32_DIMENSOES_COMPLEMENTARES_PILOTO_VIDEO_V1.md)
 - [33_AMOSTRA_PILOTO_10_VIDEOS_V1.md](/C:/social_media-analytics/docs/external_data/33_AMOSTRA_PILOTO_10_VIDEOS_V1.md)
+- [34_WORKBOOK_EXECUCAO_HUMANA_PILOTO_VIDEO_V1.md](/C:/social_media-analytics/docs/external_data/34_WORKBOOK_EXECUCAO_HUMANA_PILOTO_VIDEO_V1.md)
 
 ## 3. Dashboard
 

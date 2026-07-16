@@ -1754,3 +1754,51 @@ Aplicacao operacional:
   - classificacao humana
   - prompt final da IA
   - execucao da rodada automatica
+
+---
+
+## Workbook unico em Excel para execucao humana do piloto do Sprint 6
+
+Data:
+
+- 2026-07-16
+
+Decisao:
+
+- publicar um workbook unico em
+  `docs/external_data/34_WORKBOOK_EXECUCAO_HUMANA_PILOTO_VIDEO_V1.xlsm`
+- consolidar no arquivo:
+  - taxonomias do piloto
+  - lista canonica dos `10` videos primarios
+  - campos de classificacao humana
+- manter uma aba visivel de taxonomias e uma aba visivel de execucao humana
+- usar dropdowns com valores canonicos sugeridos, mas sem bloquear digitacao
+  livre
+- manter `sub_niche` apto a receber mais de um valor no mesmo campo usando
+  separacao canonica por `, `
+
+Motivo:
+
+- a rodada humana fica mais simples e auditavel em um unico arquivo de Excel
+- manter taxonomia e amostra no mesmo artefato reduz ambiguidade operacional
+- dropdowns aceleram o preenchimento sem impedir excecoes justificadas durante
+  a calibracao
+- permitir mais de um `sub_niche` no mesmo campo preserva casos hibridos do
+  piloto sem multiplicar colunas ou forcar categoria ad hoc
+
+Contrato atual:
+
+- o workbook operacional complementa, mas nao substitui, os artefatos canonicos
+  `31`, `32` e `33`
+- `video_url` deve ser publicado com link clicavel para YouTube a partir de
+  `post_id`
+- a aba oculta `listas` e a fonte dos dropdowns
+- o arquivo e gerado por
+  `scripts/external_data/build_pilot_human_workbook.ps1`
+
+Observacao de implementacao:
+
+- o gerador atual publica o workbook em `.xlsm` com dropdowns editaveis e
+  preenchimento manual livre
+- nesta v1, a multisselecao de `sub_niche` fica operacional por preenchimento
+  manual no mesmo campo, usando separacao por `, `
