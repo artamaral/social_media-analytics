@@ -1,0 +1,62 @@
+dimension,code,label_pt,parent_code,description,example_signals,allowed_in_pilot
+niche,manutencao,Manutencao,,Tema principal de manutencao preventiva ou corretiva,"troca, revisao, manutencao, reparo preventivo",true
+niche,diagnostico,Diagnostico,,Tema principal de identificacao de falha ou leitura tecnica,"scanner, falha, erro, luz, diagnostico",true
+niche,review,Review,,Tema principal de avaliacao de veiculo ou teste de uso,"avaliacao, review, test drive, comparativo de carro",true
+niche,mercado,Mercado,,Tema principal de leitura de mercado automotivo,"lancamento, mercado, emplacamento, usados",true
+niche,powertrain,Powertrain,,Tema principal de tipo de motorizacao,"eletrico, hibrido, combustao, flex, diesel",true
+niche,eletrica_eletronica,Eletrica e eletronica,,Tema principal de sistemas eletricos e eletronicos sem virar motorizacao,"bateria 12v, sensor, modulo, chicote, falha eletrica",true
+niche,off_road,Off-road,,Tema principal de preparacao ou uso fora de estrada,"4x4, trilha, lift kit, off-road",true
+niche,compra_venda,Compra e venda,,Tema principal de decisao de compra e posicionamento comercial,"vale a pena, comprar, vender, popular, premium",true
+sub_niche,troca_oleo,Troca de oleo,manutencao,Manutencao focada em oleo e lubrificacao,"troca de oleo, filtro de oleo, lubrificacao",true
+sub_niche,freios,Freios,manutencao,Manutencao focada em freios,"pastilha, disco, freio, manutencao de freio",true
+sub_niche,suspensao,Suspensao,manutencao,Manutencao focada em suspensao,"amortecedor, bandeja, batente, suspensao",true
+sub_niche,pneus,Pneus,manutencao,Manutencao focada em pneus e rodas,"pneu, alinhamento, balanceamento, calibragem",true
+sub_niche,arrefecimento,Arrefecimento,manutencao,Manutencao focada em sistema de arrefecimento,"radiador, agua, superaquecimento preventivo, arrefecimento",true
+sub_niche,manutencao_motor,Manutencao de motor,manutencao,Manutencao de motor sem ambiguidade com diagnostico,"retifica preventiva, manutencao de motor, revisao de motor",true
+sub_niche,manutencao_cambio,Manutencao de cambio,manutencao,Manutencao de cambio sem ambiguidade com diagnostico,"troca de oleo do cambio, revisao de cambio, manutencao de transmissao",true
+sub_niche,scanner_obd2,Scanner OBD2,diagnostico,Diagnostico orientado por leitura de scanner,"obd2, scanner, codigo de falha, leitura de erro",true
+sub_niche,injecao_eletronica,Injecao eletronica,diagnostico,Diagnostico focado em injecao eletronica,"injecao, mistura, sonda, bico, modulo",true
+sub_niche,diagnostico_motor,Diagnostico de motor,diagnostico,Diagnostico de falhas de motor sem ambiguidade com manutencao,"falha de motor, perda de potencia, luz de motor, barulho de motor",true
+sub_niche,diagnostico_cambio,Diagnostico de cambio,diagnostico,Diagnostico de falhas de cambio sem ambiguidade com manutencao,"tranco, patinando, falha no cambio, erro de transmissao",true
+sub_niche,falha_eletrica,Falha eletrica,diagnostico,Diagnostico de falha eletrica ou eletronica,"curto, modulo, sensor, eletrica, falha eletrica",true
+sub_niche,test_drive,Test drive,review,Avaliacao de uso e dirigibilidade de veiculo,"test drive, andando, impressao ao dirigir",true
+sub_niche,comparativo,Comparativo,review,Comparacao entre dois ou mais veiculos,"comparativo, versus, melhor que, x ou y",true
+sub_niche,mercado_usados,Mercado de usados,mercado,Conteudo sobre usados e valor de mercado,"usados, valorizacao, desvalorizacao, revenda",true
+sub_niche,lancamentos,Lancamentos,mercado,Conteudo sobre novos lancamentos e mercado,"novo modelo, lancamento, chegou ao brasil",true
+sub_niche,eletrico,Eletrico,powertrain,Motorizacao eletrica como tema principal,"carro eletrico, bateria de tracao, veiculo eletrico",true
+sub_niche,hibrido,Hibrido,powertrain,Motorizacao hibrida como tema principal,"carro hibrido, sistema hibrido, motor eletrico + combustao",true
+sub_niche,combustao,Combustao,powertrain,Motorizacao a combustao como tema principal,"motor a combustao, gasolina, aspirado, combustao",true
+sub_niche,flex,Flex,powertrain,Motorizacao flex como tema principal,"etanol, gasolina, flex",true
+sub_niche,diesel,Diesel,powertrain,Motorizacao diesel como tema principal,"diesel, caminhonete diesel, motor diesel",true
+sub_niche,bateria_12v,Bateria 12v,eletrica_eletronica,Tema eletrico focado em bateria 12v e circuito auxiliar,"bateria 12v, partida, alternador, carga da bateria",true
+sub_niche,sensores_modulos,Sensores e modulos,eletrica_eletronica,Tema eletrico focado em sensores, modulos e chicote,"sensor, modulo, central, chicote, conector",true
+sub_niche,preparacao_off_road,Preparacao off-road,off_road,Tema de adaptacao off-road,"lift kit, pneu mud, snorkel, trilha",true
+sub_niche,carro_popular,Carro popular,compra_venda,Tema de compra ligado a faixa popular,"carro barato, primeiro carro, popular, economico",true
+sub_niche,carro_premium,Carro premium,compra_venda,Tema de compra ligado a faixa premium,"premium, luxo, vale a pena premium",true
+sub_niche,suv,SUV,compra_venda,Tema de compra ligado a SUVs,"suv, utilitario, melhor suv",true
+sub_niche,picape,Picape,compra_venda,Tema de compra ligado a picapes,"picape, caminhonete, melhor picape",true
+sub_sub_niche,troca_pastilha,Troca de pastilha,freios,Granularidade para manutencao especifica de freios,"pastilha, troca de pastilha",true
+sub_sub_niche,problema_cronico,Problema cronico,,Granularidade para falha recorrente conhecida,"cronico, defeito cronico, problema recorrente",true
+sub_sub_niche,limpeza_bico_injetor,Limpeza de bico injetor,injecao_eletronica,Granularidade para manutencao ou diagnostico focado em bico injetor,"bico injetor, limpeza de bico",true
+sub_sub_niche,cambio_automatico,Cambio automatico,diagnostico_cambio,Granularidade para diagnostico de cambio automatico,"automatico, cambio automatico, transmissao automatica",true
+sub_sub_niche,sistema_hibrido,Sistema hibrido,hibrido,Granularidade para sistema hibrido,"sistema hibrido, regeneracao, bateria hibrida",true
+sub_sub_niche,falha_sensor,Falha de sensor,sensores_modulos,Granularidade para diagnostico de sensor ou modulo,"sensor falhando, sensor ruim, modulo com defeito",true
+content_type,educativo,Educativo,,Formato de explicacao ou ensino,"explicando, entenda, como funciona",true
+content_type,tutorial,Tutorial,,Formato passo a passo de execucao,"como fazer, passo a passo, tutorial",true
+content_type,review,Review,,Formato de avaliacao editorial de produto ou veiculo,"review, avaliacao, impressao",true
+content_type,comparativo,Comparativo,,Formato editorial de comparacao,"comparativo, versus, duelo",true
+content_type,noticia,Noticia,,Formato jornalistico ou atualizacao de mercado,"noticia, saiu, acabou de chegar",true
+content_type,opiniao,Opiniao,,Formato editorial opinativo,"minha opiniao, acho, vale ou nao vale",true
+content_type,entretenimento,Entretenimento,,Formato focado em diversao e narrativa leve,"curiosidade, react, divertido",true
+content_type,alerta,Alerta,,Formato focado em aviso ou risco,"cuidado, alerta, nao faca isso",true
+content_type,ranking,Ranking,,Formato de lista ranqueada,"top 5, ranking, melhores",true
+content_type,case,Case,,Formato de caso real ou estudo de caso,"caso real, cliente, oficina, aconteceu",true
+audience_intent,resolver_problema,Resolver problema,,Intencao principal de corrigir uma falha ou entender um defeito,"falha, defeito, conserto, erro",true
+audience_intent,evitar_prejuizo,Evitar prejuizo,,Intencao principal de prevenir gasto ou dano,"nao compre, cuidado, prejuizo, problema caro",true
+audience_intent,aprender_manutencao,Aprender manutencao,,Intencao principal de aprender manutencao ou procedimento,"como trocar, manutencao, revisao",true
+audience_intent,decidir_compra,Decidir compra,,Intencao principal de escolher um carro ou configuracao,"vale a pena, qual comprar, melhor opcao",true
+audience_intent,comparar_opcoes,Comparar opcoes,,Intencao principal de comparar alternativas,"versus, comparativo, melhor entre",true
+audience_intent,acompanhar_lancamento,Acompanhar lancamento,,Intencao principal de acompanhar novidades do mercado,"lancamento, novo modelo, novidade",true
+audience_intent,entender_powertrain,Entender powertrain,,Intencao principal de entender motorizacao e propulsao,"eletrico, hibrido, diesel, flex",true
+audience_intent,entender_mercado,Entender mercado,,Intencao principal de entender comportamento de mercado,"mercado, vendas, emplacamento, usados",true
+audience_intent,entretenimento,Entretenimento,,Intencao principal de consumo leve ou curiosidade,"curiosidade, divertido, historia",true

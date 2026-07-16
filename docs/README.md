@@ -84,6 +84,12 @@ considerada incompleta.
 
 - [27_CARROSNAWEB_VEHICLE_SPECS_INGESTION_PLAN.md](/C:/social_media-analytics/docs/external_data/27_CARROSNAWEB_VEHICLE_SPECS_INGESTION_PLAN.md)
 
+### Enrichment e classificacao de videos
+
+- [29_SPEC-INGESTAO-VALIDACAO-NICHOS-SUBNICHOS.md](/C:/social_media-analytics/docs/external_data/29_SPEC-INGESTAO-VALIDACAO-NICHOS-SUBNICHOS.md)
+- [30_SPEC_PREMISSAS_OPENAI_CLASSIFICACAO_TRANSCRICAO.md](/C:/social_media-analytics/docs/external_data/30_SPEC_PREMISSAS_OPENAI_CLASSIFICACAO_TRANSCRICAO.md)
+- [31_TAXONOMIA_PILOTO_VIDEO_V1.md](/C:/social_media-analytics/docs/external_data/31_TAXONOMIA_PILOTO_VIDEO_V1.md)
+
 ## 3. Dashboard
 
 ### Estrategia e implementacao

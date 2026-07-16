@@ -1571,3 +1571,64 @@ Pendencias:
   `plotly`
 - avaliar pinagem conservadora de dependencias apenas se houver nova regressao
   nativa ou diferenca relevante entre ambiente local e Cloud
+
+---
+
+## Taxonomia piloto v1 para classificacao de videos do Sprint 6
+
+Data:
+
+- 2026-07-16
+
+Decisao:
+
+- definir uma taxonomia piloto v1 compacta para a fase metodologica de
+  classificacao de videos do Sprint 6
+- tratar esta taxonomia como fonte de verdade temporaria em documento + CSV,
+  separada da taxonomia operacional atual de `public.sub_niches`
+- usar `powertrain` como niche para temas de motorizacao:
+  - `eletrico`
+  - `hibrido`
+  - `combustao`
+  - `flex`
+  - `diesel`
+- manter `eletrica_eletronica` restrita a bateria `12v`, sensores, modulos,
+  chicote e falhas eletricas/eletronicas em geral
+- proibir `motor` e `cambio` como `sub_niche` solto
+- exigir termos contextualizados quando o assunto mudar de natureza:
+  - `manutencao_motor`
+  - `diagnostico_motor`
+  - `manutencao_cambio`
+  - `diagnostico_cambio`
+- manter `scanner_obd2` dentro de `diagnostico`, mesmo quando o problema final
+  estiver ligado a motor ou cambio
+
+Motivo:
+
+- a classificacao metodologica do piloto precisa evitar termos ambiguos que
+  mudam de significado entre manutencao e diagnostico
+- `eletrico` e `hibrido` descrevem melhor tipo de motorizacao do que um tema
+  generico de eletrica/eletronica
+- misturar motorizacao com eletrica ou diagnostico com manutencao reduziria a
+  concordancia humano vs IA e enfraqueceria o `agreement_score`
+- separar a taxonomia piloto do banco atual permite calibrar a metodologia
+  antes de assumir compromisso estrutural de schema ou seed
+
+Impacto esperado:
+
+- classificacao inicial mais consistente na rodada de `10` videos
+- menor risco de colisao semantica entre niches e subnichos
+- melhor base para `confidence_score`, `agreement_score` e revisao de
+  taxonomia apos a rodada piloto
+- base pronta para discussao futura de persistencia operacional sem acoplar o
+  piloto ao banco cedo demais
+
+Aplicacao operacional:
+
+- documento canonico: `docs/external_data/31_TAXONOMIA_PILOTO_VIDEO_V1.md`
+- CSV canonico: `docs/external_data/31_TAXONOMIA_PILOTO_VIDEO_V1.csv`
+- escopo atual: fase metodologica do piloto de `10` videos
+- fora do escopo atual:
+  - seed de banco
+  - migration SQL
+  - integracao automatica com `public.sub_niches`
