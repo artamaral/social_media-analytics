@@ -3320,31 +3320,149 @@ Status em 2026-07-15:
 
 ### Objetivo
 
-Preparar a proxima camada de inteligencia, com classificacao e insights acionaveis para marketing automotivo.
+Iniciar o planejamento operacional da camada de enrichment, validando metodo,
+taxonomia e uso controlado de IA antes de qualquer escala para a base completa.
+
+### Status inicial em 2026-07-16
+
+Leitura atual:
+
+- o Sprint 5 continua como sprint ativo formal, mas a frente Carros na Web esta
+  bloqueada operacionalmente nesta maquina pela ausencia dos CSVs de catalogo
+  no ambiente atual
+- por solicitacao explicita do usuario, o Sprint 6 entra em inicio de
+  planejamento sem ser tratado ainda como execucao em escala
+- os documentos
+  `docs/external_data/29_SPEC-INGESTAO-VALIDACAO-NICHOS-SUBNICHOS.md` e
+  `docs/external_data/30_SPEC_PREMISSAS_OPENAI_CLASSIFICACAO_TRANSCRICAO.md`
+  passam a ser a base obrigatoria deste planejamento
+
+Premissas ja fechadas para o inicio do sprint:
+
+- a classificacao deve comecar por amostra manual de `10` videos, com
+  comparacao humano vs IA, antes de qualquer escala
+- a primeira classificacao deve usar apenas dados ja existentes do video, sem
+  transcricao na chamada inicial
+- a camada de IA desta fase usara somente OpenAI
+- o maior risco operacional desta frente nao e custo, e sim TPM/RPM em Tier 1
+  e competicao com o Hermes
+- transcricao deve ser parcial, sob demanda e acionada apenas quando a
+  confianca inicial nao for suficiente ou quando o video tiver relevancia
+  analitica alta
 
 ### Atividades
 
-- Definir classificacao minima de videos: nicho, subnicho e tipo.
-- Priorizar campos de enrichment.
-- Definir onde LLM entra no pipeline.
-- Desenhar primeiras perguntas de produto:
-  - creators emergentes
-  - temas em alta
-  - videos fora da curva
-  - oportunidades por nicho automotivo
-- Atualizar backlog e roadmap com proximos modulos.
+- [ ] Consolidar a taxonomia inicial da fase metodologica, cobrindo no minimo:
+  - `niche`
+  - `sub_niche`
+  - `sub_sub_niche`
+  - `content_type`
+  - `audience_intent`
+- [ ] Confirmar as dimensoes automotivas complementares que entram ja na
+  validacao inicial:
+  - `vehicle_brand`
+  - `vehicle_model`
+  - `vehicle_year_or_generation`
+  - `automotive_system`
+  - `component`
+  - `problem`
+- [ ] Selecionar a amostra inicial de `10` videos com mistura de casos claros e
+  ambiguos, seguindo a composicao metodologica definida na spec de nichos e
+  subnichos.
+- [ ] Registrar a classificacao humana dos `10` videos como baseline de
+  calibracao.
+- [ ] Definir o contrato da classificacao inicial por IA usando somente
+  metadados existentes do video.
+- [ ] Fechar a formula e os campos obrigatorios do `confidence_score`.
+- [ ] Fechar o calculo e os pesos do `agreement_score` para comparacao humano
+  vs IA.
+- [ ] Unificar os thresholds operacionais da fase:
+  - aprovacao sem transcricao
+  - aprovacao provisoria por amostragem
+  - envio para transcricao parcial
+  - revisao humana
+- [ ] Definir o contrato operacional OpenAI desta fase:
+  - classificacao inicial com `gpt-5-nano` ou `gpt-5.4-nano`
+  - transcricao sob demanda com `gpt-4o-mini-transcribe`
+  - reclassificacao apos transcricao com `gpt-5-nano` ou `gpt-5.4-nano`
+- [ ] Definir as guardas operacionais contra TPM/RPM:
+  - `batch_size` pequeno
+  - `concurrency = 1` no inicio
+  - backoff exponencial em `429`
+  - janelas separadas do Hermes
+  - limite diario de videos
+- [ ] Definir a separacao de papeis entre orquestracao e logica pesada:
+  - `n8n` controla lotes, status e roteamento
+  - servico Python/API monta prompt, chama OpenAI, valida JSON e calcula
+    scores
+  - banco persiste status e historico de tentativas
+- [ ] Definir o historico minimo obrigatorio por tentativa:
+  - `post_id`
+  - `attempt_type`
+  - `model_name`
+  - `prompt_version`
+  - `input_token_estimate`
+  - `output_token_estimate`
+  - `confidence_score`
+  - `classification_result`
+  - `error_message`
+  - `created_at`
+- [ ] Traduzir o enrichment em perguntas de produto que orientem o proximo
+  modulo analitico:
+  - creators emergentes por nicho
+  - temas em alta por subnicho
+  - videos fora da curva no contexto do proprio creator
+  - oportunidades por nicho, marca, modelo ou sistema automotivo
+- [ ] Atualizar roadmap, backlog e decisoes tecnicas com o recorte real da fase
+  seguinte, separando claramente:
+  - validacao metodologica
+  - implementacao de pipeline
+  - consumo analitico no dashboard
+
+### Criterio de saida do planejamento
+
+O inicio do planejamento do Sprint 6 so deve ser considerado concluido quando
+existirem, no minimo:
+
+- taxonomia inicial validada para a fase de teste
+- amostra de `10` videos definida
+- contrato de classificacao humana vs IA documentado
+- thresholds de `confidence_score` e `agreement_score` consolidados
+- contrato OpenAI e guardas de TPM/RPM documentados
+- desenho claro do que fica para validacao metodologica, implementacao e
+  consumo no dashboard
+
+### Proxima execucao esperada
+
+Depois deste planejamento inicial, a primeira execucao do Sprint 6 deve seguir
+esta ordem:
+
+1. selecionar os `10` videos
+2. classificar manualmente os `10` videos
+3. classificar os mesmos `10` videos por IA sem transcricao
+4. calcular `confidence_score` e `agreement_score`
+5. revisar divergencias
+6. decidir se a fase avanca para nova rodada, para transcricao parcial ou para
+   ajuste de taxonomia/prompt
 
 ### Documentacao relacionada
 
 - [01_BACKLOG.md](01_BACKLOG.md)
 - [02_ROADMAP.md](02_ROADMAP.md)
 - [05_DECISOES_TECNICAS.md](05_DECISOES_TECNICAS.md)
+- [29_SPEC-INGESTAO-VALIDACAO-NICHOS-SUBNICHOS.md](../external_data/29_SPEC-INGESTAO-VALIDACAO-NICHOS-SUBNICHOS.md)
+- [30_SPEC_PREMISSAS_OPENAI_CLASSIFICACAO_TRANSCRICAO.md](../external_data/30_SPEC_PREMISSAS_OPENAI_CLASSIFICACAO_TRANSCRICAO.md)
 
 ### Entregas
 
-- Plano de enrichment priorizado.
-- Proximo roadmap orientado a produto.
-- Separacao clara entre ideias, execucao e decisoes tecnicas.
+- Sprint 6 com inicio de planejamento formalizado e alinhado aos docs `29` e
+  `30`.
+- Plano metodologico inicial de enrichment orientado por amostra de `10`
+  videos.
+- Contrato operacional preliminar de OpenAI, transcricao parcial e protecao de
+  TPM/RPM.
+- Separacao clara entre validacao metodologica, execucao futura de pipeline e
+  consumo analitico.
 
 ### Estimativa
 
