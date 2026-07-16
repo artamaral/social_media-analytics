@@ -1,0 +1,42 @@
+dimension,code,label_pt,parent_code,description,example_signals,allowed_in_pilot
+vehicle_brand,explicit_brand_only,Marca explicita somente,,Preencher apenas quando a marca estiver explicita e com evidencia forte,"Fiat, Toyota, Jeep, BYD",true
+vehicle_model,explicit_model_only,Modelo explicito somente,,Preencher apenas quando o modelo estiver explicito e sem depender de inferencia pelo canal,"Compass, Hilux, Dolphin, Nivus",true
+vehicle_year_or_generation,exact_year,Ano exato,,Usar ano exato quando o video citar ano ou versao temporal clara,"2022, 2024",true
+vehicle_year_or_generation,geracao_atual,Geracao atual,,Descritor controlado quando o video indicar geracao atual sem ano exato,"geracao atual, modelo atual",true
+vehicle_year_or_generation,geracao_anterior,Geracao anterior,,Descritor controlado quando o video indicar geracao anterior sem ano exato,"geracao anterior, modelo anterior",true
+vehicle_year_or_generation,facelift,Facelift,,Descritor controlado para update visual ou tecnico explicito,"facelift, reestilizado",true
+vehicle_year_or_generation,pre_facelift,Pre-facelift,,Descritor controlado para versao anterior ao facelift,"pre-facelift, antes da reestilizacao",true
+vehicle_year_or_generation,modelo_antigo,Modelo antigo,,Descritor controlado quando o video contrastar com versao antiga,"modelo antigo, versao antiga",true
+vehicle_year_or_generation,modelo_novo,Modelo novo,,Descritor controlado quando o video contrastar com versao nova,"modelo novo, nova geracao",true
+automotive_system,motor,Motor,,Sistema principal ligado ao motor,"motor, cabecote, bloco, combustao",true
+automotive_system,transmissao,Transmissao,,Sistema principal ligado a cambio ou transmissao,"cambio, transmissao, caixa, automatico",true
+automotive_system,freios,Freios,,Sistema principal ligado a freios,"freio, pastilha, disco, fluido",true
+automotive_system,suspensao,Suspensao,,Sistema principal ligado a suspensao,"amortecedor, mola, bandeja, suspensao",true
+automotive_system,eletrica_eletronica,Eletrica e eletronica,,Sistema principal ligado a sensores, modulos, chicote e eletrica em geral,"sensor, modulo, chicote, eletrica",true
+automotive_system,arrefecimento,Arrefecimento,,Sistema principal ligado a refrigeracao do motor,"radiador, agua, ventoinha, arrefecimento",true
+automotive_system,combustivel,Combustivel,,Sistema principal ligado a alimentacao e combustivel,"bomba, tanque, combustivel, injecao",true
+automotive_system,direcao,Direcao,,Sistema principal ligado a direcao,"direcao, caixa de direcao, alinhamento",true
+automotive_system,rodas_pneus,Rodas e pneus,,Sistema principal ligado a rodas e pneus,"pneu, roda, calibragem, balanceamento",true
+automotive_system,carroceria,Carroceria,,Sistema principal ligado a estrutura externa e acabamento,"lataria, funilaria, pintura, carroceria",true
+automotive_system,powertrain,Powertrain,,Sistema principal ligado a arquitetura de motorizacao e propulsao,"eletrico, hibrido, diesel, flex",true
+component,pastilha_freio,Pastilha de freio,freios,Componente especifico do sistema de freios,"pastilha, jogo de pastilhas",true
+component,disco_freio,Disco de freio,freios,Componente especifico do sistema de freios,"disco, disco de freio",true
+component,bateria_12v,Bateria 12v,eletrica_eletronica,Componente especifico do sistema eletrico auxiliar,"bateria 12v, bateria de partida",true
+component,alternador,Alternador,eletrica_eletronica,Componente especifico do sistema eletrico,"alternador, carga",true
+component,bobina,Bobina,eletrica_eletronica,Componente especifico de ignicao ou eletrica,"bobina, ignicao",true
+component,vela,Vela,eletrica_eletronica,Componente especifico de ignicao,"vela, vela de ignicao",true
+component,bico_injetor,Bico injetor,combustivel,Componente especifico de alimentacao,"bico, bico injetor",true
+component,sensor_oxigenio,Sensor de oxigenio,eletrica_eletronica,Componente especifico de sensor/eletronica,"sonda lambda, sensor de oxigenio",true
+component,cambio_automatico,Cambio automatico,transmissao,Componente ou conjunto especifico de transmissao automatica,"cambio automatico, caixa automatica",true
+component,modulo_injecao,Modulo de injecao,eletrica_eletronica,Componente especifico de controle eletronico,"ecu, modulo, central",true
+component,turbina,Turbina,motor,Componente especifico ligado a sobrealimentacao,"turbo, turbina",true
+problem,falha_de_motor,Falha de motor,motor,Problema principal ligado a falha de funcionamento do motor,"motor falhando, falha de motor",true
+problem,luz_injecao,Luz de injecao,eletrica_eletronica,Problema principal ligado a alerta de injecao ou avaria,"luz da injecao, check engine",true
+problem,barulho_suspensao,Barulho na suspensao,suspensao,Problema principal ligado a ruido ou folga de suspensao,"barulho, estalo, suspensao",true
+problem,superaquecimento,Superaquecimento,arrefecimento,Problema principal ligado a temperatura excessiva,"esquentando, ferveu, superaquecimento",true
+problem,consumo_alto,Consumo alto,combustivel,Problema principal ligado a consumo excessivo,"gastando muito, consumo alto",true
+problem,perda_potencia,Perda de potencia,motor,Problema principal ligado a falta de desempenho,"sem forca, perda de potencia",true
+problem,problema_cronico,Problema cronico,,Problema recorrente conhecido em determinado conjunto ou modelo,"defeito cronico, problema recorrente",true
+problem,falha_eletrica,Falha eletrica,eletrica_eletronica,Problema principal ligado a curto, modulo ou sensor,"falha eletrica, modulo, sensor",true
+problem,desgaste_prematuro,Desgaste prematuro,,Problema principal ligado a desgaste antecipado de peca ou sistema,"desgaste rapido, gastou cedo",true
+problem,tranco_cambio,Tranco no cambio,transmissao,Problema principal ligado a comportamento anormal da transmissao,"tranco, patinando, cambio ruim",true

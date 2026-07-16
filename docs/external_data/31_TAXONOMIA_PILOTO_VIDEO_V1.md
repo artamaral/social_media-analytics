@@ -15,6 +15,8 @@ Os artefatos canonicos desta fase sao:
 
 - este documento
 - `docs/external_data/31_TAXONOMIA_PILOTO_VIDEO_V1.csv`
+- `docs/external_data/32_DIMENSOES_COMPLEMENTARES_PILOTO_VIDEO_V1.md`
+- `docs/external_data/32_DIMENSOES_COMPLEMENTARES_PILOTO_VIDEO_V1.csv`
 
 Se houver divergencia entre exemplos antigos de outras specs e esta taxonomia
 piloto, a taxonomia piloto v1 deve prevalecer para a rodada inicial de `10`
@@ -290,3 +292,4 @@ piloto se:
 - pipeline de classificacao
 - prompt final da IA
 - persistencia definitiva da classificacao
+- fechamento das dimensoes complementares, que seguem em artefato proprio

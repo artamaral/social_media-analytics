@@ -3352,13 +3352,13 @@ Premissas ja fechadas para o inicio do sprint:
 
 ### Atividades
 
-- [ ] Consolidar a taxonomia inicial da fase metodologica, cobrindo no minimo:
+- [x] Consolidar a taxonomia inicial da fase metodologica, cobrindo no minimo:
   - `niche`
   - `sub_niche`
   - `sub_sub_niche`
   - `content_type`
   - `audience_intent`
-- [ ] Confirmar as dimensoes automotivas complementares que entram ja na
+- [x] Confirmar as dimensoes automotivas complementares que entram ja na
   validacao inicial:
   - `vehicle_brand`
   - `vehicle_model`
@@ -3366,7 +3366,7 @@ Premissas ja fechadas para o inicio do sprint:
   - `automotive_system`
   - `component`
   - `problem`
-- [ ] Selecionar a amostra inicial de `10` videos com mistura de casos claros e
+- [x] Selecionar a amostra inicial de `10` videos com mistura de casos claros e
   ambiguos, seguindo a composicao metodologica definida na spec de nichos e
   subnichos.
 - [ ] Registrar a classificacao humana dos `10` videos como baseline de

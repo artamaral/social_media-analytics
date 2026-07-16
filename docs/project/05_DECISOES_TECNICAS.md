@@ -1632,3 +1632,125 @@ Aplicacao operacional:
   - seed de banco
   - migration SQL
   - integracao automatica com `public.sub_niches`
+
+---
+
+## Dimensoes complementares piloto v1 para classificacao de videos
+
+Data:
+
+- 2026-07-16
+
+Decisao:
+
+- fechar um contrato piloto para as dimensoes complementares:
+  - `vehicle_brand`
+  - `vehicle_model`
+  - `vehicle_year_or_generation`
+  - `automotive_system`
+  - `component`
+  - `problem`
+- tratar essas dimensoes como camada complementar da taxonomia principal, sem
+  permitir que redefinam `niche` ou `sub_niche`
+- manter `vehicle_brand` e `vehicle_model` como campos semifechados,
+  preenchidos apenas quando houver evidencia explicita ou muito forte
+- tratar `vehicle_year_or_generation` como campo hibrido:
+  - ano exato quando existir
+  - descritores controlados quando nao houver ano
+- fechar `automotive_system`, `component` e `problem` com vocabulario piloto
+  controlado
+- manter a regra de que `scanner_obd2` continua em diagnostico, usando sistema,
+  componente e problema apenas como refinamento tecnico
+- usar `automotive_system = powertrain` quando o video for claramente sobre
+  motorizacao eletrica, hibrida, flex, diesel ou combustao
+
+Motivo:
+
+- sem esse contrato, a rodada humano vs IA dos `10` videos ficaria sujeita a
+  interpretacoes diferentes mesmo com a taxonomia principal fechada
+- as dimensoes complementares precisam enriquecer a leitura tecnica sem
+  competir com o tema principal do video
+- preencher marca, modelo ou componente por inferencia fraca aumentaria ruido,
+  derrubaria o `agreement_score` e tornaria a revisao metodologica menos
+  confiavel
+
+Impacto esperado:
+
+- classificacao manual e automatica mais consistente no piloto
+- menor risco de contradicao entre `sub_niche`, sistema, componente e problema
+- melhor base para revisar divergencias humano vs IA sem misturar tema e
+  detalhe tecnico
+
+Aplicacao operacional:
+
+- documento canonico:
+  `docs/external_data/32_DIMENSOES_COMPLEMENTARES_PILOTO_VIDEO_V1.md`
+- CSV canonico:
+  `docs/external_data/32_DIMENSOES_COMPLEMENTARES_PILOTO_VIDEO_V1.csv`
+- escopo atual:
+  - fase metodologica do piloto de `10` videos
+  - uso conjunto com a taxonomia piloto v1
+- fora do escopo atual:
+  - tabela definitiva de marcas
+  - tabela definitiva de modelos
+  - cruzamento automatico com Fenabrave, Carros na Web ou `public.sub_niches`
+
+---
+
+## Amostra piloto v1 de 10 videos para a rodada humano vs IA
+
+Data:
+
+- 2026-07-16
+
+Decisao:
+
+- fechar uma amostra metodologica inicial de `10` videos para a rodada humano
+  vs IA do Sprint 6
+- dividir a amostra em:
+  - `5` videos `short`
+  - `5` videos `long`
+- excluir creators cujo `entity_name` ou `username` combine com:
+  - `Acelerados`
+  - `ACF`
+  - `Tcar`
+- evitar creators muito pequenos e videos com baixo engajamento usando os
+  filtros:
+  - `followers >= 150000`
+  - `engagement_pct >= 2.0`
+- manter uma mistura intencional de:
+  - casos claros
+  - titulos ambiguos
+  - temas de `powertrain`
+  - temas de `manutencao`
+  - temas de `mercado` ou `compra_venda`
+
+Motivo:
+
+- a rodada inicial precisa calibrar o metodo, nao medir distribuicao
+  estatistica da base
+- excluir `Acelerados`, `ACF` e `Tcar` reduz vies editorial e respeita a
+  restricao definida para o piloto
+- exigir porte e engajamento minimos reduz o risco de montar o piloto com
+  videos fracos demais para classificacao util
+
+Impacto esperado:
+
+- base inicial mais estavel para classificacao humana e automatica
+- menor risco de ruído metodologico por creators muito pequenos ou pouco
+  engajados
+- melhor variedade de sinais para testar a taxonomia piloto
+
+Aplicacao operacional:
+
+- documento canonico:
+  `docs/external_data/33_AMOSTRA_PILOTO_10_VIDEOS_V1.md`
+- CSV canonico:
+  `docs/external_data/33_AMOSTRA_PILOTO_10_VIDEOS_V1.csv`
+- fonte usada para shortlist:
+  - `posts`
+  - `creators`
+- fora do escopo atual:
+  - classificacao humana
+  - prompt final da IA
+  - execucao da rodada automatica
