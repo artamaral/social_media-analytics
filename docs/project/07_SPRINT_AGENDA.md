@@ -3375,8 +3375,12 @@ Premissas ja fechadas para o inicio do sprint:
   - links clicaveis
   - dropdowns editaveis
   - `sub_niche` com preenchimento multiplo no mesmo campo
-- [ ] Registrar a classificacao humana dos `10` videos como baseline de
-  calibracao.
+- [ ] Registrar a classificacao humana dos `10` videos em duas entregas
+  separadas:
+  - `entrega_1_descricao`
+  - `entrega_2_90s_iniciais`
+- [ ] Adquirir e incluir a descricao dos `10` videos no material de execucao
+  antes da primeira entrega.
 - [ ] Definir o contrato da classificacao inicial por IA usando somente
   metadados existentes do video.
 - [ ] Fechar a formula e os campos obrigatorios do `confidence_score`.
@@ -3453,6 +3457,14 @@ Contrato operacional da v1:
   `, `
 - o arquivo `.xlsx` e a versao recomendada para execucao humana nesta v1
 
+Contrato das entregas humanas:
+
+- Entrega 1: classificar pela descricao, sem assistir ao video
+- Entrega 2: classificar novamente pelos `90s` iniciais do video
+- para videos menores que `90s`, usar o conteudo completo na Entrega 2
+- preservar os dois arquivos sem sobrescrita para comparacao posterior
+- a descricao dos videos deve ser incluida no material antes da Entrega 1
+
 Validacao corretiva em 2026-07-16:
 
 - corrigida a serializacao que distribuia cada registro de taxonomia letra por
@@ -3481,11 +3493,14 @@ Depois deste planejamento inicial, a primeira execucao do Sprint 6 deve seguir
 esta ordem:
 
 1. selecionar os `10` videos
-2. classificar manualmente os `10` videos
-3. classificar os mesmos `10` videos por IA sem transcricao
-4. calcular `confidence_score` e `agreement_score`
-5. revisar divergencias
-6. decidir se a fase avanca para nova rodada, para transcricao parcial ou para
+2. adquirir e incluir a descricao dos `10` videos
+3. produzir a classificacao humana `entrega_1_descricao`
+4. produzir a classificacao humana `entrega_2_90s_iniciais`
+5. classificar os mesmos `10` videos por IA sem transcricao
+6. calcular `confidence_score` e `agreement_score`
+7. comparar humano por descricao, humano por `90s` e IA
+8. revisar divergencias
+9. decidir se a fase avanca para nova rodada, para transcricao parcial ou para
    ajuste de taxonomia/prompt
 
 ### Documentacao relacionada

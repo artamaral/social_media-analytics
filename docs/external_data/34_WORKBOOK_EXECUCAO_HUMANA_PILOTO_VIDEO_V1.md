@@ -96,6 +96,32 @@ Campos de classificacao humana:
   classificacao
 - `classificacao_finalizada` deve ser preenchido com `sim` ou `nao`
 
+## Entregas da classificacao humana
+
+O workbook sera preenchido e entregue duas vezes, sempre com os mesmos `10`
+videos e os mesmos campos:
+
+- `entrega_1_descricao`: classificacao baseada na descricao, sem assistir ao
+  video
+- `entrega_2_90s_iniciais`: nova classificacao depois de assistir e ouvir os
+  `90s` iniciais; quando o video for menor, usar o conteudo completo
+
+Uma entrega nao deve sobrescrever a outra. Nomes recomendados para os arquivos
+preenchidos:
+
+- `34_WORKBOOK_EXECUCAO_HUMANA_PILOTO_VIDEO_V1_ENTREGA_1_DESCRICAO.xlsx`
+- `34_WORKBOOK_EXECUCAO_HUMANA_PILOTO_VIDEO_V1_ENTREGA_2_90S_INICIAIS.xlsx`
+
+Na segunda entrega, qualquer mudanca de classificacao deve refletir a evidencia
+adicional observada no inicio do video. A comparacao entre os dois arquivos
+sera usada para identificar quais dimensoes dependem de transcricao ou consumo
+do conteudo.
+
+Pre-requisito:
+
+- incluir a descricao dos `10` videos no material de execucao antes da Entrega
+  1, pois o CSV canonico da amostra ainda nao possui a coluna `description`
+
 ## Geracao
 
 O arquivo e gerado por:

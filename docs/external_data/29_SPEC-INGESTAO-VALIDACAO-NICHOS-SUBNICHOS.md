@@ -898,3 +898,49 @@ Depois desta spec, a próxima discussão deve definir o método de implementaç�
 ```bash
 git commit -m "docs(enrichment): define spec de validacao de nichos e subnichos"
 ```
+
+---
+
+## Duas entregas humanas do piloto
+
+Decisao registrada em 2026-07-16:
+
+A classificacao humana dos `10` videos sera feita em duas entregas separadas,
+mantendo a mesma taxonomia, os mesmos campos e a mesma amostra.
+
+### Entrega 1 - classificacao pela descricao
+
+- classificar os `10` videos usando a descricao como evidencia semantica
+  principal
+- nao assistir ao video nem usar audio, transcricao ou os `90s` iniciais
+- preservar duvidas e falta de evidencia em `observacoes`
+- nao criar categoria ad hoc apenas para completar campos sem evidencia
+
+### Entrega 2 - classificacao pelos `90s` iniciais
+
+- classificar novamente os mesmos `10` videos depois de assistir e ouvir os
+  `90s` iniciais
+- quando o video tiver menos de `90s`, considerar o video completo
+- registrar uma nova classificacao, sem sobrescrever a Entrega 1
+- usar a evidencia audiovisual para confirmar, complementar ou revisar os
+  campos preenchidos anteriormente
+
+### Regra de comparacao
+
+As duas entregas devem permanecer separadas para permitir:
+
+- comparar classificacao por descricao versus classificacao com `90s` de
+  conteudo
+- identificar campos alterados com evidencia adicional
+- medir se a descricao foi suficiente
+- calibrar a futura classificacao inicial e a reclassificacao apos transcricao
+  parcial
+
+As entregas esperadas devem usar identificacao explicita:
+
+- `entrega_1_descricao`
+- `entrega_2_90s_iniciais`
+
+A descricao dos videos precisa estar disponivel antes da Entrega 1. A amostra
+canonica do doc `33` ainda nao contem esse campo, portanto sua aquisicao e
+inclusao no artefato de execucao e um pre-requisito operacional.

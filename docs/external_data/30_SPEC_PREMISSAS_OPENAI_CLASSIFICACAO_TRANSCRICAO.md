@@ -616,3 +616,30 @@ Como a conta é Tier 1 e já existem problemas de TPM no Hermes, o pipeline deve
 Próxima etapa:
 
 Definir o método de implementação da classificação inicial, começando por 10 vídeos classificados manualmente e comparados com a IA.
+
+---
+
+## 21. Baseline humano em duas entregas
+
+Decisao registrada em 2026-07-16:
+
+O baseline humano do piloto sera produzido em duas entregas:
+
+1. `entrega_1_descricao`: classificacao pela descricao, sem assistir ao video e
+   sem usar transcricao.
+2. `entrega_2_90s_iniciais`: nova classificacao com a evidencia dos `90s`
+   iniciais do video; para videos menores, usar o conteudo completo.
+
+A segunda entrega nao substitui a primeira. Os dois resultados devem ser
+preservados para medir o ganho de evidencia e orientar o desenho do fluxo:
+
+```text
+classificacao inicial por texto
+-> evidencia parcial de ate 90s
+-> reclassificacao
+-> comparacao das alteracoes por campo
+```
+
+Esse contrato antecipa, na execucao humana, o mesmo padrao metodologico previsto
+para a IA: classificacao inicial com dados existentes e reclassificacao apos
+transcricao parcial.

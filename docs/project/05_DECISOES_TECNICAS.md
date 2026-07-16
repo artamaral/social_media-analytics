@@ -1806,3 +1806,45 @@ Observacao de implementacao:
   manual no mesmo campo, usando separacao por `, `
 - o gerador valida antes da entrega as contagens de taxonomias, videos,
   hyperlinks e dropdowns
+
+---
+
+## Baseline humano do piloto em duas entregas
+
+Data:
+
+- 2026-07-16
+
+Decisao:
+
+- produzir duas classificacoes humanas para os mesmos `10` videos
+- Entrega 1:
+  - identificador `entrega_1_descricao`
+  - usar a descricao como evidencia semantica principal
+  - nao assistir ao video nem usar audio ou transcricao
+- Entrega 2:
+  - identificador `entrega_2_90s_iniciais`
+  - classificar novamente usando os `90s` iniciais do video
+  - usar o video completo quando a duracao for menor que `90s`
+- preservar as duas entregas separadamente, sem sobrescrever resultados
+
+Motivo:
+
+- o desenho segue o padrao ja previsto nos docs `29` e `30`: classificacao
+  inicial com texto e reclassificacao com evidencia parcial do conteudo
+- comparar as duas entregas permite medir em quais dimensoes a descricao e
+  suficiente e onde os primeiros `90s` mudam a leitura
+- a separacao reduz perda de rastreabilidade e permite calibrar a futura
+  decisao de transcrever ou nao um video
+
+Pre-requisito operacional:
+
+- adquirir e incluir a descricao dos `10` videos antes da Entrega 1
+- o CSV canonico do doc `33` ainda nao contem `description`
+
+Impacto esperado:
+
+- baseline humano com duas camadas de evidencia
+- comparacao por campo entre descricao e conteudo inicial
+- melhor criterio para avaliar a classificacao inicial da IA e a
+  reclassificacao apos transcricao parcial
