@@ -18,6 +18,10 @@ Este workbook deve ser usado em conjunto com:
 - `docs/external_data/32_DIMENSOES_COMPLEMENTARES_PILOTO_VIDEO_V1.csv`
 - `docs/external_data/33_AMOSTRA_PILOTO_10_VIDEOS_V1.md`
 - `docs/external_data/33_AMOSTRA_PILOTO_10_VIDEOS_V1.csv`
+- `docs/external_data/34_WORKBOOK_EXECUCAO_HUMANA_PILOTO_VIDEO_V1.xlsx`
+
+Tambem e publicada uma copia compativel em:
+
 - `docs/external_data/34_WORKBOOK_EXECUCAO_HUMANA_PILOTO_VIDEO_V1.xlsm`
 
 ## Estrutura do arquivo
@@ -104,11 +108,25 @@ Comando:
 powershell -ExecutionPolicy Bypass -File scripts/external_data/build_pilot_human_workbook.ps1
 ```
 
+O gerador valida automaticamente:
+
+- `102` registros de taxonomia, alem do cabecalho
+- `10` videos primarios, alem do cabecalho
+- `10` hyperlinks de YouTube
+- `12` campos com dropdown
+
 ## Observacao operacional
 
-O workbook e publicado em formato `.xlsm` para manter compatibilidade com a
-evolucao futura da rodada humana em Excel.
+Abrir preferencialmente o arquivo `.xlsx` nesta versao. O `.xlsm` e mantido
+para compatibilidade com a evolucao futura da rodada humana em Excel.
 
 Na versao atual, o campo `sub_niche` permite multiplos valores por digitacao
 manual no mesmo campo, mantendo o dropdown como sugestao inicial de valores
 canonicos.
+
+Validacao executada em 2026-07-16 no Excel desktop:
+
+- aba `taxonomias`: `103` linhas e `7` colunas
+- aba `execucao_humana`: `11` linhas e `25` colunas
+- dropdowns ativos e editaveis nos `12` campos previstos
+- `10` links clicaveis para os videos

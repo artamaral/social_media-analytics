@@ -1765,8 +1765,9 @@ Data:
 
 Decisao:
 
-- publicar um workbook unico em
-  `docs/external_data/34_WORKBOOK_EXECUCAO_HUMANA_PILOTO_VIDEO_V1.xlsm`
+- publicar o workbook operacional recomendado em
+  `docs/external_data/34_WORKBOOK_EXECUCAO_HUMANA_PILOTO_VIDEO_V1.xlsx`
+- manter uma copia `.xlsm` para compatibilidade com evolucao futura
 - consolidar no arquivo:
   - taxonomias do piloto
   - lista canonica dos `10` videos primarios
@@ -1798,7 +1799,10 @@ Contrato atual:
 
 Observacao de implementacao:
 
-- o gerador atual publica o workbook em `.xlsm` com dropdowns editaveis e
+- o gerador atual publica `.xlsx` e `.xlsm` com dropdowns editaveis e
   preenchimento manual livre
+- o `.xlsx` e a versao recomendada para uso nesta v1
 - nesta v1, a multisselecao de `sub_niche` fica operacional por preenchimento
   manual no mesmo campo, usando separacao por `, `
+- o gerador valida antes da entrega as contagens de taxonomias, videos,
+  hyperlinks e dropdowns

@@ -3,6 +3,7 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $externalDataDir = Join-Path $repoRoot "docs\external_data"
 $outputPath = Join-Path $externalDataDir "34_WORKBOOK_EXECUCAO_HUMANA_PILOTO_VIDEO_V1.xlsm"
+$outputXlsxPath = Join-Path $externalDataDir "34_WORKBOOK_EXECUCAO_HUMANA_PILOTO_VIDEO_V1.xlsx"
 
 $taxonomyCsvPath = Join-Path $externalDataDir "31_TAXONOMIA_PILOTO_VIDEO_V1.csv"
 $dimensionsCsvPath = Join-Path $externalDataDir "32_DIMENSOES_COMPLEMENTARES_PILOTO_VIDEO_V1.csv"
@@ -119,8 +120,8 @@ function New-WorksheetXml {
   <dimension ref="$dimensionRef"/>
 $sheetViewXml  <sheetFormatPr defaultRowHeight="15"/>
   <sheetData>$($sheetData -join '')</sheetData>
-  $hyperlinksXml
   $dataValidationXml
+  $hyperlinksXml
 </worksheet>
 "@
 
@@ -186,6 +187,132 @@ function Write-Utf8File {
     [System.IO.File]::WriteAllText($Path, $Content, $utf8NoBom)
 }
 
+function Add-FileToZip {
+    param(
+        [System.IO.Compression.ZipArchive]$Archive,
+        [string]$SourcePath,
+        [string]$EntryPath
+    )
+
+    $normalizedEntryPath = $EntryPath -replace "\\", "/"
+    [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+        $Archive,
+        $SourcePath,
+        $normalizedEntryPath,
+        [System.IO.Compression.CompressionLevel]::Optimal
+    ) | Out-Null
+}
+
+function Write-WorkbookArchive {
+    param(
+        [string]$TempRoot,
+        [string]$OutputFilePath,
+        [string]$ContentTypesXml
+    )
+
+    Write-Utf8File -Path (Join-Path $TempRoot "[Content_Types].xml") -Content $ContentTypesXml
+
+    if (Test-Path $OutputFilePath) {
+        Remove-Item $OutputFilePath -Force
+    }
+
+    $zipPath = "$OutputFilePath.zip"
+    if (Test-Path $zipPath) {
+        Remove-Item $zipPath -Force
+    }
+
+    Add-Type -AssemblyName System.IO.Compression
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $archive = [System.IO.Compression.ZipFile]::Open($zipPath, [System.IO.Compression.ZipArchiveMode]::Create)
+    try {
+        Add-FileToZip -Archive $archive -SourcePath (Join-Path $TempRoot "[Content_Types].xml") -EntryPath "[Content_Types].xml"
+        Add-FileToZip -Archive $archive -SourcePath (Join-Path $TempRoot "_rels\.rels") -EntryPath "_rels/.rels"
+        Add-FileToZip -Archive $archive -SourcePath (Join-Path $TempRoot "docProps\app.xml") -EntryPath "docProps/app.xml"
+        Add-FileToZip -Archive $archive -SourcePath (Join-Path $TempRoot "docProps\core.xml") -EntryPath "docProps/core.xml"
+        Add-FileToZip -Archive $archive -SourcePath (Join-Path $TempRoot "xl\workbook.xml") -EntryPath "xl/workbook.xml"
+        Add-FileToZip -Archive $archive -SourcePath (Join-Path $TempRoot "xl\_rels\workbook.xml.rels") -EntryPath "xl/_rels/workbook.xml.rels"
+        Add-FileToZip -Archive $archive -SourcePath (Join-Path $TempRoot "xl\worksheets\sheet1.xml") -EntryPath "xl/worksheets/sheet1.xml"
+        Add-FileToZip -Archive $archive -SourcePath (Join-Path $TempRoot "xl\worksheets\sheet2.xml") -EntryPath "xl/worksheets/sheet2.xml"
+        Add-FileToZip -Archive $archive -SourcePath (Join-Path $TempRoot "xl\worksheets\sheet3.xml") -EntryPath "xl/worksheets/sheet3.xml"
+        Add-FileToZip -Archive $archive -SourcePath (Join-Path $TempRoot "xl\worksheets\_rels\sheet2.xml.rels") -EntryPath "xl/worksheets/_rels/sheet2.xml.rels"
+    }
+    finally {
+        $archive.Dispose()
+    }
+
+    Move-Item -Path $zipPath -Destination $OutputFilePath -Force
+}
+
+function Assert-WorkbookArchive {
+    param(
+        [string]$WorkbookPath,
+        [int]$ExpectedTaxonomyRows,
+        [int]$ExpectedVideoRows,
+        [int]$ExpectedValidationCount
+    )
+
+    Add-Type -AssemblyName System.IO.Compression
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+
+    $archive = [System.IO.Compression.ZipFile]::OpenRead($WorkbookPath)
+    try {
+        $namespaceManager = New-Object System.Xml.XmlNamespaceManager((New-Object System.Xml.NameTable))
+        $namespaceManager.AddNamespace("x", "http://schemas.openxmlformats.org/spreadsheetml/2006/main")
+
+        $sheetDocuments = @{}
+        foreach ($sheetNumber in 1..3) {
+            $entry = $archive.GetEntry("xl/worksheets/sheet$sheetNumber.xml")
+            if ($null -eq $entry) {
+                throw "Missing worksheet XML: sheet$sheetNumber.xml"
+            }
+
+            $reader = New-Object System.IO.StreamReader($entry.Open())
+            try {
+                $document = New-Object System.Xml.XmlDocument
+                $document.LoadXml($reader.ReadToEnd())
+                $sheetDocuments[$sheetNumber] = $document
+            }
+            finally {
+                $reader.Dispose()
+            }
+        }
+
+        $taxonomyRowCount = $sheetDocuments[1].SelectNodes("//x:sheetData/x:row", $namespaceManager).Count
+        if ($taxonomyRowCount -ne ($ExpectedTaxonomyRows + 1)) {
+            throw "Invalid taxonomy row count: expected $($ExpectedTaxonomyRows + 1), found $taxonomyRowCount"
+        }
+
+        $taxonomyFirstDataRow = $sheetDocuments[1].SelectSingleNode("//x:sheetData/x:row[@r='2']", $namespaceManager)
+        $taxonomyFirstDataCells = $taxonomyFirstDataRow.SelectNodes("x:c", $namespaceManager)
+        if ($taxonomyFirstDataCells.Count -ne 7) {
+            throw "Invalid taxonomy column count on row 2: expected 7, found $($taxonomyFirstDataCells.Count)"
+        }
+
+        $taxonomyFirstValue = $taxonomyFirstDataCells[0].SelectSingleNode(".//x:t", $namespaceManager).InnerText
+        if ([string]::IsNullOrWhiteSpace($taxonomyFirstValue) -or $taxonomyFirstValue.Length -le 1) {
+            throw "Taxonomy row serialization failed: first value is '$taxonomyFirstValue'"
+        }
+
+        $videoRowCount = $sheetDocuments[2].SelectNodes("//x:sheetData/x:row", $namespaceManager).Count
+        if ($videoRowCount -ne ($ExpectedVideoRows + 1)) {
+            throw "Invalid video row count: expected $($ExpectedVideoRows + 1), found $videoRowCount"
+        }
+
+        $validationCount = $sheetDocuments[2].SelectNodes("//x:dataValidations/x:dataValidation", $namespaceManager).Count
+        if ($validationCount -ne $ExpectedValidationCount) {
+            throw "Invalid dropdown validation count: expected $ExpectedValidationCount, found $validationCount"
+        }
+
+        $hyperlinkCount = $sheetDocuments[2].SelectNodes("//x:hyperlinks/x:hyperlink", $namespaceManager).Count
+        if ($hyperlinkCount -ne $ExpectedVideoRows) {
+            throw "Invalid hyperlink count: expected $ExpectedVideoRows, found $hyperlinkCount"
+        }
+    }
+    finally {
+        $archive.Dispose()
+    }
+}
+
 $taxonomyRows = @(Import-Csv -Path $taxonomyCsvPath -Encoding UTF8)
 $dimensionRows = @(Import-Csv -Path $dimensionsCsvPath -Encoding UTF8)
 $sampleRows = @(Import-Csv -Path $sampleCsvPath -Encoding UTF8)
@@ -247,8 +374,9 @@ $taxHeaders = @(
     "allowed_in_pilot"
 )
 
-$taxRows = foreach ($row in $mergedTaxonomyRows) {
-    @(
+$taxRows = New-Object System.Collections.Generic.List[object]
+foreach ($row in $mergedTaxonomyRows) {
+    $taxRows.Add([object][object[]]@(
         $row.dimension,
         $row.code,
         $row.label_pt,
@@ -256,7 +384,7 @@ $taxRows = foreach ($row in $mergedTaxonomyRows) {
         $row.description,
         $row.example_signals,
         $row.allowed_in_pilot
-    )
+    ))
 }
 
 $execHeaders = @(
@@ -306,7 +434,7 @@ for ($index = 0; $index -lt $primarySampleRows.Count; $index++) {
         (New-RelationshipXml -Id $relationshipId -Type "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" -Target $execHyperlinks[$videoLinkRef].Url -TargetMode "External")
     )
 
-    $execRows.Add(@(
+    $execRows.Add([object][object[]]@(
         $row.post_id,
         "abrir_video",
         $row.title,
@@ -348,7 +476,7 @@ for ($i = 0; $i -lt $maxListRows; $i++) {
             $rowValues += ""
         }
     }
-    $listRows.Add($rowValues)
+    $listRows.Add([object][object[]]$rowValues)
 }
 
 $definedNames = New-Object System.Collections.Generic.List[string]
@@ -393,6 +521,11 @@ $contentTypesXml = @"
 </Types>
 "@
 
+$contentTypesXlsxXml = $contentTypesXml.Replace(
+    "application/vnd.ms-excel.sheet.macroEnabled.main+xml",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"
+)
+
 $packageRelsXml = @"
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
@@ -406,7 +539,7 @@ $workbookXml = @"
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
   <bookViews>
-    <workbookView xWindow="120" yWindow="120" windowWidth="28800" windowHeight="16800"/>
+    <workbookView xWindow="120" yWindow="120" windowWidth="28800" windowHeight="16800" activeTab="1"/>
   </bookViews>
   <sheets>
     <sheet name="taxonomias" sheetId="1" r:id="rId1"/>
@@ -488,7 +621,6 @@ New-Item -ItemType Directory -Path (Join-Path $tempRoot "xl\_rels") | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $tempRoot "xl\worksheets") | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $tempRoot "xl\worksheets\_rels") | Out-Null
 
-Write-Utf8File -Path (Join-Path $tempRoot "[Content_Types].xml") -Content $contentTypesXml
 Write-Utf8File -Path (Join-Path $tempRoot "_rels\.rels") -Content $packageRelsXml
 Write-Utf8File -Path (Join-Path $tempRoot "docProps\core.xml") -Content $coreXml
 Write-Utf8File -Path (Join-Path $tempRoot "docProps\app.xml") -Content $appXml
@@ -499,17 +631,11 @@ Write-Utf8File -Path (Join-Path $tempRoot "xl\worksheets\sheet2.xml") -Content $
 Write-Utf8File -Path (Join-Path $tempRoot "xl\worksheets\sheet3.xml") -Content $listsSheet.Xml
 Write-Utf8File -Path (Join-Path $tempRoot "xl\worksheets\_rels\sheet2.xml.rels") -Content $executionSheetRelsXml
 
-if (Test-Path $outputPath) {
-    Remove-Item $outputPath -Force
-}
-
-$zipPath = "$outputPath.zip"
-if (Test-Path $zipPath) {
-    Remove-Item $zipPath -Force
-}
-
-Compress-Archive -Path (Join-Path $tempRoot "*") -DestinationPath $zipPath -Force
-Move-Item -Path $zipPath -Destination $outputPath -Force
+Write-WorkbookArchive -TempRoot $tempRoot -OutputFilePath $outputPath -ContentTypesXml $contentTypesXml
+Write-WorkbookArchive -TempRoot $tempRoot -OutputFilePath $outputXlsxPath -ContentTypesXml $contentTypesXlsxXml
+Assert-WorkbookArchive -WorkbookPath $outputPath -ExpectedTaxonomyRows $mergedTaxonomyRows.Count -ExpectedVideoRows $primarySampleRows.Count -ExpectedValidationCount $execDataValidationSpecs.Count
+Assert-WorkbookArchive -WorkbookPath $outputXlsxPath -ExpectedTaxonomyRows $mergedTaxonomyRows.Count -ExpectedVideoRows $primarySampleRows.Count -ExpectedValidationCount $execDataValidationSpecs.Count
 Remove-Item -Path $tempRoot -Recurse -Force
 
 Write-Output "Workbook generated at $outputPath"
+Write-Output "Workbook generated at $outputXlsxPath"

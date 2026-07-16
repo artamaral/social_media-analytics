@@ -3438,6 +3438,7 @@ Objetivo:
 
 Resultado publicado:
 
+- `docs/external_data/34_WORKBOOK_EXECUCAO_HUMANA_PILOTO_VIDEO_V1.xlsx`
 - `docs/external_data/34_WORKBOOK_EXECUCAO_HUMANA_PILOTO_VIDEO_V1.xlsm`
 - `docs/external_data/34_WORKBOOK_EXECUCAO_HUMANA_PILOTO_VIDEO_V1.md`
 - `scripts/external_data/build_pilot_human_workbook.ps1`
@@ -3450,6 +3451,16 @@ Contrato operacional da v1:
 - os campos de classificacao usam dropdowns sugeridos sem bloquear valor novo
 - `sub_niche` pode receber mais de um valor no mesmo campo usando separacao por
   `, `
+- o arquivo `.xlsx` e a versao recomendada para execucao humana nesta v1
+
+Validacao corretiva em 2026-07-16:
+
+- corrigida a serializacao que distribuia cada registro de taxonomia letra por
+  letra
+- confirmadas `102` linhas de taxonomia, `10` videos, `10` hyperlinks e `12`
+  dropdowns no Excel desktop
+- o gerador passou a interromper a publicacao se essas contagens nao forem
+  atendidas
 
 ### Criterio de saida do planejamento
 
