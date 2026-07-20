@@ -1848,3 +1848,80 @@ Impacto esperado:
 - comparacao por campo entre descricao e conteudo inicial
 - melhor criterio para avaliar a classificacao inicial da IA e a
   reclassificacao apos transcricao parcial
+
+---
+
+## Evolucao da taxonomia apos o primeiro teste humano
+
+Data:
+
+- 2026-07-20
+
+Decisao:
+
+- preservar a taxonomia v1 e os workbooks preenchidos como evidencia da rodada
+- nao alterar retroativamente os CSVs `31` e `32`
+- preparar uma taxonomia v2 com arvore de apresentacao legivel e dimensoes
+  canonicas separadas
+- exigir no desenho futuro compatibilidade entre:
+  - niche, sub_niche e sub_sub_niche
+  - rota taxonomica, sistema, componente e problema
+  - marca, modelo e geracao
+- validar resultados da IA antes da persistencia e enviar combinacoes invalidas
+  para revisao humana
+
+Decisao ainda aberta:
+
+- nao liberar multi-niche irrestrito nesta fase
+- avaliar primeiro a separacao entre `automotive_domain` e `activity_type`
+- testar `niche_primary` e `niche_secondary` controlados apenas se a separacao
+  de eixos nao resolver os casos hibridos
+
+Motivo:
+
+- o teste mostrou sobreposicao semantica entre `diagnostico` e `manutencao`
+- dropdowns independentes permitem combinacoes tecnicamente impossiveis
+- uma arvore amigavel ao humano nao precisa reproduzir diretamente as colunas
+  do modelo de dados
+- travas apenas na interface nao protegem persistencia por API ou IA
+
+Referencia:
+
+- `docs/external_data/35_ACHADOS_POS_TESTE_TAXONOMIA_CLASSIFICACAO_V1.md`
+
+---
+
+## Avaliacao GPT equivalente ao baseline humano em duas etapas
+
+Data:
+
+- 2026-07-20
+
+Decisao:
+
+- executar o agente GPT sobre os mesmos `10` videos em duas etapas
+- Etapa 1: descricao sem audio, video ou transcricao
+- Etapa 2: mesma descricao acrescida da transcricao dos `90s` iniciais
+- nao fornecer classificacoes ou observacoes humanas ao agente classificador
+- persistir as duas saidas GPT antes de iniciar comparacoes
+- manter termos novos em `taxonomy_gaps` e inconsistencias em
+  `validation_issues`, sem alterar silenciosamente a taxonomia v1
+
+Motivo:
+
+- o isolamento evita vazamento do baseline humano para o agente
+- a equivalencia de evidencias permite medir o valor marginal dos `90s`
+- preservar lacunas separadamente evita confundir capacidade do modelo com
+  insuficiencia da taxonomia
+
+Pre-requisitos:
+
+- corrigir os metadados truncados por virgulas no CSV da amostra
+- capturar e versionar descricoes
+- obter transcricoes limitadas ao intervalo contratado
+- fechar o JSON Schema da resposta
+
+Referencia:
+
+- `docs/external_data/36_RESULTADO_BASELINE_HUMANO_E_CONTRATO_AVALIACAO_GPT_V1.md`
+- `docs/external_data/36_BASELINE_HUMANO_DUAS_ETAPAS_V1.csv`

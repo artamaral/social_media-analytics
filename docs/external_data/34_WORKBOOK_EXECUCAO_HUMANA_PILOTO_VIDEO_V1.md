@@ -26,13 +26,22 @@ Tambem e publicada uma copia compativel em:
 
 ## Estrutura do arquivo
 
-O workbook possui tres abas:
+O workbook atualizado pelo avaliador humano possui quatro abas:
 
 - `taxonomias`
-- `execucao_humana`
+- `execucao_humana_title`
+- `execucao_humana_transcricao_90s`
 - `listas`
 
 A aba `listas` fica oculta e serve apenas como fonte dos dropdowns.
+
+Mapeamento metodologico:
+
+- `execucao_humana_title` registra a avaliacao informada como baseada na
+  descricao, antes de assistir ao video
+- `execucao_humana_transcricao_90s` registra a avaliacao depois de assistir aos
+  `90s` iniciais; o nome da aba nao significa que uma transcricao textual tenha
+  sido persistida no workbook
 
 ## Conteudo da aba `taxonomias`
 
@@ -51,7 +60,7 @@ As colunas preservadas sao:
 - `example_signals`
 - `allowed_in_pilot`
 
-## Conteudo da aba `execucao_humana`
+## Conteudo das abas de execucao humana
 
 Cada linha representa um dos `10` videos primarios da amostra piloto.
 
@@ -98,19 +107,15 @@ Campos de classificacao humana:
 
 ## Entregas da classificacao humana
 
-O workbook sera preenchido e entregue duas vezes, sempre com os mesmos `10`
-videos e os mesmos campos:
+O workbook registra as duas entregas em abas separadas do mesmo arquivo, sempre
+com os mesmos `10` videos e os mesmos campos:
 
 - `entrega_1_descricao`: classificacao baseada na descricao, sem assistir ao
   video
 - `entrega_2_90s_iniciais`: nova classificacao depois de assistir e ouvir os
   `90s` iniciais; quando o video for menor, usar o conteudo completo
 
-Uma entrega nao deve sobrescrever a outra. Nomes recomendados para os arquivos
-preenchidos:
-
-- `34_WORKBOOK_EXECUCAO_HUMANA_PILOTO_VIDEO_V1_ENTREGA_1_DESCRICAO.xlsx`
-- `34_WORKBOOK_EXECUCAO_HUMANA_PILOTO_VIDEO_V1_ENTREGA_2_90S_INICIAIS.xlsx`
+Uma entrega nao deve sobrescrever a outra.
 
 Na segunda entrega, qualquer mudanca de classificacao deve refletir a evidencia
 adicional observada no inicio do video. A comparacao entre os dois arquivos
@@ -121,6 +126,11 @@ Pre-requisito:
 
 - incluir a descricao dos `10` videos no material de execucao antes da Entrega
   1, pois o CSV canonico da amostra ainda nao possui a coluna `description`
+
+Resultado consolidado:
+
+- `docs/external_data/36_RESULTADO_BASELINE_HUMANO_E_CONTRATO_AVALIACAO_GPT_V1.md`
+- `docs/external_data/36_BASELINE_HUMANO_DUAS_ETAPAS_V1.csv`
 
 ## Geracao
 
@@ -156,3 +166,9 @@ Validacao executada em 2026-07-16 no Excel desktop:
 - aba `execucao_humana`: `11` linhas e `25` colunas
 - dropdowns ativos e editaveis nos `12` campos previstos
 - `10` links clicaveis para os videos
+
+## Estado atual do gerador
+
+O script `build_pilot_human_workbook.ps1` ainda representa a estrutura anterior
+com uma unica aba humana. Nao regenerar o workbook preenchido antes de atualizar
+o script para preservar as duas abas e o baseline registrado.

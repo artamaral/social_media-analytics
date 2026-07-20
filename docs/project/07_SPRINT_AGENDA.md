@@ -3375,14 +3375,31 @@ Premissas ja fechadas para o inicio do sprint:
   - links clicaveis
   - dropdowns editaveis
   - `sub_niche` com preenchimento multiplo no mesmo campo
-- [ ] Registrar a classificacao humana dos `10` videos em duas entregas
+- [x] Registrar a classificacao humana dos `10` videos em duas entregas
   separadas:
   - `entrega_1_descricao`
   - `entrega_2_90s_iniciais`
 - [ ] Adquirir e incluir a descricao dos `10` videos no material de execucao
   antes da primeira entrega.
+- [x] Registrar os achados pos-teste sobre hierarquia, coerencia entre campos,
+  validacao futura no banco e sobreposicao entre `diagnostico` e `manutencao`.
+- [ ] Desenhar a taxonomia v2 com arvore legivel e codigos canonicos separados
+  da navegacao apresentada ao usuario.
+- [ ] Definir matrizes de compatibilidade entre rota taxonomica,
+  `automotive_system`, `component` e `problem`.
+- [ ] Definir a validacao referencial de `vehicle_brand`, `vehicle_model` e
+  `vehicle_year_or_generation` contra cadastros canonicos futuros.
+- [ ] Decidir, usando os resultados do piloto, entre:
+  - separar `automotive_domain` e `activity_type`
+  - adotar `niche_primary` e `niche_secondary` controlados
 - [ ] Definir o contrato da classificacao inicial por IA usando somente
   metadados existentes do video.
+- [x] Consolidar o resultado humano e o contrato de avaliacao cega pelo agente
+  GPT no doc `36`.
+- [ ] Corrigir os metadados truncados da amostra e capturar snapshots das
+  descricoes antes da avaliacao GPT.
+- [ ] Capturar ou gerar as transcricoes dos `90s` iniciais dos `10` videos.
+- [ ] Executar as duas etapas GPT sem expor o baseline humano ao classificador.
 - [ ] Fechar a formula e os campos obrigatorios do `confidence_score`.
 - [ ] Fechar o calculo e os pesos do `agreement_score` para comparacao humano
   vs IA.
@@ -3473,6 +3490,49 @@ Validacao corretiva em 2026-07-16:
   dropdowns no Excel desktop
 - o gerador passou a interromper a publicacao se essas contagens nao forem
   atendidas
+
+#### Achados pos-teste da taxonomia v1
+
+Status: registrados em 2026-07-20.
+
+Documento:
+
+- `docs/external_data/35_ACHADOS_POS_TESTE_TAXONOMIA_CLASSIFICACAO_V1.md`
+
+Leitura:
+
+- a taxonomia precisa de uma arvore de apresentacao mais clara, como
+  `diagnostico > scanner_obd2` e `diagnostico > luz_injecao`
+- a arvore visual nao deve misturar tecnicamente subnicho, problema, sistema e
+  componente na mesma dimensao canonica
+- combinacoes entre tema, sistema, componente e problema precisam ser
+  validadas por matrizes de compatibilidade
+- marca, modelo e geracao precisam ser reconciliados com cadastros canonicos
+  do banco antes da persistencia futura
+- a possibilidade de mais de um niche permanece em decisao; a alternativa
+  preferida para teste e separar dominio automotivo de tipo de atividade
+- a taxonomia v1 nao sera reescrita retroativamente e permanece como evidencia
+  da primeira rodada
+
+#### Resultado do baseline humano em duas etapas
+
+Status: consolidado em 2026-07-20.
+
+Artefatos:
+
+- `docs/external_data/36_RESULTADO_BASELINE_HUMANO_E_CONTRATO_AVALIACAO_GPT_V1.md`
+- `docs/external_data/36_BASELINE_HUMANO_DUAS_ETAPAS_V1.csv`
+
+Resultado:
+
+- `2/10` videos ficaram finalizados apenas pela descricao
+- `9/10` ficaram finalizados depois dos `90s` iniciais
+- `7/10` mudaram em pelo menos um campo de classificacao
+- foram observadas `29` mudancas de campo
+- `8/10` resultados apos `90s` apresentam termo fora da v1 ou incompatibilidade
+  de parent, confirmando a necessidade das travas registradas no doc `35`
+- a proxima rodada sera executada pelo GPT em duas etapas cegas equivalentes,
+  sem acesso previo ao baseline humano
 
 ### Criterio de saida do planejamento
 
