@@ -3383,7 +3383,7 @@ Premissas ja fechadas para o inicio do sprint:
   antes da primeira entrega.
 - [x] Registrar os achados pos-teste sobre hierarquia, coerencia entre campos,
   validacao futura no banco e sobreposicao entre `diagnostico` e `manutencao`.
-- [ ] Desenhar a taxonomia v2 com arvore legivel e codigos canonicos separados
+- [x] Desenhar a taxonomia v2 com arvore legivel e codigos canonicos separados
   da navegacao apresentada ao usuario.
 - [ ] Definir matrizes de compatibilidade entre rota taxonomica,
   `automotive_system`, `component` e `problem`.
@@ -3398,7 +3398,12 @@ Premissas ja fechadas para o inicio do sprint:
   GPT no doc `36`.
 - [ ] Corrigir os metadados truncados da amostra e capturar snapshots das
   descricoes antes da avaliacao GPT.
-- [ ] Capturar ou gerar as transcricoes dos `90s` iniciais dos `10` videos.
+- [x] Capturar ou gerar as transcricoes dos `90s` iniciais dos `10` videos.
+- [x] Executar round exploratorio com GPT 5.5 para evolucao taxonomica, usando
+  apenas titulo/metadados quando descricao e transcricao nao estiverem
+  versionadas.
+- [x] Executar classificacao GPT 5.5 exploratoria com os transcripts Whisper
+  dos `90s` e comparar com o baseline humano equivalente.
 - [ ] Executar as duas etapas GPT sem expor o baseline humano ao classificador.
 - [ ] Fechar a formula e os campos obrigatorios do `confidence_score`.
 - [ ] Fechar o calculo e os pesos do `agreement_score` para comparacao humano
@@ -3533,6 +3538,158 @@ Resultado:
   de parent, confirmando a necessidade das travas registradas no doc `35`
 - a proxima rodada sera executada pelo GPT em duas etapas cegas equivalentes,
   sem acesso previo ao baseline humano
+
+#### Round exploratorio GPT 5.5 para taxonomia
+
+Status: registrado em 2026-07-20.
+
+Artefatos:
+
+- `docs/external_data/37_ANALISE_GPT55_EXPLORATORIA_TAXONOMIA_R1.md`
+- `docs/external_data/37_RESULTADO_GPT55_EXPLORATORIO_TAXONOMIA_R1.csv`
+
+Resultado:
+
+- `10/10` videos da amostra canonica foram avaliados na etapa
+  `gpt55_entrega_1_descricao`
+- a evidencia disponivel ficou limitada a titulo e metadados, porque as
+  descricoes reais ainda nao estao versionadas no doc `33`
+- `10/10` registros da etapa `gpt55_entrega_2_90s_iniciais` foram preservados,
+  mas marcados como `sem_evidencia_90s`, pois nao ha transcricao textual
+  versionada dos primeiros `90s`
+- a rodada nao e benchmark final da API `gpt-5.4-mini`; ela serve para evoluir
+  a taxonomia e orientar os proximos rounds de fine tuning conceitual
+
+#### Transcricao local dos 90s com Whisper
+
+Status: concluida em 2026-07-20.
+
+Artefatos:
+
+- `scripts/external_data/transcribe_pilot_90s_whisper.py`
+- `docs/external_data/38_TRANSCRICOES_90S_WHISPER_LOCAL_R1.md`
+- `docs/external_data/38_TRANSCRICOES_90S_WHISPER_LOCAL_R1.csv`
+
+Contrato:
+
+- executar localmente, sem `OPENAI_API_KEY`
+- usar `yt-dlp` para audio do YouTube e `faster-whisper` local para speech-to-text
+- transcrever ate `90s` por video, ou a duracao completa quando o video for
+  menor que `90s`
+- nao versionar audio, video, cache de modelo ou arquivos temporarios
+- preservar uma linha por `post_id`, inclusive quando houver falha
+
+Resultado:
+
+- `10/10` videos transcritos com `success`
+- `0` falhas
+- `pINW53ErjQI` foi transcrito por `86s`, por ser menor que `90s`
+- `_j1gOOnjgcU` foi transcrito por `73s`, por ser menor que `90s`
+- os demais `8` videos foram limitados a `90s`
+
+#### Comparacao humano vs GPT 5.5 com transcripts de 90s
+
+Status: concluida em 2026-07-21.
+
+Artefatos:
+
+- `docs/external_data/39_RESULTADO_GPT55_90S_WHISPER_R1.csv`
+- `docs/external_data/39_COMPARACAO_HUMANO_GPT55_90S_R1.md`
+
+Resultado:
+
+- `10/10` videos classificados pelo GPT 5.5 exploratorio usando transcripts
+  Whisper dos `90s`
+- comparacao feita contra `entrega_2_90s_iniciais` do baseline humano
+- maior concordancia em entidades explicitas:
+  - `vehicle_brand`: `10/10`
+  - `vehicle_model`: `9/10`
+  - `audience_intent`: `8/10`
+- maiores divergencias em:
+  - `sub_niche`: `4/10`
+  - `automotive_system`: `4/10`
+  - `vehicle_year_or_generation`: `5/10`
+- leitura principal: as divergencias restantes indicam limitacao estrutural da
+  taxonomia v1, especialmente em videos que cruzam `review`, `mercado`,
+  `powertrain`, diagnostico, manutencao e custo
+
+#### Taxonomia V2 e guia de classificacao
+
+Status: documentada em 2026-07-21.
+
+Artefato:
+
+- `docs/external_data/40_TAXONOMIA_VIDEO_V2_GUIA_CLASSIFICACAO.md`
+
+Decisao metodologica:
+
+- a V2 deixa de depender de um unico `niche`
+- a classificacao passa a separar:
+  - `automotive_domain`
+  - `activity_type`
+  - `topic_path`
+  - `content_type`
+  - `audience_intent`
+  - entidades do veiculo
+  - contexto tecnico
+- `topic_path` e a arvore legivel para navegacao humana
+- banco, workbook, CSVs v1 e pipeline ainda nao sao alterados por esta entrega
+
+Resultado:
+
+- a arvore V2 cobre os `10` videos do piloto
+- `fora_escopo` passa a existir como rota controlada
+- `eletrico`, `hibrido`, `flex` e `diesel` ficam sob `powertrain`
+- `motor` e `cambio` ficam preservados como contexto tecnico ou rotas
+  contextualizadas, nao como rotulos soltos
+
+#### Round GPT 5.5 usando Taxonomia V2
+
+Status: concluido em 2026-07-21.
+
+Artefatos:
+
+- `docs/external_data/41_RESULTADO_GPT55_TAXONOMIA_V2_R1.csv`
+- `docs/external_data/41_COMPARACAO_GPT55_V1_V2_R1.md`
+
+Resultado:
+
+- `10/10` videos foram classificados na etapa
+  `gpt55_v2_entrega_1_descricao`, usando titulo e metadados porque a descricao
+  real ainda nao esta versionada
+- `10/10` videos foram classificados na etapa
+  `gpt55_v2_entrega_2_90s_iniciais`, usando os transcripts Whisper locais
+  dos primeiros `90s`
+- a V2 reduziu a disputa estrutural entre `review`, `mercado` e `powertrain`
+  ao separar `automotive_domain`, `activity_type`, `topic_path`,
+  `content_type` e contexto tecnico
+- a V2 tambem tornou `fora_escopo` uma rota operacional explicita para casos
+  como `pINW53ErjQI`
+- a proxima necessidade metodologica passa a ser criar CSV canonico da arvore
+  V2 e matriz de compatibilidade entre `topic_path`, `automotive_system`,
+  `component` e `problem`
+
+#### CSVs operacionais da Taxonomia V2
+
+Status: concluido em 2026-07-21.
+
+Artefatos:
+
+- `docs/external_data/42_TAXONOMIA_VIDEO_V2_TOPIC_PATHS.csv`
+- `docs/external_data/43_TAXONOMIA_VIDEO_V2_COMPATIBILIDADE_TECNICA.csv`
+
+Resultado:
+
+- a arvore `topic_path` da V2 foi transformada em CSV operacional com dominio,
+  atividade default, hierarquia, sinal de uso no piloto e suporte opcional a
+  `topic_path_secondary`
+- a matriz inicial de compatibilidade tecnica cobre `motor`, `transmissao`,
+  `arrefecimento`, `eletrica_eletronica` e `powertrain`
+- `fora_escopo` passou a ter regra operacional para impedir preenchimento de
+  sistema, componente ou problema quando os termos tecnicos forem incidentais
+- `motor` e `cambio` permanecem proibidos como tema solto, aparecendo apenas
+  como contexto tecnico ou rotas contextualizadas
+- banco, workbook e pipeline permanecem inalterados nesta entrega
 
 ### Criterio de saida do planejamento
 

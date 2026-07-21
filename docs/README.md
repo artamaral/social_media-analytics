@@ -94,6 +94,13 @@ considerada incompleta.
 - [34_WORKBOOK_EXECUCAO_HUMANA_PILOTO_VIDEO_V1.md](/C:/social_media-analytics/docs/external_data/34_WORKBOOK_EXECUCAO_HUMANA_PILOTO_VIDEO_V1.md)
 - [35_ACHADOS_POS_TESTE_TAXONOMIA_CLASSIFICACAO_V1.md](/C:/social_media-analytics/docs/external_data/35_ACHADOS_POS_TESTE_TAXONOMIA_CLASSIFICACAO_V1.md)
 - [36_RESULTADO_BASELINE_HUMANO_E_CONTRATO_AVALIACAO_GPT_V1.md](/C:/social_media-analytics/docs/external_data/36_RESULTADO_BASELINE_HUMANO_E_CONTRATO_AVALIACAO_GPT_V1.md)
+- [37_ANALISE_GPT55_EXPLORATORIA_TAXONOMIA_R1.md](/C:/social_media-analytics/docs/external_data/37_ANALISE_GPT55_EXPLORATORIA_TAXONOMIA_R1.md)
+- [38_TRANSCRICOES_90S_WHISPER_LOCAL_R1.md](/C:/social_media-analytics/docs/external_data/38_TRANSCRICOES_90S_WHISPER_LOCAL_R1.md)
+- [39_COMPARACAO_HUMANO_GPT55_90S_R1.md](/C:/social_media-analytics/docs/external_data/39_COMPARACAO_HUMANO_GPT55_90S_R1.md)
+- [40_TAXONOMIA_VIDEO_V2_GUIA_CLASSIFICACAO.md](/C:/social_media-analytics/docs/external_data/40_TAXONOMIA_VIDEO_V2_GUIA_CLASSIFICACAO.md)
+- [41_COMPARACAO_GPT55_V1_V2_R1.md](/C:/social_media-analytics/docs/external_data/41_COMPARACAO_GPT55_V1_V2_R1.md)
+- [42_TAXONOMIA_VIDEO_V2_TOPIC_PATHS.csv](/C:/social_media-analytics/docs/external_data/42_TAXONOMIA_VIDEO_V2_TOPIC_PATHS.csv)
+- [43_TAXONOMIA_VIDEO_V2_COMPATIBILIDADE_TECNICA.csv](/C:/social_media-analytics/docs/external_data/43_TAXONOMIA_VIDEO_V2_COMPATIBILIDADE_TECNICA.csv)
 
 ## 3. Dashboard
 

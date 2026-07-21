@@ -1925,3 +1925,163 @@ Referencia:
 
 - `docs/external_data/36_RESULTADO_BASELINE_HUMANO_E_CONTRATO_AVALIACAO_GPT_V1.md`
 - `docs/external_data/36_BASELINE_HUMANO_DUAS_ETAPAS_V1.csv`
+
+---
+
+## Round exploratorio GPT 5.5 para evolucao da taxonomia
+
+Data:
+
+- 2026-07-20
+
+Decisao:
+
+- executar uma rodada exploratoria com `gpt-5.5` disponivel no ambiente de
+  trabalho para evoluir a taxonomia antes de automatizar o processo
+- tratar o resultado como insumo de desenho taxonomico e fine tuning
+  conceitual, nao como benchmark final do modelo de API
+- nao chamar `gpt-5.4-mini` por API nesta etapa
+- nao chamar modelo de transcricao nesta etapa
+- nao criar tabelas, migrations, workers ou scripts robustos para esta rodada
+- persistir apenas CSV e documento analitico simples
+
+Motivo:
+
+- a prioridade imediata e entender lacunas de taxonomia, sobreposicoes entre
+  campos e travas futuras
+- automatizar cedo demais aumentaria custo de manutencao antes de estabilizar
+  a estrutura conceitual
+- a etapa de `90s` ainda nao tem transcricao textual versionada, entao deve ser
+  registrada como ausencia de evidencia em vez de ser simulada
+
+Contrato:
+
+- `gpt-5.5` nesta rodada significa avaliacao exploratoria no ambiente atual
+- as saidas devem registrar `taxonomy_gaps` e `validation_issues`
+- o baseline humano nao deve ser usado como entrada do classificador
+- a comparacao futura com `gpt-5.4-mini` continua separada e devera usar
+  entradas versionadas, schema fechado e transcricoes dos `90s`
+
+Referencia:
+
+- `docs/external_data/37_ANALISE_GPT55_EXPLORATORIA_TAXONOMIA_R1.md`
+- `docs/external_data/37_RESULTADO_GPT55_EXPLORATORIO_TAXONOMIA_R1.csv`
+
+---
+
+## Transcricao local com Whisper para o round taxonomico
+
+Data:
+
+- 2026-07-20
+
+Decisao:
+
+- gerar as transcricoes dos primeiros `90s` dos `10` videos do piloto com
+  Whisper local, sem configurar `OPENAI_API_KEY`
+- usar `yt-dlp` para obter audio dos links do YouTube derivados de `post_id`
+- usar `faster-whisper` com modelo `small`, idioma `pt` e `compute_type=int8`
+- manter audio, video e cache de modelo fora do Git
+- tratar o resultado como insumo de calibracao taxonomica, nao como benchmark
+  final do fluxo automatizado futuro
+
+Motivo:
+
+- o objetivo imediato e evoluir a taxonomia e a estrutura dos campos
+- configurar chave OpenAI neste laptop nao e necessario para esta rodada
+- o lote de `10` videos e pequeno o suficiente para transcricao local
+
+Resultado:
+
+- `10/10` videos transcritos com sucesso
+- videos menores que `90s` foram transcritos na duracao completa
+- a qualidade deve ser revisada em nomes proprios e termos automotivos antes de
+  usar o transcript como evidencia definitiva
+
+Referencia:
+
+- `docs/external_data/38_TRANSCRICOES_90S_WHISPER_LOCAL_R1.md`
+- `docs/external_data/38_TRANSCRICOES_90S_WHISPER_LOCAL_R1.csv`
+
+---
+
+## Comparacao exploratoria humano vs GPT 5.5 com transcripts de 90s
+
+Data:
+
+- 2026-07-21
+
+Decisao:
+
+- usar os transcripts locais dos `90s` para executar uma nova classificacao GPT
+  5.5 exploratoria
+- comparar essa saida contra a `entrega_2_90s_iniciais` humana
+- publicar apenas concordancia exata por campo e divergencias brutas
+- manter `agreement_score` fora desta rodada ate os pesos serem definidos
+
+Motivo:
+
+- a comparacao por `90s` mede melhor o ganho de evidencia em relacao ao titulo
+  isolado
+- divergencias em `niche`, `sub_niche` e `component` ajudam a direcionar a
+  Taxonomia v2
+- entidades explicitas podem ser avaliadas separadamente dos problemas de
+  modelagem taxonomica
+
+Resultado:
+
+- maior concordancia em `vehicle_brand`, `vehicle_model` e `audience_intent`
+- maiores divergencias em `sub_niche`, `automotive_system` e
+  `vehicle_year_or_generation`
+- conclusao: a v2 deve separar dominio, atividade, arvore de topicos,
+  entidades e compatibilidade tecnica
+
+Referencia:
+
+- `docs/external_data/39_RESULTADO_GPT55_90S_WHISPER_R1.csv`
+- `docs/external_data/39_COMPARACAO_HUMANO_GPT55_90S_R1.md`
+
+---
+
+## Taxonomia V2 por eixos separados para videos automotivos
+
+Data:
+
+- 2026-07-21
+
+Decisao:
+
+- documentar a Taxonomia V2 como proposta metodologica antes de alterar CSVs,
+  workbook, banco ou pipeline
+- testar a classificacao por eixos separados:
+  - `automotive_domain`
+  - `activity_type`
+  - `topic_path`
+  - `vehicle_entity`
+  - `technical_context`
+- usar `topic_path` como arvore de navegacao humana
+- manter `content_type` e `audience_intent` separados do tema automotivo
+- registrar lacunas em `taxonomy_gaps`, sem promover termos livres a canonicos
+  automaticamente
+
+Motivo:
+
+- o piloto mostrou que `niche` unico nao representa bem videos que misturam
+  `review`, `mercado`, `powertrain`, manutencao, diagnostico e custo
+- entidades explicitas tiveram boa concordancia, mas `sub_niche`,
+  `automotive_system` e ano/geracao ainda precisam de estrutura melhor
+- a separacao de eixos reduz a necessidade de multi-niche livre e prepara
+  matrizes de compatibilidade tecnica
+
+Contrato:
+
+- `fora_escopo` e rota valida para videos nao automotivos ou apenas
+  incidentalmente ligados a carros
+- `eletrico`, `hibrido`, `flex` e `diesel` pertencem a `powertrain`
+- `motor` e `cambio` nao devem ser usados como rotulos soltos
+- marca, modelo e ano devem ser tratados como entidades, nao como subnichos
+- a v1 permanece preservada como evidencia historica
+
+Referencia:
+
+- `docs/external_data/40_TAXONOMIA_VIDEO_V2_GUIA_CLASSIFICACAO.md`
