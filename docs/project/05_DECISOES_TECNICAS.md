@@ -2337,3 +2337,37 @@ Referencia:
 - `sql/ddl/tables/022_create_video_taxonomy_classification.sql`
 - `sql/ddl/views/023_create_v_video_classification_latest.sql`
 - `sql/ddl/tests/011_test_video_taxonomy_classification.sql`
+
+---
+
+## Execucao do classificador GPT em VPS via cron
+
+Data:
+
+- 2026-07-23
+
+Decisao:
+
+- usar uma VPS Hostinger como ambiente inicial de execucao agendada do
+  classificador GPT da Taxonomia V2
+- acessar a VPS pelo VS Code com Remote SSH durante o desenvolvimento
+- usar Ubuntu 24.04 LTS como ambiente operacional observado
+- usar `/opt/social-media-analytics` como diretorio base no servidor
+- subir apenas o script e arquivos auxiliares necessarios, sem clonar o
+  repositorio completo nesta fase
+- agendar a rotina futura com `cron`
+- manter credenciais, chaves SSH, `.env`, IP publico e usuario real fora do Git
+
+Motivo:
+
+- a etapa atual precisa validar a execucao operacional do classificador antes
+  de criar automacao mais pesada
+- deploy minimo reduz superficie de erro e evita levar o repositorio completo
+  para a VPS antes de necessidade real
+- cron e suficiente para o primeiro ciclo de classificacao controlada
+- a decisao pode ser reaberta depois para GitHub Actions, Docker ou Google
+  Cloud se a rotina amadurecer
+
+Referencia:
+
+- `docs/external_data/59_VPS_CRON_CLASSIFICADOR_GPT_V2_RUNBOOK.md`

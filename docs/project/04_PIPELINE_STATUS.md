@@ -550,6 +550,8 @@ Proxima avaliacao:
 - score hibrido `v2`
 - guarda de cobertura minima
 - modelagem inicial do Carros na Web por CSV recorrente
+- classificador GPT da Taxonomia V2 em preparacao para execucao agendada em
+  VPS Hostinger via `cron`
 - estudo de granularidade para SENATRAN / RENAVAM
 - expansao funcional do app Streamlit
 
@@ -563,6 +565,8 @@ Proxima avaliacao:
   mensal fechada para a fase 2 ativa
 - evolucao do dashboard depende de expandir a cobertura funcional do app sobre
   as views ja operacionais
+- evolucao da classificacao GPT depende de implementar o script minimo,
+  validar execucao manual na VPS e so depois ativar cron
 
 ### 4.4 Ultima verificacao manual consolidada
 

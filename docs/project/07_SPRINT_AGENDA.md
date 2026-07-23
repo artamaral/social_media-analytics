@@ -3931,6 +3931,27 @@ Resultado:
 - a execucao futura fica reservada para rotina Google Cloud separada
 - dashboard, workbook, coleta e pipeline permanecem fora desta entrega
 
+#### Ambiente de execucao VPS para classificador GPT
+
+Status: documentado em 2026-07-23.
+
+Artefato:
+
+- `docs/external_data/59_VPS_CRON_CLASSIFICADOR_GPT_V2_RUNBOOK.md`
+
+Resultado:
+
+- foi definido que a primeira execucao agendada do classificador sera em VPS
+  Hostinger via `cron`
+- o acesso de desenvolvimento sera feito por VS Code Remote SSH
+- o servidor observado usa Ubuntu 24.04 LTS
+- o diretorio base definido no servidor e `/opt/social-media-analytics`
+- nesta fase, nao sera clonado o repositorio completo na VPS
+- o deploy sera minimo: subir apenas script e arquivos auxiliares necessarios
+- credenciais, `.env`, chaves SSH, IP publico e usuario real ficam fora do Git
+- a decisao sobre Google Cloud, Docker ou CI/CD fica adiada ate a rotina ser
+  validada em lote pequeno
+
 ### Criterio de saida do planejamento
 
 O inicio do planejamento do Sprint 6 so deve ser considerado concluido quando
