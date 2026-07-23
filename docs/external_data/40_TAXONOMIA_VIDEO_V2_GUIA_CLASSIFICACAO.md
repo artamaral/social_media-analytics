@@ -11,8 +11,10 @@ Este documento nao substitui ainda os CSVs canonicos da v1:
 - `docs/external_data/31_TAXONOMIA_PILOTO_VIDEO_V1.csv`
 - `docs/external_data/32_DIMENSOES_COMPLEMENTARES_PILOTO_VIDEO_V1.csv`
 
-A V2 deve ser validada contra o piloto antes de virar CSV canonico, workbook,
-schema de banco ou contrato de pipeline.
+A V2 deve ser validada contra o piloto antes de virar workbook ou contrato de
+pipeline. Em 2026-07-23, a V2 passou tambem a ter um contrato operacional de
+banco para uso controlado pelo classificador GPT, sem alterar coleta, dashboard
+ou workbook.
 
 ## Por que a v2 existe
 
@@ -816,20 +818,48 @@ O CSV `50` materializa `technical_context[]` em formato longo, com uma linha
 por contexto tecnico coerente. Ele resolve os casos de videos com multiplos
 sistemas e componentes sem reabrir termos soltos ou listas separadas por `;`.
 
-Esses CSVs ainda nao alteram banco, workbook ou pipeline. Eles tambem nao
-substituem retroativamente os CSVs v1 `31` e `32`.
+Esses CSVs tambem nao substituem retroativamente os CSVs v1 `31` e `32`.
 
 `topic_path_secondary` fica documentado como campo opcional para casos em que
 ha segundo tema forte e explicito, como `review_teste > review_veiculo` com
 `mercado_produto > compra_venda > carro_popular`. Ele nao substitui
 `topic_path` principal e nao reabre multi-nicho livre.
 
+## Contrato Supabase e harness GPT
+
+Em 2026-07-23, a V2 ganhou contrato operacional para uso por GPT:
+
+- `docs/external_data/58_GPT_VIDEO_CLASSIFIER_HARNESS_CONTRACT_V2.md`
+- `docs/external_data/58_GPT_VIDEO_CLASSIFIER_OUTPUT_SCHEMA_V2.json`
+- `sql/ddl/tables/022_create_video_taxonomy_classification.sql`
+- `sql/ddl/views/023_create_v_video_classification_latest.sql`
+
+O harness recebe um video por estagio (`title_metadata` ou `transcript_90s`) e
+deve devolver JSON estruturado com:
+
+- `classification_result`
+- `technical_contexts[]`
+- `vehicle_entities[]`
+
+Regra adicional:
+
+- o GPT atua como classificador da industria automotiva
+- nao pode completar lacunas por plausibilidade externa
+- todo campo preenchido deve ter evidencia textual no titulo, descricao,
+  transcricao ou metadado confiavel
+- a resposta so deve ser gravada depois de validar `topic_path`, matriz
+  tecnica, entidades e schema JSON
+
+Esse contrato altera a preparacao de banco para classificacao, mas nao cria
+metodo de ingestao, rotina Google Cloud, worker, dashboard ou alteracao do
+workbook.
+
 ## Proximo passo
 
-Transformar estes artefatos em validacao assistida:
+Transformar estes artefatos em execucao controlada:
 
-1. Validar os CSVs `42` e `43` contra os `10` videos do piloto.
-2. Decidir se `topic_path_secondary` entra no workbook ou fica apenas no
-   contrato IA.
-3. Atualizar workbook ou interface com dropdowns dependentes.
-4. Rodar novo round GPT 5.5 usando os CSVs V2 como contrato fechado.
+1. Carregar a Taxonomia V2 no Supabase pela rotina operacional definida fora
+   deste documento.
+2. Executar lote pequeno do classificador GPT com o contrato do doc `58`.
+3. Validar se a resposta e gravavel sem ajuste manual.
+4. Comparar resultados por `title_metadata` e `transcript_90s`.

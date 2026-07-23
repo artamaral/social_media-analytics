@@ -3385,14 +3385,14 @@ Premissas ja fechadas para o inicio do sprint:
   validacao futura no banco e sobreposicao entre `diagnostico` e `manutencao`.
 - [x] Desenhar a taxonomia v2 com arvore legivel e codigos canonicos separados
   da navegacao apresentada ao usuario.
-- [ ] Definir matrizes de compatibilidade entre rota taxonomica,
+- [x] Definir matrizes de compatibilidade entre rota taxonomica,
   `automotive_system`, `component` e `problem`.
-- [ ] Definir a validacao referencial de `vehicle_brand`, `vehicle_model` e
+- [x] Definir a validacao referencial de `vehicle_brand`, `vehicle_model` e
   `vehicle_year_or_generation` contra cadastros canonicos futuros.
 - [ ] Decidir, usando os resultados do piloto, entre:
   - separar `automotive_domain` e `activity_type`
   - adotar `niche_primary` e `niche_secondary` controlados
-- [ ] Definir o contrato da classificacao inicial por IA usando somente
+- [x] Definir o contrato da classificacao inicial por IA usando somente
   metadados existentes do video.
 - [x] Consolidar o resultado humano e o contrato de avaliacao cega pelo agente
   GPT no doc `36`.
@@ -3413,10 +3413,11 @@ Premissas ja fechadas para o inicio do sprint:
   - aprovacao provisoria por amostragem
   - envio para transcricao parcial
   - revisao humana
-- [ ] Definir o contrato operacional OpenAI desta fase:
-  - classificacao inicial com `gpt-5-nano` ou `gpt-5.4-nano`
+- [x] Definir o contrato operacional OpenAI desta fase:
+  - classificacao inicial com `gpt-5-nano`
   - transcricao sob demanda com `gpt-4o-mini-transcribe`
-  - reclassificacao apos transcricao com `gpt-5-nano` ou `gpt-5.4-nano`
+  - reclassificacao apos transcricao com `gpt-5-nano`
+  - sem fallback automatico para `gpt-5.4-mini` nesta etapa
 - [ ] Definir as guardas operacionais contra TPM/RPM:
   - `batch_size` pequeno
   - `concurrency = 1` no inicio
@@ -3894,6 +3895,41 @@ Resultado:
 - foram aceitos apenas novos termos tecnicos controlados para review:
   `cambio_automatico`, `cambio_cvt`, `tracao_traseira`, `tracao_dianteira` e
   `tracao_integral`
+
+#### Harness GPT e contrato Supabase para Taxonomia V2
+
+Status: documentado e modelado em 2026-07-23.
+
+Artefatos:
+
+- `docs/external_data/58_GPT_VIDEO_CLASSIFIER_HARNESS_CONTRACT_V2.md`
+- `docs/external_data/58_GPT_VIDEO_CLASSIFIER_SKILL_V2.md`
+- `docs/external_data/58_GPT_VIDEO_CLASSIFIER_OUTPUT_SCHEMA_V2.json`
+- `sql/ddl/tables/022_create_video_taxonomy_classification.sql`
+- `sql/ddl/views/023_create_v_video_classification_latest.sql`
+- `sql/ddl/tests/011_test_video_taxonomy_classification.sql`
+
+Resultado:
+
+- foi criado o contrato de banco para armazenar a Taxonomia V2 no Supabase
+  como referencia operacional
+- foram modeladas tabelas para rodadas de classificacao, resultado principal,
+  `technical_context[]` repetivel e entidades de veiculo
+- o harness foi definido como contrato de entrada/saida, nao como metodo de
+  ingestao ou script local
+- a skill do classificador passa a ser o prompt/contrato enviado na chamada
+  da API GPT e versionado pelo campo `prompt_contract_version`
+- a saida aceitavel do GPT deve validar contra schema JSON e ser imputavel
+  diretamente nas tabelas de classificacao
+- a definicao operacional de modelo fica:
+  - `gpt-5-nano` para classificacao por titulo/metadados
+  - `gpt-4o-mini-transcribe` para transcricao dos `90s`
+  - `gpt-5-nano` para classificacao por transcricao
+  - sem fallback automatico para `gpt-5.4-mini`
+- a qualidade do `gpt-5-nano` sera avaliada depois da implementacao em rodada
+  propria
+- a execucao futura fica reservada para rotina Google Cloud separada
+- dashboard, workbook, coleta e pipeline permanecem fora desta entrega
 
 ### Criterio de saida do planejamento
 

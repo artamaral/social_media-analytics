@@ -66,7 +66,7 @@ Se possível, executar:
 Modelo sugerido:
 
 ```text
-gpt-5-nano ou gpt-5.4-nano
+gpt-5-nano
 ```
 
 Uso:
@@ -125,7 +125,7 @@ Ponto de atenção operacional:
 Modelo sugerido:
 
 ```text
-gpt-5-nano ou gpt-5.4-nano
+gpt-5-nano
 ```
 
 Uso:
@@ -643,3 +643,30 @@ classificacao inicial por texto
 Esse contrato antecipa, na execucao humana, o mesmo padrao metodologico previsto
 para a IA: classificacao inicial com dados existentes e reclassificacao apos
 transcricao parcial.
+
+---
+
+## 22. Definicao operacional de modelos API
+
+Decisao registrada em 2026-07-23:
+
+- classificacao inicial por titulo/metadados: `gpt-5-nano`
+- transcricao dos `90s`: `gpt-4o-mini-transcribe`
+- classificacao apos transcricao: `gpt-5-nano`
+- nao aplicar fallback automatico para `gpt-5.4-mini` nesta etapa
+
+Motivo:
+
+- a classificacao por titulo e por transcript e uma tarefa estruturada e
+  controlada por Taxonomia V2, schema JSON e validacao de banco
+- o custo operacional do `gpt-5-nano` e menor e deve ser validado primeiro
+- a decisao sobre uso de modelos maiores deve depender do resultado empirico
+  depois da implementacao, nao de premissa antecipada
+
+Validacao futura:
+
+- comparar `gpt-5-nano` contra baseline humano e rodadas GPT anteriores
+- medir erro de JSON, `needs_human_review`, `taxonomy_gaps`,
+  `validation_issues` e consistencia de `vehicle_entities`
+- reabrir decisao de modelo apenas se os resultados mostrarem perda relevante
+  de qualidade

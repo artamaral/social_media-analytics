@@ -2287,3 +2287,53 @@ Referencia:
 
 - `docs/external_data/57_CLASSIFICACAO_AMOSTRA_ALEATORIA_TAXONOMIA_V2_R1.md`
 - `docs/external_data/43_TAXONOMIA_VIDEO_V2_COMPATIBILIDADE_TECNICA.csv`
+
+---
+
+## Harness GPT e persistencia Supabase da Taxonomia Video V2
+
+Data:
+
+- 2026-07-23
+
+Decisao:
+
+- criar uma camada operacional no Supabase para armazenar a Taxonomia Video V2
+  e os resultados de classificacao por GPT
+- tratar o harness como contrato de entrada/saida, nao como metodo de ingestao
+  nem script de coleta
+- versionar a skill do classificador como prompt/contrato usado na chamada da
+  API GPT, referenciado por `prompt_contract_version`
+- exigir saida JSON estruturada e imputavel diretamente nas tabelas de
+  classificacao
+- persistir `technical_context[]` como tabela filha repetivel, com uma linha
+  por combinacao coerente de sistema, componente e problema
+- persistir entidades de veiculo em tabela filha separada, preservando valor
+  bruto e preparando match futuro contra Carros na Web/Fenabrave
+- usar `gpt-5-nano` para classificacao por titulo/metadados e tambem para
+  classificacao por transcricao dos `90s`
+- usar `gpt-4o-mini-transcribe` apenas para gerar a transcricao textual
+- nao aplicar fallback automatico para `gpt-5.4-mini` nesta fase
+- manter fora desta entrega ingestao, execucao Google Cloud, worker, dashboard
+  e alteracao do workbook
+
+Motivo:
+
+- a Taxonomia V2 ja e a estrutura mais completa disponivel no projeto
+- as proximas rodadas precisam de um contrato forte para impedir classificacao
+  por achismo e permitir gravacao direta no banco
+- separar resultado principal, contexto tecnico e entidades de veiculo evita
+  campos concatenados e facilita validacao referencial
+- a tarefa de classificacao deve ser validada primeiro com o modelo de menor
+  custo operacional antes de considerar modelos maiores
+- a decisao de fallback deve depender de resultado empirico depois da
+  implementacao, nao de premissa antecipada
+
+Referencia:
+
+- `docs/external_data/58_GPT_VIDEO_CLASSIFIER_HARNESS_CONTRACT_V2.md`
+- `docs/external_data/58_GPT_VIDEO_CLASSIFIER_SKILL_V2.md`
+- `docs/external_data/58_GPT_VIDEO_CLASSIFIER_OUTPUT_SCHEMA_V2.json`
+- `sql/ddl/tables/022_create_video_taxonomy_classification.sql`
+- `sql/ddl/views/023_create_v_video_classification_latest.sql`
+- `sql/ddl/tests/011_test_video_taxonomy_classification.sql`

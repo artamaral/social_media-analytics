@@ -163,3 +163,33 @@ Regra:
 - `v_carrosnaweb_vehicle_catalog` deve ser usada para homogeneizar marca,
   modelo e ano extraidos de descricao/transcricao, sem alterar `topic_path`
   nem contexto tecnico
+
+## Classificacao GPT - Taxonomia Video V2
+
+Status:
+
+- contrato de banco e harness definidos em 2026-07-23
+- a execucao futura deve usar Taxonomia V2, schema JSON e validacao antes de
+  gravar resultados
+
+Antes de aceitar resultados do classificador GPT, validar:
+
+- `topic_path` e `topic_path_secondary` existem em
+  `video_taxonomy_topic_paths`
+- cada linha de `technical_context[]` tem apenas uma combinacao coerente de
+  sistema, componente e problema
+- nenhum campo tecnico usa `;` para concatenar valores
+- contexto tecnico de video `fora_escopo` nao aparece como `primary`
+- `barulho` nao aparece como `problem` canonico; usar `ruido`
+- marca, modelo, ano e geracao possuem evidencia textual no input
+- entidades de veiculo ficam preservadas em valor bruto antes do match contra
+  catalogos externos
+- `confidence_score` fica entre `0` e `1` e reflete evidencia disponivel, nao
+  plausibilidade externa
+- registros com termo fora da taxonomia devem preencher `taxonomy_gaps` ou
+  `needs_human_review`, sem criar codigo canonico silenciosamente
+
+Consultas de apoio:
+
+- `sql/ddl/tests/011_test_video_taxonomy_classification.sql`
+- `public.v_video_classification_quality`

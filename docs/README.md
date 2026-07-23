@@ -118,6 +118,9 @@ considerada incompleta.
 - [57_CLASSIFICACAO_AMOSTRA_ALEATORIA_TAXONOMIA_V2_R1.md](/C:/social_media-analytics/docs/external_data/57_CLASSIFICACAO_AMOSTRA_ALEATORIA_TAXONOMIA_V2_R1.md)
 - [57_CLASSIFICACAO_AMOSTRA_ALEATORIA_TAXONOMIA_V2_R1.csv](/C:/social_media-analytics/docs/external_data/57_CLASSIFICACAO_AMOSTRA_ALEATORIA_TAXONOMIA_V2_R1.csv)
 - [50_TECHNICAL_CONTEXT_REPETIVEL_TAXONOMIA_V2.csv](/C:/social_media-analytics/docs/external_data/50_TECHNICAL_CONTEXT_REPETIVEL_TAXONOMIA_V2.csv)
+- [58_GPT_VIDEO_CLASSIFIER_HARNESS_CONTRACT_V2.md](/C:/social_media-analytics/docs/external_data/58_GPT_VIDEO_CLASSIFIER_HARNESS_CONTRACT_V2.md)
+- [58_GPT_VIDEO_CLASSIFIER_SKILL_V2.md](/C:/social_media-analytics/docs/external_data/58_GPT_VIDEO_CLASSIFIER_SKILL_V2.md)
+- [58_GPT_VIDEO_CLASSIFIER_OUTPUT_SCHEMA_V2.json](/C:/social_media-analytics/docs/external_data/58_GPT_VIDEO_CLASSIFIER_OUTPUT_SCHEMA_V2.json)
 
 ## 3. Dashboard
 

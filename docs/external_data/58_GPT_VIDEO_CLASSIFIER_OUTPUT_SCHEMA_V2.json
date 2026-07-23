@@ -1,0 +1,245 @@
+{
+  "$id": "video_taxonomy_v2_output_schema_r1",
+  "title": "Video Taxonomy V2 GPT Classification Output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "classification_result",
+    "technical_contexts",
+    "vehicle_entities"
+  ],
+  "properties": {
+    "classification_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "post_id",
+        "evaluation_stage",
+        "input_evidence_level",
+        "automotive_domain",
+        "activity_type",
+        "topic_path",
+        "topic_path_secondary",
+        "content_type",
+        "audience_intent",
+        "confidence_score",
+        "evidence_summary",
+        "taxonomy_gaps",
+        "validation_issues",
+        "needs_human_review",
+        "taxonomy_version"
+      ],
+      "properties": {
+        "post_id": {
+          "type": "string"
+        },
+        "evaluation_stage": {
+          "type": "string",
+          "enum": [
+            "title_metadata",
+            "transcript_90s"
+          ]
+        },
+        "input_evidence_level": {
+          "type": "string",
+          "enum": [
+            "metadata_only",
+            "title_description",
+            "transcript_90s",
+            "insufficient_evidence"
+          ]
+        },
+        "automotive_domain": {
+          "type": "string"
+        },
+        "activity_type": {
+          "type": "string"
+        },
+        "topic_path": {
+          "type": "string"
+        },
+        "topic_path_secondary": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "content_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "audience_intent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "confidence_score": {
+          "type": "number"
+        },
+        "evidence_summary": {
+          "type": "string"
+        },
+        "taxonomy_gaps": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "validation_issues": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "needs_human_review": {
+          "type": "boolean"
+        },
+        "taxonomy_version": {
+          "type": "string"
+        }
+      }
+    },
+    "technical_contexts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "context_order",
+          "topic_path",
+          "topic_path_secondary",
+          "automotive_system",
+          "component",
+          "problem",
+          "context_role",
+          "evidence_text",
+          "compatibility_status",
+          "validation_issue",
+          "needs_human_review"
+        ],
+        "properties": {
+          "context_order": {
+            "type": "integer"
+          },
+          "topic_path": {
+            "type": "string"
+          },
+          "topic_path_secondary": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "automotive_system": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "component": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "problem": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "context_role": {
+            "type": "string",
+            "enum": [
+              "primary",
+              "secondary",
+              "supporting",
+              "incidental"
+            ]
+          },
+          "evidence_text": {
+            "type": "string"
+          },
+          "compatibility_status": {
+            "type": "string",
+            "enum": [
+              "allowed",
+              "allowed_with_evidence",
+              "not_applicable",
+              "needs_review"
+            ]
+          },
+          "validation_issue": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "needs_human_review": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "vehicle_entities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "entity_order",
+          "vehicle_brand_raw",
+          "vehicle_model_raw",
+          "vehicle_year",
+          "vehicle_generation",
+          "evidence_text",
+          "entity_status"
+        ],
+        "properties": {
+          "entity_order": {
+            "type": "integer"
+          },
+          "vehicle_brand_raw": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "vehicle_model_raw": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "vehicle_year": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "vehicle_generation": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "evidence_text": {
+            "type": "string"
+          },
+          "entity_status": {
+            "type": "string",
+            "enum": [
+              "extracted",
+              "matched",
+              "not_found",
+              "needs_review"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

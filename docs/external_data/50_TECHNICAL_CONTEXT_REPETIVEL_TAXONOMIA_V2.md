@@ -7,8 +7,16 @@ Data: 2026-07-23
 Definir `technical_context[]` como estrutura repetivel para representar
 multiplos sistemas, componentes, problemas e evidencias em videos automotivos.
 
-Esta entrega resolve o gargalo identificado na rodada dos `20` videos com a
-Taxonomia V2 enriquecida, sem alterar banco, workbook ou pipeline.
+Esta entrega resolveu o gargalo identificado na rodada dos `20` videos com a
+Taxonomia V2 enriquecida. Naquele momento, a solucao era apenas CSV/documental
+e nao alterava banco, workbook ou pipeline.
+
+Atualizacao em 2026-07-23:
+
+- `technical_context[]` passou tambem a ter contrato de persistencia no
+  Supabase em `video_classification_technical_contexts`
+- o CSV `50` permanece como evidencia metodologica e exemplo operacional
+- workbook, coleta, dashboard e pipeline continuam fora desta alteracao
 
 Artefato operacional:
 
@@ -239,7 +247,9 @@ Com esta mudanca:
 - o CSV `48` continua servindo como classificacao agregada dos `20` registros;
 - o CSV `50` passa a ser a fonte detalhada para contexto tecnico;
 - validacoes futuras podem operar linha a linha;
-- o workbook e o banco ainda nao mudam.
+- o banco passa a ter contrato para persistencia futura em
+  `video_classification_technical_contexts`;
+- o workbook, coleta e pipeline ainda nao mudam.
 
 ## Validacao aplicada
 
@@ -251,12 +261,13 @@ A validacao desta entrega deve confirmar:
 - todo `topic_path` e `topic_path_secondary` existe no CSV `42`;
 - `barulho` nao aparece como `problem` canonico;
 - `fora_escopo` nao possui contexto `primary`;
-- banco, workbook e pipeline permanecem inalterados.
+- o contrato de banco existe para classificacao GPT futura;
+- workbook, coleta e pipeline permanecem inalterados.
 
 ## Proximo passo
 
-Depois de validar o CSV `50`, a proxima decisao metodologica e escolher como
-levar `technical_context[]` para a execucao humana:
+Depois de validar o contrato de banco, a proxima decisao metodologica e
+escolher como levar `technical_context[]` para a execucao humana:
 
 - atualizar o workbook com uma aba filha;
-- ou manter o CSV separado ate a taxonomia V2 virar contrato de banco.
+- ou manter o CSV separado enquanto a classificacao GPT amadurece.
