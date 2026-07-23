@@ -2249,3 +2249,41 @@ Status operacional:
   `8914` anos/modelo
 - `v_carrosnaweb_vehicle_catalog` foi validada com buscas por `BYD Dolphin`,
   `Renault Kwid`, `Changan Uni-T` e `Hyundai HB20`
+
+---
+
+## Taxonomia V2: consolidacao apos amostra aleatoria
+
+Data:
+
+- 2026-07-23
+
+Decisao:
+
+- manter a arvore `topic_path` estavel apos a rodada aleatoria de `10` videos
+- nao criar `audience_context`, `estagio_produto` ou `engineering_context`
+  nesta fase
+- manter motos e duas rodas como fora de escopo
+- usar ano/modelo apenas quando a informacao estiver disponivel e confiavel,
+  seguindo o contrato ja estabelecido nas bases externas
+- tratar prototipo, flagra, camuflado, pista de teste, calibracao e
+  tropicalizacao como evidencia textual, observacao ou `taxonomy_gaps`, sem
+  nova categoria canonica agora
+- classificar pista/calibracao/tropicalizacao como
+  `review_teste > avaliacao_tecnica` quando o conteudo for automotivo e houver
+  evidencia clara
+- permitir no contexto tecnico de review apenas os novos termos aprovados:
+  `cambio_automatico`, `cambio_cvt`, `tracao_traseira`, `tracao_dianteira` e
+  `tracao_integral`
+
+Motivo:
+
+- a rodada mostrou que a Taxonomia V2 ja cobre bem os temas principais
+- as lacunas observadas nao justificam abrir novos eixos estruturais agora
+- a prioridade e preservar uma arvore curta e estavel, usando contexto tecnico
+  e `taxonomy_gaps` para aprendizado incremental
+
+Referencia:
+
+- `docs/external_data/57_CLASSIFICACAO_AMOSTRA_ALEATORIA_TAXONOMIA_V2_R1.md`
+- `docs/external_data/43_TAXONOMIA_VIDEO_V2_COMPATIBILIDADE_TECNICA.csv`

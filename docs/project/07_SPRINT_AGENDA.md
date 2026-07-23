@@ -3870,6 +3870,31 @@ Resultado:
 - a view `v_carrosnaweb_vehicle_catalog` foi validada com buscas por `BYD
   Dolphin`, `Renault Kwid`, `Changan Uni-T` e `Hyundai HB20`
 
+#### Amostra aleatoria de validacao da Taxonomia V2
+
+Status: concluido em 2026-07-23.
+
+Artefatos:
+
+- `docs/external_data/55_AMOSTRA_ALEATORIA_TAXONOMIA_V2_10_VIDEOS_R1.csv`
+- `docs/external_data/56_TRANSCRICOES_90S_AMOSTRA_ALEATORIA_TAXONOMIA_V2_R1.csv`
+- `docs/external_data/57_CLASSIFICACAO_AMOSTRA_ALEATORIA_TAXONOMIA_V2_R1.md`
+- `docs/external_data/57_CLASSIFICACAO_AMOSTRA_ALEATORIA_TAXONOMIA_V2_R1.csv`
+
+Resultado:
+
+- foram sorteados `10` videos elegiveis, sem intersecao com rodadas anteriores
+- todas as transcricoes dos primeiros `90s` foram concluidas com sucesso
+- a confianca media subiu de `0.843` por titulo/metadados para `0.921` com
+  transcricao
+- a revisao humana decidiu nao expandir `topic_path` nesta rodada
+- motos e duas rodas permanecem fora de escopo
+- nao serao criados `audience_context`, `estagio_produto` ou
+  `engineering_context` nesta fase
+- foram aceitos apenas novos termos tecnicos controlados para review:
+  `cambio_automatico`, `cambio_cvt`, `tracao_traseira`, `tracao_dianteira` e
+  `tracao_integral`
+
 ### Criterio de saida do planejamento
 
 O inicio do planejamento do Sprint 6 so deve ser considerado concluido quando
