@@ -3691,6 +3691,145 @@ Resultado:
   como contexto tecnico ou rotas contextualizadas
 - banco, workbook e pipeline permanecem inalterados nesta entrega
 
+#### Enriquecimento da Taxonomia V2 por titulos
+
+Status: documentado em 2026-07-22.
+
+Artefato:
+
+- `docs/external_data/44_ENRIQUECIMENTO_TAXONOMIA_V2_TITULOS_E_PROXIMA_TRANSCRICAO.md`
+
+Resultado:
+
+- busca exploratoria no Supabase usou `title`, porque `public.posts` ainda nao
+  possui coluna `description`
+- foram lidos `5179` posts e identificados `1462` candidatos apos filtros de
+  qualidade e termos de taxonomia
+- foram selecionados `10` videos para enriquecer a V2 por titulo, cobrindo
+  sinais de `diagnostico`, `manutencao`, `review`, `mercado`, `powertrain`,
+  `pos_venda` e `off_road`
+- a curadoria removeu `motorhome`, `4x4` e `carros_descartaveis` da lista de
+  candidatos canonicos nesta rodada
+- a proxima etapa deve repetir a extracao usando transcricao dos `90s`, com
+  separacao entre termos brutos, candidatos canonicos e termos rejeitados
+
+#### Transcricao 90s para enriquecimento da Taxonomia V2
+
+Status: concluida em 2026-07-23.
+
+Artefatos:
+
+- `docs/external_data/45_TRANSCRICOES_90S_ENRIQUECIMENTO_TAXONOMIA_V2_R1.csv`
+- `docs/external_data/45_TRANSCRICOES_90S_ENRIQUECIMENTO_TAXONOMIA_V2_R1.md`
+
+Resultado:
+
+- os `10` videos selecionados no doc `44` foram transcritos localmente com
+  `yt-dlp+faster-whisper-local`
+- `10/10` videos terminaram com `transcription_status = success`
+- videos menores que `90s` foram transcritos na duracao completa
+- o video `6qSnrkGd70I` exigiu retry pontual apos falha inicial de `ffmpeg`
+- a proxima etapa e extrair termos dos transcripts e comparar contra a
+  extracao feita apenas por titulo
+
+#### Analise dos transcripts e enriquecimento da Taxonomia V2
+
+Status: concluida em 2026-07-23.
+
+Artefato:
+
+- `docs/external_data/46_ANALISE_TRANSCRICOES_ENRIQUECIMENTO_TAXONOMIA_V2_R1.md`
+
+Resultado:
+
+- os CSVs `42` e `43` foram atualizados com aprendizados dos transcripts do
+  doc `45`
+- `ruido` passou a ser o codigo canonico para sintoma sonoro
+- `barulho` ficou como sinonimo e sinal textual em `example_signals`
+- `off_road__4x4` foi removido como `topic_path_code`; `4x4` permanece apenas
+  como sinal textual
+- `motorhome`, `carros_descartaveis` e `efeito_dolphin` permanecem fora da
+  taxonomia canonica
+- foram adicionadas compatibilidades iniciais para suspensao, freios,
+  transmissao/CVT, motor, arrefecimento, pneus e powertrain hibrido plug-in
+- banco, workbook e pipeline permanecem inalterados
+
+#### Enriquecimento da Taxonomia V2 por fonte Moura
+
+Status: concluido em 2026-07-23.
+
+Artefato:
+
+- `docs/external_data/47_ANALISE_FONTE_MOURA_MANUTENCAO_PREVENTIVA_TAXONOMIA_V2.md`
+
+Fonte avaliada:
+
+- `https://www.moura.com.br/blog/checklist-de-manutencao-preventiva-carro`
+
+Resultado:
+
+- a Taxonomia V2 foi enriquecida com a rota de checklist periodico
+  `manutencao_reparo__manutencao_preventiva__revisao_10k`
+- foram adicionadas rotas preventivas para `oleo_filtros`, `filtro_ar`,
+  `filtro_combustivel`, `alinhamento_balanceamento`, `correias_tensores` e
+  `controle_revisao`
+- foram adicionadas rotas de diagnostico por sintomas gerais:
+  `luzes_painel`, `perda_potencia`, `vibracao` e `direcao_puxando`
+- a matriz tecnica passou a cobrir `combustivel_injecao` e
+  `rodagem_direcao`, alem de reforcar componentes de motor, freios,
+  suspensao, arrefecimento e eletrica/eletronica
+- `barulho` permanece apenas como sinonimo/sinal textual; `ruido` continua
+  sendo o codigo canonico para sintoma sonoro
+- banco, workbook e pipeline permanecem inalterados
+
+#### Reclassificacao dos 20 videos com Taxonomia V2 enriquecida
+
+Status: concluida em 2026-07-23.
+
+Artefatos:
+
+- `docs/external_data/48_RESULTADO_GPT55_TAXONOMIA_V2_ENRIQUECIDA_20VIDEOS_R1.csv`
+- `docs/external_data/49_COMPARACAO_TAXONOMIA_V2_ENRIQUECIDA_20VIDEOS_R1.md`
+
+Resultado:
+
+- as transcricoes salvas dos docs `38` e `45` foram reutilizadas como
+  evidencia dos `90s`
+- foram classificadas `20` linhas:
+  - `10` do piloto original
+  - `10` da rodada de enriquecimento
+- ha `16` videos unicos, porque `4` videos aparecem nos dois lotes
+- contra a rodada anterior do piloto, `automotive_domain`, `activity_type` e
+  `topic_path` ficaram estaveis em `10/10`
+- as principais mudancas ocorreram em `component`, `problem`,
+  `content_type`, `topic_path_secondary` e `needs_human_review`
+- a rodada confirmou o gargalo de modelar `technical_context` como estrutura
+  repetivel para videos com multiplos sistemas e componentes
+- banco, workbook e pipeline permanecem inalterados
+
+#### Technical context repetivel para Taxonomia V2
+
+Status: concluido em 2026-07-23.
+
+Artefatos:
+
+- `docs/external_data/50_TECHNICAL_CONTEXT_REPETIVEL_TAXONOMIA_V2.md`
+- `docs/external_data/50_TECHNICAL_CONTEXT_REPETIVEL_TAXONOMIA_V2.csv`
+
+Resultado:
+
+- `technical_context[]` foi definido como estrutura repetivel canonica para
+  representar multiplos sistemas, componentes, problemas e evidencias
+- o formato operacional desta fase e um CSV filho em formato longo, com uma
+  linha por contexto tecnico coerente
+- os campos agregados `automotive_system`, `component` e `problem` continuam
+  como resumo legado/compatibilidade em resultados consolidados
+- videos como `_j1gOOnjgcU`, `ITBdyKnV5Pg` e `6qSnrkGd70I` passaram a ter
+  multiplas linhas de contexto tecnico em vez de valores concatenados por `;`
+- casos `fora_escopo` e analises setoriais permanecem sem contexto tecnico
+  principal
+- banco, workbook e pipeline permanecem inalterados
+
 ### Criterio de saida do planejamento
 
 O inicio do planejamento do Sprint 6 so deve ser considerado concluido quando

@@ -2085,3 +2085,79 @@ Contrato:
 Referencia:
 
 - `docs/external_data/40_TAXONOMIA_VIDEO_V2_GUIA_CLASSIFICACAO.md`
+
+---
+
+## Enriquecimento da Taxonomia V2 por fontes editoriais externas
+
+Data:
+
+- 2026-07-23
+
+Decisao:
+
+- usar fontes editoriais automotivas externas como insumo controlado para
+  enriquecer a Taxonomia V2, desde que a promocao de termos preserve os eixos
+  separados da taxonomia
+- promover `revisao_10k` como rota de `topic_path` para checklist periodico
+  amplo de manutencao preventiva
+- manter itens como oleo, filtros, freios, suspensao, arrefecimento e bateria
+  como rotas especificas ou contexto tecnico compativel, nao como nichos
+  soltos
+- adicionar sintomas gerais de diagnostico, como `luzes_painel`,
+  `perda_potencia`, `vibracao` e `direcao_puxando`
+- manter `barulho` apenas como sinonimo/sinal textual; `ruido` permanece o
+  codigo canonico para sintoma sonoro
+- manter banco, workbook e pipeline inalterados nesta etapa
+
+Motivo:
+
+- a fonte Moura evidencia que conteudos de manutencao preventiva podem ser
+  checklists amplos por quilometragem, e nao apenas videos sobre um unico
+  componente
+- sem uma rota de checklist periodico, classificadores humanos ou IA tenderiam
+  a escolher um componente arbitrario como tema principal
+- a matriz tecnica precisa validar relacoes entre rota, sistema, componente e
+  problema para evitar combinacoes incoerentes
+
+Referencia:
+
+- `docs/external_data/47_ANALISE_FONTE_MOURA_MANUTENCAO_PREVENTIVA_TAXONOMIA_V2.md`
+- `docs/external_data/42_TAXONOMIA_VIDEO_V2_TOPIC_PATHS.csv`
+- `docs/external_data/43_TAXONOMIA_VIDEO_V2_COMPATIBILIDADE_TECNICA.csv`
+
+---
+
+## Technical context repetivel na Taxonomia V2
+
+Data:
+
+- 2026-07-23
+
+Decisao:
+
+- adotar `technical_context[]` como estrutura repetivel para contexto tecnico
+  na Taxonomia V2
+- materializar a estrutura nesta fase como CSV filho em formato longo, com uma
+  linha por combinacao coerente de `automotive_system`, `component` e
+  `problem`
+- manter os campos agregados `automotive_system`, `component` e `problem` como
+  resumo legado/compatibilidade em artefatos consolidados
+- nao usar `;` para juntar multiplos sistemas, componentes ou problemas em uma
+  unica celula do contexto tecnico detalhado
+- validar cada linha contra a matriz tecnica `43`, marcando
+  `needs_review` quando a combinacao ainda nao estiver coberta
+- manter banco, workbook e pipeline inalterados nesta etapa
+
+Motivo:
+
+- videos reais de manutencao pesada, dicas multiplas e procedimentos de oficina
+  frequentemente citam varios sistemas e componentes no mesmo trecho
+- campos unicos forcam perda de informacao ou combinacoes ambiguas
+- uma estrutura repetivel permite validar linha a linha sem reabrir multi-nicho
+  livre ou categorias soltas
+
+Referencia:
+
+- `docs/external_data/50_TECHNICAL_CONTEXT_REPETIVEL_TAXONOMIA_V2.md`
+- `docs/external_data/50_TECHNICAL_CONTEXT_REPETIVEL_TAXONOMIA_V2.csv`

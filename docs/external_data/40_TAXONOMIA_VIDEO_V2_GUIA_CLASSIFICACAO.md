@@ -211,14 +211,17 @@ Regras:
 
 Campos:
 
-- `automotive_system`
-- `component`
-- `problem`
+- `technical_context[]`
+- `automotive_system` como resumo legado quando necessario
+- `component` como resumo legado quando necessario
+- `problem` como resumo legado quando necessario
 
 Regra:
 
 - preencher apenas quando houver evidencia tecnica
-- sistema filtra componente e problema
+- cada item de `technical_context[]` representa uma combinacao coerente de
+  sistema, componente e problema
+- sistema filtra componente e problema dentro de cada item
 - componente nao deve contradizer sistema
 - problema nao deve contradizer sistema
 - `motor` e `cambio` nao devem ser rotulos soltos de tema; devem aparecer como
@@ -274,6 +277,13 @@ Usar quando o foco e preservar, corrigir ou executar servico em um veiculo.
 ```text
 manutencao_reparo
 manutencao_reparo > manutencao_preventiva
+manutencao_reparo > manutencao_preventiva > revisao_10k
+manutencao_reparo > manutencao_preventiva > oleo_filtros
+manutencao_reparo > manutencao_preventiva > filtro_ar
+manutencao_reparo > manutencao_preventiva > filtro_combustivel
+manutencao_reparo > manutencao_preventiva > alinhamento_balanceamento
+manutencao_reparo > manutencao_preventiva > correias_tensores
+manutencao_reparo > manutencao_preventiva > controle_revisao
 manutencao_reparo > manutencao_preventiva > arrefecimento
 manutencao_reparo > manutencao_preventiva > bateria_12v
 manutencao_reparo > manutencao_preventiva > sensores
@@ -297,6 +307,11 @@ manutencao_reparo > custo_reparo > custo_mao_obra
 Regras:
 
 - se o video ensina procedimento preventivo, usar `manutencao_preventiva`
+- se o video e checklist amplo por periodo ou quilometragem, usar
+  `manutencao_preventiva > revisao_10k` ou outra rota de revisao periodica
+  existente, sem forcar um unico componente
+- se o video fala de oleo e varios filtros juntos, usar `oleo_filtros`; se o
+  foco for apenas um filtro, usar `filtro_ar` ou `filtro_combustivel`
 - se mostra uma falha ja instalada e reparo, usar `reparo_corretivo`
 - se a promessa central e "quanto custa", usar `custo_reparo` ou registrar
   `orcamento_manutencao`
@@ -312,18 +327,30 @@ falha.
 diagnostico
 diagnostico > scanner_obd2
 diagnostico > luz_injecao
+diagnostico > luzes_painel
 diagnostico > falha_motor
+diagnostico > perda_potencia
 diagnostico > falha_cambio
 diagnostico > falha_eletrica
 diagnostico > consumo_alto
+diagnostico > vibracao
+diagnostico > direcao_puxando
 diagnostico > problema_cronico
 diagnostico > diagnostico_sensor
+diagnostico > ruido
+diagnostico > ruido > ruido_suspensao
 ```
 
 Regras:
 
 - `scanner_obd2` e metodo de diagnostico
 - `luz_injecao` e sinal/problema
+- `luzes_painel` e rota generica quando ha alerta no painel, mas a luz
+  especifica ainda nao foi identificada
+- `vibracao`, `perda_potencia` e `direcao_puxando` sao sintomas; preencher
+  sistema e componente apenas quando houver evidencia tecnica compativel
+- `ruido` e o codigo canonico para sintoma sonoro; `barulho` fica como
+  sinonimo e sinal textual
 - nao usar `motor` ou `cambio` isolado
 - para caso de scanner envolvendo cambio, usar:
   - `automotive_domain = diagnostico`
@@ -556,15 +583,37 @@ Nao inferir modelo pelo canal. Nao criar marca/modelo novo automaticamente.
 
 ### Passo 7 - Preencher contexto tecnico com compatibilidade
 
-Preencher `automotive_system`, `component` e `problem` quando houver evidencia.
+Preencher `technical_context[]` quando houver evidencia tecnica.
+
+Nesta V2 enriquecida, `automotive_system`, `component` e `problem` continuam
+existindo como resumo legado/compatibilidade. A leitura detalhada deve ser
+repetivel:
+
+```text
+technical_context[] = [
+  {
+    automotive_system,
+    component,
+    problem,
+    context_role,
+    evidence_text,
+    compatibility_status
+  }
+]
+```
 
 Regras minimas:
 
+- cada item deve ter um unico `automotive_system`, um unico `component` e um
+  unico `problem`
+- nao usar `;` para juntar multiplos componentes em uma mesma celula
 - `component` deve pertencer ao `automotive_system`
 - `problem` deve ser plausivel para o `automotive_system`
-- se houver varios componentes, registrar multiplos apenas se a interface ou
-  contrato permitir; caso contrario, escolher o principal e listar os demais em
-  `taxonomy_gaps`
+- se houver varios componentes, criar varias linhas/objetos em
+  `technical_context[]`
+- se a combinacao ainda nao existir na matriz tecnica, marcar
+  `compatibility_status = needs_review` e preencher `validation_issues`
+- em `fora_escopo`, contexto tecnico so pode ser `incidental` ou vazio
 
 ### Passo 8 - Registrar lacunas sem virar canonico
 
@@ -636,28 +685,48 @@ Compatibilidades iniciais:
 
 ```text
 automotive_system = motor
-component = motor_conjunto | turbina | vela
-problem = falha_de_motor | perda_potencia | problema_cronico
+component = motor_conjunto | turbina | vela | oleo_motor | filtro_oleo | filtro_motor | filtro_ar | correia_dentada | tensor_correia
+problem = falha_de_motor | perda_potencia | problema_cronico | desgaste | oleo_vencido | consumo_alto
+
+automotive_system = combustivel_injecao
+component = filtro_combustivel | bomba_combustivel | injetor
+problem = entupimento | consumo_alto | perda_potencia
 
 automotive_system = transmissao
-component = cambio_automatico | cambio_dupla_embreagem | cambio_manual | cvt
-problem = tranco_cambio
+component = cambio_automatico | cambio_dupla_embreagem | cambio_manual | cambio_cvt | oleo_cambio | filtro_cambio | carter_cambio
+problem = tranco_cambio | oleo_degradado | limaria
 
 automotive_system = arrefecimento
-component = radiador | fluido_arrefecimento | bomba_agua | ventoinha
-problem = superaquecimento
+component = radiador | fluido_arrefecimento | bomba_agua | ventoinha | aditivo_arrefecimento | agua_desmineralizada | limpa_radiador | filtro_arrefecimento
+problem = superaquecimento | sistema_sujo | nivel_baixo | fluido_vencido
 
 automotive_system = eletrica_eletronica
-component = bateria_12v | alternador | sensor_oxigenio | sensor_maf | modulo_injecao
-problem = falha_eletrica | luz_injecao
+component = bateria_12v | alternador | sensor_oxigenio | sensor_maf | modulo_injecao | polo_bateria | carga_bateria
+problem = falha_eletrica | luz_injecao | bateria_fraca | falha_partida | mau_contato
 
 automotive_system = powertrain
-component = bateria_tracao | motor_eletrico | sistema_hibrido
+component = bateria_tracao | motor_eletrico | sistema_hibrido | sistema_hibrido_plug_in
 problem = autonomia_baixa | degradacao_bateria
+
+automotive_system = rodagem_direcao
+component = alinhamento | balanceamento | volante | pneu
+problem = vibracao | direcao_puxando | desgaste_irregular | consumo_alto
+
+automotive_system = suspensao
+component = pivo_suspensao | bieleta | bandeja_suspensao | terminal_axial | bucha_balanca | bucha_suspensao | mola | amortecedor
+problem = ruido | batida_seca | trepidacao | suspensao_dura | carro_desconfortavel | folga | desgaste
+
+automotive_system = freios
+component = pastilha_freio | disco_freio | fluido_freio
+problem = desgaste | disco_empenado | fluido_contaminado | frenagem_comprometida
+
+automotive_system = pneus
+component = pneu
+problem = aderencia | durabilidade | conforto | resistencia | custo_beneficio
 ```
 
-Essas compatibilidades ainda precisam virar matriz canonica antes de
-persistencia automatica.
+Essas compatibilidades foram iniciadas no CSV `43` e ainda devem ser validadas
+antes de persistencia automatica.
 
 ## Lacunas conhecidas
 
@@ -709,10 +778,16 @@ A primeira resolucao operacional do gargalo da V2 foi publicada em:
 
 - `docs/external_data/42_TAXONOMIA_VIDEO_V2_TOPIC_PATHS.csv`
 - `docs/external_data/43_TAXONOMIA_VIDEO_V2_COMPATIBILIDADE_TECNICA.csv`
+- `docs/external_data/50_TECHNICAL_CONTEXT_REPETIVEL_TAXONOMIA_V2.csv`
+- `docs/external_data/50_TECHNICAL_CONTEXT_REPETIVEL_TAXONOMIA_V2.md`
 
 O CSV `42` transforma a arvore `topic_path` em estrutura canonica para
 validacao metodologica. O CSV `43` inicia a matriz de compatibilidade entre
 `topic_path`, `automotive_system`, `component` e `problem`.
+
+O CSV `50` materializa `technical_context[]` em formato longo, com uma linha
+por contexto tecnico coerente. Ele resolve os casos de videos com multiplos
+sistemas e componentes sem reabrir termos soltos ou listas separadas por `;`.
 
 Esses CSVs ainda nao alteram banco, workbook ou pipeline. Eles tambem nao
 substituem retroativamente os CSVs v1 `31` e `32`.
