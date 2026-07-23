@@ -2161,3 +2161,91 @@ Referencia:
 
 - `docs/external_data/50_TECHNICAL_CONTEXT_REPETIVEL_TAXONOMIA_V2.md`
 - `docs/external_data/50_TECHNICAL_CONTEXT_REPETIVEL_TAXONOMIA_V2.csv`
+
+---
+
+## Limite de profundidade da arvore taxonomica V2
+
+Data:
+
+- 2026-07-23
+
+Decisao:
+
+- manter `topic_path` como arvore curta, estavel e navegavel
+- nao promover automaticamente todo termo tecnico novo para subnicho ou novo
+  nivel de `topic_path`
+- usar `technical_context[]` para registrar profundidade tecnica, como pecas,
+  sintomas, procedimentos, insumos e problemas citados no video
+- tratar termos tecnicos novos primeiro como vocabulario controlado,
+  sinonimos, evidencias ou `taxonomy_gaps`
+- promover um termo para `topic_path` apenas quando ele representar um tipo
+  recorrente de conteudo e melhorar a navegacao/classificacao humana
+
+Motivo:
+
+- o aprendizado incremental pode gerar profundidade praticamente ilimitada se
+  cada novo termo virar subnicho
+- uma arvore infinita prejudicaria consistencia, validacao e comparacao humano
+  vs IA
+- separar arvore navegavel de contexto tecnico preserva riqueza semantica sem
+  transformar a taxonomia em lista de pecas e sintomas
+
+Exemplo:
+
+- `topic_path = manutencao_reparo > reparo_corretivo > troca_motor`
+- `technical_context[]` registra `motor_conjunto`, `oleo_motor`,
+  `oleo_vencido`, `borra`, `carbonizacao`, `desgaste`, `folga_axial` e
+  `retifica_motor` quando houver evidencia
+
+Referencia:
+
+- `docs/external_data/40_TAXONOMIA_VIDEO_V2_GUIA_CLASSIFICACAO.md`
+- `docs/external_data/50_TECHNICAL_CONTEXT_REPETIVEL_TAXONOMIA_V2.md`
+
+---
+
+## Catalogo Carros na Web para homogeneizacao de veiculos
+
+Data:
+
+- 2026-07-23
+
+Decisao:
+
+- persistir no Supabase os CSVs de catalogo do Carros na Web para fabricantes,
+  modelos e anos/modelo
+- usar o catalogo como base de homogeneizacao de `vehicle_brand`,
+  `vehicle_model` e `vehicle_year_or_generation` extraidos de descricao e
+  transcricao
+- excluir `aplicacoes_modelo_ano_test.csv` da carga, pois o arquivo pertence a
+  exploracao de ficha tecnica
+- preservar `params` bruto como JSON e extrair campos canonicos para fabricante,
+  modelo e ano/modelo
+- expor uma view inicial `v_carrosnaweb_vehicle_catalog` para matching de
+  entidades de veiculo
+
+Motivo:
+
+- a rodada de classificacao mostrou que identificar veiculo, marca e modelo e
+  fundamental quando a informacao esta disponivel
+- entidades extraidas por humanos ou GPT precisam ser comparadas a uma base
+  controlada para evitar grafias divergentes e combinacoes impossiveis
+- ficha tecnica continua fora de escopo; o valor imediato esta no catalogo de
+  nomes e anos
+
+Referencia:
+
+- `docs/external_data/51_CARROSNAWEB_CATALOGO_SUPABASE_HOMOGENEIZACAO_VEICULOS.md`
+- `sql/ddl/tables/021_create_market_carrosnaweb_catalog.sql`
+- `sql/ddl/views/022_create_v_carrosnaweb_vehicle_catalog.sql`
+- `sql/ddl/tests/010_test_carrosnaweb_catalog.sql`
+
+Status operacional:
+
+- DDL e script de ingestao foram preparados
+- `dry-run` validou `127` fabricantes, `1458` modelos e `8914` anos/modelo
+- carga REST foi concluida no Supabase com `127` fabricantes, `1458` modelos e
+  `8914` anos/modelo
+- `v_carrosnaweb_vehicle_catalog` foi validada com buscas por `BYD Dolphin`,
+  `Renault Kwid`, `Changan Uni-T` e `Hyundai HB20`

@@ -130,12 +130,34 @@ Responde: qual e o caminho hierarquico mais especifico com evidencia?
 O `topic_path` e a arvore apresentada ao humano. Deve usar codigos em
 `snake_case`, separados por ` > `.
 
+O `topic_path` deve permanecer curto, estavel e navegavel. Ele nao deve tentar
+absorver toda a profundidade tecnica do video.
+
 Regra:
 
 - escolher o caminho mais especifico sustentado por evidencia
 - nao preencher nivel profundo por inferencia fraca
 - quando o caminho ainda nao existir, manter o melhor pai canonico e registrar
   o termo em `taxonomy_gaps`
+- nao promover automaticamente pecas, sintomas, insumos, procedimentos,
+  marcas, modelos ou termos de fala para subnicho
+- usar `topic_path` para responder "qual e o tipo de conteudo?", nao "todos os
+  termos tecnicos citados"
+
+Exemplo:
+
+```text
+topic_path = manutencao_reparo > reparo_corretivo > troca_motor
+```
+
+Esse caminho nao precisa virar:
+
+```text
+manutencao_reparo > reparo_corretivo > troca_motor > oleo_motor > borra > folga_axial
+```
+
+`oleo_motor`, `borra` e `folga_axial` pertencem ao contexto tecnico, nao a uma
+profundidade infinita de subnichos.
 
 ### `content_type`
 
@@ -221,9 +243,14 @@ Regra:
 - preencher apenas quando houver evidencia tecnica
 - cada item de `technical_context[]` representa uma combinacao coerente de
   sistema, componente e problema
+- `technical_context[]` captura a profundidade tecnica do video sem inflar a
+  arvore de `topic_path`
 - sistema filtra componente e problema dentro de cada item
 - componente nao deve contradizer sistema
 - problema nao deve contradizer sistema
+- termos tecnicos evidenciados devem ser preservados como contexto, vocabulario
+  tecnico, sinonimo ou lacuna, mas nao promovidos automaticamente para
+  subnicho
 - `motor` e `cambio` nao devem ser rotulos soltos de tema; devem aparecer como
   sistema tecnico ou em caminhos contextualizados como `reparo_motor` e
   `diagnostico_cambio`

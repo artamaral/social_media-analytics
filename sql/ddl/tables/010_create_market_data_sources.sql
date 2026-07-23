@@ -1,8 +1,8 @@
 -- 010_create_market_data_sources.sql
 
 -- Cadastro das fontes externas usadas pela camada de inteligencia de mercado.
--- Nesta fase, Fenabrave e SENATRAN/RENAVAM sao as unicas fontes previstas
--- para ingestao estruturada no Supabase.
+-- Fenabrave, SENATRAN/RENAVAM e Carros na Web sao fontes previstas para
+-- ingestao estruturada no Supabase.
 CREATE TABLE IF NOT EXISTS public.market_data_sources (
   id BIGSERIAL PRIMARY KEY,
   source_name TEXT NOT NULL,

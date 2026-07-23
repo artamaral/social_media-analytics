@@ -3830,6 +3830,46 @@ Resultado:
   principal
 - banco, workbook e pipeline permanecem inalterados
 
+Complemento metodologico registrado em 2026-07-23:
+
+- `topic_path` deve permanecer como arvore curta, estavel e navegavel
+- termos tecnicos novos nao devem virar subnichos automaticamente
+- a profundidade incremental de pecas, sintomas, procedimentos e insumos deve
+  ficar em `technical_context[]`, vocabulario tecnico controlado,
+  `taxonomy_gaps` ou sinonimos
+- a promocao de um termo para `topic_path` exige evidencia de que ele
+  representa um tipo recorrente de conteudo e melhora a navegacao humana
+- `context_order` nao representa peso de importancia; serve apenas para ordem
+  de aparicao ou organizacao operacional
+
+#### Catalogo Carros na Web para entidades de veiculo
+
+Status: concluido e validado no Supabase em 2026-07-23.
+
+Artefatos:
+
+- `docs/external_data/51_CARROSNAWEB_CATALOGO_SUPABASE_HOMOGENEIZACAO_VEICULOS.md`
+- `sql/ddl/tables/021_create_market_carrosnaweb_catalog.sql`
+- `sql/ddl/views/022_create_v_carrosnaweb_vehicle_catalog.sql`
+- `sql/ddl/tests/010_test_carrosnaweb_catalog.sql`
+- `scripts/carrosnaweb_ingestion/ingest_carrosnaweb_catalog.py`
+
+Resultado:
+
+- os CSVs historicos de `fabricantes`, `modelos` e `anos_modelo` do Carros na
+  Web foram adotados como base inicial de catalogo para Supabase
+- `aplicacoes_modelo_ano_test.csv` ficou fora da carga por pertencer a ficha
+  tecnica
+- a modelagem passa a suportar homogeneizacao futura de marca, modelo e ano
+  extraidos da descricao e da transcricao
+- o catalogo nao altera `topic_path`, `technical_context[]`, banco do pipeline
+  de classificacao ou workbook humano
+- o `dry-run` validou `127` fabricantes, `1458` modelos e `8914` anos/modelo
+- a carga `--write` gravou `127` fabricantes, `1458` modelos e `8914`
+  anos/modelo no Supabase
+- a view `v_carrosnaweb_vehicle_catalog` foi validada com buscas por `BYD
+  Dolphin`, `Renault Kwid`, `Changan Uni-T` e `Hyundai HB20`
+
 ### Criterio de saida do planejamento
 
 O inicio do planejamento do Sprint 6 so deve ser considerado concluido quando

@@ -83,6 +83,7 @@ considerada incompleta.
 ### Carros na Web
 
 - [27_CARROSNAWEB_VEHICLE_SPECS_INGESTION_PLAN.md](/C:/social_media-analytics/docs/external_data/27_CARROSNAWEB_VEHICLE_SPECS_INGESTION_PLAN.md)
+- [51_CARROSNAWEB_CATALOGO_SUPABASE_HOMOGENEIZACAO_VEICULOS.md](/C:/social_media-analytics/docs/external_data/51_CARROSNAWEB_CATALOGO_SUPABASE_HOMOGENEIZACAO_VEICULOS.md)
 
 ### Enrichment e classificacao de videos
 

@@ -35,6 +35,51 @@ uma linha = um contexto tecnico coerente
 Isso evita celulas com multiplos valores separados por `;` e permite validar
 cada combinacao contra a matriz tecnica do CSV `43`.
 
+## Regra anti-explosao de subnichos
+
+A Taxonomia V2 separa duas camadas:
+
+- `topic_path`: arvore curta, estavel e navegavel para classificar o tipo de
+  conteudo.
+- `technical_context[]`: camada profunda e expansivel para registrar os termos
+  tecnicos que o video realmente trata.
+
+Nem todo termo novo deve virar `topic_path`, `sub_niche` ou novo nivel da
+arvore.
+
+Termos como estes devem ser preservados em `technical_context[]`,
+`taxonomy_gaps`, sinonimos ou vocabulario tecnico controlado:
+
+- pecas: `filtro_oleo`, `bomba_oleo`, `pivo_suspensao`;
+- sintomas: `borra`, `folga_axial`, `vibracao`, `ruido`;
+- procedimentos: `retifica`, `limpeza`, `desmontagem`;
+- insumos/produtos: `limpa_radiador`, `aditivo_arrefecimento`;
+- entidades: marca, modelo, ano, versao ou tipo de uso do veiculo.
+
+O criterio para promover um termo a `topic_path` deve ser mais forte:
+
+- o termo representa um tipo recorrente de conteudo, nao apenas uma peca;
+- ajuda a navegacao humana;
+- reduz ambiguidade metodologica;
+- pode ser validado contra exemplos suficientes;
+- nao duplica informacao que ja cabe melhor em `technical_context[]`.
+
+Exemplo:
+
+```text
+topic_path = manutencao_reparo > reparo_corretivo > troca_motor
+
+technical_context[] =
+- motor_conjunto / falha_de_motor
+- oleo_motor / oleo_vencido
+- motor_conjunto / desgaste
+- motor_conjunto / folga_axial
+- retifica_motor como procedimento citado
+```
+
+Nesse caso, `borra`, `carbonizacao`, `oleo_motor`, `folga_axial` e `retifica`
+ajudam a entender o video, mas nao precisam virar niveis adicionais da arvore.
+
 ## Estrutura do CSV
 
 Colunas:
@@ -92,8 +137,11 @@ Nao usar `;` em `automotive_system`, `component` ou `problem`.
 Quando o video citar varios componentes:
 
 - criar uma linha por componente;
-- preservar a ordem de aparicao ou importancia em `context_order`;
+- preservar a ordem de aparicao ou organizacao em `context_order`;
 - marcar `context_role` conforme o papel de cada item.
+
+`context_order` nao e peso de importancia. Ele serve apenas para manter a
+sequencia de evidencias ou uma ordenacao operacional estavel.
 
 Quando a combinacao existir no CSV `43`:
 
@@ -212,4 +260,3 @@ levar `technical_context[]` para a execucao humana:
 
 - atualizar o workbook com uma aba filha;
 - ou manter o CSV separado ate a taxonomia V2 virar contrato de banco.
-

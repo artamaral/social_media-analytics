@@ -133,6 +133,10 @@ Status:
 
 - contrato definido em 2026-07-15
 - fichas tecnicas por scraping ficam em `on_hold`
+- catalogo inicial de fabricantes, modelos e anos/modelo modelado para
+  Supabase em 2026-07-23
+- carga inicial validada no Supabase em 2026-07-23 com `127` fabricantes,
+  `1458` modelos e `8914` anos/modelo
 
 Antes de publicar dados do Carros na Web em view consumida pelo Streamlit,
 validar:
@@ -142,6 +146,9 @@ validar:
 - schema esperado por CSV
 - campos obrigatorios de fabricante, modelo e ano do modelo
 - duplicidades pela chave natural definida para o catalogo
+- `params` parseavel como JSON nos CSVs que trazem parametros de URL
+- ausencia de carga de `aplicacoes_modelo_ano_test.csv`, pois esse arquivo
+  pertence a exploracao de ficha tecnica
 - novas entradas em relacao ao ultimo arquivo validado
 - registros removidos ou alterados em relacao a versao anterior
 - status de validacao da carga antes de expor a view analitica
@@ -153,3 +160,6 @@ Regra:
   ou emplacamento
 - dados do Carros na Web devem ser rotulados como catalogo/oferta tecnica,
   separados de Fenabrave e SENATRAN/RENAVAM
+- `v_carrosnaweb_vehicle_catalog` deve ser usada para homogeneizar marca,
+  modelo e ano extraidos de descricao/transcricao, sem alterar `topic_path`
+  nem contexto tecnico
