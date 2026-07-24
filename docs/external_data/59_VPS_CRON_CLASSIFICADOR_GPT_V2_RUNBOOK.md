@@ -213,7 +213,32 @@ python3 bin/classify_videos_gpt_v2.py --stage title_metadata --limit 1 --write
 ```
 
 Nesta primeira versao, `transcript_90s` exige um CSV de transcricoes ja
-existente. A chamada de transcricao por API sera implementada separadamente.
+existente. A transcricao operacional deve ser gerada por GPT Transcribe, usando
+`gpt-4o-mini-transcribe` ou outro modelo GPT de transcricao que venha a ser
+definido depois. A chamada de transcricao por API sera implementada
+separadamente e nao faz parte do script classificador atual.
+
+## Decisao operacional: chamada combinada
+
+Quando a transcricao dos `90s` estiver disponivel, a rotina operacional deve
+executar uma unica classificacao com:
+
+```bash
+python3 bin/classify_videos_gpt_v2.py --stage transcript_90s --transcripts-csv <arquivo.csv> --limit <n> --write
+```
+
+Esse estagio deve receber titulo, metadados e transcricao no mesmo input. A
+execucao por `title_metadata` fica reservada para diagnostico, calibracao,
+comparacao de custo/qualidade ou triagem preliminar, nao para resultado final
+quando o transcript ja existir.
+
+O transcript usado nessa rotina deve vir de GPT Transcribe. Transcricoes locais
+com Whisper permanecem apenas como historico das rodadas exploratorias e nao
+como padrao operacional.
+
+A chamada combinada aumenta o custo em relacao ao titulo puro porque adiciona
+tokens de entrada da transcricao, mas evita duplicar prompt, taxonomia, matriz
+de compatibilidade e JSON de saida em duas chamadas completas.
 
 ## Cron
 
@@ -252,7 +277,7 @@ O script inicial deve seguir os contratos:
 Modelos definidos:
 
 - classificacao por titulo/metadados: `gpt-5-nano`
-- transcricao dos `90s`: `gpt-4o-mini-transcribe`
+- transcricao operacional dos `90s`: `gpt-4o-mini-transcribe`
 - classificacao por transcricao: `gpt-5-nano`
 - sem fallback automatico para `gpt-5.4-mini`
 

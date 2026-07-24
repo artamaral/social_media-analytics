@@ -3406,6 +3406,8 @@ Premissas ja fechadas para o inicio do sprint:
   dos `90s` e comparar com o baseline humano equivalente.
 - [ ] Executar as duas etapas GPT sem expor o baseline humano ao classificador.
 - [ ] Fechar a formula e os campos obrigatorios do `confidence_score`.
+- [x] Documentar a avaliacao de qualidade textual do `transcript_90s` como
+  evidencia auxiliar da classificacao.
 - [ ] Fechar o calculo e os pesos do `agreement_score` para comparacao humano
   vs IA.
 - [ ] Unificar os thresholds operacionais da fase:
@@ -3414,9 +3416,11 @@ Premissas ja fechadas para o inicio do sprint:
   - envio para transcricao parcial
   - revisao humana
 - [x] Definir o contrato operacional OpenAI desta fase:
-  - classificacao inicial com `gpt-5-nano`
-  - transcricao sob demanda com `gpt-4o-mini-transcribe`
-  - reclassificacao apos transcricao com `gpt-5-nano`
+  - classificacao diagnostica inicial com `gpt-5-nano`
+  - transcricao operacional sob demanda com GPT Transcribe
+    (`gpt-4o-mini-transcribe`)
+  - classificacao operacional combinada com titulo, metadados e transcricao
+    dos `90s` usando `gpt-5-nano`
   - sem fallback automatico para `gpt-5.4-mini` nesta etapa
 - [ ] Definir as guardas operacionais contra TPM/RPM:
   - `batch_size` pequeno
@@ -3922,9 +3926,10 @@ Resultado:
 - a saida aceitavel do GPT deve validar contra schema JSON e ser imputavel
   diretamente nas tabelas de classificacao
 - a definicao operacional de modelo fica:
-  - `gpt-5-nano` para classificacao por titulo/metadados
-  - `gpt-4o-mini-transcribe` para transcricao dos `90s`
-  - `gpt-5-nano` para classificacao por transcricao
+  - `gpt-5-nano` para classificacao diagnostica por titulo/metadados
+  - `gpt-4o-mini-transcribe` para transcricao operacional dos `90s`
+  - `gpt-5-nano` para classificacao operacional combinada por titulo,
+    metadados e transcricao
   - sem fallback automatico para `gpt-5.4-mini`
 - a qualidade do `gpt-5-nano` sera avaliada depois da implementacao em rodada
   propria
@@ -3964,6 +3969,43 @@ Resultado:
   - `91` regras de compatibilidade tecnica
   - `59` termos controlados
 - cron continua desativado ate validacao manual na VPS
+
+#### Decisao de chamada operacional combinada
+
+Status: documentada em 2026-07-24.
+
+Resultado:
+
+- o estagio `transcript_90s` passa a ser a classificacao operacional principal
+  quando houver transcricao salva
+- a transcricao operacional deve ser gerada por GPT Transcribe, nao por
+  Whisper/local
+- cada chamada operacional deve combinar titulo, metadados confiaveis, descricao
+  quando existir e transcricao dos primeiros `90s`
+- `title_metadata` permanece disponivel para diagnostico, calibracao, triagem
+  ou comparacao metodologica, mas nao como resultado final quando a transcricao
+  ja existir
+- a decisao evita duplicar prompt, taxonomia, matriz tecnica e JSON de saida em
+  duas chamadas completas
+- banco, schema, workbook e pipeline permanecem inalterados
+
+#### Qualidade textual da transcricao
+
+Status: documentada em 2026-07-24.
+
+Resultado:
+
+- o classificador deve avaliar se o transcript recebido e suficiente para
+  sustentar a classificacao automotiva
+- a avaliacao mede a qualidade textual da evidencia, nao a qualidade do audio
+  original
+- transcripts vazios, truncados, incoerentes ou com nomes proprios degradados
+  devem reduzir confianca e podem acionar revisao humana ou retranscricao
+- evidencias curtas permanecem nos campos `evidence_summary`,
+  `technical_contexts[].evidence_text` e `vehicle_entities[].evidence_text`
+- o transcript completo nao sera salvo no Supabase por padrao nesta etapa
+- uma futura revisao do schema podera incluir `transcript_quality`, mas banco e
+  script permanecem inalterados nesta decisao
 
 ### Criterio de saida do planejamento
 

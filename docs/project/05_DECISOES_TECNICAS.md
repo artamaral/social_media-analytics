@@ -2371,3 +2371,89 @@ Motivo:
 Referencia:
 
 - `docs/external_data/59_VPS_CRON_CLASSIFICADOR_GPT_V2_RUNBOOK.md`
+
+---
+
+## Classificacao operacional combinada com titulo e transcricao
+
+Data:
+
+- 2026-07-24
+
+Decisao:
+
+- usar uma unica chamada operacional por video no estagio `transcript_90s`
+  quando a transcricao dos primeiros `90s` estiver disponivel
+- gerar a transcricao operacional por GPT Transcribe, inicialmente com
+  `gpt-4o-mini-transcribe`
+- enviar na mesma chamada titulo, metadados confiaveis, descricao quando existir
+  e transcricao textual dos `90s`
+- manter `title_metadata` apenas para diagnostico, calibracao, comparacao
+  metodologica de sinal fraco ou triagem preliminar
+- nao criar um novo estagio ou schema nesta fase; o contrato atual de
+  `transcript_90s` ja comporta a chamada combinada
+
+Motivo:
+
+- a classificacao apenas por titulo mostrou utilidade para testar guardrails,
+  mas tambem evidencia limitada em titulos vagos ou sensacionalistas
+- a chamada combinada tende a reduzir inferencia ruim sem duplicar toda a
+  entrada fixa de taxonomia, matriz de compatibilidade e prompt
+- o custo por chamada aumenta em relacao ao titulo puro por incluir transcript,
+  mas deve ser menor que executar duas classificacoes completas e persistir dois
+  resultados operacionais equivalentes
+
+Aplicacao operacional:
+
+- `gpt-5-nano` permanece como modelo classificador definido para esta fase
+- `gpt-4o-mini-transcribe` permanece apenas como modelo de geracao do texto da
+  transcricao
+- Whisper/local fica preservado apenas como evidencia historica das rodadas
+  exploratorias, nao como padrao operacional
+- rodadas de comparacao em duas etapas continuam permitidas, desde que marcadas
+  com `round_id` experimental e nao confundidas com resultado operacional final
+
+Referencia:
+
+- `docs/external_data/58_GPT_VIDEO_CLASSIFIER_HARNESS_CONTRACT_V2.md`
+- `docs/external_data/58_GPT_VIDEO_CLASSIFIER_SKILL_V2.md`
+- `docs/external_data/59_VPS_CRON_CLASSIFICADOR_GPT_V2_RUNBOOK.md`
+
+---
+
+## Avaliacao da qualidade textual da transcricao pelo classificador
+
+Data:
+
+- 2026-07-24
+
+Decisao:
+
+- o classificador GPT deve avaliar se o `transcript_90s` recebido e textual e
+  semanticamente utilizavel para sustentar a classificacao
+- essa avaliacao mede qualidade da evidencia textual, nao qualidade do audio
+  original
+- a nota de qualidade do transcript deve influenciar `confidence_score`,
+  `needs_human_review` e `validation_issues`
+- nao salvar transcript completo no Supabase apenas para auditoria; preservar
+  evidencias curtas nos campos ja contratados:
+  - `evidence_summary`
+  - `technical_contexts[].evidence_text`
+  - `vehicle_entities[].evidence_text`
+- preparar uma proxima revisao de schema com um bloco opcional
+  `transcript_quality`, sem alterar banco nesta decisao documental
+
+Motivo:
+
+- a transcricao pode conter erros em nomes de marcas, modelos, versoes e termos
+  automotivos
+- mesmo sem ouvir o audio, o GPT consegue identificar sinais textuais de baixa
+  qualidade, como frases truncadas, incoerencia, transcript vazio ou termos
+  degradados
+- guardar uma nota de qualidade da evidencia ajuda a decidir quando revisar,
+  retranscrever ou reduzir confianca sem armazenar todo o transcript no banco
+
+Referencia:
+
+- `docs/external_data/58_GPT_VIDEO_CLASSIFIER_HARNESS_CONTRACT_V2.md`
+- `docs/external_data/58_GPT_VIDEO_CLASSIFIER_SKILL_V2.md`

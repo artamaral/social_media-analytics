@@ -7,6 +7,8 @@ Script minimo para classificar videos com GPT usando a Taxonomia Video V2.
 - busca videos em `public.posts`
 - usa Taxonomia V2 carregada no Supabase
 - chama `gpt-5-nano` para `title_metadata`
+- usa `transcript_90s` como classificacao operacional quando a transcricao
+  estiver disponivel, combinando titulo, metadados e transcript em uma chamada
 - valida JSON e regras semanticas basicas
 - grava em `video_classification_results`,
   `video_classification_technical_contexts` e
@@ -26,6 +28,20 @@ Fora de escopo nesta versao:
 - dashboard
 - fallback automatico para modelo maior
 
+## Decisao de uso
+
+O uso operacional recomendado e classificar uma vez por video com
+`--stage transcript_90s`, quando o CSV de transcricoes existir. Esse estagio
+envia titulo, metadados e transcript dos primeiros `90s` no mesmo input.
+
+A transcricao operacional dos `90s` deve ser gerada por GPT Transcribe antes de
+rodar este script. O script consome o CSV de transcricoes, mas nao implementa a
+extracao de audio nem a chamada de transcricao nesta versao.
+
+`--stage title_metadata` continua disponivel para diagnostico, calibracao e
+comparacao de sinal fraco, mas nao deve ser tratado como resultado operacional
+final quando a transcricao ja existe.
+
 ## Variaveis
 
 ```text
@@ -33,6 +49,7 @@ OPENAI_API_KEY
 SUPABASE_URL
 SUPABASE_SERVICE_ROLE_KEY
 CLASSIFIER_MODEL_TITLE=gpt-5-nano
+TRANSCRIPTION_MODEL=gpt-4o-mini-transcribe
 CLASSIFIER_MODEL_TRANSCRIPT=gpt-5-nano
 ```
 

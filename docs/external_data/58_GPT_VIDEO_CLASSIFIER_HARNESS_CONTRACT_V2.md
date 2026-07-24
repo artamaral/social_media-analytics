@@ -80,9 +80,45 @@ Regra de evidencia:
 
 - `title_metadata` classifica apenas com titulo, descricao disponivel e
   metadados.
-- `transcript_90s` pode revisar a leitura da etapa anterior, mas nao deve usar
-  baseline humano ou classificacoes anteriores como cola.
+- `transcript_90s` classifica com titulo, descricao disponivel, metadados e
+  transcricao dos primeiros `90s`.
 - Se uma informacao nao estiver no input, ela nao pode ser inventada.
+
+## Decisao operacional de estagio
+
+Para uso operacional do classificador, o estagio principal passa a ser uma
+unica chamada `transcript_90s`, combinando:
+
+- titulo;
+- metadados confiaveis;
+- descricao quando existir;
+- transcricao textual dos primeiros `90s`, gerada por GPT Transcribe.
+
+O estagio `title_metadata` permanece valido, mas com finalidade diagnostica,
+amostral e de calibracao. Ele serve para medir o quanto titulo/metadados
+sozinhos induzem acertos, erros conservadores, `fora_escopo` ou
+`sem_match_taxonomico`.
+
+Motivo da decisao:
+
+- uma unica classificacao combinada evita duplicar prompt, taxonomia, matriz de
+  compatibilidade e JSON de saida;
+- a transcricao reduz inferencias ruins em titulos vagos ou sensacionalistas;
+- o custo por chamada aumenta em relacao ao titulo puro porque ha mais tokens de
+  entrada, mas tende a ser menor que executar duas classificacoes completas
+  separadas para o mesmo video;
+- a saida operacional continua sendo uma unica resposta imputavel no Supabase.
+
+Regra pratica:
+
+- usar `title_metadata` apenas quando o objetivo explicito for auditoria,
+  comparacao metodologica ou priorizacao previa de lote;
+- usar `transcript_90s` como classificacao oficial quando a transcricao estiver
+  disponivel;
+- gerar a transcricao operacional com `gpt-4o-mini-transcribe`, ou modelo GPT
+  de transcricao definido posteriormente, antes da chamada classificadora;
+- nao gravar duas classificacoes como se ambas fossem resultado operacional
+  equivalente, salvo rodada experimental com `round_id` separado.
 
 ## Skill GPT
 
@@ -96,7 +132,8 @@ Versao inicial:
 - `output_schema_version = video_taxonomy_v2_output_schema_r1`
 - modelo de classificacao por titulo/metadados: `gpt-5-nano`
 - modelo de transcricao dos `90s`: `gpt-4o-mini-transcribe`
-- modelo de classificacao por transcricao: `gpt-5-nano`
+- modelo de classificacao operacional com titulo/metadados/transcricao:
+  `gpt-5-nano`
 - skill: `docs/external_data/58_GPT_VIDEO_CLASSIFIER_SKILL_V2.md`
 - schema: `docs/external_data/58_GPT_VIDEO_CLASSIFIER_OUTPUT_SCHEMA_V2.json`
 
@@ -108,9 +145,11 @@ constraints SQL antes da gravacao.
 
 Decisao operacional:
 
-- usar `gpt-5-nano` para `title_metadata`
-- usar `gpt-4o-mini-transcribe` somente para transformar audio em texto
-- usar `gpt-5-nano` para classificar `transcript_90s`
+- usar `gpt-5-nano` para `title_metadata` apenas em diagnostico/calibracao
+- usar `gpt-4o-mini-transcribe` somente para transformar audio em texto; nao
+  usar Whisper/local como fonte operacional desta fase
+- usar `gpt-5-nano` para a classificacao operacional `transcript_90s`, com
+  titulo, metadados e transcricao no mesmo input
 - nao aplicar fallback automatico para `gpt-5.4-mini` nesta fase
 - avaliar a qualidade real do `gpt-5-nano` depois da primeira implementacao e
   comparar com o baseline humano/GPT ja documentado
@@ -205,6 +244,68 @@ Valores recomendados para `input_evidence_level`:
 - `title_description`: titulo, metadados e descricao.
 - `transcript_90s`: titulo, metadados e transcricao dos primeiros 90s.
 - `insufficient_evidence`: input insuficiente para classificacao confiavel.
+
+## Qualidade da transcricao como evidencia
+
+Quando `evaluation_stage = transcript_90s`, o classificador deve avaliar a
+qualidade textual do transcript recebido antes de usar essa evidencia para
+classificar.
+
+Essa avaliacao nao e uma nota de qualidade do audio, porque o GPT classificador
+recebe texto, nao o audio original. Ela mede se o texto transcrito e suficiente,
+coerente e especifico para sustentar a classificacao automotiva.
+
+Campos recomendados para a proxima revisao do schema:
+
+```json
+{
+  "transcript_quality": {
+    "quality_score": 0.0,
+    "quality_status": "usable",
+    "issues": null,
+    "impact_on_classification": "low",
+    "needs_retranscription": false
+  }
+}
+```
+
+Escala de `quality_score`:
+
+- `0.90` a `1.00`: transcript claro, coerente e especifico.
+- `0.70` a `0.89`: transcript utilizavel, com pequenas incertezas.
+- `0.50` a `0.69`: transcript parcialmente utilizavel; exige cuidado.
+- abaixo de `0.50`: transcript ruim para classificacao; revisar ou
+  retranscrever.
+
+Valores de `quality_status`:
+
+- `usable`
+- `partially_usable`
+- `poor`
+- `empty`
+
+Valores de `impact_on_classification`:
+
+- `none`
+- `low`
+- `medium`
+- `high`
+
+Regras:
+
+- transcript vazio ou muito curto deve gerar `quality_status = empty` ou
+  `poor`, `needs_retranscription = true` e `needs_human_review = true`.
+- frases truncadas, palavras sem sentido, nomes de marca/modelo degradados ou
+  trechos incoerentes devem reduzir `quality_score`.
+- se a classificacao depender de um trecho confuso, reduzir tambem
+  `confidence_score`.
+- se titulo/metadados indicarem uma coisa e o transcript indicar outra, marcar
+  `needs_human_review = true` e registrar a divergencia em `validation_issues`.
+- nao usar `transcript_quality` para salvar o transcript completo; ela deve
+  resumir apenas a confiabilidade da evidencia textual recebida.
+- quando a evidencia do transcript for fraca, o classificador deve preferir
+  `sem_match_taxonomico`, `validation_issues` ou revisao humana a uma
+  classificacao por plausibilidade.
 
 ## Entidades de veiculo
 

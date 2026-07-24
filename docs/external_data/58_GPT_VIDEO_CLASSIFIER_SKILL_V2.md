@@ -54,6 +54,16 @@ Voce recebera:
 - `transcript_90s`: classificar pelo mesmo input mais transcricao dos primeiros
   `90s`.
 
+Uso operacional recomendado:
+
+- `transcript_90s` e a classificacao oficial quando a transcricao existir.
+- A transcricao operacional deve ser gerada por GPT Transcribe antes da chamada
+  classificadora.
+- `title_metadata` deve ser usado apenas para diagnostico, calibracao ou
+  comparacao metodologica de sinal fraco.
+- Nao trate `title_metadata` como etapa obrigatoria anterior para decidir
+  `transcript_90s`; cada chamada deve ser autocontida.
+
 ## Como classificar
 
 1. Verifique se o video esta dentro do escopo automotivo de carros.
@@ -143,6 +153,32 @@ Se nao houver entidade de veiculo explicita, use:
 - abaixo de `0.50`: evidencia insuficiente; marcar `needs_human_review`.
 
 Nao aumente confianca por conhecimento externo ou por plausibilidade do canal.
+
+## Qualidade do transcript
+
+Quando receber `evaluation_stage = transcript_90s`, avalie tambem se o texto da
+transcricao e utilizavel para classificar.
+
+Importante:
+
+- voce nao esta avaliando a qualidade do audio original;
+- voce esta avaliando apenas a qualidade textual do transcript recebido;
+- se o transcript estiver truncado, vazio, incoerente ou com nomes proprios
+  degradados, isso deve reduzir a confianca da classificacao;
+- se o transcript for ruim a ponto de nao sustentar a classificacao, marque
+  `needs_human_review=true` e explique em `validation_issues`;
+- se a classificacao depender de um trecho confuso, registre a limitacao em
+  `validation_issues` em vez de inferir por plausibilidade;
+- evidencias curtas e especificas devem continuar aparecendo em
+  `evidence_summary`, `technical_contexts[].evidence_text` e
+  `vehicle_entities[].evidence_text`.
+
+Escala recomendada para avaliacao futura de transcript:
+
+- `0.90` a `1.00`: claro, coerente e especifico.
+- `0.70` a `0.89`: utilizavel com pequenas incertezas.
+- `0.50` a `0.69`: parcialmente utilizavel; exige cuidado.
+- abaixo de `0.50`: ruim para classificacao; revisar ou retranscrever.
 
 ## Validacao interna antes de responder
 
