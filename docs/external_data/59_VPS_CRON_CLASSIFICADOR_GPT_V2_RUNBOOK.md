@@ -171,6 +171,10 @@ Se a versao exibida nao for `2026-07-24-r3-context-review`, a VPS ainda esta
 com uma copia antiga do script. Copiar novamente o arquivo versionado para
 `/opt/social-media-analytics/bin/classify_videos_gpt_v2.py`.
 
+Tambem sao validos os aliases `--script-version` e `-V`. Se nenhum desses
+argumentos existir, a copia ainda esta baseada no commit remoto antigo
+`a38495f`, anterior ao commit que adicionou o marcador de versao.
+
 O script usa `6000` como limite padrao de saida. Se uma chamada retornar
 `incomplete/max_output_tokens`, reprocessar o mesmo video com limite maior:
 

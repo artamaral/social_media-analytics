@@ -17,6 +17,7 @@ REPO_DIR = BASE_DIR.parent.parent
 TAXONOMY_VERSION = "taxonomia_video_v2"
 PROMPT_CONTRACT_VERSION = "video_taxonomy_v2_classifier_r1"
 OUTPUT_SCHEMA_VERSION = "video_taxonomy_v2_output_schema_r1"
+# Marcador operacional para confirmar se a copia local/VPS esta atualizada.
 SCRIPT_VERSION = "2026-07-24-r3-context-review"
 DEFAULT_TITLE_MODEL = "gpt-5-nano"
 DEFAULT_TRANSCRIPT_MODEL = "gpt-5-nano"
@@ -1051,7 +1052,13 @@ def parse_args():
     parser.add_argument("--max-output-tokens", type=int, default=DEFAULT_MAX_OUTPUT_TOKENS)
     parser.add_argument("--sleep-seconds", type=float, default=0.5)
     parser.add_argument("--include-already-classified", action="store_true")
-    parser.add_argument("--version", action="version", version=f"%(prog)s {SCRIPT_VERSION}")
+    parser.add_argument(
+        "-V",
+        "--version",
+        "--script-version",
+        action="version",
+        version=f"%(prog)s {SCRIPT_VERSION}",
+    )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--write", action="store_true")
     args = parser.parse_args()

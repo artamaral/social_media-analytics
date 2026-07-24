@@ -68,6 +68,13 @@ A versao esperada apos a correcao de contexto tecnico generico e:
 classify_videos_gpt_v2.py 2026-07-24-r3-context-review
 ```
 
+Aliases equivalentes:
+
+```bash
+python scripts/video_classification/classify_videos_gpt_v2.py --script-version
+python scripts/video_classification/classify_videos_gpt_v2.py -V
+```
+
 Gravacao:
 
 ```bash
