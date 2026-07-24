@@ -566,7 +566,19 @@ Proxima avaliacao:
 - evolucao do dashboard depende de expandir a cobertura funcional do app sobre
   as views ja operacionais
 - evolucao da classificacao GPT depende de implementar o script minimo,
-  validar execucao manual na VPS e so depois ativar cron
+  copiar para a VPS, validar execucao manual e so depois ativar cron
+
+Status do classificador GPT em 2026-07-24:
+
+- script inicial versionado em
+  `scripts/video_classification/classify_videos_gpt_v2.py`
+- seed estatico versionado em `sql/dml/seed_video_taxonomy_v2.sql`
+- execucao suportada por enquanto:
+  - `title_metadata` direto de `posts`/`creators`
+  - `transcript_90s` apenas com CSV de transcricoes ja existente
+- cron ainda nao esta ativo
+- proximo checkpoint: copiar o script para `/opt/social-media-analytics/bin/`
+  na VPS e rodar `--dry-run` manual
 
 ### 4.4 Ultima verificacao manual consolidada
 

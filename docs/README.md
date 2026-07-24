@@ -123,6 +123,10 @@ considerada incompleta.
 - [58_GPT_VIDEO_CLASSIFIER_OUTPUT_SCHEMA_V2.json](/C:/social_media-analytics/docs/external_data/58_GPT_VIDEO_CLASSIFIER_OUTPUT_SCHEMA_V2.json)
 - [59_VPS_CRON_CLASSIFICADOR_GPT_V2_RUNBOOK.md](/C:/social_media-analytics/docs/external_data/59_VPS_CRON_CLASSIFICADOR_GPT_V2_RUNBOOK.md)
 
+SQL operacional relacionado:
+
+- [seed_video_taxonomy_v2.sql](/C:/social_media-analytics/sql/dml/seed_video_taxonomy_v2.sql)
+
 ## 3. Dashboard
 
 ### Estrategia e implementacao

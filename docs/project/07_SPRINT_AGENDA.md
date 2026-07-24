@@ -3938,6 +3938,9 @@ Status: documentado em 2026-07-23.
 Artefato:
 
 - `docs/external_data/59_VPS_CRON_CLASSIFICADOR_GPT_V2_RUNBOOK.md`
+- `scripts/video_classification/classify_videos_gpt_v2.py`
+- `scripts/video_classification/README.md`
+- `sql/dml/seed_video_taxonomy_v2.sql`
 
 Resultado:
 
@@ -3951,6 +3954,16 @@ Resultado:
 - credenciais, `.env`, chaves SSH, IP publico e usuario real ficam fora do Git
 - a decisao sobre Google Cloud, Docker ou CI/CD fica adiada ate a rotina ser
   validada em lote pequeno
+- o script inicial foi implementado para execucao manual:
+  - `--stage title_metadata`
+  - `--stage transcript_90s` com CSV de transcricoes ja existente
+  - `--dry-run` e `--write`
+  - validacao local de JSON/schema e regras semanticas antes da gravacao
+- foi criado seed estatico para carregar a Taxonomia V2 no Supabase:
+  - `104` topic paths
+  - `91` regras de compatibilidade tecnica
+  - `59` termos controlados
+- cron continua desativado ate validacao manual na VPS
 
 ### Criterio de saida do planejamento
 

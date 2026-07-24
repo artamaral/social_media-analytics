@@ -94,6 +94,42 @@ Uso esperado:
 - `logs/`: logs do cron e execucoes
 - `tmp/`: arquivos temporarios de audio/transcricao quando necessario
 
+Script inicial:
+
+```text
+scripts/video_classification/classify_videos_gpt_v2.py
+```
+
+Destino recomendado na VPS:
+
+```text
+/opt/social-media-analytics/bin/classify_videos_gpt_v2.py
+```
+
+## Preparacao do Supabase
+
+Antes de executar o script na VPS, a estrutura de banco e a Taxonomia V2 devem
+estar aplicadas no Supabase.
+
+Aplicar nesta ordem pelo Supabase SQL Editor ou pela rotina operacional
+equivalente:
+
+1. `sql/ddl/tables/022_create_video_taxonomy_classification.sql`
+2. `sql/dml/seed_video_taxonomy_v2.sql`
+3. `sql/ddl/views/023_create_v_video_classification_latest.sql`
+4. `sql/ddl/tests/011_test_video_taxonomy_classification.sql`
+
+O seed `sql/dml/seed_video_taxonomy_v2.sql` e uma carga estatica versionada,
+nao um metodo de ingestao recorrente.
+
+Resultado esperado apos o seed:
+
+```text
+topic_paths = 104
+compatibility_rules = 91
+controlled_terms = 59
+```
+
 ## Variaveis e segredos
 
 Segredos devem ficar apenas no servidor, fora do Git.
@@ -121,6 +157,24 @@ Exemplo no servidor:
 chmod 600 /opt/social-media-analytics/config/*.env
 ```
 
+## Execucao manual inicial
+
+Antes do cron, rodar manualmente em lote pequeno:
+
+```bash
+cd /opt/social-media-analytics
+python3 bin/classify_videos_gpt_v2.py --stage title_metadata --limit 1 --dry-run
+```
+
+Depois de validar a resposta e o contrato de banco:
+
+```bash
+python3 bin/classify_videos_gpt_v2.py --stage title_metadata --limit 1 --write
+```
+
+Nesta primeira versao, `transcript_90s` exige um CSV de transcricoes ja
+existente. A chamada de transcricao por API sera implementada separadamente.
+
 ## Cron
 
 O agendamento final ainda sera definido depois da implementacao do script.
@@ -146,7 +200,7 @@ Regras:
 
 ## Relacao com Taxonomia V2
 
-O script futuro deve seguir os contratos:
+O script inicial deve seguir os contratos:
 
 - `docs/external_data/58_GPT_VIDEO_CLASSIFIER_HARNESS_CONTRACT_V2.md`
 - `docs/external_data/58_GPT_VIDEO_CLASSIFIER_SKILL_V2.md`
@@ -187,6 +241,12 @@ Antes de ativar o agendamento:
 
 ## Proximo passo
 
-Desenvolver o script minimo de classificacao para ser copiado para
-`/opt/social-media-analytics/bin/` e executado manualmente antes de ativar o
+Copiar o script minimo de classificacao para
+`/opt/social-media-analytics/bin/` e executa-lo manualmente antes de ativar o
 cron.
+
+Status em 2026-07-24:
+
+- script inicial criado em `scripts/video_classification/classify_videos_gpt_v2.py`
+- seed estatico criado em `sql/dml/seed_video_taxonomy_v2.sql`
+- cron continua desativado ate validacao manual na VPS
