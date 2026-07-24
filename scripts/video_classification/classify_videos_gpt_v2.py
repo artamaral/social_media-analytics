@@ -19,7 +19,7 @@ TAXONOMY_VERSION = "taxonomia_video_v2"
 PROMPT_CONTRACT_VERSION = "video_taxonomy_v2_classifier_r1"
 OUTPUT_SCHEMA_VERSION = "video_taxonomy_v2_output_schema_r1"
 # Marcador operacional para confirmar se a copia local/VPS esta atualizada.
-SCRIPT_VERSION = "2026-07-24-r4-documented-confidence"
+SCRIPT_VERSION = "2026-07-24-r5-post-id-limit"
 DEFAULT_TITLE_MODEL = "gpt-5-nano"
 DEFAULT_TRANSCRIPT_MODEL = "gpt-5-nano"
 DEFAULT_MAX_OUTPUT_TOKENS = 6000
@@ -1089,6 +1089,9 @@ def parse_args():
 
     if args.limit < 1:
         parser.error("--limit deve ser >= 1")
+
+    if args.post_id and args.limit < len(args.post_id):
+        args.limit = len(args.post_id)
 
     if args.stage == "transcript_90s" and not args.transcripts_csv:
         parser.error("--transcripts-csv e obrigatorio para --stage transcript_90s nesta versao")

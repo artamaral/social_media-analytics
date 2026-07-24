@@ -167,7 +167,7 @@ python3 bin/classify_videos_gpt_v2.py --version
 python3 bin/classify_videos_gpt_v2.py --stage title_metadata --limit 1 --dry-run
 ```
 
-Se a versao exibida nao for `2026-07-24-r4-documented-confidence`, a VPS ainda esta
+Se a versao exibida nao for `2026-07-24-r5-post-id-limit`, a VPS ainda esta
 com uma copia antiga do script. Copiar novamente o arquivo versionado para
 `/opt/social-media-analytics/bin/classify_videos_gpt_v2.py`.
 

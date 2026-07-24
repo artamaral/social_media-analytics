@@ -67,7 +67,7 @@ python scripts/video_classification/classify_videos_gpt_v2.py --version
 A versao esperada apos alinhar a skill oficial e a regra de confianca e:
 
 ```text
-classify_videos_gpt_v2.py 2026-07-24-r4-documented-confidence
+classify_videos_gpt_v2.py 2026-07-24-r5-post-id-limit
 ```
 
 Aliases equivalentes:
@@ -89,6 +89,10 @@ Gravacao:
 ```bash
 python scripts/video_classification/classify_videos_gpt_v2.py --stage title_metadata --limit 1 --write
 ```
+
+Quando `--post-id` e usado mais de uma vez, o script ajusta `--limit`
+automaticamente para cobrir todos os IDs informados. Assim uma lista explicita
+de videos nao fica truncada pelo default operacional de `5`.
 
 Classificacao com transcript salvo em CSV:
 
