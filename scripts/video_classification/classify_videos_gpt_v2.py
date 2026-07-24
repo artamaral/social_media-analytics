@@ -17,8 +17,10 @@ REPO_DIR = BASE_DIR.parent.parent
 TAXONOMY_VERSION = "taxonomia_video_v2"
 PROMPT_CONTRACT_VERSION = "video_taxonomy_v2_classifier_r1"
 OUTPUT_SCHEMA_VERSION = "video_taxonomy_v2_output_schema_r1"
+SCRIPT_VERSION = "2026-07-24-r3-context-review"
 DEFAULT_TITLE_MODEL = "gpt-5-nano"
 DEFAULT_TRANSCRIPT_MODEL = "gpt-5-nano"
+DEFAULT_MAX_OUTPUT_TOKENS = 6000
 OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
 
 DEFAULT_CONTENT_TYPES = [
@@ -62,11 +64,18 @@ Regras obrigatorias:
 - topic_path_secondary so entra com segundo tema forte e explicito.
 - technical_contexts[] so entra com evidencia explicita.
 - Cada technical_context representa uma unica combinacao de sistema, componente e problema.
+- Se houver apenas dominio/topico generico, nao crie technical_context.
+- Se um contexto tecnico nao existir na matriz recebida, marque
+  compatibility_status=needs_review e needs_human_review=true.
 - Nao use valores concatenados por ponto e virgula.
 - motor e cambio nao sao rotulos soltos de tema.
 - barulho e sinal textual; problem canonico deve ser ruido.
 - Marca, modelo, ano e geracao devem preservar o valor bruto encontrado no input.
 - Termos fora da taxonomia devem ir para taxonomy_gaps, nunca para campo canonico.
+- Seja conciso: evidence_summary, taxonomy_gaps e validation_issues devem ter
+  apenas a evidencia necessaria para auditoria.
+- Para title_metadata, use no maximo 3 technical_contexts e 2 vehicle_entities.
+- Para transcript_90s, use no maximo 6 technical_contexts e 4 vehicle_entities.
 
 Responda somente com JSON valido no schema video_taxonomy_v2_output_schema_r1.
 """
@@ -597,6 +606,50 @@ def group_terms(terms):
     return grouped
 
 
+def compact_text(value, max_chars=180):
+    if value is None:
+        return None
+
+    text = str(value).strip()
+    if len(text) <= max_chars:
+        return text
+
+    return text[: max_chars - 3].rstrip() + "..."
+
+
+def compact_topic_paths(topic_paths):
+    compacted = []
+    for row in topic_paths:
+        compacted.append(
+            {
+                "code": row.get("topic_path_code"),
+                "parent": row.get("parent_code"),
+                "domain": row.get("automotive_domain"),
+                "activity": row.get("default_activity_type"),
+                "requires_technical_context": row.get("requires_technical_context"),
+                "allows_secondary_topic": row.get("allows_secondary_topic"),
+                "signals": compact_text(row.get("example_signals"), 140),
+            }
+        )
+    return compacted
+
+
+def compact_technical_compatibility(compatibility_rows):
+    compacted = []
+    for row in compatibility_rows:
+        compacted.append(
+            {
+                "topic_path": row.get("topic_path_code"),
+                "system": row.get("automotive_system"),
+                "component": row.get("component"),
+                "problem": row.get("problem"),
+                "status": row.get("compatibility_status"),
+                "signals": compact_text(row.get("example_signals"), 120),
+            }
+        )
+    return compacted
+
+
 def build_harness_input(post, stage, taxonomy, terms, transcript=None):
     evidence_level = "metadata_only"
     if stage == "transcript_90s":
@@ -621,8 +674,8 @@ def build_harness_input(post, stage, taxonomy, terms, transcript=None):
     return {
         "video": video,
         "taxonomy_version": taxonomy["version"],
-        "topic_paths": taxonomy["topic_paths"],
-        "technical_compatibility": taxonomy["compatibility"],
+        "topic_paths": compact_topic_paths(taxonomy["topic_paths"]),
+        "technical_compatibility": compact_technical_compatibility(taxonomy["compatibility"]),
         "controlled_terms": terms,
         "output_contract": {
             "prompt_contract_version": PROMPT_CONTRACT_VERSION,
@@ -680,6 +733,15 @@ def call_openai(model, skill_text, schema, harness_input, max_output_tokens):
     text = extract_response_text(response)
 
     if not text:
+        if response.get("status") == "incomplete":
+            reason = (response.get("incomplete_details") or {}).get("reason")
+            if reason == "max_output_tokens":
+                raise RuntimeError(
+                    "Resposta OpenAI incompleta por max_output_tokens. "
+                    f"Tente aumentar --max-output-tokens acima de {max_output_tokens} "
+                    "ou reduza o lote para reprocessar este post_id."
+                )
+
         raise RuntimeError(f"Resposta OpenAI sem output_text: {json.dumps(response)[:800]}")
 
     try:
@@ -717,6 +779,8 @@ def validate_classification(result, schema, taxonomy, stage, post_id):
         )
         for row in compatibility_rows
     }
+
+    normalize_technical_contexts_for_validation(result, compatibility_keys)
 
     if classification["post_id"] != post_id:
         raise ValueError("post_id da resposta difere do video enviado")
@@ -757,6 +821,50 @@ def validate_classification(result, schema, taxonomy, stage, post_id):
             ]
         ):
             raise ValueError("vehicle_entity sem valor bruto extraido")
+
+
+def normalize_technical_contexts_for_validation(result, compatibility_keys):
+    normalized_contexts = []
+
+    for context in result["technical_contexts"]:
+        has_technical_value = any(
+            normalize_nullable(context.get(field))
+            for field in ["automotive_system", "component", "problem"]
+        )
+        if not has_technical_value:
+            continue
+
+        key = (
+            context["topic_path"],
+            normalize_nullable(context.get("automotive_system")),
+            normalize_nullable(context.get("component")),
+            normalize_nullable(context.get("problem")),
+        )
+
+        if key not in compatibility_keys and context["compatibility_status"] != "needs_review":
+            issue = (
+                "technical_context sem combinacao compativel na matriz V2; "
+                "marcado para revisao humana"
+            )
+            context["compatibility_status"] = "needs_review"
+            context["needs_human_review"] = True
+            context["validation_issue"] = append_validation_issue(
+                context.get("validation_issue"), issue
+            )
+
+        normalized_contexts.append(context)
+
+    result["technical_contexts"] = normalized_contexts
+
+
+def append_validation_issue(current, issue):
+    if not current:
+        return issue
+
+    if issue in current:
+        return current
+
+    return f"{current}; {issue}"
 
 
 def validate_context(context, topic_codes, compatibility_keys, primary_topic):
@@ -940,9 +1048,10 @@ def parse_args():
     parser.add_argument("--skill-path")
     parser.add_argument("--schema-path")
     parser.add_argument("--transcripts-csv")
-    parser.add_argument("--max-output-tokens", type=int, default=2500)
+    parser.add_argument("--max-output-tokens", type=int, default=DEFAULT_MAX_OUTPUT_TOKENS)
     parser.add_argument("--sleep-seconds", type=float, default=0.5)
     parser.add_argument("--include-already-classified", action="store_true")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {SCRIPT_VERSION}")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--write", action="store_true")
     args = parser.parse_args()
@@ -991,8 +1100,10 @@ def main():
     errors = []
 
     print("Classificador GPT Taxonomia V2")
+    print(f"- script_version: {SCRIPT_VERSION}")
     print(f"- stage: {args.stage}")
     print(f"- model: {model}")
+    print(f"- max_output_tokens: {args.max_output_tokens}")
     print(f"- taxonomy_version: {taxonomy['version']} id={taxonomy['id']}")
     print(f"- topic_paths: {len(taxonomy['topic_paths'])}")
     print(f"- technical_compatibility: {len(taxonomy['compatibility'])}")

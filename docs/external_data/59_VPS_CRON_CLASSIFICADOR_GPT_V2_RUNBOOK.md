@@ -163,8 +163,26 @@ Antes do cron, rodar manualmente em lote pequeno:
 
 ```bash
 cd /opt/social-media-analytics
+python3 bin/classify_videos_gpt_v2.py --version
 python3 bin/classify_videos_gpt_v2.py --stage title_metadata --limit 1 --dry-run
 ```
+
+Se a versao exibida nao for `2026-07-24-r3-context-review`, a VPS ainda esta
+com uma copia antiga do script. Copiar novamente o arquivo versionado para
+`/opt/social-media-analytics/bin/classify_videos_gpt_v2.py`.
+
+O script usa `6000` como limite padrao de saida. Se uma chamada retornar
+`incomplete/max_output_tokens`, reprocessar o mesmo video com limite maior:
+
+```bash
+python3 bin/classify_videos_gpt_v2.py --stage title_metadata --post-id Z8hPL7MGOxU --max-output-tokens 9000 --dry-run
+```
+
+Se a execucao falhar com `technical_context sem compatibilidade e sem
+needs_review`, atualizar a VPS para a versao `2026-07-24-r3-context-review`.
+Essa versao preserva a trava de compatibilidade, mas converte combinacoes
+tecnicas fora da matriz V2 para `needs_review`, impedindo que o lote falhe por
+um contexto generico como `motor` ou `off_road` sem componente/problema.
 
 Depois de validar a resposta e o contrato de banco:
 

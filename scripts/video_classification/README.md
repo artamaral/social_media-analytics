@@ -11,6 +11,10 @@ Script minimo para classificar videos com GPT usando a Taxonomia Video V2.
 - grava em `video_classification_results`,
   `video_classification_technical_contexts` e
   `video_classification_vehicle_entities`
+- envia a taxonomia em formato compacto para reduzir custo e risco de resposta
+  incompleta
+- marca contexto tecnico fora da matriz V2 como `needs_review`, em vez de
+  gravar como compativel
 
 Fora de escopo nesta versao:
 
@@ -30,6 +34,13 @@ CLASSIFIER_MODEL_TITLE=gpt-5-nano
 CLASSIFIER_MODEL_TRANSCRIPT=gpt-5-nano
 ```
 
+O limite padrao de saida e `6000` tokens. Se a OpenAI retornar
+`incomplete/max_output_tokens` para um video especifico, reprocessar com:
+
+```bash
+python scripts/video_classification/classify_videos_gpt_v2.py --stage title_metadata --post-id Z8hPL7MGOxU --max-output-tokens 9000 --dry-run
+```
+
 ## Uso local
 
 Antes de rodar o classificador, aplicar no Supabase:
@@ -43,6 +54,18 @@ Dry-run por titulo/metadados:
 
 ```bash
 python scripts/video_classification/classify_videos_gpt_v2.py --stage title_metadata --limit 1 --dry-run
+```
+
+Confirmar a versao do script copiado para a VPS:
+
+```bash
+python scripts/video_classification/classify_videos_gpt_v2.py --version
+```
+
+A versao esperada apos a correcao de contexto tecnico generico e:
+
+```text
+classify_videos_gpt_v2.py 2026-07-24-r3-context-review
 ```
 
 Gravacao:
