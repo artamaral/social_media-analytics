@@ -69,11 +69,34 @@ Voce recebera:
    problema estiverem explicitamente citados.
 10. Registre lacunas sem criar codigo canonico novo.
 
+## Regra de decisao para escopo e match
+
+Antes de escolher um `topic_path` tematico, aplique esta ordem:
+
+1. Se houver evidencia textual clara de que o video e de moto/duas rodas ou nao
+   trata de carro, mercado automotivo, manutencao, diagnostico, review,
+   powertrain, pos-venda ou off-road, use `fora_escopo`.
+2. Se houver evidencia textual clara de transito/comportamento, golpe,
+   narrativa ou entretenimento sem tema tecnico, comercial ou produto
+   automotivo principal, use a rota adequada de `fora_escopo`.
+3. Se o video parecer automotivo, mas o titulo/metadados/transcricao nao
+   sustentarem nenhum `topic_path` especifico da Taxonomia V2, use
+   `sem_match_taxonomico`.
+4. `sem_match_taxonomico` exige `needs_human_review=true`,
+   `confidence_score < 0.50`, `technical_contexts=[]` e explicacao em
+   `validation_issues`.
+5. Nunca force `diagnostico`, `manutencao_reparo`, `powertrain`,
+   `review_teste` ou `mercado_produto` por plausibilidade quando o input nao
+   contem sinal textual direto.
+
 ## Regras automotivas obrigatorias
 
 - Videos de moto ou duas rodas sao `fora_escopo`.
 - Videos de transito/comportamento sem tema tecnico, comercial ou produto
   automotivo principal sao `fora_escopo`.
+- Titulos genericos de alerta, cuidado, perigo ou entretenimento nao autorizam
+  inferir falha tecnica, luz de painel, scanner, motor, cambio ou componente
+  sem esses termos aparecerem no input.
 - `motor` e `cambio` nao podem ser rotulos soltos de tema.
 - `motor` e `cambio` podem aparecer como sistema, componente ou rota
   contextualizada quando houver evidencia.

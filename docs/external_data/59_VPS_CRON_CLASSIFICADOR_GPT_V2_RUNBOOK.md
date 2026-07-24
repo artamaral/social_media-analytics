@@ -167,7 +167,7 @@ python3 bin/classify_videos_gpt_v2.py --version
 python3 bin/classify_videos_gpt_v2.py --stage title_metadata --limit 1 --dry-run
 ```
 
-Se a versao exibida nao for `2026-07-24-r5-post-id-limit`, a VPS ainda esta
+Se a versao exibida nao for `2026-07-24-r6-sem-match-guardrail`, a VPS ainda esta
 com uma copia antiga do script. Copiar novamente o arquivo versionado para
 `/opt/social-media-analytics/bin/classify_videos_gpt_v2.py`.
 
@@ -183,6 +183,15 @@ do repositorio completo. Essa skill contem a regra oficial de confianca:
 - `0.70` a `0.89`: evidencia boa, mas com alguma ambiguidade
 - `0.50` a `0.69`: evidencia parcial ou titulo pouco especifico
 - abaixo de `0.50`: evidencia insuficiente e `needs_human_review=true`
+
+A versao `r6-sem-match-guardrail` adiciona uma trava contra inferencia ruim:
+
+- `fora_escopo` deve ser usado quando o input indicar moto, nao-automotivo,
+  transito/comportamento ou entretenimento sem tema automotivo principal
+- `sem_match_taxonomico` deve ser usado quando o input parece automotivo, mas
+  nao sustenta nenhum `topic_path` especifico
+- `sem_match_taxonomico` sempre exige `confidence_score < 0.50`,
+  `needs_human_review=true`, `validation_issues` e nenhum contexto tecnico
 
 O script usa `6000` como limite padrao de saida. Se uma chamada retornar
 `incomplete/max_output_tokens`, reprocessar o mesmo video com limite maior:

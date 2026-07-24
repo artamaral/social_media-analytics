@@ -543,6 +543,34 @@ ou comportamento, usar:
 topic_path = fora_escopo > transito_comportamento
 ```
 
+Se o conteudo parece automotivo, mas o input disponivel nao sustenta nenhum
+`topic_path` especifico da Taxonomia V2, usar a saida operacional:
+
+```text
+automotive_domain = sem_match_taxonomico
+topic_path = sem_match_taxonomico
+confidence_score < 0.50
+needs_human_review = true
+technical_contexts = []
+```
+
+`sem_match_taxonomico` nao e nicho nem tema. Ele existe para impedir que o
+classificador force `diagnostico`, `manutencao_reparo`, `powertrain`,
+`review_teste` ou `mercado_produto` quando a evidencia textual nao sustenta o
+match.
+
+Exemplo:
+
+```text
+MUITO CUIDADO AO DIRIGIR!
+```
+
+Esse titulo nao autoriza inferir `diagnostico`, `luz_injecao`, scanner, motor,
+cambio ou componente tecnico. Com titulo/metadados apenas, deve ficar em
+`fora_escopo > transito_comportamento` se o foco for comportamento/transito, ou
+`sem_match_taxonomico` se o classificador apenas souber que parece automotivo
+mas nao conseguir sustentar uma rota canonica.
+
 ### Passo 2 - Identificar o tema principal
 
 Pergunta:

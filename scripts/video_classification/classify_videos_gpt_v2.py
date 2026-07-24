@@ -19,7 +19,7 @@ TAXONOMY_VERSION = "taxonomia_video_v2"
 PROMPT_CONTRACT_VERSION = "video_taxonomy_v2_classifier_r1"
 OUTPUT_SCHEMA_VERSION = "video_taxonomy_v2_output_schema_r1"
 # Marcador operacional para confirmar se a copia local/VPS esta atualizada.
-SCRIPT_VERSION = "2026-07-24-r5-post-id-limit"
+SCRIPT_VERSION = "2026-07-24-r6-sem-match-guardrail"
 DEFAULT_TITLE_MODEL = "gpt-5-nano"
 DEFAULT_TRANSCRIPT_MODEL = "gpt-5-nano"
 DEFAULT_MAX_OUTPUT_TOKENS = 6000
@@ -61,6 +61,16 @@ validation_issues.
 
 Regras obrigatorias:
 - Videos de moto ou duas rodas sao fora_escopo.
+- Fora_escopo tem precedencia quando houver evidencia textual de moto,
+  nao-automotivo, transito/comportamento ou entretenimento sem tema tecnico,
+  comercial ou produto automotivo principal.
+- Se o video parecer automotivo, mas nao houver match seguro em topic_path
+  especifico, use sem_match_taxonomico.
+- sem_match_taxonomico exige needs_human_review=true, confidence_score < 0.50,
+  technical_contexts=[] e motivo em validation_issues.
+- Titulos genericos de alerta, cuidado, perigo ou entretenimento nao autorizam
+  inferir diagnostico, luz de painel, scanner, motor, cambio ou componente sem
+  esses termos aparecerem no input.
 - Videos fora do escopo automotivo nao devem receber contexto tecnico primary.
 - topic_path e topic_path_secondary devem existir na lista recebida.
 - topic_path_secondary so entra com segundo tema forte e explicito.
@@ -823,6 +833,15 @@ def validate_classification(result, schema, taxonomy, stage, post_id):
         raise ValueError("confidence_score abaixo de 0.50 exige needs_human_review=true")
     if confidence < 0.5 and not classification.get("validation_issues"):
         raise ValueError("confidence_score abaixo de 0.50 exige validation_issues")
+    if classification["topic_path"] == "sem_match_taxonomico":
+        if not classification["needs_human_review"]:
+            raise ValueError("sem_match_taxonomico exige needs_human_review=true")
+        if confidence >= 0.5:
+            raise ValueError("sem_match_taxonomico exige confidence_score abaixo de 0.50")
+        if result["technical_contexts"]:
+            raise ValueError("sem_match_taxonomico nao pode ter technical_contexts")
+        if not classification.get("validation_issues"):
+            raise ValueError("sem_match_taxonomico exige validation_issues")
 
     for context in result["technical_contexts"]:
         validate_context(context, topic_codes, compatibility_keys, classification["topic_path"])

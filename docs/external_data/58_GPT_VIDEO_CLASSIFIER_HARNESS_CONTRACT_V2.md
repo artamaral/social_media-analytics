@@ -171,6 +171,18 @@ Campos de saida:
 - `topic_path` deve existir na Taxonomia V2.
 - `topic_path_secondary` so entra quando houver segundo tema forte e explicito.
 - Termo fora da Taxonomia V2 entra em `taxonomy_gaps`, nao em campo canonico.
+- `fora_escopo` tem precedencia quando houver evidencia textual de moto,
+  nao-automotivo, transito/comportamento ou entretenimento sem tema tecnico,
+  comercial ou produto automotivo principal.
+- `sem_match_taxonomico` deve ser usado quando o input for automotivo ou
+  possivelmente automotivo, mas nao houver match seguro em nenhum `topic_path`
+  especifico da Taxonomia V2.
+- `sem_match_taxonomico` exige `needs_human_review=true`,
+  `confidence_score < 0.50`, `technical_contexts=[]` e registro do motivo em
+  `validation_issues`.
+- Titulos genericos como alerta, cuidado, perigo ou entretenimento nao
+  autorizam inferir diagnostico, luz de painel, scanner, motor, cambio,
+  sistema ou componente sem sinal textual direto.
 - `technical_contexts[]` so entra quando houver evidencia explicita de sistema,
   componente ou problema.
 - Cada item tecnico representa uma unica combinacao coerente de sistema,

@@ -67,7 +67,7 @@ python scripts/video_classification/classify_videos_gpt_v2.py --version
 A versao esperada apos alinhar a skill oficial e a regra de confianca e:
 
 ```text
-classify_videos_gpt_v2.py 2026-07-24-r5-post-id-limit
+classify_videos_gpt_v2.py 2026-07-24-r6-sem-match-guardrail
 ```
 
 Aliases equivalentes:
@@ -83,6 +83,18 @@ Regra aplicada:
 - `0.70` a `0.89`: evidencia boa, mas com alguma ambiguidade
 - `0.50` a `0.69`: evidencia parcial ou titulo pouco especifico
 - abaixo de `0.50`: exige `needs_human_review=true`
+
+Regra anti-inferencia:
+
+- `fora_escopo` tem precedencia quando houver evidencia textual de moto,
+  nao-automotivo, transito/comportamento ou entretenimento sem tema automotivo
+  principal
+- `sem_match_taxonomico` e usado quando o input parece automotivo, mas nao ha
+  match seguro em nenhum `topic_path` especifico
+- `sem_match_taxonomico` exige `confidence_score < 0.50`,
+  `needs_human_review=true`, `validation_issues` e `technical_contexts=[]`
+- titulo generico de alerta/cuidado/perigo nao autoriza inferir diagnostico,
+  luz de painel, scanner, motor, cambio ou componente
 
 Gravacao:
 
