@@ -225,6 +225,11 @@ CREATE TABLE IF NOT EXISTS public.video_classification_results (
   taxonomy_gaps TEXT,
   validation_issues TEXT,
   needs_human_review BOOLEAN NOT NULL DEFAULT false,
+  transcript_quality_score NUMERIC(4, 3),
+  transcript_quality_status TEXT NOT NULL DEFAULT 'not_evaluated',
+  transcript_quality_issues TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
+  transcript_quality_impact TEXT NOT NULL DEFAULT 'none',
+  needs_retranscription BOOLEAN NOT NULL DEFAULT false,
   model_used TEXT NOT NULL,
   prompt_contract_version TEXT NOT NULL,
   output_schema_version TEXT NOT NULL,
@@ -243,6 +248,49 @@ CREATE TABLE IF NOT EXISTS public.video_classification_results (
   CONSTRAINT video_classification_results_confidence_check CHECK (
     confidence_score >= 0
     AND confidence_score <= 1
+  ),
+  CONSTRAINT video_classification_results_transcript_quality_score_check CHECK (
+    transcript_quality_score IS NULL
+    OR (
+      transcript_quality_score >= 0
+      AND transcript_quality_score <= 1
+    )
+  ),
+  CONSTRAINT video_classification_results_transcript_quality_status_check CHECK (
+    transcript_quality_status IN (
+      'not_evaluated',
+      'usable',
+      'partially_usable',
+      'poor',
+      'empty'
+    )
+  ),
+  CONSTRAINT video_classification_results_transcript_quality_impact_check CHECK (
+    transcript_quality_impact IN ('none', 'low', 'medium', 'high')
+  ),
+  CONSTRAINT video_classification_results_transcript_quality_issues_check CHECK (
+    transcript_quality_issues <@ ARRAY[
+      'too_short',
+      'truncated',
+      'incoherent',
+      'degraded_entities',
+      'degraded_technical_terms',
+      'excessive_noise'
+    ]::TEXT[]
+  ),
+  CONSTRAINT video_classification_results_transcript_quality_consistency_check CHECK (
+    (
+      transcript_quality_status NOT IN ('poor', 'empty')
+      OR needs_retranscription
+    )
+    AND (
+      transcript_quality_impact <> 'medium'
+      OR (needs_human_review AND confidence_score <= 0.69)
+    )
+    AND (
+      transcript_quality_impact <> 'high'
+      OR (needs_human_review AND confidence_score <= 0.49)
+    )
   ),
   CONSTRAINT video_classification_results_topic_fk FOREIGN KEY (
     taxonomy_version_id,

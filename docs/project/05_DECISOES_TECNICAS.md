@@ -2333,6 +2333,7 @@ Referencia:
 
 - `docs/external_data/58_GPT_VIDEO_CLASSIFIER_HARNESS_CONTRACT_V2.md`
 - `docs/external_data/58_GPT_VIDEO_CLASSIFIER_SKILL_V2.md`
+
 - `docs/external_data/58_GPT_VIDEO_CLASSIFIER_OUTPUT_SCHEMA_V2.json`
 - `sql/ddl/tables/022_create_video_taxonomy_classification.sql`
 - `sql/ddl/views/023_create_v_video_classification_latest.sql`
@@ -2417,6 +2418,42 @@ Referencia:
 
 - `docs/external_data/58_GPT_VIDEO_CLASSIFIER_HARNESS_CONTRACT_V2.md`
 - `docs/external_data/58_GPT_VIDEO_CLASSIFIER_SKILL_V2.md`
+
+---
+
+## Faster Whisper operacional e qualidade textual persistida
+
+Data:
+
+- 2026-07-24
+
+Decisao:
+
+- substituir a decisao anterior de GPT Transcribe por `faster-whisper` local
+  como fonte operacional atual dos primeiros `90s`
+- usar modelo `small`, CPU e `compute_type=int8` na VPS
+- executar uma unica chamada `gpt-5-nano` por video para avaliar a qualidade
+  textual e classificar com titulo, metadados e transcript
+- manter `description = null`, pois `public.posts` nao possui descricao
+- persistir score, status, issues, impacto e necessidade de retranscricao em
+  `video_classification_results`
+- nao persistir o transcript completo no Supabase; manter somente evidencias
+  curtas e metadados sanitizados com hash e tamanho
+- manter o cron desativado ate a validacao manual do Batch 1
+
+Motivo:
+
+- a VPS nao tem restricao de tempo equivalente a um job curto em cloud
+- a transcricao local elimina custo e dependencia de API para speech-to-text
+- o doc `39` mostrou ganho relevante em entidades e contexto tecnico com os
+  primeiros `90s`
+- qualidade textual precisa ser consultavel para revisao e retranscricao sem
+  armazenar todo o transcript
+
+Referencia:
+
+- `docs/external_data/39_COMPARACAO_HUMANO_GPT55_90S_R1.md`
+- `docs/external_data/58_GPT_VIDEO_CLASSIFIER_HARNESS_CONTRACT_V2.md`
 - `docs/external_data/59_VPS_CRON_CLASSIFICADOR_GPT_V2_RUNBOOK.md`
 
 ---
@@ -2440,8 +2477,9 @@ Decisao:
   - `evidence_summary`
   - `technical_contexts[].evidence_text`
   - `vehicle_entities[].evidence_text`
-- preparar uma proxima revisao de schema com um bloco opcional
-  `transcript_quality`, sem alterar banco nesta decisao documental
+- implementar o bloco obrigatorio `transcript_quality` no schema `r2` e
+  persistir seus campos consultaveis no banco, conforme a decisao Faster
+  Whisper imediatamente anterior
 
 Motivo:
 

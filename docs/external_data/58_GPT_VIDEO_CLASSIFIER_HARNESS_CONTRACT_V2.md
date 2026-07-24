@@ -82,6 +82,8 @@ Regra de evidencia:
   metadados.
 - `transcript_90s` classifica com titulo, descricao disponivel, metadados e
   transcricao dos primeiros `90s`.
+- `public.posts` nao possui descricao nesta etapa; portanto o executor envia
+  `description = null` e nao tenta capturar esse dado implicitamente.
 - Se uma informacao nao estiver no input, ela nao pode ser inventada.
 
 ## Decisao operacional de estagio
@@ -91,8 +93,9 @@ unica chamada `transcript_90s`, combinando:
 
 - titulo;
 - metadados confiaveis;
-- descricao quando existir;
-- transcricao textual dos primeiros `90s`, gerada por GPT Transcribe.
+- `description = null` enquanto o campo nao existir em `public.posts`;
+- transcricao textual dos primeiros `90s`, gerada localmente por
+  `faster-whisper`.
 
 O estagio `title_metadata` permanece valido, mas com finalidade diagnostica,
 amostral e de calibracao. Ele serve para medir o quanto titulo/metadados
@@ -115,23 +118,23 @@ Regra pratica:
   comparacao metodologica ou priorizacao previa de lote;
 - usar `transcript_90s` como classificacao oficial quando a transcricao estiver
   disponivel;
-- gerar a transcricao operacional com `gpt-4o-mini-transcribe`, ou modelo GPT
-  de transcricao definido posteriormente, antes da chamada classificadora;
+- gerar a transcricao operacional com `faster-whisper`, modelo `small`, CPU e
+  `compute_type=int8`, antes da chamada classificadora;
 - nao gravar duas classificacoes como se ambas fossem resultado operacional
   equivalente, salvo rodada experimental com `round_id` separado.
 
 ## Skill GPT
 
 A skill do classificador e o conjunto de instrucoes enviado na chamada da API.
-Ela deve ser referenciada pelo executor futuro do Google Cloud e versionada como
+Ela deve ser referenciada pelo executor manual da VPS e versionada como
 contrato, nao como skill local do Codex.
 
 Versao inicial:
 
-- `prompt_contract_version = video_taxonomy_v2_classifier_r1`
-- `output_schema_version = video_taxonomy_v2_output_schema_r1`
+- `prompt_contract_version = video_taxonomy_v2_classifier_r2`
+- `output_schema_version = video_taxonomy_v2_output_schema_r2`
 - modelo de classificacao por titulo/metadados: `gpt-5-nano`
-- modelo de transcricao dos `90s`: `gpt-4o-mini-transcribe`
+- modelo de transcricao local dos `90s`: `faster-whisper small`
 - modelo de classificacao operacional com titulo/metadados/transcricao:
   `gpt-5-nano`
 - skill: `docs/external_data/58_GPT_VIDEO_CLASSIFIER_SKILL_V2.md`
@@ -146,8 +149,8 @@ constraints SQL antes da gravacao.
 Decisao operacional:
 
 - usar `gpt-5-nano` para `title_metadata` apenas em diagnostico/calibracao
-- usar `gpt-4o-mini-transcribe` somente para transformar audio em texto; nao
-  usar Whisper/local como fonte operacional desta fase
+- usar `faster-whisper small` localmente para transformar audio em texto, sem
+  chamada OpenAI de transcricao
 - usar `gpt-5-nano` para a classificacao operacional `transcript_90s`, com
   titulo, metadados e transcricao no mesmo input
 - nao aplicar fallback automatico para `gpt-5.4-mini` nesta fase
@@ -188,6 +191,13 @@ A resposta deve ser JSON estruturado e imputavel diretamente no banco:
     "needs_human_review": false,
     "taxonomy_version": "taxonomia_video_v2"
   },
+  "transcript_quality": {
+    "quality_score": null,
+    "quality_status": "not_evaluated",
+    "issues": [],
+    "impact_on_classification": "none",
+    "needs_retranscription": false
+  },
   "technical_contexts": [],
   "vehicle_entities": []
 }
@@ -197,6 +207,8 @@ Campos de saida:
 
 - `classification_result`: linha principal para
   `video_classification_results`.
+- `transcript_quality`: avaliacao textual da transcricao; em `title_metadata`
+  deve usar `not_evaluated`.
 - `technical_contexts[]`: linhas filhas para
   `video_classification_technical_contexts`.
 - `vehicle_entities[]`: linhas filhas para
@@ -255,14 +267,14 @@ Essa avaliacao nao e uma nota de qualidade do audio, porque o GPT classificador
 recebe texto, nao o audio original. Ela mede se o texto transcrito e suficiente,
 coerente e especifico para sustentar a classificacao automotiva.
 
-Campos recomendados para a proxima revisao do schema:
+Bloco obrigatorio no schema operacional:
 
 ```json
 {
   "transcript_quality": {
     "quality_score": 0.0,
     "quality_status": "usable",
-    "issues": null,
+    "issues": [],
     "impact_on_classification": "low",
     "needs_retranscription": false
   }
@@ -291,6 +303,15 @@ Valores de `impact_on_classification`:
 - `medium`
 - `high`
 
+Valores controlados de `issues`:
+
+- `too_short`
+- `truncated`
+- `incoherent`
+- `degraded_entities`
+- `degraded_technical_terms`
+- `excessive_noise`
+
 Regras:
 
 - transcript vazio ou muito curto deve gerar `quality_status = empty` ou
@@ -300,7 +321,10 @@ Regras:
 - se a classificacao depender de um trecho confuso, reduzir tambem
   `confidence_score`.
 - se titulo/metadados indicarem uma coisa e o transcript indicar outra, marcar
-  `needs_human_review = true` e registrar a divergencia em `validation_issues`.
+  `impact_on_classification = high`, `needs_human_review = true` e registrar a
+  divergencia em `validation_issues`.
+- impacto `medium` limita `confidence_score` a `0.69`; impacto `high` limita a
+  `0.49`.
 - nao usar `transcript_quality` para salvar o transcript completo; ela deve
   resumir apenas a confiabilidade da evidencia textual recebida.
 - quando a evidencia do transcript for fraca, o classificador deve preferir
@@ -378,8 +402,7 @@ A resposta deve ser rejeitada ou marcada para revisao quando:
 ## Fora de escopo desta entrega
 
 - Metodo de ingestao de videos.
-- Metodo de ingestao de transcricoes.
-- Script de execucao local.
+- Ingestao persistente de transcricoes completas.
 - Worker ou job Google Cloud.
 - Mudanca no dashboard.
 - Migracao de classificacoes historicas.
@@ -391,5 +414,6 @@ A resposta deve ser rejeitada ou marcada para revisao quando:
 - O contrato do harness define entradas e saidas sem ambiguidade.
 - A saida GPT e imputavel diretamente no banco.
 - A resposta aceitavel impede achismos e exige evidencia.
-- A documentacao registra que a execucao futura sera feita por rotina Google
-  Cloud separada.
+- O executor manual gera os `90s` com `faster-whisper` e usa uma unica chamada
+  `gpt-5-nano` para qualidade textual e classificacao.
+- O cron permanece desativado ate validacao manual do classificador.

@@ -125,6 +125,10 @@ considerada incompleta.
 
 SQL operacional relacionado:
 
+- [022_create_video_taxonomy_classification.sql](/C:/social_media-analytics/sql/ddl/tables/022_create_video_taxonomy_classification.sql)
+- [023_add_transcript_quality_to_video_classification.sql](/C:/social_media-analytics/sql/ddl/tables/023_add_transcript_quality_to_video_classification.sql)
+- [023_create_v_video_classification_latest.sql](/C:/social_media-analytics/sql/ddl/views/023_create_v_video_classification_latest.sql)
+- [011_test_video_taxonomy_classification.sql](/C:/social_media-analytics/sql/ddl/tests/011_test_video_taxonomy_classification.sql)
 - [seed_video_taxonomy_v2.sql](/C:/social_media-analytics/sql/dml/seed_video_taxonomy_v2.sql)
 
 ## 3. Dashboard

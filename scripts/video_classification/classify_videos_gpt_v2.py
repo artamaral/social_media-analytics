@@ -1,7 +1,9 @@
 import argparse
 import csv
+import hashlib
 import json
 import os
+import subprocess
 import sys
 import time
 from datetime import datetime, timezone
@@ -16,14 +18,26 @@ REPO_DIR = BASE_DIR.parent.parent
 DEFAULT_SKILL_PATH = REPO_DIR / "docs" / "external_data" / "58_GPT_VIDEO_CLASSIFIER_SKILL_V2.md"
 
 TAXONOMY_VERSION = "taxonomia_video_v2"
-PROMPT_CONTRACT_VERSION = "video_taxonomy_v2_classifier_r1"
-OUTPUT_SCHEMA_VERSION = "video_taxonomy_v2_output_schema_r1"
+PROMPT_CONTRACT_VERSION = "video_taxonomy_v2_classifier_r2"
+OUTPUT_SCHEMA_VERSION = "video_taxonomy_v2_output_schema_r2"
 # Marcador operacional para confirmar se a copia local/VPS esta atualizada.
-SCRIPT_VERSION = "2026-07-24-r6-sem-match-guardrail"
+SCRIPT_VERSION = "2026-07-24-r7-faster-whisper-quality"
 DEFAULT_TITLE_MODEL = "gpt-5-nano"
 DEFAULT_TRANSCRIPT_MODEL = "gpt-5-nano"
 DEFAULT_MAX_OUTPUT_TOKENS = 6000
 OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
+DEFAULT_AUDIO_WORKDIR = Path("/opt/social-media-analytics/tmp/audio")
+if os.name == "nt":
+    DEFAULT_AUDIO_WORKDIR = REPO_DIR / "tmp" / "video_classification_audio"
+
+TRANSCRIPT_QUALITY_ISSUES = [
+    "too_short",
+    "truncated",
+    "incoherent",
+    "degraded_entities",
+    "degraded_technical_terms",
+    "excessive_noise",
+]
 
 DEFAULT_CONTENT_TYPES = [
     "educativo",
@@ -94,8 +108,17 @@ Regras obrigatorias:
   apenas a evidencia necessaria para auditoria.
 - Para title_metadata, use no maximo 3 technical_contexts e 2 vehicle_entities.
 - Para transcript_90s, use no maximo 6 technical_contexts e 4 vehicle_entities.
+- Para transcript_90s, avalie primeiro a qualidade textual do transcript e
+  preencha transcript_quality. Voce nao esta avaliando o audio original.
+- Para title_metadata, use quality_score=null, quality_status=not_evaluated,
+  issues=[], impact_on_classification=none e needs_retranscription=false.
+- impact_on_classification=medium exige needs_human_review=true e
+  confidence_score <= 0.69; impact_on_classification=high exige
+  needs_human_review=true e confidence_score <= 0.49.
+- Transcript poor ou empty exige needs_retranscription=true.
+- Contradicao entre titulo e transcript deve usar impact_on_classification=high.
 
-Responda somente com JSON valido no schema video_taxonomy_v2_output_schema_r1.
+Responda somente com JSON valido no schema video_taxonomy_v2_output_schema_r2.
 """
 
 DEFAULT_SCHEMA = {
@@ -103,7 +126,12 @@ DEFAULT_SCHEMA = {
     "title": "Video Taxonomy V2 GPT Classification Output",
     "type": "object",
     "additionalProperties": False,
-    "required": ["classification_result", "technical_contexts", "vehicle_entities"],
+    "required": [
+        "classification_result",
+        "transcript_quality",
+        "technical_contexts",
+        "vehicle_entities",
+    ],
     "properties": {
         "classification_result": {
             "type": "object",
@@ -152,6 +180,39 @@ DEFAULT_SCHEMA = {
                 "validation_issues": {"type": ["string", "null"]},
                 "needs_human_review": {"type": "boolean"},
                 "taxonomy_version": {"type": "string"},
+            },
+        },
+        "transcript_quality": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": [
+                "quality_score",
+                "quality_status",
+                "issues",
+                "impact_on_classification",
+                "needs_retranscription",
+            ],
+            "properties": {
+                "quality_score": {"type": ["number", "null"]},
+                "quality_status": {
+                    "type": "string",
+                    "enum": [
+                        "not_evaluated",
+                        "usable",
+                        "partially_usable",
+                        "poor",
+                        "empty",
+                    ],
+                },
+                "issues": {
+                    "type": "array",
+                    "items": {"type": "string", "enum": TRANSCRIPT_QUALITY_ISSUES},
+                },
+                "impact_on_classification": {
+                    "type": "string",
+                    "enum": ["none", "low", "medium", "high"],
+                },
+                "needs_retranscription": {"type": "boolean"},
             },
         },
         "technical_contexts": {
@@ -613,10 +674,219 @@ def load_transcripts_csv(path):
     with Path(path).open("r", encoding="utf-8-sig", newline="") as handle:
         for row in csv.DictReader(handle):
             post_id = row.get("post_id")
-            transcript = row.get("transcript_90s")
-            if post_id and transcript:
-                transcripts[post_id] = transcript
+            if not post_id:
+                continue
+
+            transcript = row.get("transcript_90s") or ""
+            transcripts[post_id] = {
+                "text": transcript,
+                "metadata": build_transcription_metadata(
+                    transcript,
+                    source_method=row.get("source_method") or "transcripts_csv",
+                    model=row.get("whisper_model"),
+                    compute_type=row.get("compute_type"),
+                    language=row.get("language") or "pt",
+                    duration_seconds=to_optional_int(row.get("transcribed_duration_seconds")),
+                ),
+            }
     return transcripts
+
+
+def to_optional_int(value):
+    if value in (None, ""):
+        return None
+
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def build_transcription_metadata(
+    transcript,
+    source_method,
+    model,
+    compute_type,
+    language,
+    duration_seconds,
+):
+    transcript_bytes = (transcript or "").encode("utf-8")
+    return {
+        "source_method": source_method,
+        "model": model,
+        "compute_type": compute_type,
+        "language": language,
+        "transcribed_duration_seconds": duration_seconds,
+        "transcript_sha256": hashlib.sha256(transcript_bytes).hexdigest(),
+        "transcript_char_count": len(transcript or ""),
+    }
+
+
+def ensure_whisper_runtime(model_name, device, compute_type):
+    try:
+        import imageio_ffmpeg
+        from faster_whisper import WhisperModel
+    except ImportError as exc:
+        raise RuntimeError(
+            "Dependencias ausentes. Instale scripts/video_classification/requirements.txt."
+        ) from exc
+
+    ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+    if not ffmpeg_path or not Path(ffmpeg_path).exists():
+        raise RuntimeError("imageio-ffmpeg nao retornou um binario ffmpeg valido")
+
+    model = WhisperModel(model_name, device=device, compute_type=compute_type)
+    return {"model": model, "ffmpeg_path": ffmpeg_path}
+
+
+def seconds_to_timestamp(seconds):
+    minutes, remainder = divmod(seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+    return f"{hours:02d}:{minutes:02d}:{remainder:02d}"
+
+
+def target_transcription_duration(post_duration, transcript_seconds):
+    duration = to_optional_int(post_duration)
+    if duration and duration > 0:
+        return min(duration, transcript_seconds)
+    return transcript_seconds
+
+
+def run_subprocess(command, timeout):
+    env = os.environ.copy()
+    env["PYTHONWARNINGS"] = "ignore"
+    return subprocess.run(
+        command,
+        cwd=REPO_DIR,
+        env=env,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        timeout=timeout,
+        check=False,
+    )
+
+
+def download_audio_segment(
+    post_id,
+    duration_seconds,
+    output_path,
+    ffmpeg_path,
+    use_section=True,
+):
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_template = str(output_path.with_suffix(""))
+    video_url = f"https://www.youtube.com/watch?v={post_id}"
+    command = [
+        sys.executable,
+        "-m",
+        "yt_dlp",
+        "--quiet",
+        "--no-warnings",
+        "--no-playlist",
+        "--extract-audio",
+        "--audio-format",
+        "wav",
+        "--audio-quality",
+        "0",
+        "--ffmpeg-location",
+        ffmpeg_path,
+        "--force-overwrites",
+        "-o",
+        f"{output_template}.%(ext)s",
+        video_url,
+    ]
+    if use_section:
+        command[6:6] = [
+            "--download-sections",
+            f"*00:00:00-{seconds_to_timestamp(duration_seconds)}",
+        ]
+    result = run_subprocess(command, timeout=300)
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout).strip()
+        raise RuntimeError(detail[:1200] if detail else "yt-dlp falhou sem detalhe")
+
+    if output_path.exists():
+        return
+
+    candidates = sorted(output_path.parent.glob(f"{output_path.stem}.*"))
+    if not candidates:
+        raise RuntimeError("audio baixado nao foi encontrado no caminho esperado")
+    candidates[0].replace(output_path)
+
+
+def transcribe_post_local(post, runtime, args):
+    post_id = post["post_id"]
+    post_duration = to_optional_int(post.get("duration"))
+    target_duration = target_transcription_duration(
+        post_duration,
+        args.transcript_seconds,
+    )
+
+    audio_path = args.audio_workdir / f"{post_id}_{target_duration}s.wav"
+    try:
+        try:
+            download_audio_segment(
+                post_id,
+                target_duration,
+                audio_path,
+                runtime["ffmpeg_path"],
+            )
+        except RuntimeError:
+            if not post_duration or post_duration > args.transcript_seconds:
+                raise
+            download_audio_segment(
+                post_id,
+                target_duration,
+                audio_path,
+                runtime["ffmpeg_path"],
+                use_section=False,
+            )
+        segments, _info = runtime["model"].transcribe(
+            str(audio_path),
+            language=args.whisper_language,
+            vad_filter=True,
+        )
+        transcript = " ".join(
+            segment.text.strip() for segment in segments if segment.text.strip()
+        )
+        transcript = " ".join(transcript.split())
+        metadata = build_transcription_metadata(
+            transcript,
+            source_method="yt-dlp+faster-whisper-local",
+            model=args.whisper_model,
+            compute_type=args.whisper_compute_type,
+            language=args.whisper_language,
+            duration_seconds=target_duration,
+        )
+        return {"text": transcript, "metadata": metadata, "status": "success" if transcript else "partial"}
+    finally:
+        if audio_path.exists():
+            audio_path.unlink()
+
+
+def write_transcription_rows(output_path, rows):
+    if not output_path:
+        return
+
+    fields = [
+        "post_id",
+        "video_url",
+        "transcription_status",
+        "transcribed_duration_seconds",
+        "transcript_90s",
+        "language",
+        "whisper_model",
+        "compute_type",
+        "source_method",
+        "error_message",
+        "created_at",
+    ]
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fields, quoting=csv.QUOTE_ALL)
+        writer.writeheader()
+        writer.writerows(rows)
 
 
 def group_terms(terms):
@@ -678,7 +948,14 @@ def compact_technical_compatibility(compatibility_rows):
     return compacted
 
 
-def build_harness_input(post, stage, taxonomy, terms, transcript=None):
+def build_harness_input(
+    post,
+    stage,
+    taxonomy,
+    terms,
+    transcript=None,
+    transcription_metadata=None,
+):
     evidence_level = "metadata_only"
     if stage == "transcript_90s":
         evidence_level = "transcript_90s" if transcript else "insufficient_evidence"
@@ -697,6 +974,9 @@ def build_harness_input(post, stage, taxonomy, terms, transcript=None):
         "post_date": post.get("post_date"),
         "description": None,
         "transcript_90s": transcript if stage == "transcript_90s" else None,
+        "transcription_metadata": (
+            transcription_metadata if stage == "transcript_90s" else None
+        ),
     }
 
     return {
@@ -710,11 +990,21 @@ def build_harness_input(post, stage, taxonomy, terms, transcript=None):
             "output_schema_version": OUTPUT_SCHEMA_VERSION,
             "required_blocks": [
                 "classification_result",
+                "transcript_quality",
                 "technical_contexts",
                 "vehicle_entities",
             ],
         },
     }
+
+
+def sanitize_harness_input_for_storage(harness_input):
+    sanitized = json.loads(json.dumps(harness_input))
+    video = sanitized.get("video", {})
+    if "transcript_90s" in video:
+        video["transcript_90s"] = None
+        video["transcript_redacted"] = True
+    return sanitized
 
 
 def call_openai(model, skill_text, schema, harness_input, max_output_tokens):
@@ -795,6 +1085,7 @@ def extract_response_text(response):
 def validate_classification(result, schema, taxonomy, stage, post_id):
     validate_json_schema_shape(result, schema)
     classification = result["classification_result"]
+    transcript_quality = result["transcript_quality"]
 
     topic_codes = {row["topic_path_code"] for row in taxonomy["topic_paths"]}
     compatibility_rows = taxonomy["compatibility"]
@@ -818,6 +1109,8 @@ def validate_classification(result, schema, taxonomy, stage, post_id):
 
     if classification["taxonomy_version"] != taxonomy["version"]:
         raise ValueError("taxonomy_version da resposta difere da versao carregada")
+
+    validate_transcript_quality(transcript_quality, classification, stage)
 
     if classification["topic_path"] not in topic_codes:
         raise ValueError(f"topic_path inexistente: {classification['topic_path']}")
@@ -862,6 +1155,53 @@ def validate_classification(result, schema, taxonomy, stage, post_id):
             ]
         ):
             raise ValueError("vehicle_entity sem valor bruto extraido")
+
+
+def validate_transcript_quality(quality, classification, stage):
+    score = quality.get("quality_score")
+    status = quality["quality_status"]
+    impact = quality["impact_on_classification"]
+    issues = quality["issues"]
+    confidence = classification["confidence_score"]
+
+    if len(issues) != len(set(issues)):
+        raise ValueError("transcript_quality.issues contem valores duplicados")
+
+    if stage == "title_metadata":
+        if status != "not_evaluated" or score is not None:
+            raise ValueError(
+                "title_metadata exige transcript_quality not_evaluated e quality_score null"
+            )
+        if impact != "none" or quality["needs_retranscription"]:
+            raise ValueError("title_metadata nao pode solicitar retranscricao")
+        return
+
+    if score is None or score < 0 or score > 1:
+        raise ValueError("transcript_quality.quality_score deve ficar entre 0 e 1")
+
+    if status == "not_evaluated":
+        raise ValueError("transcript_90s exige avaliacao de qualidade textual")
+    if status == "usable" and score < 0.70:
+        raise ValueError("transcript_quality usable exige quality_score >= 0.70")
+    if status == "partially_usable" and not 0.50 <= score < 0.70:
+        raise ValueError("partially_usable exige quality_score entre 0.50 e 0.69")
+    if status == "poor" and not 0 <= score < 0.50:
+        raise ValueError("transcript_quality poor exige quality_score abaixo de 0.50")
+    if status == "empty" and score != 0:
+        raise ValueError("transcript_quality empty exige quality_score igual a 0")
+    if status in {"poor", "empty"} and not quality["needs_retranscription"]:
+        raise ValueError("transcript_quality poor/empty exige needs_retranscription=true")
+
+    if impact == "medium":
+        if not classification["needs_human_review"] or confidence > 0.69:
+            raise ValueError(
+                "impact medium exige needs_human_review=true e confidence_score <= 0.69"
+            )
+    if impact == "high":
+        if not classification["needs_human_review"] or confidence > 0.49:
+            raise ValueError(
+                "impact high exige needs_human_review=true e confidence_score <= 0.49"
+            )
 
 
 def normalize_technical_contexts_for_validation(result, compatibility_keys):
@@ -991,6 +1331,7 @@ def update_run(base_url, headers, run_id, status, succeeded, failed, error_summa
 
 def write_classification(base_url, headers, run_id, taxonomy_id, model, harness_input, result, raw_response):
     classification = result["classification_result"]
+    transcript_quality = result["transcript_quality"]
     result_payload = {
         "run_id": run_id,
         "taxonomy_version_id": taxonomy_id,
@@ -1008,10 +1349,15 @@ def write_classification(base_url, headers, run_id, taxonomy_id, model, harness_
         "taxonomy_gaps": classification["taxonomy_gaps"],
         "validation_issues": classification["validation_issues"],
         "needs_human_review": classification["needs_human_review"],
+        "transcript_quality_score": transcript_quality["quality_score"],
+        "transcript_quality_status": transcript_quality["quality_status"],
+        "transcript_quality_issues": transcript_quality["issues"],
+        "transcript_quality_impact": transcript_quality["impact_on_classification"],
+        "needs_retranscription": transcript_quality["needs_retranscription"],
         "model_used": model,
         "prompt_contract_version": PROMPT_CONTRACT_VERSION,
         "output_schema_version": OUTPUT_SCHEMA_VERSION,
-        "input_payload": harness_input,
+        "input_payload": sanitize_harness_input_for_storage(harness_input),
         "raw_response": raw_response,
     }
     inserted = request_json(
@@ -1076,6 +1422,24 @@ def default_round_id(stage):
     return f"v2_{stage}_{stamp}"
 
 
+def transcription_output_row(post_id, transcript_record=None, error_message=""):
+    record = transcript_record or {}
+    metadata = record.get("metadata") or {}
+    return {
+        "post_id": post_id,
+        "video_url": f"https://www.youtube.com/watch?v={post_id}",
+        "transcription_status": record.get("status") or ("failed" if error_message else "success"),
+        "transcribed_duration_seconds": metadata.get("transcribed_duration_seconds"),
+        "transcript_90s": record.get("text", ""),
+        "language": metadata.get("language"),
+        "whisper_model": metadata.get("model"),
+        "compute_type": metadata.get("compute_type"),
+        "source_method": metadata.get("source_method"),
+        "error_message": error_message,
+        "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    }
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Classifica videos com GPT usando Taxonomia Video V2 e grava no Supabase."
@@ -1089,6 +1453,13 @@ def parse_args():
     parser.add_argument("--skill-path")
     parser.add_argument("--schema-path")
     parser.add_argument("--transcripts-csv")
+    parser.add_argument("--transcripts-output", type=Path)
+    parser.add_argument("--whisper-model", default="small")
+    parser.add_argument("--whisper-device", default="cpu")
+    parser.add_argument("--whisper-compute-type", default="int8")
+    parser.add_argument("--whisper-language", default="pt")
+    parser.add_argument("--transcript-seconds", type=int, default=90)
+    parser.add_argument("--audio-workdir", type=Path, default=DEFAULT_AUDIO_WORKDIR)
     parser.add_argument("--max-output-tokens", type=int, default=DEFAULT_MAX_OUTPUT_TOKENS)
     parser.add_argument("--sleep-seconds", type=float, default=0.5)
     parser.add_argument("--include-already-classified", action="store_true")
@@ -1112,8 +1483,11 @@ def parse_args():
     if args.post_id and args.limit < len(args.post_id):
         args.limit = len(args.post_id)
 
-    if args.stage == "transcript_90s" and not args.transcripts_csv:
-        parser.error("--transcripts-csv e obrigatorio para --stage transcript_90s nesta versao")
+    if args.transcript_seconds < 1:
+        parser.error("--transcript-seconds deve ser >= 1")
+
+    if args.transcripts_output and args.stage != "transcript_90s":
+        parser.error("--transcripts-output so pode ser usado com --stage transcript_90s")
 
     return args
 
@@ -1126,6 +1500,8 @@ def main():
     schema = load_schema(args.schema_path)
     skill_text, skill_source = load_skill_text(args.skill_path)
     transcripts = load_transcripts_csv(args.transcripts_csv)
+    whisper_runtime = None
+    transcription_rows = []
     model = os.environ.get(
         "CLASSIFIER_MODEL_TRANSCRIPT" if args.stage == "transcript_90s" else "CLASSIFIER_MODEL_TITLE",
         DEFAULT_TRANSCRIPT_MODEL if args.stage == "transcript_90s" else DEFAULT_TITLE_MODEL,
@@ -1143,6 +1519,18 @@ def main():
         print("Nenhum video elegivel encontrado.")
         return 0
 
+    if args.stage == "transcript_90s" and not args.transcripts_csv:
+        print(
+            "Carregando faster-whisper "
+            f"model={args.whisper_model} device={args.whisper_device} "
+            f"compute_type={args.whisper_compute_type}..."
+        )
+        whisper_runtime = ensure_whisper_runtime(
+            args.whisper_model,
+            args.whisper_device,
+            args.whisper_compute_type,
+        )
+
     round_id = args.round_id or default_round_id(args.stage)
     run_id = None
     succeeded = 0
@@ -1159,6 +1547,11 @@ def main():
     print(f"- topic_paths: {len(taxonomy['topic_paths'])}")
     print(f"- technical_compatibility: {len(taxonomy['compatibility'])}")
     print(f"- videos selecionados: {len(posts)}")
+    if args.stage == "transcript_90s":
+        source = "csv" if args.transcripts_csv else "faster-whisper-local"
+        print(f"- transcription_source: {source}")
+        if not args.transcripts_csv:
+            print(f"- transcript_seconds: {args.transcript_seconds}")
     print(f"- modo: {'write' if args.write else 'dry-run'}")
 
     if args.write:
@@ -1176,16 +1569,48 @@ def main():
 
     for idx, post in enumerate(posts, start=1):
         post_id = post["post_id"]
-        transcript = transcripts.get(post_id)
+        transcript_record = None
 
-        if args.stage == "transcript_90s" and not transcript:
-            failed += 1
-            message = f"{post_id}: transcript_90s ausente"
-            errors.append(message)
-            print(f"[{idx}/{len(posts)}] {message}")
-            continue
+        if args.stage == "transcript_90s":
+            if args.transcripts_csv:
+                transcript_record = transcripts.get(post_id)
+                if transcript_record is None:
+                    failed += 1
+                    message = f"{post_id}: transcript_90s ausente no CSV"
+                    errors.append(message)
+                    print(f"[{idx}/{len(posts)}] {message}")
+                    continue
+            else:
+                print(f"[{idx}/{len(posts)}] transcrevendo {post_id}...")
+                try:
+                    transcript_record = transcribe_post_local(post, whisper_runtime, args)
+                    transcription_rows.append(
+                        transcription_output_row(post_id, transcript_record)
+                    )
+                    write_transcription_rows(args.transcripts_output, transcription_rows)
+                except Exception as exc:
+                    failed += 1
+                    message = f"{post_id}: falha na transcricao local: {exc}"
+                    errors.append(message)
+                    transcription_rows.append(
+                        transcription_output_row(post_id, error_message=str(exc))
+                    )
+                    write_transcription_rows(args.transcripts_output, transcription_rows)
+                    print(f"ERRO: {message}")
+                    continue
 
-        harness_input = build_harness_input(post, args.stage, taxonomy, terms, transcript)
+        transcript = transcript_record["text"] if transcript_record else None
+        transcription_metadata = (
+            transcript_record["metadata"] if transcript_record else None
+        )
+        harness_input = build_harness_input(
+            post,
+            args.stage,
+            taxonomy,
+            terms,
+            transcript,
+            transcription_metadata,
+        )
         print(f"[{idx}/{len(posts)}] classificando {post_id}...")
 
         try:

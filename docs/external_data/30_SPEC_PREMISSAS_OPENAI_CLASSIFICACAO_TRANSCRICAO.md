@@ -9,7 +9,10 @@ Documentar as premissas operacionais para a etapa de enriquecimento de vídeos d
 3. reclassificação após transcrição;
 4. controle de custo, TPM/RPM e risco operacional em conta Tier 1.
 
-Esta decisão substitui, por enquanto, a avaliação de múltiplos provedores como DeepSeek, Google Speech-to-Text, AWS Transcribe, Deepgram ou Whisper local.
+Atualizacao de 2026-07-24: a escolha de `gpt-4o-mini-transcribe` deste documento
+fica preservada como historico de avaliacao e custo. Para o fluxo operacional
+atual na VPS, ela foi substituida por `faster-whisper small`, CPU e `int8`,
+conforme os docs `58`, `59` e decisoes tecnicas.
 
 ---
 
@@ -648,10 +651,10 @@ transcricao parcial.
 
 ## 22. Definicao operacional de modelos API
 
-Decisao registrada em 2026-07-23:
+Decisao revisada em 2026-07-24:
 
 - classificacao inicial por titulo/metadados: `gpt-5-nano`
-- transcricao dos `90s`: `gpt-4o-mini-transcribe`
+- transcricao dos `90s`: `faster-whisper small`, CPU e `int8`
 - classificacao apos transcricao: `gpt-5-nano`
 - nao aplicar fallback automatico para `gpt-5.4-mini` nesta etapa
 

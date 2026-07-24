@@ -631,3 +631,20 @@ Status do classificador GPT em 2026-07-24:
   - frente SENATRAN / RENAVAM segue em estudo
   - frente dashboard esta com estrategia pronta e aguarda implementacao do app
 
+## Classificacao automotiva V2 na VPS
+
+Status em 2026-07-24:
+
+- script `r7-faster-whisper-quality` preparado para execucao manual
+- transcricao dos primeiros `90s` integrada com `faster-whisper small`, CPU e
+  `int8`
+- classificacao e avaliacao de qualidade textual usam uma unica chamada
+  `gpt-5-nano` por video
+- DDL de `transcript_quality` precisa ser aplicada antes do primeiro `--write`
+- validacao manual do Batch 1 ainda pendente
+- cron permanece desativado e nao existe agendamento operacional ativo
+
+Referencia:
+
+- `scripts/video_classification/README.md`
+- `docs/external_data/59_VPS_CRON_CLASSIFICADOR_GPT_V2_RUNBOOK.md`

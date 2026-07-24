@@ -1,10 +1,11 @@
 {
-  "$id": "video_taxonomy_v2_output_schema_r1",
+  "$id": "video_taxonomy_v2_output_schema_r2",
   "title": "Video Taxonomy V2 GPT Classification Output",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "classification_result",
+    "transcript_quality",
     "technical_contexts",
     "vehicle_entities"
   ],
@@ -99,6 +100,61 @@
         },
         "taxonomy_version": {
           "type": "string"
+        }
+      }
+    },
+    "transcript_quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "quality_score",
+        "quality_status",
+        "issues",
+        "impact_on_classification",
+        "needs_retranscription"
+      ],
+      "properties": {
+        "quality_score": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "quality_status": {
+          "type": "string",
+          "enum": [
+            "not_evaluated",
+            "usable",
+            "partially_usable",
+            "poor",
+            "empty"
+          ]
+        },
+        "issues": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "too_short",
+              "truncated",
+              "incoherent",
+              "degraded_entities",
+              "degraded_technical_terms",
+              "excessive_noise"
+            ]
+          }
+        },
+        "impact_on_classification": {
+          "type": "string",
+          "enum": [
+            "none",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "needs_retranscription": {
+          "type": "boolean"
         }
       }
     },

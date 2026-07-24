@@ -186,10 +186,16 @@ Antes de aceitar resultados do classificador GPT, validar:
   catalogos externos
 - `confidence_score` fica entre `0` e `1` e reflete evidencia disponivel, nao
   plausibilidade externa
+- `transcript_quality_score` fica entre `0` e `1` no estagio `transcript_90s`
+- `transcript_quality_status` e coerente com a faixa do score
+- impacto textual `medium` ou `high` aciona revisao humana e limita a confianca
+- transcripts `poor` ou `empty` acionam `needs_retranscription`
+- `input_payload` nao preserva o texto completo de `transcript_90s`
 - registros com termo fora da taxonomia devem preencher `taxonomy_gaps` ou
   `needs_human_review`, sem criar codigo canonico silenciosamente
 
 Consultas de apoio:
 
 - `sql/ddl/tests/011_test_video_taxonomy_classification.sql`
+- `sql/ddl/tables/023_add_transcript_quality_to_video_classification.sql`
 - `public.v_video_classification_quality`

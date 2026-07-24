@@ -7,8 +7,11 @@ Script minimo para classificar videos com GPT usando a Taxonomia Video V2.
 - busca videos em `public.posts`
 - usa Taxonomia V2 carregada no Supabase
 - chama `gpt-5-nano` para `title_metadata`
+- baixa e corta os primeiros `90s` de audio com `yt-dlp` e `imageio-ffmpeg`
+- transcreve localmente com `faster-whisper small`, CPU e `int8`
 - usa `transcript_90s` como classificacao operacional quando a transcricao
   estiver disponivel, combinando titulo, metadados e transcript em uma chamada
+- avalia a qualidade textual do transcript na mesma chamada `gpt-5-nano`
 - valida JSON e regras semanticas basicas
 - grava em `video_classification_results`,
   `video_classification_technical_contexts` e
@@ -25,18 +28,21 @@ Fora de escopo nesta versao:
 - cron
 - ingestao de videos
 - transcricao por API
+- captura de descricao do YouTube
 - dashboard
 - fallback automatico para modelo maior
 
 ## Decisao de uso
 
 O uso operacional recomendado e classificar uma vez por video com
-`--stage transcript_90s`, quando o CSV de transcricoes existir. Esse estagio
-envia titulo, metadados e transcript dos primeiros `90s` no mesmo input.
+`--stage transcript_90s`. Esse estagio envia titulo, metadados e transcript dos
+primeiros `90s` no mesmo input.
 
-A transcricao operacional dos `90s` deve ser gerada por GPT Transcribe antes de
-rodar este script. O script consome o CSV de transcricoes, mas nao implementa a
-extracao de audio nem a chamada de transcricao nesta versao.
+Sem `--transcripts-csv`, o proprio script gera a transcricao local. Quando um
+CSV e informado, ele e reutilizado para permitir replay das rodadas de
+desenvolvimento.
+
+`public.posts` nao possui descricao; o harness envia `description = null`.
 
 `--stage title_metadata` continua disponivel para diagnostico, calibracao e
 comparacao de sinal fraco, mas nao deve ser tratado como resultado operacional
@@ -49,7 +55,6 @@ OPENAI_API_KEY
 SUPABASE_URL
 SUPABASE_SERVICE_ROLE_KEY
 CLASSIFIER_MODEL_TITLE=gpt-5-nano
-TRANSCRIPTION_MODEL=gpt-4o-mini-transcribe
 CLASSIFIER_MODEL_TRANSCRIPT=gpt-5-nano
 ```
 
@@ -65,9 +70,10 @@ python scripts/video_classification/classify_videos_gpt_v2.py --stage title_meta
 Antes de rodar o classificador, aplicar no Supabase:
 
 1. `sql/ddl/tables/022_create_video_taxonomy_classification.sql`
-2. `sql/dml/seed_video_taxonomy_v2.sql`
-3. `sql/ddl/views/023_create_v_video_classification_latest.sql`
-4. `sql/ddl/tests/011_test_video_taxonomy_classification.sql`
+2. `sql/ddl/tables/023_add_transcript_quality_to_video_classification.sql`
+3. `sql/dml/seed_video_taxonomy_v2.sql`
+4. `sql/ddl/views/023_create_v_video_classification_latest.sql`
+5. `sql/ddl/tests/011_test_video_taxonomy_classification.sql`
 
 Dry-run por titulo/metadados:
 
@@ -84,7 +90,7 @@ python scripts/video_classification/classify_videos_gpt_v2.py --version
 A versao esperada apos alinhar a skill oficial e a regra de confianca e:
 
 ```text
-classify_videos_gpt_v2.py 2026-07-24-r6-sem-match-guardrail
+classify_videos_gpt_v2.py 2026-07-24-r7-faster-whisper-quality
 ```
 
 Aliases equivalentes:
@@ -133,6 +139,26 @@ python scripts/video_classification/classify_videos_gpt_v2.py \
   --dry-run
 ```
 
+Classificacao com transcricao local integrada:
+
+```bash
+python scripts/video_classification/classify_videos_gpt_v2.py \
+  --stage transcript_90s \
+  --post-id pINW53ErjQI \
+  --transcripts-output tmp/transcripts_validacao.csv \
+  --dry-run
+```
+
+O transcript completo pode ser preservado no CSV temporario, mas nao e gravado
+no Supabase. O `input_payload` persistido contem apenas hash, tamanho, duracao e
+proveniencia da transcricao.
+
+Instalar dependencias:
+
+```bash
+python3 -m pip install -r scripts/video_classification/requirements.txt
+```
+
 ## Deploy minimo na VPS
 
 Copiar o script para:
@@ -148,3 +174,5 @@ Criar configuracao fora do Git:
 ```
 
 Executar manualmente antes de ativar cron.
+
+O cron permanece desativado ate a validacao do Batch 1 e confirmacao explicita.

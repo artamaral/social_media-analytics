@@ -62,6 +62,37 @@ WHERE r.confidence_score < 0
 
 
 SELECT
+  r.id,
+  r.post_id,
+  r.transcript_quality_score,
+  r.transcript_quality_status,
+  r.transcript_quality_impact,
+  r.needs_retranscription
+FROM public.video_classification_results r
+WHERE (r.transcript_quality_score < 0 OR r.transcript_quality_score > 1)
+   OR (
+     r.transcript_quality_status IN ('poor', 'empty')
+     AND NOT r.needs_retranscription
+   )
+   OR (
+     r.transcript_quality_impact = 'medium'
+     AND (NOT r.needs_human_review OR r.confidence_score > 0.69)
+   )
+   OR (
+     r.transcript_quality_impact = 'high'
+     AND (NOT r.needs_human_review OR r.confidence_score > 0.49)
+   );
+
+
+SELECT
+  r.id,
+  r.post_id,
+  r.input_payload #>> '{video,transcript_90s}' AS persisted_transcript
+FROM public.video_classification_results r
+WHERE NULLIF(r.input_payload #>> '{video,transcript_90s}', '') IS NOT NULL;
+
+
+SELECT
   c.id,
   r.post_id,
   c.automotive_system,

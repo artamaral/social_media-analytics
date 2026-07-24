@@ -3417,11 +3417,14 @@ Premissas ja fechadas para o inicio do sprint:
   - revisao humana
 - [x] Definir o contrato operacional OpenAI desta fase:
   - classificacao diagnostica inicial com `gpt-5-nano`
-  - transcricao operacional sob demanda com GPT Transcribe
-    (`gpt-4o-mini-transcribe`)
+  - transcricao operacional local com `faster-whisper small`, CPU e `int8`
   - classificacao operacional combinada com titulo, metadados e transcricao
     dos `90s` usando `gpt-5-nano`
   - sem fallback automatico para `gpt-5.4-mini` nesta etapa
+- [x] Implementar no contrato e no script a avaliacao persistida de qualidade
+  textual do transcript, sem salvar o texto completo no Supabase.
+- [ ] Validar manualmente o fluxo integrado `faster-whisper + gpt-5-nano` nos
+  `10` videos do Batch 1 antes de ativar qualquer cron.
 - [ ] Definir as guardas operacionais contra TPM/RPM:
   - `batch_size` pequeno
   - `concurrency = 1` no inicio
@@ -3927,7 +3930,7 @@ Resultado:
   diretamente nas tabelas de classificacao
 - a definicao operacional de modelo fica:
   - `gpt-5-nano` para classificacao diagnostica por titulo/metadados
-  - `gpt-4o-mini-transcribe` para transcricao operacional dos `90s`
+  - `faster-whisper small`, CPU e `int8` para transcricao operacional dos `90s`
   - `gpt-5-nano` para classificacao operacional combinada por titulo,
     metadados e transcricao
   - sem fallback automatico para `gpt-5.4-mini`
@@ -3978,8 +3981,8 @@ Resultado:
 
 - o estagio `transcript_90s` passa a ser a classificacao operacional principal
   quando houver transcricao salva
-- a transcricao operacional deve ser gerada por GPT Transcribe, nao por
-  Whisper/local
+- a transcricao operacional passa a ser gerada localmente por
+  `faster-whisper small`, CPU e `int8`
 - cada chamada operacional deve combinar titulo, metadados confiaveis, descricao
   quando existir e transcricao dos primeiros `90s`
 - `title_metadata` permanece disponivel para diagnostico, calibracao, triagem
@@ -3987,7 +3990,8 @@ Resultado:
   ja existir
 - a decisao evita duplicar prompt, taxonomia, matriz tecnica e JSON de saida em
   duas chamadas completas
-- banco, schema, workbook e pipeline permanecem inalterados
+- o banco passa a receber os campos de qualidade textual, sem transcript
+  completo; workbook e pipeline permanecem inalterados
 
 #### Qualidade textual da transcricao
 
@@ -4004,8 +4008,11 @@ Resultado:
 - evidencias curtas permanecem nos campos `evidence_summary`,
   `technical_contexts[].evidence_text` e `vehicle_entities[].evidence_text`
 - o transcript completo nao sera salvo no Supabase por padrao nesta etapa
-- uma futura revisao do schema podera incluir `transcript_quality`, mas banco e
-  script permanecem inalterados nesta decisao
+- o schema `r2` inclui `transcript_quality` obrigatorio e o banco recebe score,
+  status, issues, impacto e necessidade de retranscricao
+- `input_payload` deve ser sanitizado antes da gravacao, mantendo hash, tamanho,
+  duracao e proveniencia, mas nao o transcript completo
+- cron continua suspenso ate a validacao manual do Batch 1
 
 ### Criterio de saida do planejamento
 

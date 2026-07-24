@@ -3,8 +3,8 @@
 ## Identificacao
 
 ```text
-prompt_contract_version = video_taxonomy_v2_classifier_r1
-output_schema_version = video_taxonomy_v2_output_schema_r1
+prompt_contract_version = video_taxonomy_v2_classifier_r2
+output_schema_version = video_taxonomy_v2_output_schema_r2
 taxonomy_version = taxonomia_video_v2
 ```
 
@@ -57,8 +57,8 @@ Voce recebera:
 Uso operacional recomendado:
 
 - `transcript_90s` e a classificacao oficial quando a transcricao existir.
-- A transcricao operacional deve ser gerada por GPT Transcribe antes da chamada
-  classificadora.
+- A transcricao operacional deve ser gerada localmente por `faster-whisper`
+  antes da chamada classificadora.
 - `title_metadata` deve ser usado apenas para diagnostico, calibracao ou
   comparacao metodologica de sinal fraco.
 - Nao trate `title_metadata` como etapa obrigatoria anterior para decidir
@@ -121,15 +121,28 @@ Antes de escolher um `topic_path` tematico, aplique esta ordem:
 ## Saida obrigatoria
 
 Responda somente com JSON valido no schema
-`video_taxonomy_v2_output_schema_r1`.
+`video_taxonomy_v2_output_schema_r2`.
 
 Nao inclua explicacao fora do JSON.
 
 Blocos obrigatorios:
 
 - `classification_result`
+- `transcript_quality`
 - `technical_contexts`
 - `vehicle_entities`
+
+Para `title_metadata`, use:
+
+```json
+"transcript_quality": {
+  "quality_score": null,
+  "quality_status": "not_evaluated",
+  "issues": [],
+  "impact_on_classification": "none",
+  "needs_retranscription": false
+}
+```
 
 Se nao houver contexto tecnico, use:
 
@@ -173,12 +186,45 @@ Importante:
   `evidence_summary`, `technical_contexts[].evidence_text` e
   `vehicle_entities[].evidence_text`.
 
+Preencha obrigatoriamente:
+
+- `quality_score`: nota de `0` a `1`, ou `null` somente em `title_metadata`;
+- `quality_status`: `not_evaluated`, `usable`, `partially_usable`, `poor` ou
+  `empty`;
+- `issues`: lista controlada, sem texto livre;
+- `impact_on_classification`: `none`, `low`, `medium` ou `high`;
+- `needs_retranscription`: se o texto deve ser gerado novamente.
+
+Valores aceitos em `issues`:
+
+- `too_short`
+- `truncated`
+- `incoherent`
+- `degraded_entities`
+- `degraded_technical_terms`
+- `excessive_noise`
+
 Escala recomendada para avaliacao futura de transcript:
 
 - `0.90` a `1.00`: claro, coerente e especifico.
 - `0.70` a `0.89`: utilizavel com pequenas incertezas.
 - `0.50` a `0.69`: parcialmente utilizavel; exige cuidado.
 - abaixo de `0.50`: ruim para classificacao; revisar ou retranscrever.
+
+Regras de coerencia:
+
+- `usable` exige `quality_score >= 0.70`;
+- `partially_usable` exige `0.50 <= quality_score < 0.70`;
+- `poor` exige `quality_score < 0.50`;
+- `empty` exige `quality_score = 0`;
+- `poor` ou `empty` exige `needs_retranscription=true`;
+- impacto `medium` exige `needs_human_review=true` e
+  `confidence_score <= 0.69`;
+- impacto `high` exige `needs_human_review=true` e
+  `confidence_score <= 0.49`;
+- contradicao entre titulo e transcript exige impacto `high`;
+- qualidade ruim do transcript nao invalida evidencia direta e independente do
+  titulo, especialmente para `fora_escopo`, mas o impacto deve ser registrado.
 
 ## Validacao interna antes de responder
 

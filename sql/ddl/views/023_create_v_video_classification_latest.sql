@@ -21,6 +21,7 @@ WITH ranked_results AS (
     ON tv.id = r.taxonomy_version_id
 )
 SELECT
+  -- Preserve existing column order: PostgreSQL only allows new view columns at the end.
   id,
   run_id,
   round_id,
@@ -46,7 +47,12 @@ SELECT
   output_schema_version,
   created_at,
   started_at,
-  completed_at
+  completed_at,
+  transcript_quality_score,
+  transcript_quality_status,
+  transcript_quality_issues,
+  transcript_quality_impact,
+  needs_retranscription
 FROM ranked_results
 WHERE recency_rank = 1;
 
@@ -56,6 +62,7 @@ COMMENT ON VIEW public.v_video_classification_latest IS
 
 CREATE OR REPLACE VIEW public.v_video_classification_quality AS
 SELECT
+  -- Preserve existing column order: append new aggregate columns after distinct_topic_paths.
   tv.taxonomy_version,
   run.round_id,
   r.evaluation_stage,
@@ -67,7 +74,15 @@ SELECT
   ROUND(AVG(r.confidence_score)::numeric, 3) AS avg_confidence_score,
   MIN(r.confidence_score) AS min_confidence_score,
   MAX(r.confidence_score) AS max_confidence_score,
-  COUNT(DISTINCT r.topic_path) AS distinct_topic_paths
+  COUNT(DISTINCT r.topic_path) AS distinct_topic_paths,
+  COUNT(*) FILTER (
+    WHERE r.transcript_quality_status IN ('usable', 'partially_usable')
+  ) AS usable_transcript_count,
+  COUNT(*) FILTER (WHERE r.needs_retranscription) AS needs_retranscription_count,
+  COUNT(*) FILTER (
+    WHERE r.transcript_quality_impact = 'high'
+  ) AS high_transcript_impact_count,
+  ROUND(AVG(r.transcript_quality_score)::numeric, 3) AS avg_transcript_quality_score
 FROM public.video_classification_results r
 JOIN public.video_classification_runs run
   ON run.id = r.run_id

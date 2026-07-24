@@ -1,19 +1,19 @@
-# Runbook VPS - Classificador GPT Taxonomia V2 via Cron
+# Runbook VPS - Classificador GPT Taxonomia V2
 
 ## Objetivo
 
-Registrar as decisoes operacionais para executar o futuro classificador GPT da
-Taxonomia Video V2 em uma VPS Hostinger via `cron`.
+Registrar as decisoes operacionais para validar manualmente o classificador GPT
+da Taxonomia Video V2 em uma VPS Hostinger.
 
-Esta entrega documenta ambiente e modo de deploy. Ela ainda nao implementa o
-script de classificacao.
+O script esta implementado. O cron continua apenas como possibilidade futura e
+nao deve ser configurado antes da aprovacao do Batch 1.
 
 ## Decisoes registradas
 
 - a execucao operacional sera feita em uma VPS Hostinger
 - o acesso de desenvolvimento sera feito pelo VS Code com Remote SSH
 - o servidor esta em Ubuntu 24.04 LTS
-- o agendamento sera feito por `cron`
+- eventual agendamento podera ser feito por `cron` depois da validacao manual
 - o diretorio base no servidor sera:
 
 ```text
@@ -24,7 +24,7 @@ script de classificacao.
 - subir apenas o script e arquivos auxiliares estritamente necessarios para
   executar o classificador
 - manter credenciais, tokens, chaves e variaveis de ambiente fora do Git
-- registrar logs em arquivo local no servidor para auditoria simples
+- registrar logs das execucoes manuais em arquivo local para auditoria simples
 - manter a implementacao pequena e operacional antes de evoluir para worker,
   container ou Google Cloud
 
@@ -39,7 +39,7 @@ O deploy minimo permite:
 - testar o classificador com menor friccao
 - isolar dependencias de runtime
 - reduzir risco de expor arquivos de desenvolvimento ou dados locais
-- manter a VPS focada em executar uma rotina agendada
+- manter a VPS focada em executar uma rotina controlada
 
 Quando a rotina amadurecer, a decisao pode ser reaberta para:
 
@@ -98,12 +98,14 @@ Script inicial:
 
 ```text
 scripts/video_classification/classify_videos_gpt_v2.py
+scripts/video_classification/requirements.txt
 ```
 
 Destino recomendado na VPS:
 
 ```text
 /opt/social-media-analytics/bin/classify_videos_gpt_v2.py
+/opt/social-media-analytics/bin/requirements.txt
 ```
 
 ## Preparacao do Supabase
@@ -115,9 +117,10 @@ Aplicar nesta ordem pelo Supabase SQL Editor ou pela rotina operacional
 equivalente:
 
 1. `sql/ddl/tables/022_create_video_taxonomy_classification.sql`
-2. `sql/dml/seed_video_taxonomy_v2.sql`
-3. `sql/ddl/views/023_create_v_video_classification_latest.sql`
-4. `sql/ddl/tests/011_test_video_taxonomy_classification.sql`
+2. `sql/ddl/tables/023_add_transcript_quality_to_video_classification.sql`
+3. `sql/dml/seed_video_taxonomy_v2.sql`
+4. `sql/ddl/views/023_create_v_video_classification_latest.sql`
+5. `sql/ddl/tests/011_test_video_taxonomy_classification.sql`
 
 O seed `sql/dml/seed_video_taxonomy_v2.sql` e uma carga estatica versionada,
 nao um metodo de ingestao recorrente.
@@ -141,7 +144,6 @@ OPENAI_API_KEY
 SUPABASE_URL
 SUPABASE_SERVICE_ROLE_KEY
 CLASSIFIER_MODEL_TITLE=gpt-5-nano
-TRANSCRIPTION_MODEL=gpt-4o-mini-transcribe
 CLASSIFIER_MODEL_TRANSCRIPT=gpt-5-nano
 ```
 
@@ -167,7 +169,7 @@ python3 bin/classify_videos_gpt_v2.py --version
 python3 bin/classify_videos_gpt_v2.py --stage title_metadata --limit 1 --dry-run
 ```
 
-Se a versao exibida nao for `2026-07-24-r6-sem-match-guardrail`, a VPS ainda esta
+Se a versao exibida nao for `2026-07-24-r7-faster-whisper-quality`, a VPS ainda esta
 com uma copia antiga do script. Copiar novamente o arquivo versionado para
 `/opt/social-media-analytics/bin/classify_videos_gpt_v2.py`.
 
@@ -212,11 +214,15 @@ Depois de validar a resposta e o contrato de banco:
 python3 bin/classify_videos_gpt_v2.py --stage title_metadata --limit 1 --write
 ```
 
-Nesta primeira versao, `transcript_90s` exige um CSV de transcricoes ja
-existente. A transcricao operacional deve ser gerada por GPT Transcribe, usando
-`gpt-4o-mini-transcribe` ou outro modelo GPT de transcricao que venha a ser
-definido depois. A chamada de transcricao por API sera implementada
-separadamente e nao faz parte do script classificador atual.
+Instalar as dependencias versionadas antes da primeira transcricao:
+
+```bash
+python3 -m pip install -r /opt/social-media-analytics/bin/requirements.txt
+```
+
+Sem `--transcripts-csv`, `transcript_90s` baixa o audio, limita o trecho aos
+primeiros `90s` e transcreve localmente com `faster-whisper small`, CPU e
+`compute_type=int8`. O modelo e carregado uma vez por execucao.
 
 ## Decisao operacional: chamada combinada
 
@@ -224,7 +230,11 @@ Quando a transcricao dos `90s` estiver disponivel, a rotina operacional deve
 executar uma unica classificacao com:
 
 ```bash
-python3 bin/classify_videos_gpt_v2.py --stage transcript_90s --transcripts-csv <arquivo.csv> --limit <n> --write
+python3 bin/classify_videos_gpt_v2.py \
+  --stage transcript_90s \
+  --post-id <post_id> \
+  --transcripts-output /opt/social-media-analytics/tmp/transcripts_validacao.csv \
+  --dry-run
 ```
 
 Esse estagio deve receber titulo, metadados e transcricao no mesmo input. A
@@ -232,17 +242,20 @@ execucao por `title_metadata` fica reservada para diagnostico, calibracao,
 comparacao de custo/qualidade ou triagem preliminar, nao para resultado final
 quando o transcript ja existir.
 
-O transcript usado nessa rotina deve vir de GPT Transcribe. Transcricoes locais
-com Whisper permanecem apenas como historico das rodadas exploratorias e nao
-como padrao operacional.
+O transcript usado nessa rotina vem de `faster-whisper` local. Um CSV existente
+pode ser passado com `--transcripts-csv` para replay e comparacao.
+
+O transcript completo nao e gravado no Supabase. O banco recebe a avaliacao de
+qualidade, evidencias curtas e metadados sanitizados da transcricao.
 
 A chamada combinada aumenta o custo em relacao ao titulo puro porque adiciona
 tokens de entrada da transcricao, mas evita duplicar prompt, taxonomia, matriz
 de compatibilidade e JSON de saida em duas chamadas completas.
 
-## Cron
+## Cron suspenso
 
-O agendamento final ainda sera definido depois da implementacao do script.
+O agendamento permanece suspenso ate a validacao manual do Batch 1 e confirmacao
+explicita do classificador.
 
 Formato esperado:
 
@@ -277,7 +290,7 @@ O script inicial deve seguir os contratos:
 Modelos definidos:
 
 - classificacao por titulo/metadados: `gpt-5-nano`
-- transcricao operacional dos `90s`: `gpt-4o-mini-transcribe`
+- transcricao operacional dos `90s`: `faster-whisper small`, CPU e `int8`
 - classificacao por transcricao: `gpt-5-nano`
 - sem fallback automatico para `gpt-5.4-mini`
 
@@ -291,6 +304,8 @@ Antes de ativar o agendamento:
 - confirmar que nenhuma credencial aparece no log
 - confirmar que a resposta GPT valida contra schema JSON
 - confirmar que inserts no Supabase respeitam as constraints
+- confirmar que `transcript_quality` e coerente com `confidence_score`
+- confirmar que o transcript completo nao aparece em `input_payload`
 - confirmar que falhas ficam registradas sem interromper proximas execucoes
 
 ## Fora de escopo
