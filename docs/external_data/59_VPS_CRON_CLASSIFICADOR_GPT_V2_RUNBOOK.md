@@ -237,6 +237,22 @@ python3 bin/classify_videos_gpt_v2.py \
   --dry-run
 ```
 
+Se o `yt-dlp` retornar `Sign in to confirm you're not a bot`, usar cookies
+exportados do navegador em arquivo local fora do Git:
+
+```bash
+python3 bin/classify_videos_gpt_v2.py \
+  --stage transcript_90s \
+  --post-id <post_id> \
+  --yt-dlp-cookies /opt/social-media-analytics/config/youtube_cookies.txt \
+  --transcripts-output /opt/social-media-analytics/tmp/transcripts_validacao.csv \
+  --dry-run
+```
+
+O arquivo `/opt/social-media-analytics/config/youtube_cookies.txt` e secreto
+operacional. Ele nao deve ser commitado nem copiado para `docs/`, `tmp/` ou
+logs.
+
 Esse estagio deve receber titulo, metadados e transcricao no mesmo input. A
 execucao por `title_metadata` fica reservada para diagnostico, calibracao,
 comparacao de custo/qualidade ou triagem preliminar, nao para resultado final

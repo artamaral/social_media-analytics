@@ -149,6 +149,18 @@ python scripts/video_classification/classify_videos_gpt_v2.py \
   --dry-run
 ```
 
+Se o YouTube bloquear o download com `Sign in to confirm you're not a bot`,
+exporte cookies do navegador para um arquivo fora do Git e informe o caminho:
+
+```bash
+python scripts/video_classification/classify_videos_gpt_v2.py \
+  --stage transcript_90s \
+  --post-id pINW53ErjQI \
+  --yt-dlp-cookies config/youtube_cookies.txt \
+  --transcripts-output tmp/transcripts_validacao.csv \
+  --dry-run
+```
+
 O transcript completo pode ser preservado no CSV temporario, mas nao e gravado
 no Supabase. O `input_payload` persistido contem apenas hash, tamanho, duracao e
 proveniencia da transcricao.
@@ -171,6 +183,7 @@ Criar configuracao fora do Git:
 
 ```text
 /opt/social-media-analytics/config/classifier.env
+/opt/social-media-analytics/config/youtube_cookies.txt
 ```
 
 Executar manualmente antes de ativar cron.
