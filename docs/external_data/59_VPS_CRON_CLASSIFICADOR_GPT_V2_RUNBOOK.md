@@ -167,13 +167,22 @@ python3 bin/classify_videos_gpt_v2.py --version
 python3 bin/classify_videos_gpt_v2.py --stage title_metadata --limit 1 --dry-run
 ```
 
-Se a versao exibida nao for `2026-07-24-r3-context-review`, a VPS ainda esta
+Se a versao exibida nao for `2026-07-24-r4-documented-confidence`, a VPS ainda esta
 com uma copia antiga do script. Copiar novamente o arquivo versionado para
 `/opt/social-media-analytics/bin/classify_videos_gpt_v2.py`.
 
 Tambem sao validos os aliases `--script-version` e `-V`. Se nenhum desses
 argumentos existir, a copia ainda esta baseada no commit remoto antigo
 `a38495f`, anterior ao commit que adicionou o marcador de versao.
+
+A execucao deve imprimir `skill_source` apontando para
+`docs/external_data/58_GPT_VIDEO_CLASSIFIER_SKILL_V2.md` quando rodada a partir
+do repositorio completo. Essa skill contem a regra oficial de confianca:
+
+- `0.90` a `1.00`: evidencia direta, clara e especifica
+- `0.70` a `0.89`: evidencia boa, mas com alguma ambiguidade
+- `0.50` a `0.69`: evidencia parcial ou titulo pouco especifico
+- abaixo de `0.50`: evidencia insuficiente e `needs_human_review=true`
 
 O script usa `6000` como limite padrao de saida. Se uma chamada retornar
 `incomplete/max_output_tokens`, reprocessar o mesmo video com limite maior:

@@ -13,12 +13,13 @@ from urllib.request import Request, urlopen
 
 BASE_DIR = Path(__file__).resolve().parent
 REPO_DIR = BASE_DIR.parent.parent
+DEFAULT_SKILL_PATH = REPO_DIR / "docs" / "external_data" / "58_GPT_VIDEO_CLASSIFIER_SKILL_V2.md"
 
 TAXONOMY_VERSION = "taxonomia_video_v2"
 PROMPT_CONTRACT_VERSION = "video_taxonomy_v2_classifier_r1"
 OUTPUT_SCHEMA_VERSION = "video_taxonomy_v2_output_schema_r1"
 # Marcador operacional para confirmar se a copia local/VPS esta atualizada.
-SCRIPT_VERSION = "2026-07-24-r3-context-review"
+SCRIPT_VERSION = "2026-07-24-r4-documented-confidence"
 DEFAULT_TITLE_MODEL = "gpt-5-nano"
 DEFAULT_TRANSCRIPT_MODEL = "gpt-5-nano"
 DEFAULT_MAX_OUTPUT_TOKENS = 6000
@@ -73,6 +74,12 @@ Regras obrigatorias:
 - barulho e sinal textual; problem canonico deve ser ruido.
 - Marca, modelo, ano e geracao devem preservar o valor bruto encontrado no input.
 - Termos fora da taxonomia devem ir para taxonomy_gaps, nunca para campo canonico.
+- confidence_score deve medir a forca da evidencia disponivel:
+  0.90-1.00 evidencia direta, clara e especifica;
+  0.70-0.89 evidencia boa, mas com alguma ambiguidade;
+  0.50-0.69 evidencia parcial ou titulo pouco especifico;
+  abaixo de 0.50 evidencia insuficiente e needs_human_review=true.
+- Nao aumente confianca por conhecimento externo ou plausibilidade do canal.
 - Seja conciso: evidence_summary, taxonomy_gaps e validation_issues devem ter
   apenas a evidencia necessaria para auditoria.
 - Para title_metadata, use no maximo 3 technical_contexts e 2 vehicle_entities.
@@ -306,6 +313,16 @@ def load_text(path, default):
         raise RuntimeError(f"Arquivo nao encontrado: {file_path}")
 
     return file_path.read_text(encoding="utf-8")
+
+
+def load_skill_text(path):
+    if path:
+        return load_text(path, DEFAULT_SKILL), str(Path(path))
+
+    if DEFAULT_SKILL_PATH.exists():
+        return DEFAULT_SKILL_PATH.read_text(encoding="utf-8"), str(DEFAULT_SKILL_PATH)
+
+    return DEFAULT_SKILL, "embedded_default_skill"
 
 
 def load_schema(path):
@@ -802,6 +819,10 @@ def validate_classification(result, schema, taxonomy, stage, post_id):
     confidence = classification["confidence_score"]
     if confidence < 0 or confidence > 1:
         raise ValueError(f"confidence_score fora de 0..1: {confidence}")
+    if confidence < 0.5 and not classification["needs_human_review"]:
+        raise ValueError("confidence_score abaixo de 0.50 exige needs_human_review=true")
+    if confidence < 0.5 and not classification.get("validation_issues"):
+        raise ValueError("confidence_score abaixo de 0.50 exige validation_issues")
 
     for context in result["technical_contexts"]:
         validate_context(context, topic_codes, compatibility_keys, classification["topic_path"])
@@ -1081,7 +1102,7 @@ def main():
     taxonomy = get_taxonomy(base_url, headers, args.taxonomy_version)
     terms = group_terms(taxonomy["terms"])
     schema = load_schema(args.schema_path)
-    skill_text = load_text(args.skill_path, DEFAULT_SKILL)
+    skill_text, skill_source = load_skill_text(args.skill_path)
     transcripts = load_transcripts_csv(args.transcripts_csv)
     model = os.environ.get(
         "CLASSIFIER_MODEL_TRANSCRIPT" if args.stage == "transcript_90s" else "CLASSIFIER_MODEL_TITLE",
@@ -1108,6 +1129,7 @@ def main():
 
     print("Classificador GPT Taxonomia V2")
     print(f"- script_version: {SCRIPT_VERSION}")
+    print(f"- skill_source: {skill_source}")
     print(f"- stage: {args.stage}")
     print(f"- model: {model}")
     print(f"- max_output_tokens: {args.max_output_tokens}")

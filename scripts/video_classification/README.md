@@ -15,6 +15,8 @@ Script minimo para classificar videos com GPT usando a Taxonomia Video V2.
   incompleta
 - marca contexto tecnico fora da matriz V2 como `needs_review`, em vez de
   gravar como compativel
+- usa `docs/external_data/58_GPT_VIDEO_CLASSIFIER_SKILL_V2.md` como skill
+  padrao, incluindo a regra documentada de `confidence_score`
 
 Fora de escopo nesta versao:
 
@@ -62,10 +64,10 @@ Confirmar a versao do script copiado para a VPS:
 python scripts/video_classification/classify_videos_gpt_v2.py --version
 ```
 
-A versao esperada apos a correcao de contexto tecnico generico e:
+A versao esperada apos alinhar a skill oficial e a regra de confianca e:
 
 ```text
-classify_videos_gpt_v2.py 2026-07-24-r3-context-review
+classify_videos_gpt_v2.py 2026-07-24-r4-documented-confidence
 ```
 
 Aliases equivalentes:
@@ -74,6 +76,13 @@ Aliases equivalentes:
 python scripts/video_classification/classify_videos_gpt_v2.py --script-version
 python scripts/video_classification/classify_videos_gpt_v2.py -V
 ```
+
+Regra aplicada:
+
+- `0.90` a `1.00`: evidencia direta, clara e especifica
+- `0.70` a `0.89`: evidencia boa, mas com alguma ambiguidade
+- `0.50` a `0.69`: evidencia parcial ou titulo pouco especifico
+- abaixo de `0.50`: exige `needs_human_review=true`
 
 Gravacao:
 
