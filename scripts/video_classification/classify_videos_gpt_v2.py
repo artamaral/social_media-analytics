@@ -23,7 +23,7 @@ TAXONOMY_VERSION = "taxonomia_video_v2"
 PROMPT_CONTRACT_VERSION = "video_taxonomy_v2_classifier_r2"
 OUTPUT_SCHEMA_VERSION = "video_taxonomy_v2_output_schema_r2"
 # Marcador operacional para confirmar se a copia local/VPS esta atualizada.
-SCRIPT_VERSION = "2026-07-29-r12-carrosnaweb-vehicle-match"
+SCRIPT_VERSION = "2026-07-29-r13-script-vehicle-entity-match"
 DEFAULT_TITLE_MODEL = "gpt-5-nano"
 DEFAULT_TRANSCRIPT_MODEL = "gpt-5-nano"
 DEFAULT_MAX_OUTPUT_TOKENS = 6000
@@ -506,6 +506,54 @@ def normalize_catalog_key(value):
     value = strip_accents(value).lower()
     value = re.sub(r"[^a-z0-9]+", " ", value)
     return re.sub(r"\s+", " ", value).strip()
+
+
+def contains_catalog_phrase(normalized_text, normalized_phrase):
+    if not normalized_text or not normalized_phrase:
+        return False
+
+    return f" {normalized_phrase} " in f" {normalized_text} "
+
+
+def evidence_snippet(source_text, normalized_phrase, max_chars=180):
+    if not source_text:
+        return ""
+
+    normalized_source = normalize_catalog_key(source_text)
+    position = normalized_source.find(normalized_phrase)
+    if position < 0:
+        return compact_text(source_text, max_chars) or ""
+
+    ratio = len(source_text) / max(len(normalized_source), 1)
+    approx_position = int(position * ratio)
+    start = max(0, approx_position - 70)
+    end = min(len(source_text), approx_position + 110)
+    return compact_text(source_text[start:end].strip(), max_chars) or ""
+
+
+def extract_nearby_year(source_text, normalized_phrase):
+    if not source_text:
+        return None
+
+    normalized_source = normalize_catalog_key(source_text)
+    position = normalized_source.find(normalized_phrase)
+    candidates = [
+        int(match.group(0))
+        for match in re.finditer(r"\b(?:19\d{2}|20\d{2}|2100)\b", source_text)
+    ]
+    if not candidates:
+        return None
+
+    if position < 0:
+        return candidates[0] if len(set(candidates)) == 1 else None
+
+    ratio = len(source_text) / max(len(normalized_source), 1)
+    approx_position = int(position * ratio)
+    for match in re.finditer(r"\b(?:19\d{2}|20\d{2}|2100)\b", source_text):
+        if abs(match.start() - approx_position) <= 90:
+            return int(match.group(0))
+
+    return candidates[0] if len(set(candidates)) == 1 else None
 
 
 def get_supabase_client():
@@ -1401,6 +1449,35 @@ def update_run(base_url, headers, run_id, status, succeeded, failed, error_summa
     )
 
 
+def fetch_vehicle_catalog_page(base_url, headers, offset, limit):
+    return request_json(
+        "GET",
+        rest_url(base_url, "v_carrosnaweb_vehicle_catalog"),
+        headers,
+        params={
+            "select": (
+                "catalog_row_id,catalog_model_id,manufacturer_name,manufacturer_key,"
+                "model_name,model_key,model_year"
+            ),
+            "order": "model_key.asc,model_year.desc",
+            "limit": str(limit),
+            "offset": str(offset),
+        },
+    ) or []
+
+
+def fetch_vehicle_catalog(base_url, headers):
+    rows = []
+    page_size = 1000
+    offset = 0
+    while True:
+        page = fetch_vehicle_catalog_page(base_url, headers, offset, page_size)
+        rows.extend(page)
+        if len(page) < page_size:
+            return rows
+        offset += page_size
+
+
 def fetch_vehicle_catalog_candidates(base_url, headers, entity):
     brand_key = normalize_catalog_key(entity.get("vehicle_brand_raw"))
     model_key = normalize_catalog_key(entity.get("vehicle_model_raw"))
@@ -1411,7 +1488,7 @@ def fetch_vehicle_catalog_candidates(base_url, headers, entity):
 
     params = {
         "select": (
-            "catalog_row_id,manufacturer_name,manufacturer_key,"
+            "catalog_row_id,catalog_model_id,manufacturer_name,manufacturer_key,"
             "model_name,model_key,model_year"
         ),
         "limit": "50",
@@ -1443,7 +1520,7 @@ def fetch_vehicle_catalog_candidates(base_url, headers, entity):
     # nao bater exatamente. Nesse caso, tente modelo exato e valide ambiguidade.
     fallback_params = {
         "select": (
-            "catalog_row_id,manufacturer_name,manufacturer_key,"
+            "catalog_row_id,catalog_model_id,manufacturer_name,manufacturer_key,"
             "model_name,model_key,model_year"
         ),
         "model_key": f"eq.{model_key}",
@@ -1460,14 +1537,38 @@ def fetch_vehicle_catalog_candidates(base_url, headers, entity):
     ) or []
 
 
-def resolve_vehicle_entity(base_url, headers, entity):
-    candidates = fetch_vehicle_catalog_candidates(base_url, headers, entity)
+def unique_vehicle_model_keys(rows):
+    return {
+        (row["manufacturer_key"], row["model_key"])
+        for row in rows
+    }
+
+
+def first_model_year_row(rows, vehicle_year=None):
+    ordered = sorted(
+        rows,
+        key=lambda row: (
+            row.get("model_year") or 0,
+            row.get("catalog_row_id") or 0,
+        ),
+        reverse=True,
+    )
+    if vehicle_year:
+        for row in ordered:
+            if row.get("model_year") == vehicle_year:
+                return row
+    return ordered[0] if ordered else None
+
+
+def resolve_vehicle_entity_from_candidates(entity, candidates):
     resolved = {
         "entity_status": entity["entity_status"],
         "canonical_manufacturer_name": None,
         "canonical_model_name": None,
         "canonical_model_year": None,
         "catalog_row_id": None,
+        "catalog_model_id": None,
+        "catalog_match_level": None,
         "match_source": "carrosnaweb_catalog",
         "match_confidence": None,
         "validation_issue": None,
@@ -1477,34 +1578,53 @@ def resolve_vehicle_entity(base_url, headers, entity):
         resolved.update(
             {
                 "entity_status": "not_found",
+                "catalog_match_level": "not_found",
                 "validation_issue": "entidade explicita nao encontrada em v_carrosnaweb_vehicle_catalog",
             }
         )
         return resolved
 
     vehicle_year = entity.get("vehicle_year")
-    unique_models = {
-        (row["manufacturer_key"], row["model_key"])
-        for row in candidates
-    }
-    first = candidates[0]
+    unique_models = unique_vehicle_model_keys(candidates)
+    first = first_model_year_row(candidates, vehicle_year)
 
     resolved.update(
         {
             "canonical_manufacturer_name": first["manufacturer_name"],
             "canonical_model_name": first["model_name"],
+            "catalog_model_id": first.get("catalog_model_id"),
         }
     )
 
     if vehicle_year:
+        exact_year_candidates = [
+            row for row in candidates if row.get("model_year") == vehicle_year
+        ]
+        if not exact_year_candidates:
+            resolved.update(
+                {
+                    "entity_status": "needs_review",
+                    "catalog_match_level": "not_found",
+                    "match_confidence": 0.60,
+                    "validation_issue": "ano informado nao existe para o modelo no catalogo",
+                }
+            )
+            return resolved
+
+        exact_models = unique_vehicle_model_keys(exact_year_candidates)
+        first = first_model_year_row(exact_year_candidates, vehicle_year)
         resolved.update(
             {
-                "entity_status": "matched" if len(candidates) == 1 else "needs_review",
+                "entity_status": "matched" if len(exact_models) == 1 else "needs_review",
+                "canonical_manufacturer_name": first["manufacturer_name"],
+                "canonical_model_name": first["model_name"],
                 "canonical_model_year": first["model_year"],
-                "catalog_row_id": first["catalog_row_id"] if len(candidates) == 1 else None,
-                "match_confidence": 0.98 if len(candidates) == 1 else 0.70,
+                "catalog_row_id": first["catalog_row_id"] if len(exact_models) == 1 else None,
+                "catalog_model_id": first.get("catalog_model_id"),
+                "catalog_match_level": "model_year" if len(exact_models) == 1 else "ambiguous",
+                "match_confidence": 0.98 if len(exact_models) == 1 else 0.70,
                 "validation_issue": None
-                if len(candidates) == 1
+                if len(exact_models) == 1
                 else "ano informado encontrou multiplos registros no catalogo",
             }
         )
@@ -1513,12 +1633,10 @@ def resolve_vehicle_entity(base_url, headers, entity):
     if len(unique_models) == 1:
         resolved.update(
             {
-                "entity_status": "needs_review",
-                "match_confidence": 0.75,
-                "validation_issue": (
-                    "modelo encontrado no Carros na Web, mas ano ausente; "
-                    "catalog_row_id por ano nao foi gravado"
-                ),
+                "entity_status": "matched",
+                "catalog_match_level": "model",
+                "match_confidence": 0.90,
+                "validation_issue": None,
             }
         )
         return resolved
@@ -1526,11 +1644,149 @@ def resolve_vehicle_entity(base_url, headers, entity):
     resolved.update(
         {
             "entity_status": "needs_review",
+            "catalog_match_level": "ambiguous",
             "match_confidence": 0.55,
             "validation_issue": "modelo/brand ambiguo no catalogo Carros na Web",
         }
     )
     return resolved
+
+
+def resolve_vehicle_entity(base_url, headers, entity):
+    candidates = fetch_vehicle_catalog_candidates(base_url, headers, entity)
+    return resolve_vehicle_entity_from_candidates(entity, candidates)
+
+
+def build_catalog_indexes(vehicle_catalog):
+    by_model = {}
+    for row in vehicle_catalog:
+        model_key = row.get("model_key")
+        if model_key:
+            by_model.setdefault(model_key, []).append(row)
+    return {"by_model": by_model}
+
+
+def vehicle_evidence_sources(harness_input):
+    video = harness_input.get("video") or {}
+    sources = [
+        ("title", video.get("title")),
+        ("description", video.get("description")),
+        ("transcript_90s", video.get("transcript_90s")),
+    ]
+    return [(name, text) for name, text in sources if text]
+
+
+def select_script_vehicle_candidates(harness_input, vehicle_catalog):
+    sources = vehicle_evidence_sources(harness_input)
+    if not sources:
+        return []
+
+    indexes = build_catalog_indexes(vehicle_catalog)
+    normalized_sources = [
+        (name, text, normalize_catalog_key(text))
+        for name, text in sources
+    ]
+    selected = []
+    selected_model_keys = set()
+    model_keys = sorted(indexes["by_model"].keys(), key=lambda item: (-len(item), item))
+
+    for model_key in model_keys:
+        if len(model_key) < 3:
+            continue
+
+        source_match = None
+        for source_name, source_text, normalized_text in normalized_sources:
+            if contains_catalog_phrase(normalized_text, model_key):
+                source_match = (source_name, source_text, normalized_text)
+                break
+
+        if not source_match:
+            continue
+
+        if any(contains_catalog_phrase(previous, model_key) for previous in selected_model_keys):
+            continue
+
+        rows = indexes["by_model"][model_key]
+        source_name, source_text, normalized_text = source_match
+        manufacturer_key = None
+        for candidate in rows:
+            if contains_catalog_phrase(normalized_text, candidate["manufacturer_key"]):
+                manufacturer_key = candidate["manufacturer_key"]
+                break
+
+        filtered_rows = [
+            row for row in rows if not manufacturer_key or row["manufacturer_key"] == manufacturer_key
+        ]
+        if not filtered_rows:
+            filtered_rows = rows
+
+        vehicle_year = extract_nearby_year(source_text, model_key)
+        if vehicle_year:
+            year_rows = [row for row in filtered_rows if row.get("model_year") == vehicle_year]
+            if year_rows:
+                filtered_rows = year_rows
+
+        first = first_model_year_row(filtered_rows, vehicle_year)
+        if not first:
+            continue
+
+        entity = {
+            "entity_order": len(selected) + 1,
+            "vehicle_brand_raw": first["manufacturer_name"] if manufacturer_key else None,
+            "vehicle_model_raw": first["model_name"],
+            "vehicle_year": vehicle_year,
+            "vehicle_generation": None,
+            "evidence_text": evidence_snippet(source_text, model_key),
+            "entity_status": "extracted",
+            "match_source": f"carrosnaweb_catalog_script:{source_name}",
+        }
+        resolved = resolve_vehicle_entity_from_candidates(entity, filtered_rows)
+        resolved["match_source"] = entity["match_source"]
+        entity.update(
+            {
+                "resolved_entity_status": resolved["entity_status"],
+                "canonical_manufacturer_name": resolved["canonical_manufacturer_name"],
+                "canonical_model_name": resolved["canonical_model_name"],
+                "canonical_model_year": resolved["canonical_model_year"],
+                "catalog_row_id": resolved["catalog_row_id"],
+                "catalog_model_id": resolved["catalog_model_id"],
+                "catalog_match_level": resolved["catalog_match_level"],
+                "match_source": resolved["match_source"],
+                "match_confidence": resolved["match_confidence"],
+                "validation_issue": resolved["validation_issue"],
+            }
+        )
+        selected.append(entity)
+        selected_model_keys.add(model_key)
+
+    return selected
+
+
+def vehicle_entity_dedupe_key(entity):
+    if entity.get("catalog_row_id"):
+        return ("row", entity["catalog_row_id"])
+    if entity.get("catalog_model_id"):
+        return ("model", entity["catalog_model_id"])
+    return (
+        "raw",
+        normalize_catalog_key(entity.get("vehicle_brand_raw")),
+        normalize_catalog_key(entity.get("vehicle_model_raw")),
+        entity.get("vehicle_year"),
+    )
+
+
+def merge_vehicle_entities(gpt_entities, script_entities):
+    merged = []
+    seen = set()
+    for entity in list(script_entities) + list(gpt_entities):
+        key = vehicle_entity_dedupe_key(entity)
+        if key in seen:
+            continue
+        seen.add(key)
+        copied = dict(entity)
+        copied["entity_order"] = len(merged) + 1
+        merged.append(copied)
+    return merged
 
 
 def build_vehicle_entity_row(base_url, headers, result_id, entity):
@@ -1540,6 +1796,8 @@ def build_vehicle_entity_row(base_url, headers, result_id, entity):
         "canonical_model_name": entity.get("canonical_model_name"),
         "canonical_model_year": entity.get("canonical_model_year"),
         "catalog_row_id": entity.get("catalog_row_id"),
+        "catalog_model_id": entity.get("catalog_model_id"),
+        "catalog_match_level": entity.get("catalog_match_level"),
         "match_source": entity.get("match_source"),
         "match_confidence": entity.get("match_confidence"),
         "validation_issue": entity.get("validation_issue"),
@@ -1560,16 +1818,48 @@ def build_vehicle_entity_row(base_url, headers, result_id, entity):
         "canonical_model_name": resolved["canonical_model_name"],
         "canonical_model_year": resolved["canonical_model_year"],
         "catalog_row_id": resolved["catalog_row_id"],
+        "catalog_model_id": resolved["catalog_model_id"],
+        "catalog_match_level": resolved["catalog_match_level"],
         "match_source": resolved["match_source"],
         "match_confidence": resolved["match_confidence"],
         "validation_issue": resolved["validation_issue"],
     }
 
 
-def enrich_vehicle_entities_with_catalog(base_url, headers, result):
+def resolve_vehicle_entity_with_catalog(entity, vehicle_catalog):
+    indexes = build_catalog_indexes(vehicle_catalog)
+    model_key = normalize_catalog_key(entity.get("vehicle_model_raw"))
+    brand_key = normalize_catalog_key(entity.get("vehicle_brand_raw"))
+    candidates = indexes["by_model"].get(model_key, []) if model_key else []
+
+    if brand_key:
+        branded_candidates = [
+            row for row in candidates if row.get("manufacturer_key") == brand_key
+        ]
+        candidates = branded_candidates or candidates
+
+    if entity.get("vehicle_year"):
+        year_candidates = [
+            row for row in candidates if row.get("model_year") == entity["vehicle_year"]
+        ]
+        candidates = year_candidates or candidates
+
+    return resolve_vehicle_entity_from_candidates(entity, candidates)
+
+
+def enrich_vehicle_entities_with_catalog(base_url, headers, result, harness_input=None, vehicle_catalog=None):
+    script_entities = []
+    topic_path = result["classification_result"].get("topic_path") or ""
+    if harness_input and not topic_path.startswith("fora_escopo"):
+        vehicle_catalog = vehicle_catalog or fetch_vehicle_catalog(base_url, headers)
+        script_entities = select_script_vehicle_candidates(harness_input, vehicle_catalog)
+
     enriched = []
     for entity in result["vehicle_entities"]:
-        resolved = resolve_vehicle_entity(base_url, headers, entity)
+        if vehicle_catalog is None:
+            resolved = resolve_vehicle_entity(base_url, headers, entity)
+        else:
+            resolved = resolve_vehicle_entity_with_catalog(entity, vehicle_catalog)
         enriched_entity = dict(entity)
         enriched_entity.update(
             {
@@ -1578,13 +1868,15 @@ def enrich_vehicle_entities_with_catalog(base_url, headers, result):
                 "canonical_model_name": resolved["canonical_model_name"],
                 "canonical_model_year": resolved["canonical_model_year"],
                 "catalog_row_id": resolved["catalog_row_id"],
+                "catalog_model_id": resolved["catalog_model_id"],
+                "catalog_match_level": resolved["catalog_match_level"],
                 "match_source": resolved["match_source"],
                 "match_confidence": resolved["match_confidence"],
                 "validation_issue": resolved["validation_issue"],
             }
         )
         enriched.append(enriched_entity)
-    result["vehicle_entities"] = enriched
+    result["vehicle_entities"] = merge_vehicle_entities(enriched, script_entities)
     return result
 
 
@@ -1836,6 +2128,7 @@ def main():
         )
         print(f"- run_id: {run_id}")
 
+    vehicle_catalog = None
     for idx, post in enumerate(posts, start=1):
         post_id = post["post_id"]
         transcript_record = None
@@ -1894,7 +2187,16 @@ def main():
                 args.max_output_tokens,
             )
             validate_classification(result, schema, taxonomy, args.stage, post_id)
-            enrich_vehicle_entities_with_catalog(base_url, headers, result)
+            topic_path = result["classification_result"].get("topic_path") or ""
+            if vehicle_catalog is None and not topic_path.startswith("fora_escopo"):
+                vehicle_catalog = fetch_vehicle_catalog(base_url, headers)
+            enrich_vehicle_entities_with_catalog(
+                base_url,
+                headers,
+                result,
+                harness_input,
+                vehicle_catalog,
+            )
 
             if args.write:
                 write_classification(

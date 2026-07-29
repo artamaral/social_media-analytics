@@ -77,9 +77,12 @@ Antes de rodar o classificador, aplicar no Supabase:
 
 1. `sql/ddl/tables/022_create_video_taxonomy_classification.sql`
 2. `sql/ddl/tables/023_add_transcript_quality_to_video_classification.sql`
-3. `sql/dml/seed_video_taxonomy_v2.sql`
-4. `sql/ddl/views/023_create_v_video_classification_latest.sql`
-5. `sql/ddl/tests/011_test_video_taxonomy_classification.sql`
+3. `sql/ddl/tables/024_add_catalog_model_match_to_video_vehicle_entities.sql`
+4. `sql/ddl/views/022_create_v_carrosnaweb_vehicle_catalog.sql`
+5. `sql/dml/seed_video_taxonomy_v2.sql`
+6. `sql/ddl/views/023_create_v_video_classification_latest.sql`
+7. `sql/ddl/tests/010_test_carrosnaweb_catalog.sql`
+8. `sql/ddl/tests/011_test_video_taxonomy_classification.sql`
 
 ## Estrutura SQL
 
@@ -107,6 +110,8 @@ Chaves principais:
 - `video_classification_vehicle_entities.catalog_row_id` aponta para o
   `catalog_row_id` exposto por `v_carrosnaweb_vehicle_catalog`, que vem de
   `market_carrosnaweb_model_years.id`
+- `video_classification_vehicle_entities.catalog_model_id` aponta para
+  `market_carrosnaweb_models.id` quando o texto sustenta modelo, mas nao ano
 
 Resumo pratico:
 
@@ -263,13 +268,19 @@ Entidades de veiculo:
 
 - o GPT devolve apenas `vehicle_brand_raw`, `vehicle_model_raw`,
   `vehicle_year`, `vehicle_generation` e evidencia textual
+- o script tambem extrai veiculos diretamente de `title`, `description` e
+  `transcript_90s`, sem enviar o catalogo Carros na Web ao GPT
 - o script consulta `v_carrosnaweb_vehicle_catalog` antes de inserir em
   `video_classification_vehicle_entities`; em `--dry-run`, o JSON impresso
-  tambem inclui os campos resolvidos apos a validacao do schema GPT
+  tambem inclui os campos resolvidos e entidades encontradas pelo script apos a
+  validacao do schema GPT
 - match unico por marca/modelo/ano grava `entity_status=matched` e
-  `catalog_row_id`
-- match sem ano suficiente para identificar modelo, mas nao ano, grava
-  `needs_review` sem escolher um `catalog_row_id` artificial
+  `catalog_row_id` + `catalog_model_id`
+- match sem ano suficiente para identificar modelo grava `catalog_model_id`,
+  `catalog_match_level=model` e deixa `catalog_row_id` nulo, sem escolher ano
+  artificial
+- quando o texto cita apenas modelo unico, como `Kwid`, o script preenche a
+  montadora canonica do catalogo, como `Renault`
 - entidade explicita nao encontrada grava `not_found`
 
 Instalar dependencias:

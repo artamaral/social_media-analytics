@@ -4063,14 +4063,19 @@ Resultado:
 
 - `vehicle_entities[]` deixou de ser apenas texto bruto extraido pelo GPT na
   gravacao operacional
-- o GPT continua extraindo somente marca/modelo/ano/geracao e evidencia
-  textual
+- o GPT continua fazendo a classificacao semantica em uma unica chamada, sem
+  receber a lista Carros na Web
+- o script extrai e reconcilia veiculos a partir de `title`, `description` e
+  `transcript_90s`
 - o script consulta `public.v_carrosnaweb_vehicle_catalog` antes de inserir as
   entidades
 - match unico por marca/modelo/ano preenche `entity_status = matched`,
-  `catalog_row_id`, nomes canonicos e `match_confidence`
+  `catalog_row_id`, `catalog_model_id`, nomes canonicos e `match_confidence`
 - quando marca/modelo existem mas o ano nao esta sustentado pela evidencia, o
-  script grava nomes canonicos e `needs_review`, sem escolher um ano artificial
+  script grava `catalog_model_id`, nomes canonicos e `catalog_match_level =
+  model`, sem escolher um ano artificial
+- se o texto citar apenas modelo unico, como `Kwid`, o script pode preencher a
+  montadora canonica `Renault` pelo catalogo
 - entidades explicitas sem match ficam como `not_found`
 
 ### Criterio de saida do planejamento

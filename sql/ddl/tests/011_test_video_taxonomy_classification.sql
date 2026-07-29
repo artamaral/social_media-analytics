@@ -93,6 +93,16 @@ WHERE NULLIF(r.input_payload #>> '{video,transcript_90s}', '') IS NOT NULL;
 
 
 SELECT
+  column_name,
+  data_type
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name = 'video_classification_vehicle_entities'
+  AND column_name IN ('catalog_row_id', 'catalog_model_id', 'catalog_match_level')
+ORDER BY column_name;
+
+
+SELECT
   c.id,
   r.post_id,
   c.automotive_system,

@@ -20,8 +20,17 @@ SELECT
   y.param_year_end,
   y.year_url,
   y.source_model_url,
-  y.params
+  y.params,
+  m.id AS catalog_model_id
 FROM public.market_carrosnaweb_model_years y
+LEFT JOIN LATERAL (
+  SELECT models.id
+  FROM public.market_carrosnaweb_models models
+  WHERE models.manufacturer_key = y.manufacturer_key
+    AND models.model_key = y.model_key
+  ORDER BY models.updated_at DESC, models.id DESC
+  LIMIT 1
+) m ON TRUE
 JOIN public.market_source_files f
   ON f.id = y.source_file_id
 JOIN public.market_data_sources s

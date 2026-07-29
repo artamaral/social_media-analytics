@@ -211,6 +211,7 @@ class ClassifierContractTests(unittest.TestCase):
         }
         catalog_row = {
             "catalog_row_id": 123,
+            "catalog_model_id": 77,
             "manufacturer_name": "Changan",
             "manufacturer_key": "changan",
             "model_name": "Uni-T",
@@ -228,11 +229,13 @@ class ClassifierContractTests(unittest.TestCase):
 
         self.assertEqual(row["entity_status"], "matched")
         self.assertEqual(row["catalog_row_id"], 123)
+        self.assertEqual(row["catalog_model_id"], 77)
+        self.assertEqual(row["catalog_match_level"], "model_year")
         self.assertEqual(row["canonical_manufacturer_name"], "Changan")
         self.assertEqual(row["canonical_model_name"], "Uni-T")
         self.assertEqual(row["canonical_model_year"], 2026)
 
-    def test_vehicle_entity_without_year_does_not_store_year_catalog_id(self):
+    def test_vehicle_entity_without_year_matches_model_level(self):
         entity = {
             "entity_order": 1,
             "vehicle_brand_raw": "Renault",
@@ -245,6 +248,7 @@ class ClassifierContractTests(unittest.TestCase):
         catalog_rows = [
             {
                 "catalog_row_id": 1,
+                "catalog_model_id": 10,
                 "manufacturer_name": "Renault",
                 "manufacturer_key": "renault",
                 "model_name": "Kwid",
@@ -253,6 +257,7 @@ class ClassifierContractTests(unittest.TestCase):
             },
             {
                 "catalog_row_id": 2,
+                "catalog_model_id": 10,
                 "manufacturer_name": "Renault",
                 "manufacturer_key": "renault",
                 "model_name": "Kwid",
@@ -269,11 +274,53 @@ class ClassifierContractTests(unittest.TestCase):
                 entity,
             )
 
-        self.assertEqual(row["entity_status"], "needs_review")
+        self.assertEqual(row["entity_status"], "matched")
         self.assertIsNone(row["catalog_row_id"])
+        self.assertEqual(row["catalog_model_id"], 10)
+        self.assertEqual(row["catalog_match_level"], "model")
         self.assertEqual(row["canonical_manufacturer_name"], "Renault")
         self.assertEqual(row["canonical_model_name"], "Kwid")
-        self.assertIn("ano ausente", row["validation_issue"])
+        self.assertIsNone(row["validation_issue"])
+
+    def test_script_vehicle_match_fills_unique_manufacturer_from_model(self):
+        harness = {
+            "video": {
+                "title": "Quanto custa o motor do Kwid ?",
+                "description": None,
+                "transcript_90s": None,
+            }
+        }
+        catalog_rows = [
+            {
+                "catalog_row_id": 1,
+                "catalog_model_id": 10,
+                "manufacturer_name": "Renault",
+                "manufacturer_key": "renault",
+                "model_name": "Kwid",
+                "model_key": "kwid",
+                "model_year": 2025,
+            },
+            {
+                "catalog_row_id": 2,
+                "catalog_model_id": 10,
+                "manufacturer_name": "Renault",
+                "manufacturer_key": "renault",
+                "model_name": "Kwid",
+                "model_key": "kwid",
+                "model_year": 2024,
+            },
+        ]
+
+        entities = CLASSIFIER.select_script_vehicle_candidates(harness, catalog_rows)
+
+        self.assertEqual(len(entities), 1)
+        self.assertIsNone(entities[0]["vehicle_brand_raw"])
+        self.assertEqual(entities[0]["vehicle_model_raw"], "Kwid")
+        self.assertEqual(entities[0]["resolved_entity_status"], "matched")
+        self.assertEqual(entities[0]["canonical_manufacturer_name"], "Renault")
+        self.assertEqual(entities[0]["catalog_model_id"], 10)
+        self.assertIsNone(entities[0]["catalog_row_id"])
+        self.assertEqual(entities[0]["catalog_match_level"], "model")
 
 
 if __name__ == "__main__":

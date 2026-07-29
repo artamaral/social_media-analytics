@@ -411,6 +411,8 @@ CREATE TABLE IF NOT EXISTS public.video_classification_vehicle_entities (
   canonical_model_name TEXT,
   canonical_model_year INTEGER,
   catalog_row_id BIGINT,
+  catalog_model_id BIGINT,
+  catalog_match_level TEXT,
   match_source TEXT,
   match_confidence NUMERIC(4, 3),
   validation_issue TEXT,
@@ -437,6 +439,16 @@ CREATE TABLE IF NOT EXISTS public.video_classification_vehicle_entities (
       'needs_review'
     )
   ),
+  CONSTRAINT video_classification_vehicle_entities_catalog_match_level_check CHECK (
+    catalog_match_level IS NULL
+    OR catalog_match_level IN (
+      'model_year',
+      'model',
+      'manufacturer',
+      'ambiguous',
+      'not_found'
+    )
+  ),
   CONSTRAINT video_classification_vehicle_entities_match_confidence_check CHECK (
     match_confidence IS NULL
     OR (match_confidence >= 0 AND match_confidence <= 1)
@@ -455,5 +467,8 @@ CREATE INDEX IF NOT EXISTS video_classification_vehicle_entities_result_idx
 CREATE INDEX IF NOT EXISTS video_classification_vehicle_entities_raw_idx
   ON public.video_classification_vehicle_entities (vehicle_brand_raw, vehicle_model_raw, vehicle_year);
 
+CREATE INDEX IF NOT EXISTS video_classification_vehicle_entities_catalog_model_idx
+  ON public.video_classification_vehicle_entities (catalog_model_id, catalog_row_id);
+
 COMMENT ON TABLE public.video_classification_vehicle_entities IS
-  'Entidades de veiculo extraidas pelo GPT e preparadas para homogeneizacao com catalogos externos.';
+  'Entidades de veiculo extraidas pelo classificador e homogeneizadas com catalogos externos.';

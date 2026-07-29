@@ -248,8 +248,10 @@ Decisao:
 
 - tratar o identificador do catalogo Carros na Web como parte essencial da
   saida operacional de `vehicle_entities[]`
-- manter o GPT responsavel apenas pela extracao bruta de marca, modelo, ano,
-  geracao e evidencia textual
+- manter o GPT responsavel pela classificacao semantica e por entidades brutas
+  explicitas quando ele as identificar
+- executar tambem uma extracao deterministica por script sobre `title`,
+  `description` e `transcript_90s`, sem enviar o catalogo ao GPT
 - executar o matching contra `public.v_carrosnaweb_vehicle_catalog` no harness
   antes de gravar a classificacao
 - preencher em `video_classification_vehicle_entities`:
@@ -257,6 +259,8 @@ Decisao:
   - `canonical_model_name`
   - `canonical_model_year`
   - `catalog_row_id`
+  - `catalog_model_id`
+  - `catalog_match_level`
   - `match_source`
   - `match_confidence`
   - `validation_issue`
@@ -274,8 +278,8 @@ Regra operacional:
 
 - se marca/modelo/ano encontrarem match unico, gravar `matched` e
   `catalog_row_id`
-- se marca/modelo forem encontrados mas o ano estiver ausente, gravar nomes
-  canonicos e `needs_review`, sem escolher ano artificial
+- se marca/modelo forem encontrados mas o ano estiver ausente, gravar
+  `catalog_model_id`, nomes canonicos e `matched`, sem escolher ano artificial
 - se nao houver match, gravar `not_found`
 - ambiguidades devem ficar em `needs_review`
 
@@ -2607,3 +2611,39 @@ Referencia:
 
 - `docs/external_data/60_PO_TOKEN_YTDLP_TRANSCRICAO_VPS_R1.md`
 - `docs/external_data/59_VPS_CRON_CLASSIFICADOR_GPT_V2_RUNBOOK.md`
+
+---
+
+## Matching deterministico de veiculo por script
+
+Data:
+
+- 2026-07-29
+
+Decisao:
+
+- nao enviar a lista Carros na Web ao GPT para classificacao de veiculos
+- nao fazer uma segunda chamada GPT para normalizar marca/modelo/ano
+- executar no harness um matcher deterministico por script usando `title`,
+  `description` e `transcript_90s`
+- usar `catalog_row_id` apenas quando marca/modelo/ano estiverem sustentados
+  pela evidencia textual
+- adicionar `catalog_model_id` para casos em que o modelo e identificado, mas o
+  ano nao aparece
+- permitir preencher a montadora canonica pelo catalogo quando o modelo citado
+  for unico; exemplo: `Kwid` resolve para `Renault/Kwid`
+
+Motivo:
+
+- o identificador de veiculo e essencial para pesquisa de mercado, como buscas
+  por todos os videos que falam de um lancamento ou modelo
+- passar o catalogo inteiro ao GPT aumenta tokens e ainda assim nao garante
+  homogeneizacao consistente
+- escolher um ano artificial quando o texto nao cita ano criaria falsa precisao
+- o script consegue resolver marca/modelo de forma auditavel, barata e
+  reproduzivel, preservando a chamada GPT unica para a classificacao semantica
+
+Referencia:
+
+- `docs/external_data/58_GPT_VIDEO_CLASSIFIER_HARNESS_CONTRACT_V2.md`
+- `scripts/video_classification/README.md`

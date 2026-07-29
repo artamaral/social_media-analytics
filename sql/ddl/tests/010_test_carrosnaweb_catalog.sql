@@ -21,6 +21,7 @@ ORDER BY check_name;
 SELECT
   manufacturer_name,
   model_name,
+  MIN(catalog_model_id) AS catalog_model_id,
   COUNT(*) AS years_count,
   MIN(model_year) AS first_year,
   MAX(model_year) AS last_year
@@ -50,3 +51,13 @@ FROM (
 ) catalog_rows
 WHERE source_file_id IS NULL
 GROUP BY source_file_id;
+
+
+SELECT
+  column_name,
+  data_type
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name = 'v_carrosnaweb_vehicle_catalog'
+  AND column_name IN ('catalog_row_id', 'catalog_model_id')
+ORDER BY column_name;

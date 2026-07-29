@@ -78,6 +78,8 @@ Uso operacional recomendado:
    - Se marca/modelo e ano-modelo aparecerem no titulo, descricao ou
      transcricao, preencha `vehicle_year`; nao deixe o ano nulo.
    - Exemplos: `Uni-T 2026`, `BYD Dolphin 2025`, `Kwid 2021`.
+   - Preserve apenas o valor bruto observado; a normalizacao Carros na Web e
+     feita por script depois da resposta.
 9. Preencha `technical_contexts[]` somente quando sistema, componente ou
    problema estiverem explicitamente citados.
 10. Registre lacunas sem criar codigo canonico novo.

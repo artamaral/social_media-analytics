@@ -96,6 +96,8 @@ Ligacao com Carros na Web:
 - `video_classification_vehicle_entities.catalog_row_id` referencia o
   identificador exposto por `v_carrosnaweb_vehicle_catalog.catalog_row_id`.
 - Esse `catalog_row_id` vem de `market_carrosnaweb_model_years.id`.
+- `video_classification_vehicle_entities.catalog_model_id` referencia o modelo
+  canonico em `market_carrosnaweb_models.id` quando o texto nao sustenta ano.
 - Como `v_carrosnaweb_vehicle_catalog` e uma view, essa ligacao e preenchida
   pelo harness e auditada por status/confidence, nao por FK direta no banco.
 
@@ -410,6 +412,8 @@ Campos:
   - `canonical_model_name`
   - `canonical_model_year`
   - `catalog_row_id`
+  - `catalog_model_id`
+  - `catalog_match_level`
   - `match_source`
   - `match_confidence`
   - `validation_issue`
@@ -422,9 +426,14 @@ Valores de `entity_status`:
 - `needs_review`: entidade ambigua ou contraditoria.
 
 O match com Carros na Web ocorre depois da extracao e antes da gravacao. O GPT
-nao deve retornar `catalog_row_id`, nem trocar a grafia bruta por uma grafia
-canonica sem evidencia. O identificador canonico deve vir de consulta
-deterministica a `public.v_carrosnaweb_vehicle_catalog`.
+nao deve retornar `catalog_row_id`, `catalog_model_id`, nem trocar a grafia
+bruta por uma grafia canonica sem evidencia. O identificador canonico deve vir
+de consulta deterministica a `public.v_carrosnaweb_vehicle_catalog`.
+
+O harness tambem executa uma extracao deterministica de veiculos a partir de
+`title`, `description` e `transcript_90s`. Essa extracao por script e a fonte
+operacional de verdade para marca/modelo canonicos, porque evita enviar a lista
+Carros na Web ao GPT e evita uma segunda chamada de modelo.
 
 Obrigacao de extracao:
 
@@ -433,17 +442,22 @@ Obrigacao de extracao:
 - deixar `vehicle_year = null` quando o ano aparece explicitamente deve ser
   tratado como erro de qualidade da classificacao ou motivo de reprocessamento;
 - o ano extraido continua sendo evidencia textual, nao inferencia externa.
+- quando o texto trouxer apenas o modelo, o script pode preencher a montadora
+  canonica se o modelo for unico no catalogo; exemplo: `Kwid` resolve para
+  `Renault/Kwid` em nivel de modelo.
 
 Regra de prontidao:
 
 - se marca, modelo e ano forem encontrados com match unico no catalogo, gravar
-  `entity_status = matched`, `catalog_row_id`, nomes canonicos e
+  `entity_status = matched`, `catalog_row_id`, `catalog_model_id`, nomes
+  canonicos, `catalog_match_level = model_year` e
   `match_confidence` alto;
-- se marca/modelo forem encontrados mas o ano estiver ausente, gravar nomes
-  canonicos e `entity_status = needs_review`, sem escolher artificialmente um
-  `catalog_row_id` de ano;
+- se marca/modelo forem encontrados mas o ano estiver ausente, gravar
+  `catalog_model_id`, nomes canonicos, `entity_status = matched`,
+  `catalog_match_level = model` e deixar `catalog_row_id = null`;
 - se a entidade explicita nao existir no catalogo, gravar
-  `entity_status = not_found` e `validation_issue`;
+  `entity_status = not_found`, `catalog_match_level = not_found` e
+  `validation_issue`;
 - se houver varios matches possiveis, gravar `needs_review`.
 
 Na pratica, a classificacao so deve ser considerada pronta para pesquisa de
