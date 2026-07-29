@@ -56,6 +56,58 @@ Views:
 - `v_video_classification_latest`
 - `v_video_classification_quality`
 
+### Como as tabelas se ligam
+
+O contrato operacional usa uma estrutura em cadeia:
+
+```text
+video_taxonomy_versions
+  1:N -> video_classification_runs
+           1:N -> video_classification_results
+                    1:N -> video_classification_technical_contexts
+                    1:N -> video_classification_vehicle_entities
+```
+
+Ligacoes principais:
+
+- `video_classification_runs.taxonomy_version_id` aponta para
+  `video_taxonomy_versions.id`.
+- `video_classification_results.run_id` aponta para
+  `video_classification_runs.id`.
+- `video_classification_results.taxonomy_version_id` aponta para
+  `video_taxonomy_versions.id`.
+- `video_classification_results.post_id` aponta para `posts.post_id`.
+- `video_classification_technical_contexts.classification_result_id` aponta
+  para `video_classification_results.id`.
+- `video_classification_vehicle_entities.classification_result_id` aponta para
+  `video_classification_results.id`.
+
+Ligacoes taxonomicas:
+
+- `video_classification_results.topic_path` e
+  `topic_path_secondary` apontam para
+  `video_taxonomy_topic_paths.topic_path_code` dentro da mesma
+  `taxonomy_version_id`.
+- `video_classification_technical_contexts.topic_path` e
+  `topic_path_secondary` seguem a mesma regra.
+
+Ligacao com Carros na Web:
+
+- `video_classification_vehicle_entities.catalog_row_id` referencia o
+  identificador exposto por `v_carrosnaweb_vehicle_catalog.catalog_row_id`.
+- Esse `catalog_row_id` vem de `market_carrosnaweb_model_years.id`.
+- Como `v_carrosnaweb_vehicle_catalog` e uma view, essa ligacao e preenchida
+  pelo harness e auditada por status/confidence, nao por FK direta no banco.
+
+Em termos praticos:
+
+- um `post` pode ter varias classificacoes ao longo de rodadas e estagios;
+- cada classificacao pertence a uma rodada e a uma versao da taxonomia;
+- cada classificacao pode ter zero ou mais contextos tecnicos;
+- cada classificacao pode ter zero ou mais entidades de veiculo;
+- cada entidade de veiculo pode apontar para um item canonico do catalogo
+  Carros na Web quando o match for seguro.
+
 ## Entrada do harness
 
 Cada chamada classifica um unico video em um unico estagio.
@@ -83,7 +135,13 @@ Regra de evidencia:
 - `transcript_90s` classifica com titulo, descricao disponivel, metadados e
   transcricao dos primeiros `90s`.
 - `public.posts` nao possui descricao nesta etapa; portanto o executor envia
-  `description = null` e nao tenta capturar esse dado implicitamente.
+- `description = null` por padrao e nao tenta capturar esse dado
+  implicitamente.
+- Em rodadas manuais de calibracao, o executor pode receber um CSV externo de
+  descricoes obtidas pela YouTube Data API e adicionar `description` ao JSON do
+  harness. Essa opcao nao altera `public.posts`, nao cria ingestao oficial e
+  deve preservar `input_evidence_level = title_description` quando a descricao
+  estiver preenchida.
 - Se uma informacao nao estiver no input, ela nao pode ser inventada.
 
 ## Decisao operacional de estagio
@@ -93,7 +151,8 @@ unica chamada `transcript_90s`, combinando:
 
 - titulo;
 - metadados confiaveis;
-- `description = null` enquanto o campo nao existir em `public.posts`;
+- `description = null` enquanto o campo nao existir em `public.posts`, exceto
+  rodadas manuais com CSV externo de descricoes;
 - transcricao textual dos primeiros `90s`, gerada localmente por
   `faster-whisper`.
 
@@ -334,6 +393,9 @@ Regras:
 ## Entidades de veiculo
 
 `vehicle_entities[]` registra entidades extraidas, nao entidades imaginadas.
+Essas entidades precisam ser reconciliadas pelo harness contra o catalogo
+Carros na Web antes da gravacao, porque o identificador canonico do veiculo e
+parte essencial da classificacao operacional.
 
 Campos:
 
@@ -343,6 +405,14 @@ Campos:
 - `vehicle_generation`
 - `evidence_text`
 - `entity_status`
+- campos canônicos persistidos pelo harness:
+  - `canonical_manufacturer_name`
+  - `canonical_model_name`
+  - `canonical_model_year`
+  - `catalog_row_id`
+  - `match_source`
+  - `match_confidence`
+  - `validation_issue`
 
 Valores de `entity_status`:
 
@@ -351,9 +421,34 @@ Valores de `entity_status`:
 - `not_found`: entidade explicita nao encontrada no catalogo usado.
 - `needs_review`: entidade ambigua ou contraditoria.
 
-O match com Carros na Web/Fenabrave ocorre depois da extracao. O GPT nao deve
-trocar a grafia bruta por uma grafia canonica sem evidencia ou sem etapa de
-matching.
+O match com Carros na Web ocorre depois da extracao e antes da gravacao. O GPT
+nao deve retornar `catalog_row_id`, nem trocar a grafia bruta por uma grafia
+canonica sem evidencia. O identificador canonico deve vir de consulta
+deterministica a `public.v_carrosnaweb_vehicle_catalog`.
+
+Obrigacao de extracao:
+
+- se marca/modelo e ano-modelo estiverem explicitamente no titulo, descricao ou
+  transcricao, o GPT deve preencher `vehicle_year`;
+- deixar `vehicle_year = null` quando o ano aparece explicitamente deve ser
+  tratado como erro de qualidade da classificacao ou motivo de reprocessamento;
+- o ano extraido continua sendo evidencia textual, nao inferencia externa.
+
+Regra de prontidao:
+
+- se marca, modelo e ano forem encontrados com match unico no catalogo, gravar
+  `entity_status = matched`, `catalog_row_id`, nomes canonicos e
+  `match_confidence` alto;
+- se marca/modelo forem encontrados mas o ano estiver ausente, gravar nomes
+  canonicos e `entity_status = needs_review`, sem escolher artificialmente um
+  `catalog_row_id` de ano;
+- se a entidade explicita nao existir no catalogo, gravar
+  `entity_status = not_found` e `validation_issue`;
+- se houver varios matches possiveis, gravar `needs_review`.
+
+Na pratica, a classificacao so deve ser considerada pronta para pesquisa de
+mercado quando `vehicle_entities[]` trouxer o identificador do catalogo ou uma
+justificativa explicita de `not_found`/`needs_review`.
 
 ## Technical context repetivel
 

@@ -3389,6 +3389,9 @@ Premissas ja fechadas para o inicio do sprint:
   `automotive_system`, `component` e `problem`.
 - [x] Definir a validacao referencial de `vehicle_brand`, `vehicle_model` e
   `vehicle_year_or_generation` contra cadastros canonicos futuros.
+- [x] Tornar o matching de `vehicle_entities[]` contra Carros na Web parte da
+  saida operacional da classificacao, preenchendo identificador canonico quando
+  houver match seguro.
 - [ ] Decidir, usando os resultados do piloto, entre:
   - separar `automotive_domain` e `activity_type`
   - adotar `niche_primary` e `niche_secondary` controlados
@@ -4031,6 +4034,44 @@ Resultado:
 - cookies, tokens, plugins e configuracoes locais permanecem fora do Git
 - `--transcripts-csv` continua sendo o fallback validado para testar o
   classificador quando a aquisicao de audio falhar
+
+#### Descricoes via YouTube Data API para teste manual
+
+Status: implementado para validacao manual em 2026-07-29.
+
+Resultado:
+
+- a descricao continua fora de `public.posts` e fora de ingestao persistente
+  nesta etapa
+- foi criado um utilitario simples para salvar descricoes em CSV usando a
+  YouTube Data API:
+  `scripts/video_classification/extract_youtube_descriptions.py`
+- o classificador passou a aceitar `--descriptions-csv` para adicionar a
+  descricao ao JSON do harness antes da chamada GPT
+- quando a descricao estiver preenchida, o harness usa
+  `input_evidence_level = title_description`
+- o fluxo esperado para o teste dos `10` videos do Batch 1 passa a ser:
+  1. salvar as descricoes em `tmp/youtube_descriptions_batch1.csv`
+  2. classificar os mesmos `post_id` com `--descriptions-csv`
+  3. comparar a rodada com o resultado anterior de titulo/metadados
+
+#### Matching de entidades de veiculo com Carros na Web
+
+Status: implementado no harness em 2026-07-29.
+
+Resultado:
+
+- `vehicle_entities[]` deixou de ser apenas texto bruto extraido pelo GPT na
+  gravacao operacional
+- o GPT continua extraindo somente marca/modelo/ano/geracao e evidencia
+  textual
+- o script consulta `public.v_carrosnaweb_vehicle_catalog` antes de inserir as
+  entidades
+- match unico por marca/modelo/ano preenche `entity_status = matched`,
+  `catalog_row_id`, nomes canonicos e `match_confidence`
+- quando marca/modelo existem mas o ano nao esta sustentado pela evidencia, o
+  script grava nomes canonicos e `needs_review`, sem escolher um ano artificial
+- entidades explicitas sem match ficam como `not_found`
 
 ### Criterio de saida do planejamento
 

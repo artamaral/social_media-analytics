@@ -77,6 +77,32 @@ class ClassifierContractTests(unittest.TestCase):
         self.assertEqual(rows["video1"]["text"], "")
         self.assertEqual(rows["video1"]["metadata"]["transcript_char_count"], 0)
 
+    def test_description_csv_sets_title_description_evidence(self):
+        temp_dir = SCRIPT_PATH.parents[2] / "tmp" / "video_classification_tests"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        path = temp_dir / f"descriptions_{uuid.uuid4().hex}.csv"
+        try:
+            path.write_text(
+                "post_id,description_status,description\n"
+                "video1,success,Descricao automotiva\n",
+                encoding="utf-8",
+            )
+
+            descriptions = CLASSIFIER.load_descriptions_csv(path)
+            harness = CLASSIFIER.build_harness_input(
+                {"post_id": "video1", "title": "Teste"},
+                "title_metadata",
+                {"version": "taxonomia_video_v2", "topic_paths": [], "compatibility": []},
+                {},
+                description=descriptions["video1"]["description"],
+            )
+        finally:
+            if path.exists():
+                path.unlink()
+
+        self.assertEqual(harness["video"]["description"], "Descricao automotiva")
+        self.assertEqual(harness["video"]["input_evidence_level"], "title_description")
+
     def test_external_schema_matches_embedded_required_blocks(self):
         schema_path = (
             SCRIPT_PATH.parents[2]
@@ -117,7 +143,7 @@ class ClassifierContractTests(unittest.TestCase):
                     plugin_dirs=[plugin_dir],
                 )
 
-            command = run_subprocess.call_args.args[0]
+            command = run_subprocess.call_args[0][0]
             self.assertIn("--extractor-args", command)
             self.assertIn("youtube:player-client=default,mweb", command)
             self.assertIn("--plugin-dirs", command)
@@ -169,9 +195,85 @@ class ClassifierContractTests(unittest.TestCase):
                 {"id": "response1"},
             )
 
-        payload = request.call_args_list[0].kwargs["payload"]
+        payload = request.call_args_list[0][1]["payload"]
         self.assertEqual(payload["transcript_quality_score"], 0.85)
         self.assertIsNone(payload["input_payload"]["video"]["transcript_90s"])
+
+    def test_vehicle_entity_exact_year_matches_carrosnaweb_catalog(self):
+        entity = {
+            "entity_order": 1,
+            "vehicle_brand_raw": "Caoa Changan",
+            "vehicle_model_raw": "Uni-T",
+            "vehicle_year": 2026,
+            "vehicle_generation": None,
+            "evidence_text": "Caoa Changan Uni-T 2026",
+            "entity_status": "extracted",
+        }
+        catalog_row = {
+            "catalog_row_id": 123,
+            "manufacturer_name": "Changan",
+            "manufacturer_key": "changan",
+            "model_name": "Uni-T",
+            "model_key": "uni t",
+            "model_year": 2026,
+        }
+
+        with patch.object(CLASSIFIER, "request_json", side_effect=[[], [catalog_row]]):
+            row = CLASSIFIER.build_vehicle_entity_row(
+                "https://example.supabase.co",
+                {"apikey": "test"},
+                10,
+                entity,
+            )
+
+        self.assertEqual(row["entity_status"], "matched")
+        self.assertEqual(row["catalog_row_id"], 123)
+        self.assertEqual(row["canonical_manufacturer_name"], "Changan")
+        self.assertEqual(row["canonical_model_name"], "Uni-T")
+        self.assertEqual(row["canonical_model_year"], 2026)
+
+    def test_vehicle_entity_without_year_does_not_store_year_catalog_id(self):
+        entity = {
+            "entity_order": 1,
+            "vehicle_brand_raw": "Renault",
+            "vehicle_model_raw": "Kwid",
+            "vehicle_year": None,
+            "vehicle_generation": None,
+            "evidence_text": "Kwid",
+            "entity_status": "extracted",
+        }
+        catalog_rows = [
+            {
+                "catalog_row_id": 1,
+                "manufacturer_name": "Renault",
+                "manufacturer_key": "renault",
+                "model_name": "Kwid",
+                "model_key": "kwid",
+                "model_year": 2025,
+            },
+            {
+                "catalog_row_id": 2,
+                "manufacturer_name": "Renault",
+                "manufacturer_key": "renault",
+                "model_name": "Kwid",
+                "model_key": "kwid",
+                "model_year": 2024,
+            },
+        ]
+
+        with patch.object(CLASSIFIER, "request_json", return_value=catalog_rows):
+            row = CLASSIFIER.build_vehicle_entity_row(
+                "https://example.supabase.co",
+                {"apikey": "test"},
+                10,
+                entity,
+            )
+
+        self.assertEqual(row["entity_status"], "needs_review")
+        self.assertIsNone(row["catalog_row_id"])
+        self.assertEqual(row["canonical_manufacturer_name"], "Renault")
+        self.assertEqual(row["canonical_model_name"], "Kwid")
+        self.assertIn("ano ausente", row["validation_issue"])
 
 
 if __name__ == "__main__":

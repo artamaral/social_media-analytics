@@ -203,6 +203,82 @@ Contrato atual:
   `v_dashboard_new_post_discovery_status` apenas como fallback tecnico por
   enquanto e revisar remocao futura do campo no SQL
 
+---
+
+## Descricao do YouTube como evidencia opcional do classificador V2
+
+Data:
+
+- 2026-07-29
+
+Decisao:
+
+- manter `public.posts` sem coluna de descricao nesta etapa
+- nao transformar a descricao do YouTube em ingestao persistente ainda
+- permitir rodadas manuais de calibracao com descricoes salvas em CSV externo
+- adicionar `--descriptions-csv` ao classificador GPT V2 para inserir a
+  descricao no JSON do harness quando ela estiver disponivel
+
+Motivo:
+
+- separar aquisicao de evidencia textual da classificacao propriamente dita
+- testar se descricao melhora a classificacao antes de alterar modelo de dados
+  ou pipeline
+- evitar repetir o erro operacional de misturar fetch da YouTube Data API,
+  montagem do harness e chamada GPT em um unico loop improvisado
+
+Regra operacional:
+
+- o CSV de descricao e artefato temporario/manual
+- quando houver descricao preenchida, usar
+  `input_evidence_level = title_description`
+- quando nao houver descricao, manter `metadata_only`
+- a descricao pode enriquecer a evidencia textual, mas nao autoriza inferencia
+  sem suporte explicito no titulo, descricao ou metadado recebido
+
+---
+
+## Identificador Carros na Web nas entidades de veiculo classificadas
+
+Data:
+
+- 2026-07-29
+
+Decisao:
+
+- tratar o identificador do catalogo Carros na Web como parte essencial da
+  saida operacional de `vehicle_entities[]`
+- manter o GPT responsavel apenas pela extracao bruta de marca, modelo, ano,
+  geracao e evidencia textual
+- executar o matching contra `public.v_carrosnaweb_vehicle_catalog` no harness
+  antes de gravar a classificacao
+- preencher em `video_classification_vehicle_entities`:
+  - `canonical_manufacturer_name`
+  - `canonical_model_name`
+  - `canonical_model_year`
+  - `catalog_row_id`
+  - `match_source`
+  - `match_confidence`
+  - `validation_issue`
+
+Motivo:
+
+- consultas de pesquisa de mercado dependem de entidade veicular canonica, nao
+  apenas de texto bruto
+- o GPT nao deve inventar identificador de catalogo nem escolher grafia
+  canonica por plausibilidade
+- o match contra Carros na Web precisa ser deterministico, auditavel e
+  reprocessavel
+
+Regra operacional:
+
+- se marca/modelo/ano encontrarem match unico, gravar `matched` e
+  `catalog_row_id`
+- se marca/modelo forem encontrados mas o ano estiver ausente, gravar nomes
+  canonicos e `needs_review`, sem escolher ano artificial
+- se nao houver match, gravar `not_found`
+- ambiguidades devem ficar em `needs_review`
+
 Leitura esperada no dashboard:
 
 - `ok`: heartbeat recente com posts tocados ou execucao confirmada sem

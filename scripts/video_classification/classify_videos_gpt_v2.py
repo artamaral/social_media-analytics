@@ -3,11 +3,13 @@ import csv
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+import unicodedata
 from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -21,7 +23,7 @@ TAXONOMY_VERSION = "taxonomia_video_v2"
 PROMPT_CONTRACT_VERSION = "video_taxonomy_v2_classifier_r2"
 OUTPUT_SCHEMA_VERSION = "video_taxonomy_v2_output_schema_r2"
 # Marcador operacional para confirmar se a copia local/VPS esta atualizada.
-SCRIPT_VERSION = "2026-07-29-r10-yt-dlp-po-token"
+SCRIPT_VERSION = "2026-07-29-r12-carrosnaweb-vehicle-match"
 DEFAULT_TITLE_MODEL = "gpt-5-nano"
 DEFAULT_TRANSCRIPT_MODEL = "gpt-5-nano"
 DEFAULT_MAX_OUTPUT_TOKENS = 6000
@@ -490,6 +492,22 @@ def normalize_nullable(value):
     return value
 
 
+def strip_accents(value):
+    return "".join(
+        char
+        for char in unicodedata.normalize("NFKD", value)
+        if not unicodedata.combining(char)
+    )
+
+
+def normalize_catalog_key(value):
+    value = "" if value is None else str(value)
+    value = re.sub(r"\s+", " ", value.replace("\n", " ")).strip()
+    value = strip_accents(value).lower()
+    value = re.sub(r"[^a-z0-9]+", " ", value)
+    return re.sub(r"\s+", " ", value).strip()
+
+
 def get_supabase_client():
     load_local_env()
     base_url = normalize_supabase_url(require_env("SUPABASE_URL"))
@@ -690,6 +708,30 @@ def load_transcripts_csv(path):
                 ),
             }
     return transcripts
+
+
+def load_descriptions_csv(path):
+    if not path:
+        return {}
+
+    descriptions = {}
+    with Path(path).open("r", encoding="utf-8-sig", newline="") as handle:
+        for row in csv.DictReader(handle):
+            post_id = row.get("post_id")
+            if not post_id:
+                continue
+
+            status = (row.get("description_status") or row.get("status") or "").strip()
+            description = row.get("description") or ""
+            if status and status != "success":
+                description = ""
+
+            descriptions[post_id] = {
+                "description": description,
+                "status": status or ("success" if description else "empty"),
+                "description_length": len(description),
+            }
+    return descriptions
 
 
 def to_optional_int(value):
@@ -982,8 +1024,11 @@ def build_harness_input(
     terms,
     transcript=None,
     transcription_metadata=None,
+    description=None,
 ):
     evidence_level = "metadata_only"
+    if description:
+        evidence_level = "title_description"
     if stage == "transcript_90s":
         evidence_level = "transcript_90s" if transcript else "insufficient_evidence"
 
@@ -999,7 +1044,7 @@ def build_harness_input(
         "likes": post.get("likes"),
         "comments": post.get("comments"),
         "post_date": post.get("post_date"),
-        "description": None,
+        "description": description,
         "transcript_90s": transcript if stage == "transcript_90s" else None,
         "transcription_metadata": (
             transcription_metadata if stage == "transcript_90s" else None
@@ -1356,6 +1401,193 @@ def update_run(base_url, headers, run_id, status, succeeded, failed, error_summa
     )
 
 
+def fetch_vehicle_catalog_candidates(base_url, headers, entity):
+    brand_key = normalize_catalog_key(entity.get("vehicle_brand_raw"))
+    model_key = normalize_catalog_key(entity.get("vehicle_model_raw"))
+    vehicle_year = entity.get("vehicle_year")
+
+    if not brand_key and not model_key:
+        return []
+
+    params = {
+        "select": (
+            "catalog_row_id,manufacturer_name,manufacturer_key,"
+            "model_name,model_key,model_year"
+        ),
+        "limit": "50",
+        "order": "model_year.desc",
+    }
+
+    if brand_key and model_key:
+        params["manufacturer_key"] = f"eq.{brand_key}"
+        params["model_key"] = f"eq.{model_key}"
+    elif model_key:
+        params["model_key"] = f"eq.{model_key}"
+    else:
+        params["manufacturer_key"] = f"eq.{brand_key}"
+
+    if vehicle_year:
+        params["model_year"] = f"eq.{vehicle_year}"
+
+    candidates = request_json(
+        "GET",
+        rest_url(base_url, "v_carrosnaweb_vehicle_catalog"),
+        headers,
+        params=params,
+    ) or []
+
+    if candidates or not (brand_key and model_key):
+        return candidates
+
+    # O catalogo usa fabricante canonico; textos como "Caoa Changan" podem
+    # nao bater exatamente. Nesse caso, tente modelo exato e valide ambiguidade.
+    fallback_params = {
+        "select": (
+            "catalog_row_id,manufacturer_name,manufacturer_key,"
+            "model_name,model_key,model_year"
+        ),
+        "model_key": f"eq.{model_key}",
+        "limit": "50",
+        "order": "model_year.desc",
+    }
+    if vehicle_year:
+        fallback_params["model_year"] = f"eq.{vehicle_year}"
+    return request_json(
+        "GET",
+        rest_url(base_url, "v_carrosnaweb_vehicle_catalog"),
+        headers,
+        params=fallback_params,
+    ) or []
+
+
+def resolve_vehicle_entity(base_url, headers, entity):
+    candidates = fetch_vehicle_catalog_candidates(base_url, headers, entity)
+    resolved = {
+        "entity_status": entity["entity_status"],
+        "canonical_manufacturer_name": None,
+        "canonical_model_name": None,
+        "canonical_model_year": None,
+        "catalog_row_id": None,
+        "match_source": "carrosnaweb_catalog",
+        "match_confidence": None,
+        "validation_issue": None,
+    }
+
+    if not candidates:
+        resolved.update(
+            {
+                "entity_status": "not_found",
+                "validation_issue": "entidade explicita nao encontrada em v_carrosnaweb_vehicle_catalog",
+            }
+        )
+        return resolved
+
+    vehicle_year = entity.get("vehicle_year")
+    unique_models = {
+        (row["manufacturer_key"], row["model_key"])
+        for row in candidates
+    }
+    first = candidates[0]
+
+    resolved.update(
+        {
+            "canonical_manufacturer_name": first["manufacturer_name"],
+            "canonical_model_name": first["model_name"],
+        }
+    )
+
+    if vehicle_year:
+        resolved.update(
+            {
+                "entity_status": "matched" if len(candidates) == 1 else "needs_review",
+                "canonical_model_year": first["model_year"],
+                "catalog_row_id": first["catalog_row_id"] if len(candidates) == 1 else None,
+                "match_confidence": 0.98 if len(candidates) == 1 else 0.70,
+                "validation_issue": None
+                if len(candidates) == 1
+                else "ano informado encontrou multiplos registros no catalogo",
+            }
+        )
+        return resolved
+
+    if len(unique_models) == 1:
+        resolved.update(
+            {
+                "entity_status": "needs_review",
+                "match_confidence": 0.75,
+                "validation_issue": (
+                    "modelo encontrado no Carros na Web, mas ano ausente; "
+                    "catalog_row_id por ano nao foi gravado"
+                ),
+            }
+        )
+        return resolved
+
+    resolved.update(
+        {
+            "entity_status": "needs_review",
+            "match_confidence": 0.55,
+            "validation_issue": "modelo/brand ambiguo no catalogo Carros na Web",
+        }
+    )
+    return resolved
+
+
+def build_vehicle_entity_row(base_url, headers, result_id, entity):
+    resolved = {
+        "entity_status": entity.get("resolved_entity_status"),
+        "canonical_manufacturer_name": entity.get("canonical_manufacturer_name"),
+        "canonical_model_name": entity.get("canonical_model_name"),
+        "canonical_model_year": entity.get("canonical_model_year"),
+        "catalog_row_id": entity.get("catalog_row_id"),
+        "match_source": entity.get("match_source"),
+        "match_confidence": entity.get("match_confidence"),
+        "validation_issue": entity.get("validation_issue"),
+    }
+    if not resolved["entity_status"]:
+        resolved = resolve_vehicle_entity(base_url, headers, entity)
+
+    return {
+        "classification_result_id": result_id,
+        "entity_order": entity["entity_order"],
+        "vehicle_brand_raw": entity["vehicle_brand_raw"],
+        "vehicle_model_raw": entity["vehicle_model_raw"],
+        "vehicle_year": entity["vehicle_year"],
+        "vehicle_generation": entity["vehicle_generation"],
+        "evidence_text": entity["evidence_text"],
+        "entity_status": resolved["entity_status"],
+        "canonical_manufacturer_name": resolved["canonical_manufacturer_name"],
+        "canonical_model_name": resolved["canonical_model_name"],
+        "canonical_model_year": resolved["canonical_model_year"],
+        "catalog_row_id": resolved["catalog_row_id"],
+        "match_source": resolved["match_source"],
+        "match_confidence": resolved["match_confidence"],
+        "validation_issue": resolved["validation_issue"],
+    }
+
+
+def enrich_vehicle_entities_with_catalog(base_url, headers, result):
+    enriched = []
+    for entity in result["vehicle_entities"]:
+        resolved = resolve_vehicle_entity(base_url, headers, entity)
+        enriched_entity = dict(entity)
+        enriched_entity.update(
+            {
+                "resolved_entity_status": resolved["entity_status"],
+                "canonical_manufacturer_name": resolved["canonical_manufacturer_name"],
+                "canonical_model_name": resolved["canonical_model_name"],
+                "canonical_model_year": resolved["canonical_model_year"],
+                "catalog_row_id": resolved["catalog_row_id"],
+                "match_source": resolved["match_source"],
+                "match_confidence": resolved["match_confidence"],
+                "validation_issue": resolved["validation_issue"],
+            }
+        )
+        enriched.append(enriched_entity)
+    result["vehicle_entities"] = enriched
+    return result
+
+
 def write_classification(base_url, headers, run_id, taxonomy_id, model, harness_input, result, raw_response):
     classification = result["classification_result"]
     transcript_quality = result["transcript_quality"]
@@ -1423,16 +1655,7 @@ def write_classification(base_url, headers, run_id, taxonomy_id, model, harness_
         )
 
     entity_rows = [
-        {
-            "classification_result_id": result_id,
-            "entity_order": row["entity_order"],
-            "vehicle_brand_raw": row["vehicle_brand_raw"],
-            "vehicle_model_raw": row["vehicle_model_raw"],
-            "vehicle_year": row["vehicle_year"],
-            "vehicle_generation": row["vehicle_generation"],
-            "evidence_text": row["evidence_text"],
-            "entity_status": row["entity_status"],
-        }
+        build_vehicle_entity_row(base_url, headers, result_id, row)
         for row in result["vehicle_entities"]
     ]
     if entity_rows:
@@ -1479,6 +1702,7 @@ def parse_args():
     parser.add_argument("--input-source", default="supabase_posts")
     parser.add_argument("--skill-path")
     parser.add_argument("--schema-path")
+    parser.add_argument("--descriptions-csv")
     parser.add_argument("--transcripts-csv")
     parser.add_argument("--transcripts-output", type=Path)
     parser.add_argument("--whisper-model", default="small")
@@ -1541,6 +1765,7 @@ def main():
     terms = group_terms(taxonomy["terms"])
     schema = load_schema(args.schema_path)
     skill_text, skill_source = load_skill_text(args.skill_path)
+    descriptions = load_descriptions_csv(args.descriptions_csv)
     transcripts = load_transcripts_csv(args.transcripts_csv)
     whisper_runtime = None
     transcription_rows = []
@@ -1589,6 +1814,8 @@ def main():
     print(f"- topic_paths: {len(taxonomy['topic_paths'])}")
     print(f"- technical_compatibility: {len(taxonomy['compatibility'])}")
     print(f"- videos selecionados: {len(posts)}")
+    if args.descriptions_csv:
+        print(f"- descriptions_source: csv ({len(descriptions)})")
     if args.stage == "transcript_90s":
         source = "csv" if args.transcripts_csv else "faster-whisper-local"
         print(f"- transcription_source: {source}")
@@ -1645,6 +1872,8 @@ def main():
         transcription_metadata = (
             transcript_record["metadata"] if transcript_record else None
         )
+        description_record = descriptions.get(post_id) or {}
+        description = description_record.get("description") or None
         harness_input = build_harness_input(
             post,
             args.stage,
@@ -1652,6 +1881,7 @@ def main():
             terms,
             transcript,
             transcription_metadata,
+            description,
         )
         print(f"[{idx}/{len(posts)}] classificando {post_id}...")
 
@@ -1664,6 +1894,7 @@ def main():
                 args.max_output_tokens,
             )
             validate_classification(result, schema, taxonomy, args.stage, post_id)
+            enrich_vehicle_entities_with_catalog(base_url, headers, result)
 
             if args.write:
                 write_classification(

@@ -75,6 +75,9 @@ Uso operacional recomendado:
 7. Classifique `audience_intent` como intencao provavel sustentada pela
    evidencia.
 8. Extraia entidades de veiculo somente quando explicitas.
+   - Se marca/modelo e ano-modelo aparecerem no titulo, descricao ou
+     transcricao, preencha `vehicle_year`; nao deixe o ano nulo.
+   - Exemplos: `Uni-T 2026`, `BYD Dolphin 2025`, `Kwid 2021`.
 9. Preencha `technical_contexts[]` somente quando sistema, componente ou
    problema estiverem explicitamente citados.
 10. Registre lacunas sem criar codigo canonico novo.

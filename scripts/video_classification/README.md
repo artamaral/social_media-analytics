@@ -16,6 +16,9 @@ Script minimo para classificar videos com GPT usando a Taxonomia Video V2.
 - grava em `video_classification_results`,
   `video_classification_technical_contexts` e
   `video_classification_vehicle_entities`
+- reconcilia `vehicle_entities[]` contra
+  `public.v_carrosnaweb_vehicle_catalog` antes de gravar, preenchendo
+  identificador e nomes canonicos quando houver match seguro
 - envia a taxonomia em formato compacto para reduzir custo e risco de resposta
   incompleta
 - marca contexto tecnico fora da matriz V2 como `needs_review`, em vez de
@@ -28,7 +31,7 @@ Fora de escopo nesta versao:
 - cron
 - ingestao de videos
 - transcricao por API
-- captura de descricao do YouTube
+- ingestao persistente de descricao do YouTube
 - dashboard
 - fallback automatico para modelo maior
 
@@ -42,7 +45,10 @@ Sem `--transcripts-csv`, o proprio script gera a transcricao local. Quando um
 CSV e informado, ele e reutilizado para permitir replay das rodadas de
 desenvolvimento.
 
-`public.posts` nao possui descricao; o harness envia `description = null`.
+`public.posts` nao possui descricao. Por padrao, o harness envia
+`description = null`. Para testes manuais, um CSV externo de descricoes pode
+ser informado com `--descriptions-csv`; isso adiciona a descricao ao JSON de
+entrada sem alterar `public.posts` nem criar ingestao oficial.
 
 `--stage title_metadata` continua disponivel para diagnostico, calibracao e
 comparacao de sinal fraco, mas nao deve ser tratado como resultado operacional
@@ -75,10 +81,65 @@ Antes de rodar o classificador, aplicar no Supabase:
 4. `sql/ddl/views/023_create_v_video_classification_latest.sql`
 5. `sql/ddl/tests/011_test_video_taxonomy_classification.sql`
 
+## Estrutura SQL
+
+Cada execucao cria uma rodada e grava resultados por video:
+
+```text
+video_taxonomy_versions
+  1:N -> video_classification_runs
+           1:N -> video_classification_results
+                    1:N -> video_classification_technical_contexts
+                    1:N -> video_classification_vehicle_entities
+```
+
+Chaves principais:
+
+- `video_classification_runs.taxonomy_version_id` ->
+  `video_taxonomy_versions.id`
+- `video_classification_results.run_id` ->
+  `video_classification_runs.id`
+- `video_classification_results.post_id` -> `posts.post_id`
+- `video_classification_technical_contexts.classification_result_id` ->
+  `video_classification_results.id`
+- `video_classification_vehicle_entities.classification_result_id` ->
+  `video_classification_results.id`
+- `video_classification_vehicle_entities.catalog_row_id` aponta para o
+  `catalog_row_id` exposto por `v_carrosnaweb_vehicle_catalog`, que vem de
+  `market_carrosnaweb_model_years.id`
+
+Resumo pratico:
+
+- `video_classification_results` guarda a decisao principal do video.
+- `video_classification_technical_contexts` guarda a lista repetivel de
+  sistemas, componentes e problemas.
+- `video_classification_vehicle_entities` guarda os veiculos extraidos e o
+  match canonico Carros na Web quando possivel.
+
 Dry-run por titulo/metadados:
 
 ```bash
 python scripts/video_classification/classify_videos_gpt_v2.py --stage title_metadata --limit 1 --dry-run
+```
+
+Extrair descricoes via YouTube Data API para os 10 videos canonicos do Batch 1:
+
+```bash
+python scripts/video_classification/extract_youtube_descriptions.py \
+  --sample-csv docs/external_data/33_AMOSTRA_PILOTO_10_VIDEOS_V1.csv \
+  --limit 10 \
+  --output tmp/youtube_descriptions_batch1.csv
+```
+
+Classificar por titulo/metadados adicionando a descricao salva no CSV:
+
+```bash
+python scripts/video_classification/classify_videos_gpt_v2.py \
+  --stage title_metadata \
+  --post-id pINW53ErjQI \
+  --descriptions-csv tmp/youtube_descriptions_batch1.csv \
+  --max-output-tokens 9000 \
+  --dry-run
 ```
 
 Confirmar a versao do script copiado para a VPS:
@@ -197,6 +258,19 @@ Plugins, PO Tokens, cookies e configuracoes locais ficam fora do Git.
 O transcript completo pode ser preservado no CSV temporario, mas nao e gravado
 no Supabase. O `input_payload` persistido contem apenas hash, tamanho, duracao e
 proveniencia da transcricao.
+
+Entidades de veiculo:
+
+- o GPT devolve apenas `vehicle_brand_raw`, `vehicle_model_raw`,
+  `vehicle_year`, `vehicle_generation` e evidencia textual
+- o script consulta `v_carrosnaweb_vehicle_catalog` antes de inserir em
+  `video_classification_vehicle_entities`; em `--dry-run`, o JSON impresso
+  tambem inclui os campos resolvidos apos a validacao do schema GPT
+- match unico por marca/modelo/ano grava `entity_status=matched` e
+  `catalog_row_id`
+- match sem ano suficiente para identificar modelo, mas nao ano, grava
+  `needs_review` sem escolher um `catalog_row_id` artificial
+- entidade explicita nao encontrada grava `not_found`
 
 Instalar dependencias:
 
