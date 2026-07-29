@@ -157,9 +157,42 @@ python scripts/video_classification/classify_videos_gpt_v2.py \
   --stage transcript_90s \
   --post-id pINW53ErjQI \
   --yt-dlp-cookies config/youtube_cookies.txt \
+  --yt-dlp-user-agent "<user_agent_do_navegador>" \
+  --yt-dlp-referer "https://www.youtube.com/" \
   --transcripts-output tmp/transcripts_validacao.csv \
   --dry-run
 ```
+
+Quando os cookies vierem de uma chamada `requests` do navegador, passar tambem
+o `user-agent` da mesma chamada ajuda a manter a sessao coerente na VPS.
+
+Teste manual com PO Token Provider plugin do `yt-dlp`:
+
+```bash
+python -m pip install -U yt-dlp bgutil-ytdlp-pot-provider
+```
+
+Se Docker estiver disponivel na VPS:
+
+```bash
+docker run --name bgutil-provider -d -p 127.0.0.1:4416:4416 --init brainicism/bgutil-ytdlp-pot-provider
+```
+
+```bash
+python scripts/video_classification/classify_videos_gpt_v2.py \
+  --stage transcript_90s \
+  --post-id pINW53ErjQI \
+  --yt-dlp-cookies config/youtube_cookies.txt \
+  --yt-dlp-user-agent "<user_agent_do_navegador>" \
+  --yt-dlp-referer "https://www.youtube.com/" \
+  --yt-dlp-extractor-args "youtube:player-client=default,mweb" \
+  --yt-dlp-extractor-args "youtubepot-bgutilhttp:base_url=http://127.0.0.1:4416" \
+  --transcripts-output tmp/transcripts_po_token_test.csv \
+  --dry-run
+```
+
+O script apenas repassa `--plugin-dirs` e `--extractor-args` ao `yt-dlp`.
+Plugins, PO Tokens, cookies e configuracoes locais ficam fora do Git.
 
 O transcript completo pode ser preservado no CSV temporario, mas nao e gravado
 no Supabase. O `input_payload` persistido contem apenas hash, tamanho, duracao e

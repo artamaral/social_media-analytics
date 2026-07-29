@@ -21,7 +21,7 @@ TAXONOMY_VERSION = "taxonomia_video_v2"
 PROMPT_CONTRACT_VERSION = "video_taxonomy_v2_classifier_r2"
 OUTPUT_SCHEMA_VERSION = "video_taxonomy_v2_output_schema_r2"
 # Marcador operacional para confirmar se a copia local/VPS esta atualizada.
-SCRIPT_VERSION = "2026-07-24-r8-yt-dlp-cookies"
+SCRIPT_VERSION = "2026-07-29-r10-yt-dlp-po-token"
 DEFAULT_TITLE_MODEL = "gpt-5-nano"
 DEFAULT_TRANSCRIPT_MODEL = "gpt-5-nano"
 DEFAULT_MAX_OUTPUT_TOKENS = 6000
@@ -773,6 +773,10 @@ def download_audio_segment(
     output_path,
     ffmpeg_path,
     cookies_path=None,
+    user_agent=None,
+    referer=None,
+    extractor_args=None,
+    plugin_dirs=None,
     use_section=True,
 ):
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -797,13 +801,23 @@ def download_audio_segment(
         f"{output_template}.%(ext)s",
         video_url,
     ]
+    extra_options = []
+    for plugin_dir in plugin_dirs or []:
+        extra_options.extend(["--plugin-dirs", str(plugin_dir)])
+    for extractor_arg in extractor_args or []:
+        extra_options.extend(["--extractor-args", extractor_arg])
     if cookies_path:
-        command[6:6] = ["--cookies", str(cookies_path)]
+        extra_options.extend(["--cookies", str(cookies_path)])
+    if user_agent:
+        extra_options.extend(["--user-agent", user_agent])
+    if referer:
+        extra_options.extend(["--referer", referer])
     if use_section:
-        command[6:6] = [
+        extra_options.extend([
             "--download-sections",
             f"*00:00:00-{seconds_to_timestamp(duration_seconds)}",
-        ]
+        ])
+    command[-1:-1] = extra_options
     result = run_subprocess(command, timeout=300)
     if result.returncode != 0:
         detail = (result.stderr or result.stdout).strip()
@@ -835,6 +849,10 @@ def transcribe_post_local(post, runtime, args):
                 audio_path,
                 runtime["ffmpeg_path"],
                 args.yt_dlp_cookies,
+                args.yt_dlp_user_agent,
+                args.yt_dlp_referer,
+                args.yt_dlp_extractor_args,
+                args.yt_dlp_plugin_dir,
             )
         except RuntimeError:
             if not post_duration or post_duration > args.transcript_seconds:
@@ -845,6 +863,10 @@ def transcribe_post_local(post, runtime, args):
                 audio_path,
                 runtime["ffmpeg_path"],
                 args.yt_dlp_cookies,
+                args.yt_dlp_user_agent,
+                args.yt_dlp_referer,
+                args.yt_dlp_extractor_args,
+                args.yt_dlp_plugin_dir,
                 use_section=False,
             )
         segments, _info = runtime["model"].transcribe(
@@ -1466,6 +1488,10 @@ def parse_args():
     parser.add_argument("--transcript-seconds", type=int, default=90)
     parser.add_argument("--audio-workdir", type=Path, default=DEFAULT_AUDIO_WORKDIR)
     parser.add_argument("--yt-dlp-cookies", type=Path)
+    parser.add_argument("--yt-dlp-user-agent")
+    parser.add_argument("--yt-dlp-referer")
+    parser.add_argument("--yt-dlp-extractor-args", action="append", default=[])
+    parser.add_argument("--yt-dlp-plugin-dir", action="append", type=Path, default=[])
     parser.add_argument("--max-output-tokens", type=int, default=DEFAULT_MAX_OUTPUT_TOKENS)
     parser.add_argument("--sleep-seconds", type=float, default=0.5)
     parser.add_argument("--include-already-classified", action="store_true")
@@ -1497,6 +1523,13 @@ def parse_args():
 
     if args.yt_dlp_cookies and not args.yt_dlp_cookies.exists():
         parser.error("--yt-dlp-cookies aponta para arquivo inexistente")
+
+    missing_plugin_dirs = [path for path in args.yt_dlp_plugin_dir if not path.exists()]
+    if missing_plugin_dirs:
+        parser.error(
+            "--yt-dlp-plugin-dir aponta para caminho inexistente: "
+            + ", ".join(str(path) for path in missing_plugin_dirs)
+        )
 
     return args
 

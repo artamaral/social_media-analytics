@@ -122,6 +122,7 @@ considerada incompleta.
 - [58_GPT_VIDEO_CLASSIFIER_SKILL_V2.md](/C:/social_media-analytics/docs/external_data/58_GPT_VIDEO_CLASSIFIER_SKILL_V2.md)
 - [58_GPT_VIDEO_CLASSIFIER_OUTPUT_SCHEMA_V2.json](/C:/social_media-analytics/docs/external_data/58_GPT_VIDEO_CLASSIFIER_OUTPUT_SCHEMA_V2.json)
 - [59_VPS_CRON_CLASSIFICADOR_GPT_V2_RUNBOOK.md](/C:/social_media-analytics/docs/external_data/59_VPS_CRON_CLASSIFICADOR_GPT_V2_RUNBOOK.md)
+- [60_PO_TOKEN_YTDLP_TRANSCRICAO_VPS_R1.md](/C:/social_media-analytics/docs/external_data/60_PO_TOKEN_YTDLP_TRANSCRICAO_VPS_R1.md)
 
 SQL operacional relacionado:
 

@@ -4014,6 +4014,24 @@ Resultado:
   duracao e proveniencia, mas nao o transcript completo
 - cron continua suspenso ate a validacao manual do Batch 1
 
+#### PO Token para aquisicao de audio na VPS
+
+Status: em teste manual em 2026-07-29.
+
+Resultado:
+
+- a classificacao por `transcript_90s` com CSV ja foi validada no Supabase
+- a aquisicao direta de audio na VPS via `yt-dlp` continuou falhando com
+  bloqueio de bot/sign-in mesmo com cookies e user-agent
+- o classificador passou a aceitar flags genericas para PO Token Provider
+  plugin do `yt-dlp`:
+  - `--yt-dlp-plugin-dir`
+  - `--yt-dlp-extractor-args`
+- o teste com PO Token fica limitado a execucao manual, sem cron
+- cookies, tokens, plugins e configuracoes locais permanecem fora do Git
+- `--transcripts-csv` continua sendo o fallback validado para testar o
+  classificador quando a aquisicao de audio falhar
+
 ### Criterio de saida do planejamento
 
 O inicio do planejamento do Sprint 6 so deve ser considerado concluido quando

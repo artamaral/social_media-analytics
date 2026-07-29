@@ -291,6 +291,8 @@ python3 bin/classify_videos_gpt_v2.py \
   --stage transcript_90s \
   --post-id <post_id> \
   --yt-dlp-cookies /opt/social-media-analytics/config/youtube_cookies.txt \
+  --yt-dlp-user-agent "<user_agent_do_navegador>" \
+  --yt-dlp-referer "https://www.youtube.com/" \
   --transcripts-output /opt/social-media-analytics/tmp/transcripts_validacao.csv \
   --dry-run
 ```
@@ -298,6 +300,56 @@ python3 bin/classify_videos_gpt_v2.py \
 O arquivo `/opt/social-media-analytics/config/youtube_cookies.txt` e secreto
 operacional. Ele nao deve ser commitado nem copiado para `docs/`, `tmp/` ou
 logs.
+
+Quando os cookies forem extraidos de uma chamada `requests` do navegador, usar
+tambem o `user-agent` da mesma chamada. Sem isso, a sessao pode funcionar na
+maquina local e ainda assim ser recusada na VPS por diferenca de ambiente.
+
+Se mesmo com cookies e headers o YouTube continuar exigindo validacao de bot,
+o proximo teste manual controlado e usar PO Token Provider plugin do `yt-dlp`.
+O script aceita as flags genericas:
+
+```bash
+--yt-dlp-plugin-dir /opt/social-media-analytics/config/yt_dlp_plugins
+--yt-dlp-extractor-args "youtube:player-client=default,mweb"
+```
+
+Primeira tentativa recomendada:
+
+```bash
+cd /opt/social-media-analytics
+source .venv/bin/activate
+python -m pip install -U yt-dlp bgutil-ytdlp-pot-provider
+```
+
+Se Docker estiver disponivel, subir o provider HTTP local:
+
+```bash
+docker run --name bgutil-provider -d -p 127.0.0.1:4416:4416 --init brainicism/bgutil-ytdlp-pot-provider
+```
+
+Exemplo:
+
+```bash
+UA="$(cat /opt/social-media-analytics/config/youtube_user_agent.txt)"
+
+python3 bin/classify_videos_gpt_v2.py \
+  --stage transcript_90s \
+  --post-id <post_id> \
+  --yt-dlp-cookies /opt/social-media-analytics/config/youtube_cookies.txt \
+  --yt-dlp-user-agent "$UA" \
+  --yt-dlp-referer "https://www.youtube.com/" \
+  --yt-dlp-extractor-args "youtube:player-client=default,mweb" \
+  --yt-dlp-extractor-args "youtubepot-bgutilhttp:base_url=http://127.0.0.1:4416" \
+  --transcripts-output /opt/social-media-analytics/tmp/transcripts_po_token_test.csv \
+  --dry-run
+```
+
+Tokens, cookies e diretorios de plugin em `config/` sao segredo/configuracao
+operacional da VPS e nao devem ser versionados.
+
+Usar `--yt-dlp-plugin-dir` apenas se o plugin for instalado manualmente fora do
+venv.
 
 Esse estagio deve receber titulo, metadados e transcricao no mesmo input. A
 execucao por `title_metadata` fica reservada para diagnostico, calibracao,

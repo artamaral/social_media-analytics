@@ -2495,3 +2495,39 @@ Referencia:
 
 - `docs/external_data/58_GPT_VIDEO_CLASSIFIER_HARNESS_CONTRACT_V2.md`
 - `docs/external_data/58_GPT_VIDEO_CLASSIFIER_SKILL_V2.md`
+
+---
+
+## PO Token para aquisicao de audio na VPS
+
+Data:
+
+- 2026-07-29
+
+Decisao:
+
+- testar PO Token Provider plugin do `yt-dlp` apenas em execucao manual na VPS
+- expor no classificador flags genericas para repassar ao `yt-dlp`:
+  - `--yt-dlp-plugin-dir`
+  - `--yt-dlp-extractor-args`
+- manter cookies, tokens, user-agent e plugins instalados localmente fora do Git
+- manter `--transcripts-csv` como fallback validado para classificacao quando a
+  aquisicao de audio falhar
+- nao ativar cron enquanto a aquisicao de audio por PO Token nao for validada
+  em lote pequeno
+- nao adotar Tor, proxy residencial ou conta Google descartavel como padrao
+  operacional nesta fase
+
+Motivo:
+
+- a VPS foi recusada pelo YouTube com `Sign in to confirm you're not a bot`
+  mesmo usando cookies e user-agent aceitos localmente
+- a documentacao atual do `yt-dlp` indica exigencia crescente de PO Tokens em
+  alguns clients, formatos e subtitles
+- a falha esta na aquisicao de audio, nao no contrato do classificador GPT, que
+  ja foi validado com CSV de transcript
+
+Referencia:
+
+- `docs/external_data/60_PO_TOKEN_YTDLP_TRANSCRICAO_VPS_R1.md`
+- `docs/external_data/59_VPS_CRON_CLASSIFICADOR_GPT_V2_RUNBOOK.md`

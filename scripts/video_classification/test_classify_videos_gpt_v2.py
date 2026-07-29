@@ -3,6 +3,7 @@ import json
 import unittest
 import uuid
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 
@@ -93,6 +94,37 @@ class ClassifierContractTests(unittest.TestCase):
         self.assertEqual(CLASSIFIER.target_transcription_duration(42, 90), 42)
         self.assertEqual(CLASSIFIER.target_transcription_duration(600, 90), 90)
         self.assertEqual(CLASSIFIER.target_transcription_duration(None, 90), 90)
+
+    def test_download_audio_segment_passes_po_token_options_to_ytdlp(self):
+        temp_dir = SCRIPT_PATH.parents[2] / "tmp" / "video_classification_tests"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        plugin_dir = temp_dir / "yt_dlp_plugins"
+        plugin_dir.mkdir(exist_ok=True)
+        output_path = temp_dir / f"audio_{uuid.uuid4().hex}.wav"
+        output_path.write_bytes(b"placeholder")
+        try:
+            with patch.object(
+                CLASSIFIER,
+                "run_subprocess",
+                return_value=SimpleNamespace(returncode=0, stderr="", stdout=""),
+            ) as run_subprocess:
+                CLASSIFIER.download_audio_segment(
+                    "video1",
+                    90,
+                    output_path,
+                    "ffmpeg",
+                    extractor_args=["youtube:player-client=default,mweb"],
+                    plugin_dirs=[plugin_dir],
+                )
+
+            command = run_subprocess.call_args.args[0]
+            self.assertIn("--extractor-args", command)
+            self.assertIn("youtube:player-client=default,mweb", command)
+            self.assertIn("--plugin-dirs", command)
+            self.assertIn(str(plugin_dir), command)
+        finally:
+            if output_path.exists():
+                output_path.unlink()
 
     def test_write_persists_quality_and_redacts_transcript(self):
         result = {
