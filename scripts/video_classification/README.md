@@ -173,6 +173,12 @@ python3 -m pip install -r scripts/video_classification/requirements.txt
 
 ## Deploy minimo na VPS
 
+Conexao local esperada via alias SSH:
+
+```powershell
+ssh hostinger-vps
+```
+
 Copiar o script para:
 
 ```text
@@ -185,6 +191,27 @@ Criar configuracao fora do Git:
 /opt/social-media-analytics/config/classifier.env
 /opt/social-media-analytics/config/youtube_cookies.txt
 ```
+
+Estrutura minima na VPS:
+
+```bash
+mkdir -p /opt/social-media-analytics/bin
+mkdir -p /opt/social-media-analytics/config
+mkdir -p /opt/social-media-analytics/logs
+mkdir -p /opt/social-media-analytics/tmp
+mkdir -p /opt/social-media-analytics/scripts/video_classification
+chmod 700 /opt/social-media-analytics/config
+```
+
+Copiar arquivos pelo PowerShell local:
+
+```powershell
+scp C:\social_media-analytics\scripts\video_classification\classify_videos_gpt_v2.py hostinger-vps:/opt/social-media-analytics/bin/classify_videos_gpt_v2.py
+scp C:\social_media-analytics\scripts\video_classification\requirements.txt hostinger-vps:/opt/social-media-analytics/scripts/video_classification/requirements.txt
+scp C:\social_media-analytics\tmp\youtube_cookies_from_paste.txt hostinger-vps:/opt/social-media-analytics/config/youtube_cookies.txt
+```
+
+O arquivo de cookies e segredo operacional e nao deve ser commitado.
 
 Executar manualmente antes de ativar cron.
 

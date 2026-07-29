@@ -52,7 +52,7 @@ Quando a rotina amadurecer, a decisao pode ser reaberta para:
 
 O acesso deve usar `Remote - SSH` no VS Code.
 
-Configuracao local esperada no arquivo SSH do usuario:
+Configuracao local esperada no arquivo SSH do usuario, sem versionar o arquivo:
 
 ```sshconfig
 Host hostinger-vps
@@ -68,6 +68,36 @@ Regras:
 - nao versionar IP publico, usuario real, senha ou chave privada
 - preferir chave SSH a senha
 - manter `known_hosts` local fora do repositorio
+- usar o alias local `hostinger-vps` nos comandos operacionais, para evitar
+  repetir IP, usuario e caminho da chave em chat, shell history e docs
+
+Comandos locais de conexao:
+
+```powershell
+ssh hostinger-vps
+```
+
+Se precisar diagnosticar conexao:
+
+```powershell
+ssh -vvv hostinger-vps
+```
+
+Para copiar a versao atual do classificador:
+
+```powershell
+scp C:\social_media-analytics\scripts\video_classification\classify_videos_gpt_v2.py hostinger-vps:/opt/social-media-analytics/bin/classify_videos_gpt_v2.py
+```
+
+Para copiar o arquivo de cookies operacional quando existir:
+
+```powershell
+scp C:\social_media-analytics\tmp\youtube_cookies_from_paste.txt hostinger-vps:/opt/social-media-analytics/config/youtube_cookies.txt
+```
+
+O arquivo de cookies e segredo operacional. Ele deve ficar apenas em
+`/opt/social-media-analytics/config/youtube_cookies.txt` na VPS, com permissao
+restrita, e nao deve ser enviado para Git.
 
 ## Estrutura prevista no servidor
 
@@ -85,6 +115,8 @@ Estrutura recomendada:
   config/
   logs/
   tmp/
+  scripts/
+    video_classification/
 ```
 
 Uso esperado:
@@ -93,6 +125,8 @@ Uso esperado:
 - `config/`: arquivos `.env` ou configuracoes locais nao versionadas
 - `logs/`: logs do cron e execucoes
 - `tmp/`: arquivos temporarios de audio/transcricao quando necessario
+- `scripts/video_classification/`: arquivos auxiliares versionados, como
+  `requirements.txt`
 
 Script inicial:
 
@@ -105,7 +139,18 @@ Destino recomendado na VPS:
 
 ```text
 /opt/social-media-analytics/bin/classify_videos_gpt_v2.py
-/opt/social-media-analytics/bin/requirements.txt
+/opt/social-media-analytics/scripts/video_classification/requirements.txt
+```
+
+Criacao da estrutura minima na VPS:
+
+```bash
+mkdir -p /opt/social-media-analytics/bin
+mkdir -p /opt/social-media-analytics/config
+mkdir -p /opt/social-media-analytics/logs
+mkdir -p /opt/social-media-analytics/tmp
+mkdir -p /opt/social-media-analytics/scripts/video_classification
+chmod 700 /opt/social-media-analytics/config
 ```
 
 ## Preparacao do Supabase
@@ -165,11 +210,12 @@ Antes do cron, rodar manualmente em lote pequeno:
 
 ```bash
 cd /opt/social-media-analytics
+source .venv/bin/activate
 python3 bin/classify_videos_gpt_v2.py --version
 python3 bin/classify_videos_gpt_v2.py --stage title_metadata --limit 1 --dry-run
 ```
 
-Se a versao exibida nao for `2026-07-24-r7-faster-whisper-quality`, a VPS ainda esta
+Se a versao exibida nao for `2026-07-24-r8-yt-dlp-cookies`, a VPS ainda esta
 com uma copia antiga do script. Copiar novamente o arquivo versionado para
 `/opt/social-media-analytics/bin/classify_videos_gpt_v2.py`.
 
@@ -217,7 +263,7 @@ python3 bin/classify_videos_gpt_v2.py --stage title_metadata --limit 1 --write
 Instalar as dependencias versionadas antes da primeira transcricao:
 
 ```bash
-python3 -m pip install -r /opt/social-media-analytics/bin/requirements.txt
+python3 -m pip install -r /opt/social-media-analytics/scripts/video_classification/requirements.txt
 ```
 
 Sem `--transcripts-csv`, `transcript_90s` baixa o audio, limita o trecho aos
