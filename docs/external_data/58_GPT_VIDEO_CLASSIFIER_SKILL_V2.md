@@ -69,20 +69,24 @@ Uso operacional recomendado:
 1. Verifique se o video esta dentro do escopo automotivo de carros.
 2. Escolha o `automotive_domain` principal.
 3. Escolha o `activity_type` de acordo com a abordagem dominante.
-4. Escolha o `topic_path` mais especifico que tenha evidencia.
-5. Use `topic_path_secondary` somente se houver segundo tema forte e explicito.
-6. Classifique `content_type` como formato editorial.
-7. Classifique `audience_intent` como intencao provavel sustentada pela
+4. Escolha o `topic_path` pela proposta principal do video, nao pelo primeiro
+   detalhe tecnico forte que aparecer na transcricao.
+5. Preencha `technical_contexts[]` com sistemas, componentes, atributos,
+   problemas e evidencias tecnicas explicitamente citados.
+6. Use `topic_path_secondary` somente se houver segundo tema editorial forte e
+   explicito.
+7. Classifique `content_type` como formato editorial.
+8. Classifique `audience_intent` como intencao provavel sustentada pela
    evidencia.
-8. Extraia entidades de veiculo somente quando explicitas.
+9. Extraia entidades de veiculo somente quando explicitas.
    - Se marca/modelo e ano-modelo aparecerem no titulo, descricao ou
      transcricao, preencha `vehicle_year`; nao deixe o ano nulo.
    - Exemplos: `Uni-T 2026`, `BYD Dolphin 2025`, `Kwid 2021`.
    - Preserve apenas o valor bruto observado; a normalizacao Carros na Web e
      feita por script depois da resposta.
-9. Preencha `technical_contexts[]` somente quando sistema, componente ou
+10. Preencha `technical_contexts[]` somente quando sistema, componente ou
    problema estiverem explicitamente citados.
-10. Registre lacunas sem criar codigo canonico novo.
+11. Registre lacunas sem criar codigo canonico novo.
 
 ## Regra de decisao para escopo e match
 
@@ -118,6 +122,18 @@ Antes de escolher um `topic_path` tematico, aplique esta ordem:
 - `eletrico`, `hibrido`, `flex` e `diesel` pertencem a `powertrain`.
 - `bateria_12v` pertence a `eletrica_eletronica`.
 - `bateria_tracao` pertence a `powertrain`.
+- Em videos de `review_teste` ou `mercado_produto`, motor, cambio, bateria,
+  autonomia, turbo, flex ou eletrico nao devem virar `topic_path` principal
+  quando forem apenas atributo do veiculo, argumento de compra ou detalhe citado
+  no review. Nesses casos, use `technical_contexts[]` e, se o segundo tema for
+  forte, `topic_path_secondary`.
+- `powertrain` so deve ser `topic_path` principal quando o video for
+  explicitamente sobre motorizacao, autonomia, recarga, consumo, cambio ou
+  tecnologia de propulsao. Nao use `powertrain` como principal apenas porque o
+  veiculo citado e eletrico, flex, turbo ou hibrido.
+- Em teste de autonomia com formato de avaliacao/teste, prefira
+  `review_teste__teste_autonomia` como principal e registre
+  `powertrain__eletrico__autonomia` como secundario/contexto quando aplicavel.
 - `barulho` e sinal textual; o problema canonico e `ruido`.
 - Em review ou mercado, preencha problema tecnico apenas quando houver defeito
   ou sintoma explicito.
@@ -238,7 +254,27 @@ Antes de finalizar, confirme:
 - o `topic_path` existe na lista recebida;
 - `topic_path_secondary`, se usado, existe na lista recebida;
 - nenhum campo tecnico contem multiplos valores concatenados;
+- se o video for review/mercado, nenhum detalhe de `powertrain` substituiu o
+  tema principal sem evidencia de que o video e sobre powertrain;
 - cada contexto tecnico tem evidencia textual;
 - todo termo fora da taxonomia foi para `taxonomy_gaps`;
 - qualquer incoerencia foi registrada em `validation_issues`;
 - a resposta e imputavel diretamente no banco.
+
+## Exemplos de decisao do Batch 1
+
+- `aXbFPJMVGKw`: se o input mostra avaliacao do `Changan Uni-T 2026` e cita
+  `motor 1.5 turbo`, use `review_teste__review_veiculo` como principal.
+  `powertrain__combustao__turbo` entra como contexto tecnico ou secundario se
+  houver segundo tema forte.
+- `CjFrJg6VCjc`: se o video testa autonomia de um eletrico, prefira
+  `review_teste__teste_autonomia` como principal; `powertrain__eletrico__autonomia`
+  pode ser secundario/contexto.
+- `z55GnDEg7_U`: se a transcricao mostra desmontagem, diagnostico e reparo de
+  motor, use `manutencao_reparo__reparo_corretivo__reparo_motor`, mesmo que o
+  titulo pareca apenas preco.
+- `RTZHxSE2t5M`: se a transcricao mostra gargalo de oficinas, pecas e
+  reparacao, use `pos_venda_reparacao` como principal.
+- `6qSnrkGd70I`: se a evidencia fala de radiador, aditivo, agua
+  desmineralizada, drenagem ou limpa-radiador, mantenha a especificidade
+  `manutencao_reparo__manutencao_preventiva__arrefecimento`.

@@ -23,7 +23,7 @@ TAXONOMY_VERSION = "taxonomia_video_v2"
 PROMPT_CONTRACT_VERSION = "video_taxonomy_v2_classifier_r2"
 OUTPUT_SCHEMA_VERSION = "video_taxonomy_v2_output_schema_r2"
 # Marcador operacional para confirmar se a copia local/VPS esta atualizada.
-SCRIPT_VERSION = "2026-07-29-r13-script-vehicle-entity-match"
+SCRIPT_VERSION = "2026-07-30-r18-topic-context-vehicle-guards"
 DEFAULT_TITLE_MODEL = "gpt-5-nano"
 DEFAULT_TRANSCRIPT_MODEL = "gpt-5-nano"
 DEFAULT_MAX_OUTPUT_TOKENS = 6000
@@ -31,6 +31,8 @@ OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
 DEFAULT_AUDIO_WORKDIR = Path("/opt/social-media-analytics/tmp/audio")
 if os.name == "nt":
     DEFAULT_AUDIO_WORKDIR = REPO_DIR / "tmp" / "video_classification_audio"
+
+CONDITIONAL_MODEL_KEYS = {"100", "bora", "link", "tipo"}
 
 TRANSCRIPT_QUALITY_ISSUES = [
     "too_short",
@@ -89,7 +91,15 @@ Regras obrigatorias:
   esses termos aparecerem no input.
 - Videos fora do escopo automotivo nao devem receber contexto tecnico primary.
 - topic_path e topic_path_secondary devem existir na lista recebida.
+- topic_path representa a proposta principal do video, nao o primeiro detalhe
+  tecnico citado na transcricao.
 - topic_path_secondary so entra com segundo tema forte e explicito.
+- Em review_teste ou mercado_produto, motor, cambio, bateria, autonomia,
+  turbo, flex ou eletrico devem ir para technical_contexts[] ou
+  topic_path_secondary quando forem atributos do veiculo, nao topic_path
+  principal.
+- powertrain so e topic_path principal quando o video for explicitamente sobre
+  motorizacao, autonomia, recarga, consumo, cambio ou tecnologia de propulsao.
 - technical_contexts[] so entra com evidencia explicita.
 - Cada technical_context representa uma unica combinacao de sistema, componente e problema.
 - Se houver apenas dominio/topico generico, nao crie technical_context.
@@ -119,6 +129,27 @@ Regras obrigatorias:
   needs_human_review=true e confidence_score <= 0.49.
 - Transcript poor ou empty exige needs_retranscription=true.
 - Contradicao entre titulo e transcript deve usar impact_on_classification=high.
+
+Ordem para transcript_90s:
+1. identifique se e fora_escopo;
+2. identifique a intencao central do video;
+3. escolha topic_path pela intencao central;
+4. coloque termos tecnicos explicitos em technical_contexts[];
+5. use topic_path_secondary so para segundo tema editorial forte.
+
+Exemplos do Batch 1:
+- aXbFPJMVGKw: avaliacao Changan Uni-T 2026 com motor 1.5 turbo deve manter
+  review_teste__review_veiculo como principal; powertrain__combustao__turbo
+  entra como contexto tecnico ou secundario.
+- CjFrJg6VCjc: teste de autonomia deve preferir
+  review_teste__teste_autonomia como principal; powertrain__eletrico__autonomia
+  pode ser secundario/contexto.
+- z55GnDEg7_U: se a transcricao mostra desmontagem, diagnostico e reparo de
+  motor, use manutencao_reparo__reparo_corretivo__reparo_motor.
+- RTZHxSE2t5M: gargalo de oficinas, pecas e reparacao deve usar
+  pos_venda_reparacao como principal.
+- 6qSnrkGd70I: radiador, aditivo, agua desmineralizada, drenagem ou
+  limpa-radiador devem manter manutencao_reparo__manutencao_preventiva__arrefecimento.
 
 Responda somente com JSON valido no schema video_taxonomy_v2_output_schema_r2.
 """
@@ -515,6 +546,53 @@ def contains_catalog_phrase(normalized_text, normalized_phrase):
     return f" {normalized_phrase} " in f" {normalized_text} "
 
 
+def has_nearby_catalog_phrase(normalized_text, normalized_phrase, normalized_anchor, window=8):
+    if not (
+        normalized_text
+        and normalized_phrase
+        and normalized_anchor
+        and contains_catalog_phrase(normalized_text, normalized_phrase)
+        and contains_catalog_phrase(normalized_text, normalized_anchor)
+    ):
+        return False
+
+    tokens = normalized_text.split()
+    phrase_tokens = normalized_phrase.split()
+    anchor_tokens = normalized_anchor.split()
+    if not phrase_tokens or not anchor_tokens:
+        return False
+
+    def positions(needle):
+        size = len(needle)
+        return [
+            index
+            for index in range(0, len(tokens) - size + 1)
+            if tokens[index:index + size] == needle
+        ]
+
+    phrase_positions = positions(phrase_tokens)
+    anchor_positions = positions(anchor_tokens)
+    return any(
+        abs(phrase_position - anchor_position) <= window
+        for phrase_position in phrase_positions
+        for anchor_position in anchor_positions
+    )
+
+
+def model_key_requires_explicit_manufacturer(model_key):
+    return model_key in CONDITIONAL_MODEL_KEYS
+
+
+def has_strong_vehicle_context_for_model(normalized_text, model_key, rows):
+    if not model_key_requires_explicit_manufacturer(model_key):
+        return True
+
+    return any(
+        has_nearby_catalog_phrase(normalized_text, model_key, row.get("manufacturer_key"))
+        for row in rows
+    )
+
+
 def evidence_snippet(source_text, normalized_phrase, max_chars=180):
     if not source_text:
         return ""
@@ -857,6 +935,23 @@ def run_subprocess(command, timeout):
     )
 
 
+def ytdlp_common_options(cookies_path=None, user_agent=None, referer=None, extractor_args=None, plugin_dirs=None, proxy=None):
+    options = []
+    for plugin_dir in plugin_dirs or []:
+        options.extend(["--plugin-dirs", str(plugin_dir)])
+    for extractor_arg in extractor_args or []:
+        options.extend(["--extractor-args", extractor_arg])
+    if cookies_path:
+        options.extend(["--cookies", str(cookies_path)])
+    if user_agent:
+        options.extend(["--user-agent", user_agent])
+    if referer:
+        options.extend(["--referer", referer])
+    if proxy:
+        options.extend(["--proxy", proxy])
+    return options
+
+
 def download_audio_segment(
     post_id,
     duration_seconds,
@@ -867,6 +962,7 @@ def download_audio_segment(
     referer=None,
     extractor_args=None,
     plugin_dirs=None,
+    proxy=None,
     use_section=True,
 ):
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -891,17 +987,14 @@ def download_audio_segment(
         f"{output_template}.%(ext)s",
         video_url,
     ]
-    extra_options = []
-    for plugin_dir in plugin_dirs or []:
-        extra_options.extend(["--plugin-dirs", str(plugin_dir)])
-    for extractor_arg in extractor_args or []:
-        extra_options.extend(["--extractor-args", extractor_arg])
-    if cookies_path:
-        extra_options.extend(["--cookies", str(cookies_path)])
-    if user_agent:
-        extra_options.extend(["--user-agent", user_agent])
-    if referer:
-        extra_options.extend(["--referer", referer])
+    extra_options = ytdlp_common_options(
+        cookies_path,
+        user_agent,
+        referer,
+        extractor_args,
+        plugin_dirs,
+        proxy,
+    )
     if use_section:
         extra_options.extend([
             "--download-sections",
@@ -922,6 +1015,111 @@ def download_audio_segment(
     candidates[0].replace(output_path)
 
 
+def download_audio_source(
+    post_id,
+    output_stem,
+    cookies_path=None,
+    user_agent=None,
+    referer=None,
+    extractor_args=None,
+    plugin_dirs=None,
+    proxy=None,
+):
+    video_url = f"https://www.youtube.com/watch?v={post_id}"
+    command = [
+        sys.executable,
+        "-m",
+        "yt_dlp",
+        "--quiet",
+        "--no-warnings",
+        "--no-playlist",
+        "-f",
+        "139/140/18/best[height<=360][ext=mp4]/bestaudio[ext=m4a]/bestaudio/best",
+        "--force-overwrites",
+        "-o",
+        f"{output_stem}.%(ext)s",
+        video_url,
+    ]
+    command[-1:-1] = ytdlp_common_options(
+        cookies_path,
+        user_agent,
+        referer,
+        extractor_args,
+        plugin_dirs,
+        proxy,
+    )
+    result = run_subprocess(command, timeout=300)
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout).strip()
+        raise RuntimeError(detail[:1200] if detail else "yt-dlp source download falhou sem detalhe")
+
+    candidates = sorted(output_stem.parent.glob(f"{output_stem.name}.*"))
+    if not candidates:
+        raise RuntimeError("arquivo fonte de audio/video nao foi encontrado")
+    return candidates[0]
+
+
+def convert_audio_source_to_wav(source_path, output_path, ffmpeg_path, duration_seconds):
+    command = [
+        ffmpeg_path,
+        "-y",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-ss",
+        "0",
+        "-t",
+        str(duration_seconds),
+        "-i",
+        str(source_path),
+        "-vn",
+        "-ac",
+        "1",
+        "-ar",
+        "16000",
+        str(output_path),
+    ]
+    result = run_subprocess(command, timeout=180)
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout).strip()
+        raise RuntimeError(detail[:1200] if detail else "ffmpeg fallback falhou sem detalhe")
+    if not output_path.exists():
+        raise RuntimeError("audio wav do fallback nao foi encontrado")
+
+
+def download_audio_segment_stable(
+    post_id,
+    duration_seconds,
+    output_path,
+    ffmpeg_path,
+    cookies_path=None,
+    user_agent=None,
+    referer=None,
+    extractor_args=None,
+    plugin_dirs=None,
+    proxy=None,
+):
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    source_stem = output_path.parent / f"{output_path.stem}_source"
+    source_path = None
+    try:
+        source_path = download_audio_source(
+            post_id,
+            source_stem,
+            cookies_path,
+            user_agent,
+            referer,
+            extractor_args,
+            plugin_dirs,
+            proxy,
+        )
+        convert_audio_source_to_wav(source_path, output_path, ffmpeg_path, duration_seconds)
+    finally:
+        for candidate in output_path.parent.glob(f"{source_stem.name}.*"):
+            if candidate.exists():
+                candidate.unlink()
+
+
 def transcribe_post_local(post, runtime, args):
     post_id = post["post_id"]
     post_duration = to_optional_int(post.get("duration"))
@@ -931,6 +1129,7 @@ def transcribe_post_local(post, runtime, args):
     )
 
     audio_path = args.audio_workdir / f"{post_id}_{target_duration}s.wav"
+    source_method = "yt-dlp+faster-whisper-local"
     try:
         try:
             download_audio_segment(
@@ -943,22 +1142,28 @@ def transcribe_post_local(post, runtime, args):
                 args.yt_dlp_referer,
                 args.yt_dlp_extractor_args,
                 args.yt_dlp_plugin_dir,
+                args.yt_dlp_proxy,
             )
-        except RuntimeError:
-            if not post_duration or post_duration > args.transcript_seconds:
-                raise
-            download_audio_segment(
-                post_id,
-                target_duration,
-                audio_path,
-                runtime["ffmpeg_path"],
-                args.yt_dlp_cookies,
-                args.yt_dlp_user_agent,
-                args.yt_dlp_referer,
-                args.yt_dlp_extractor_args,
-                args.yt_dlp_plugin_dir,
-                use_section=False,
-            )
+        except RuntimeError as first_error:
+            try:
+                download_audio_segment_stable(
+                    post_id,
+                    target_duration,
+                    audio_path,
+                    runtime["ffmpeg_path"],
+                    args.yt_dlp_cookies,
+                    args.yt_dlp_user_agent,
+                    args.yt_dlp_referer,
+                    args.yt_dlp_extractor_args,
+                    args.yt_dlp_plugin_dir,
+                    args.yt_dlp_proxy,
+                )
+                source_method = "yt-dlp-source+ffmpeg-segment+faster-whisper-local"
+            except RuntimeError as fallback_error:
+                raise RuntimeError(
+                    "falha no download/conversao de audio; "
+                    f"tentativa_yt_dlp={first_error}; fallback_estavel={fallback_error}"
+                ) from fallback_error
         segments, _info = runtime["model"].transcribe(
             str(audio_path),
             language=args.whisper_language,
@@ -970,7 +1175,7 @@ def transcribe_post_local(post, runtime, args):
         transcript = " ".join(transcript.split())
         metadata = build_transcription_metadata(
             transcript,
-            source_method="yt-dlp+faster-whisper-local",
+            source_method=source_method,
             model=args.whisper_model,
             compute_type=args.whisper_compute_type,
             language=args.whisper_language,
@@ -1706,8 +1911,11 @@ def select_script_vehicle_candidates(harness_input, vehicle_catalog):
         if any(contains_catalog_phrase(previous, model_key) for previous in selected_model_keys):
             continue
 
-        rows = indexes["by_model"][model_key]
         source_name, source_text, normalized_text = source_match
+        rows = indexes["by_model"][model_key]
+        if not has_strong_vehicle_context_for_model(normalized_text, model_key, rows):
+            continue
+
         manufacturer_key = None
         for candidate in rows:
             if contains_catalog_phrase(normalized_text, candidate["manufacturer_key"]):
@@ -2008,6 +2216,7 @@ def parse_args():
     parser.add_argument("--yt-dlp-referer")
     parser.add_argument("--yt-dlp-extractor-args", action="append", default=[])
     parser.add_argument("--yt-dlp-plugin-dir", action="append", type=Path, default=[])
+    parser.add_argument("--yt-dlp-proxy")
     parser.add_argument("--max-output-tokens", type=int, default=DEFAULT_MAX_OUTPUT_TOKENS)
     parser.add_argument("--sleep-seconds", type=float, default=0.5)
     parser.add_argument("--include-already-classified", action="store_true")

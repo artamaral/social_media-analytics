@@ -244,6 +244,21 @@ Se Docker estiver disponivel na VPS:
 docker run --name bgutil-provider -d -p 127.0.0.1:4416:4416 --init brainicism/bgutil-ytdlp-pot-provider
 ```
 
+Para IP de datacenter bloqueado pelo YouTube, usar WARP apenas isolado em
+container, expondo SOCKS5 local para o `yt-dlp`:
+
+```bash
+docker run -d \
+  --name warproxy-test \
+  --restart unless-stopped \
+  -p 127.0.0.1:11080:1080 \
+  ghcr.io/kingcc/warproxy:latest
+
+curl -4 --max-time 30 \
+  -x socks5h://127.0.0.1:11080 \
+  https://www.cloudflare.com/cdn-cgi/trace | egrep 'warp|ip|colo'
+```
+
 ```bash
 python scripts/video_classification/classify_videos_gpt_v2.py \
   --stage transcript_90s \
@@ -251,14 +266,21 @@ python scripts/video_classification/classify_videos_gpt_v2.py \
   --yt-dlp-cookies config/youtube_cookies.txt \
   --yt-dlp-user-agent "<user_agent_do_navegador>" \
   --yt-dlp-referer "https://www.youtube.com/" \
+  --yt-dlp-proxy "socks5://127.0.0.1:11080" \
   --yt-dlp-extractor-args "youtube:player-client=default,mweb" \
   --yt-dlp-extractor-args "youtubepot-bgutilhttp:base_url=http://127.0.0.1:4416" \
   --transcripts-output tmp/transcripts_po_token_test.csv \
   --dry-run
 ```
 
-O script apenas repassa `--plugin-dirs` e `--extractor-args` ao `yt-dlp`.
-Plugins, PO Tokens, cookies e configuracoes locais ficam fora do Git.
+O script apenas repassa `--plugin-dirs`, `--extractor-args` e `--proxy` ao
+`yt-dlp`. Plugins, PO Tokens, cookies e configuracoes locais ficam fora do Git.
+
+Se o caminho direto do `yt-dlp` falhar com `ffmpeg exited with code -11`, o
+classificador usa fallback estavel: baixa a fonte de audio/video sem conversao
+pelo `yt-dlp`, preferindo audio leve `139/140` antes do progressivo `18`, e
+corta/converte os primeiros `90s` com o `ffmpeg` do `imageio-ffmpeg` em uma
+etapa separada.
 
 O transcript completo pode ser preservado no CSV temporario, mas nao e gravado
 no Supabase. O `input_payload` persistido contem apenas hash, tamanho, duracao e
@@ -281,6 +303,11 @@ Entidades de veiculo:
   artificial
 - quando o texto cita apenas modelo unico, como `Kwid`, o script preenche a
   montadora canonica do catalogo, como `Renault`
+- modelos que tambem sao palavras comuns exigem marca explicita e proxima no
+  texto antes de virar entidade; a lista inicial condicionada e `100`, `tipo`,
+  `bora` e `link`
+- exemplos rejeitados sem marca proxima: `100%`, `bora para o canal`,
+  `tipo SKD` e `link na descricao`
 - entidade explicita nao encontrada grava `not_found`
 
 Instalar dependencias:

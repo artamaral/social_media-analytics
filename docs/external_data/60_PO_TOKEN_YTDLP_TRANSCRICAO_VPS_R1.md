@@ -99,11 +99,41 @@ python bin/classify_videos_gpt_v2.py \
 Se for instalado um plugin manual fora do venv, usar tambem
 `--yt-dlp-plugin-dir <path>`.
 
+Quando o bloqueio vier da reputacao do IP da VPS, usar WARP apenas isolado em
+container. O teste validado usa `warproxy` como SOCKS5 local:
+
+```bash
+docker run -d \
+  --name warproxy-test \
+  --restart unless-stopped \
+  -p 127.0.0.1:11080:1080 \
+  ghcr.io/kingcc/warproxy:latest
+
+curl -4 --max-time 30 \
+  -x socks5h://127.0.0.1:11080 \
+  https://www.cloudflare.com/cdn-cgi/trace | egrep 'warp|ip|colo'
+```
+
+O resultado esperado e `warp=on`. O classificador deve entao receber:
+
+```bash
+--yt-dlp-proxy "socks5://127.0.0.1:11080"
+```
+
+Nao usar `warp-cli connect` global no host, pois esse modo ja causou falha de
+DNS/rota na VPS.
+
+Se o `yt-dlp` passar pela barreira de bot mas falhar em conversao com
+`ffmpeg exited with code -11`, o fallback do classificador deve preferir audio
+leve `139/140` antes do progressivo `18`. O formato `139` foi validado no teste
+manual com WARP/PO Token para `JGzj254Kgs4`.
+
 ## Validacao
 
 Um teste manual com PO Token so sera considerado aprovado se:
 
 - `yt-dlp` baixar o audio do video na VPS sem erro de bot/sign-in;
+- se WARP for necessario, `curl` via proxy local deve retornar `warp=on`;
 - `faster-whisper` gerar `transcript_90s`;
 - o GPT classificar em `--dry-run` sem erro de schema;
 - uma execucao `--write` gravar resultado, contexto tecnico e qualidade textual

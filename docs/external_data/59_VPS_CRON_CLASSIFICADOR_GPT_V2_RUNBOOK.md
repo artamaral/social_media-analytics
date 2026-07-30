@@ -328,6 +328,25 @@ Se Docker estiver disponivel, subir o provider HTTP local:
 docker run --name bgutil-provider -d -p 127.0.0.1:4416:4416 --init brainicism/bgutil-ytdlp-pot-provider
 ```
 
+Se o IP da VPS continuar bloqueado, nao usar `warp-cli connect` global no host.
+O teste validado e isolar WARP em container e expor apenas um SOCKS5 local para
+o `yt-dlp`:
+
+```bash
+docker run -d \
+  --name warproxy-test \
+  --restart unless-stopped \
+  -p 127.0.0.1:11080:1080 \
+  ghcr.io/kingcc/warproxy:latest
+
+curl -4 --max-time 30 \
+  -x socks5h://127.0.0.1:11080 \
+  https://www.cloudflare.com/cdn-cgi/trace | egrep 'warp|ip|colo'
+```
+
+O resultado esperado do trace e `warp=on`. O `warp-cli` global ja causou perda
+de DNS/rota na VPS e deve permanecer desligado.
+
 Exemplo:
 
 ```bash
@@ -339,6 +358,7 @@ python3 bin/classify_videos_gpt_v2.py \
   --yt-dlp-cookies /opt/social-media-analytics/config/youtube_cookies.txt \
   --yt-dlp-user-agent "$UA" \
   --yt-dlp-referer "https://www.youtube.com/" \
+  --yt-dlp-proxy "socks5://127.0.0.1:11080" \
   --yt-dlp-extractor-args "youtube:player-client=default,mweb" \
   --yt-dlp-extractor-args "youtubepot-bgutilhttp:base_url=http://127.0.0.1:4416" \
   --transcripts-output /opt/social-media-analytics/tmp/transcripts_po_token_test.csv \
@@ -358,6 +378,12 @@ quando o transcript ja existir.
 
 O transcript usado nessa rotina vem de `faster-whisper` local. Um CSV existente
 pode ser passado com `--transcripts-csv` para replay e comparacao.
+
+Se a aquisicao direta falhar com `ffmpeg exited with code -11`, a versao
+`2026-07-30-r17-audio-first-fallback` tenta automaticamente um caminho mais
+estavel: baixar a fonte sem conversao pelo `yt-dlp`, preferindo audio leve
+`139/140` antes do progressivo `18`, e cortar/converter com o `ffmpeg` do
+`imageio-ffmpeg` fora do `yt-dlp`.
 
 O transcript completo nao e gravado no Supabase. O banco recebe a avaliacao de
 qualidade, evidencias curtas e metadados sanitizados da transcricao.
@@ -421,6 +447,11 @@ Antes de ativar o agendamento:
 - confirmar que `transcript_quality` e coerente com `confidence_score`
 - confirmar que o transcript completo nao aparece em `input_payload`
 - confirmar que falhas ficam registradas sem interromper proximas execucoes
+- confirmar que a versao `2026-07-30-r18-topic-context-vehicle-guards` preserva
+  `review_teste`/`mercado_produto` como tema principal quando `powertrain` e
+  apenas atributo tecnico
+- confirmar que o matcher nao cria entidades para `100%`, `bora para o canal`,
+  `tipo SKD` ou `link na descricao`
 
 ## Fora de escopo
 
@@ -442,5 +473,11 @@ cron.
 Status em 2026-07-24:
 
 - script inicial criado em `scripts/video_classification/classify_videos_gpt_v2.py`
+
+Status em 2026-07-30:
+
+- versao `2026-07-30-r18-topic-context-vehicle-guards` preparada para nova
+  rodada manual do Batch 1
+- cron continua suspenso ate validacao explicita da classificacao reforcada
 - seed estatico criado em `sql/dml/seed_video_taxonomy_v2.sql`
 - cron continua desativado ate validacao manual na VPS

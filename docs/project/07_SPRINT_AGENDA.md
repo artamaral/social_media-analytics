@@ -4030,6 +4030,20 @@ Resultado:
   plugin do `yt-dlp`:
   - `--yt-dlp-plugin-dir`
   - `--yt-dlp-extractor-args`
+- foi validado que `warp-cli connect` global no host nao deve ser usado, pois
+  pode quebrar DNS/rota da VPS
+- foi validado que WARP isolado em container via `warproxy` expoe SOCKS5 local
+  com `warp=on` em `127.0.0.1:11080`
+- o `yt-dlp` com `--proxy socks5://127.0.0.1:11080` e PO Token Provider local
+  passou da barreira `Sign in to confirm you're not a bot`
+- o classificador passou a aceitar:
+  - `--yt-dlp-proxy`
+- a primeira rodada Batch 1 com transcricao real gravou `2/10` videos e falhou
+  `8/10` por `ffmpeg exited with code -11`, ja depois de superar o bloqueio do
+  YouTube
+- a versao `2026-07-30-r17-audio-first-fallback` ajustou o fallback para baixar
+  a fonte sem conversao pelo `yt-dlp`, preferindo audio leve `139/140` antes do
+  progressivo `18`, e cortar/converter em etapa separada
 - o teste com PO Token fica limitado a execucao manual, sem cron
 - cookies, tokens, plugins e configuracoes locais permanecem fora do Git
 - `--transcripts-csv` continua sendo o fallback validado para testar o
@@ -4077,6 +4091,32 @@ Resultado:
 - se o texto citar apenas modelo unico, como `Kwid`, o script pode preencher a
   montadora canonica `Renault` pelo catalogo
 - entidades explicitas sem match ficam como `not_found`
+- em 2026-07-30, apos a comparacao Batch 1 `title_metadata` vs
+  `transcript_90s`, o matcher foi reforcado para evitar falsos positivos em
+  modelos que tambem sao palavras comuns; `100`, `tipo`, `bora` e `link`
+  exigem marca explicita e proxima no texto
+
+#### Reforco do harness V2 apos Batch 1
+
+Status: implementado para nova rodada manual em 2026-07-30.
+
+Resultado:
+
+- a classificacao por `transcript_90s` completou os `10/10` videos do Batch 1
+  no Supabase
+- a transcricao melhorou casos em que o titulo era ambiguo, como
+  `_j1gOOnjgcU`, `z55GnDEg7_U`, `nP0q6x1Uqs0`, `RTZHxSE2t5M` e
+  `pINW53ErjQI`
+- o principal gargalo restante passou a ser a separacao entre `topic_path`
+  principal e detalhe tecnico forte da transcricao
+- a skill e o contrato foram reforcados para tratar `topic_path` como proposta
+  principal do video, mantendo motor, cambio, bateria, autonomia, turbo, flex e
+  eletrico em `technical_contexts[]` ou `topic_path_secondary` quando forem
+  atributos do review/mercado
+- exemplos obrigatorios do Batch 1 foram documentados para orientar nova
+  execucao: `aXbFPJMVGKw`, `CjFrJg6VCjc`, `z55GnDEg7_U`, `RTZHxSE2t5M` e
+  `6qSnrkGd70I`
+- banco, ingestao, cron e pipeline permanecem inalterados
 
 ### Criterio de saida do planejamento
 

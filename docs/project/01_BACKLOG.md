@@ -55,6 +55,7 @@ Itens ja concluidos ficam consolidados no historico ao fim do arquivo.
   de persistir classificacoes automaticas, conforme o doc `35`.
 - [ ] Proxima etapa de IA: montar a validacao metodologica de nicho/subnicho com amostra inicial de `10` videos, classificacao humana, classificacao por IA sem transcricao, calculo de `agreement_score` e revisao da taxonomia antes de escalar para lotes maiores, conforme `docs/external_data/29_SPEC-INGESTAO-VALIDACAO-NICHOS-SUBNICHOS.md`.
 - [ ] Proxima etapa operacional de IA: desenhar a implementacao com OpenAI para classificacao inicial, transcricao parcial e reclassificacao, incluindo thresholds, controle de `TPM/RPM`, batch pequeno, concorrencia baixa, backoff, historico de tentativas e separacao operacional do Hermes, conforme `docs/external_data/30_SPEC_PREMISSAS_OPENAI_CLASSIFICACAO_TRANSCRICAO.md`.
+- [ ] [feat] Criar view de curadoria `v_video_taxonomy_gap_candidates` como parte do MVP de classificacao, consolidando termos tecnicos gravados com `compatibility_status = needs_review`, `taxonomy_gaps` e `validation_issues`, com contagem de ocorrencias, exemplos de `post_id` e evidencias para decidir promocao futura para a Taxonomia V2.
 
 ## Historico
 

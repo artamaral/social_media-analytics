@@ -2647,3 +2647,84 @@ Referencia:
 
 - `docs/external_data/58_GPT_VIDEO_CLASSIFIER_HARNESS_CONTRACT_V2.md`
 - `scripts/video_classification/README.md`
+
+---
+
+## Reforco do harness V2: tema principal vs contexto tecnico
+
+Data:
+
+- 2026-07-30
+
+Decisao:
+
+- manter `topic_path` como representacao da proposta principal do video
+- guardar sistemas, componentes, atributos e problemas citados em
+  `technical_contexts[]`, sem deixar que um detalhe tecnico substitua o tema
+  editorial principal
+- em videos de `review_teste` ou `mercado_produto`, usar `powertrain` como
+  principal apenas quando o video for explicitamente sobre motorizacao,
+  autonomia, recarga, consumo, cambio ou tecnologia de propulsao
+- reforcar exemplos do Batch 1 na skill:
+  `aXbFPJMVGKw`, `CjFrJg6VCjc`, `z55GnDEg7_U`, `RTZHxSE2t5M` e
+  `6qSnrkGd70I`
+- restringir o matcher deterministico para modelos que tambem sao palavras
+  comuns; `100`, `tipo`, `bora` e `link` exigem marca explicita e proxima no
+  texto antes de virar `vehicle_entity`
+
+Motivo:
+
+- a rodada Batch 1 com `transcript_90s` mostrou melhora clara em titulos
+  ambiguos, mas tambem mostrou que detalhes como `motor 1.5 turbo` podem roubar
+  o `topic_path` de um review
+- a mesma rodada revelou falsos positivos do catalogo Carros na Web em termos
+  comuns da fala, como `100%`, `bora para o canal`, `tipo SKD` e `link na
+  descricao`
+- a solucao preserva uma unica chamada GPT por video e usa regras
+  deterministicas para evitar inferencia ruim
+
+Referencia:
+
+- `docs/external_data/58_GPT_VIDEO_CLASSIFIER_HARNESS_CONTRACT_V2.md`
+- `docs/external_data/58_GPT_VIDEO_CLASSIFIER_SKILL_V2.md`
+- `scripts/video_classification/README.md`
+
+---
+
+## WARP isolado em container para aquisicao de audio
+
+Data:
+
+- 2026-07-29
+
+Decisao:
+
+- nao usar `warp-cli connect` global no host da VPS como caminho operacional
+- usar Cloudflare WARP apenas isolado em container/proxy quando o IP da VPS for
+  recusado pelo YouTube
+- expor o proxy local somente em `127.0.0.1`, inicialmente
+  `socks5://127.0.0.1:11080`
+- repassar esse proxy ao `yt-dlp` via flag do classificador
+  `--yt-dlp-proxy`
+- manter o PO Token Provider `bgutil` em `127.0.0.1:4416` como complemento ao
+  proxy WARP
+
+Motivo:
+
+- `warp-cli connect` global alterou DNS/rota da VPS e colocou o acesso SSH em
+  risco
+- o modo proxy do client WARP Linux aceitou comandos, mas nao abriu listener
+  local
+- o container `warproxy` expôs SOCKS5 local e o trace via proxy retornou
+  `warp=on`
+- `yt-dlp` com `--proxy socks5://127.0.0.1:11080` passou da barreira
+  `Sign in to confirm you're not a bot` no teste manual
+- a rodada Batch 1 mostrou falhas `ffmpeg exited with code -11`; o classificador
+  passou a ter fallback estavel que baixa a fonte sem conversao pelo `yt-dlp`,
+  preferindo audio leve `139/140` antes do progressivo `18`, e corta/converte
+  com `ffmpeg` em etapa separada
+
+Referencia:
+
+- `docs/external_data/59_VPS_CRON_CLASSIFICADOR_GPT_V2_RUNBOOK.md`
+- `docs/external_data/60_PO_TOKEN_YTDLP_TRANSCRICAO_VPS_R1.md`

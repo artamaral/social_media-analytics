@@ -141,6 +141,7 @@ class ClassifierContractTests(unittest.TestCase):
                     "ffmpeg",
                     extractor_args=["youtube:player-client=default,mweb"],
                     plugin_dirs=[plugin_dir],
+                    proxy="socks5://127.0.0.1:11080",
                 )
 
             command = run_subprocess.call_args[0][0]
@@ -148,9 +149,87 @@ class ClassifierContractTests(unittest.TestCase):
             self.assertIn("youtube:player-client=default,mweb", command)
             self.assertIn("--plugin-dirs", command)
             self.assertIn(str(plugin_dir), command)
+            self.assertIn("--proxy", command)
+            self.assertIn("socks5://127.0.0.1:11080", command)
         finally:
             if output_path.exists():
                 output_path.unlink()
+
+    def test_transcribe_post_local_uses_stable_audio_fallback(self):
+        temp_dir = SCRIPT_PATH.parents[2] / "tmp" / "video_classification_tests"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+
+        class Segment:
+            text = "texto transcrito"
+
+        class FakeModel:
+            def transcribe(self, audio_path, language, vad_filter):
+                self.audio_path = audio_path
+                self.language = language
+                self.vad_filter = vad_filter
+                return [Segment()], {}
+
+        fake_model = FakeModel()
+        args = SimpleNamespace(
+            transcript_seconds=90,
+            audio_workdir=temp_dir,
+            yt_dlp_cookies=None,
+            yt_dlp_user_agent=None,
+            yt_dlp_referer=None,
+            yt_dlp_extractor_args=[],
+            yt_dlp_plugin_dir=[],
+            yt_dlp_proxy="socks5://127.0.0.1:11080",
+            whisper_language="pt",
+            whisper_model="small",
+            whisper_compute_type="int8",
+        )
+
+        def stable_download(*call_args):
+            call_args[2].write_bytes(b"wav")
+
+        with patch.object(CLASSIFIER, "download_audio_segment", side_effect=RuntimeError("ffmpeg exited with code -11")), patch.object(
+            CLASSIFIER,
+            "download_audio_segment_stable",
+            side_effect=stable_download,
+        ) as fallback:
+            record = CLASSIFIER.transcribe_post_local(
+                {"post_id": "video1", "duration": 300},
+                {"ffmpeg_path": "ffmpeg", "model": fake_model},
+                args,
+            )
+
+        self.assertEqual(record["text"], "texto transcrito")
+        self.assertEqual(
+            record["metadata"]["source_method"],
+            "yt-dlp-source+ffmpeg-segment+faster-whisper-local",
+        )
+        fallback.assert_called_once()
+
+    def test_stable_source_download_prefers_progressive_format(self):
+        temp_dir = SCRIPT_PATH.parents[2] / "tmp" / "video_classification_tests"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        output_stem = temp_dir / f"source_{uuid.uuid4().hex}"
+        output_file = output_stem.with_suffix(".mp4")
+
+        def fake_run(command, timeout):
+            output_file.write_bytes(b"mp4")
+            return SimpleNamespace(returncode=0, stderr="", stdout="")
+
+        try:
+            with patch.object(CLASSIFIER, "run_subprocess", side_effect=fake_run) as run_subprocess:
+                source = CLASSIFIER.download_audio_source(
+                    "video1",
+                    output_stem,
+                    proxy="socks5://127.0.0.1:11080",
+                )
+
+            command = run_subprocess.call_args[0][0]
+            format_index = command.index("-f") + 1
+            self.assertTrue(command[format_index].startswith("139/140/18/"))
+            self.assertEqual(source, output_file)
+        finally:
+            if output_file.exists():
+                output_file.unlink()
 
     def test_write_persists_quality_and_redacts_transcript(self):
         result = {
@@ -321,6 +400,107 @@ class ClassifierContractTests(unittest.TestCase):
         self.assertEqual(entities[0]["catalog_model_id"], 10)
         self.assertIsNone(entities[0]["catalog_row_id"])
         self.assertEqual(entities[0]["catalog_match_level"], "model")
+
+    def test_script_vehicle_match_rejects_common_words_without_manufacturer(self):
+        harness = {
+            "video": {
+                "title": "Bora para o canal, link na descricao e carro 100% eletrico",
+                "description": "Tipo SKD e CKD aparecem como contexto industrial.",
+                "transcript_90s": "O carro chega a 99 km por hora e nao chega a 100 por hora.",
+            }
+        }
+        catalog_rows = [
+            {
+                "catalog_row_id": 1,
+                "catalog_model_id": 10,
+                "manufacturer_name": "Audi",
+                "manufacturer_key": "audi",
+                "model_name": "100",
+                "model_key": "100",
+                "model_year": 1995,
+            },
+            {
+                "catalog_row_id": 2,
+                "catalog_model_id": 20,
+                "manufacturer_name": "Volkswagen",
+                "manufacturer_key": "volkswagen",
+                "model_name": "Bora",
+                "model_key": "bora",
+                "model_year": 2010,
+            },
+            {
+                "catalog_row_id": 3,
+                "catalog_model_id": 30,
+                "manufacturer_name": "Fiat",
+                "manufacturer_key": "fiat",
+                "model_name": "Tipo",
+                "model_key": "tipo",
+                "model_year": 1994,
+            },
+            {
+                "catalog_row_id": 4,
+                "catalog_model_id": 40,
+                "manufacturer_name": "Rely",
+                "manufacturer_key": "rely",
+                "model_name": "Link",
+                "model_key": "link",
+                "model_year": 2014,
+            },
+        ]
+
+        entities = CLASSIFIER.select_script_vehicle_candidates(harness, catalog_rows)
+
+        self.assertEqual(entities, [])
+
+    def test_script_vehicle_match_accepts_common_model_with_nearby_manufacturer(self):
+        harness = {
+            "video": {
+                "title": "Review do Fiat Tipo usado",
+                "description": "Comparativo com Volkswagen Bora em mercado de usados.",
+                "transcript_90s": "O Audi 100 aparece como referencia historica.",
+            }
+        }
+        catalog_rows = [
+            {
+                "catalog_row_id": 1,
+                "catalog_model_id": 10,
+                "manufacturer_name": "Audi",
+                "manufacturer_key": "audi",
+                "model_name": "100",
+                "model_key": "100",
+                "model_year": 1995,
+            },
+            {
+                "catalog_row_id": 2,
+                "catalog_model_id": 20,
+                "manufacturer_name": "Volkswagen",
+                "manufacturer_key": "volkswagen",
+                "model_name": "Bora",
+                "model_key": "bora",
+                "model_year": 2010,
+            },
+            {
+                "catalog_row_id": 3,
+                "catalog_model_id": 30,
+                "manufacturer_name": "Fiat",
+                "manufacturer_key": "fiat",
+                "model_name": "Tipo",
+                "model_key": "tipo",
+                "model_year": 1994,
+            },
+        ]
+
+        entities = CLASSIFIER.select_script_vehicle_candidates(harness, catalog_rows)
+        models = {entity["vehicle_model_raw"] for entity in entities}
+
+        self.assertEqual(models, {"100", "Bora", "Tipo"})
+        self.assertTrue(all(entity["resolved_entity_status"] == "matched" for entity in entities))
+
+    def test_default_skill_documents_topic_path_priority(self):
+        skill = CLASSIFIER.DEFAULT_SKILL
+
+        self.assertIn("topic_path representa a proposta principal", skill)
+        self.assertIn("powertrain so e topic_path principal", skill)
 
 
 if __name__ == "__main__":

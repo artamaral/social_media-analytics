@@ -281,7 +281,16 @@ Campos de saida:
 - Nao usar conhecimento externo para completar marca, modelo, ano, sistema,
   componente ou problema.
 - `topic_path` deve existir na Taxonomia V2.
+- `topic_path` representa a proposta principal do video, nao o primeiro detalhe
+  tecnico forte citado na transcricao.
 - `topic_path_secondary` so entra quando houver segundo tema forte e explicito.
+- Em videos de `review_teste` ou `mercado_produto`, motor, cambio, bateria,
+  autonomia, turbo, flex ou eletrico devem ficar em `technical_contexts[]` ou
+  `topic_path_secondary` quando forem atributos do veiculo ou argumentos dentro
+  do review/mercado.
+- `powertrain` so deve ser `topic_path` principal quando a proposta do video for
+  explicitamente motorizacao, autonomia, recarga, consumo, cambio ou tecnologia
+  de propulsao.
 - Termo fora da Taxonomia V2 entra em `taxonomy_gaps`, nao em campo canonico.
 - `fora_escopo` tem precedencia quando houver evidencia textual de moto,
   nao-automotivo, transito/comportamento ou entretenimento sem tema tecnico,
@@ -434,6 +443,13 @@ O harness tambem executa uma extracao deterministica de veiculos a partir de
 `title`, `description` e `transcript_90s`. Essa extracao por script e a fonte
 operacional de verdade para marca/modelo canonicos, porque evita enviar a lista
 Carros na Web ao GPT e evita uma segunda chamada de modelo.
+
+Para evitar falsos positivos, modelos que tambem sao palavras comuns exigem
+marca explicita e proxima no texto antes de virarem entidade. Na rodada Batch 1,
+os termos condicionais iniciais sao `100`, `tipo`, `bora` e `link`. Exemplos:
+`Audi 100`, `Fiat Tipo` e `Volkswagen Bora` podem ser aceitos; `100%`,
+`bora para o canal`, `tipo SKD` e `link na descricao` nao devem gerar
+`vehicle_entity`.
 
 Obrigacao de extracao:
 
