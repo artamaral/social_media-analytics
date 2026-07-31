@@ -2728,3 +2728,35 @@ Referencia:
 
 - `docs/external_data/59_VPS_CRON_CLASSIFICADOR_GPT_V2_RUNBOOK.md`
 - `docs/external_data/60_PO_TOKEN_YTDLP_TRANSCRICAO_VPS_R1.md`
+
+---
+
+## Default VPS para audio YouTube: android_vr sem bgutil
+
+Data:
+
+- 2026-07-31
+
+Decisao:
+
+- usar `youtube:player-client=android_vr` como default operacional do
+  `yt-dlp` na VPS
+- manter WARP apenas via proxy local `socks5://127.0.0.1:11080`
+- manter cookies e user-agent/referer, mas sem `mweb` e sem
+  `youtubepot-bgutilhttp` como caminho padrao
+- deixar `mweb + bgutil` como fallback experimental, porque o provider retornou
+  `HTTP 500` em `POST /get_pot`
+
+Motivo:
+
+- `mweb + bgutil` ficou preso em tentativas de PO Token, chegando a `300s` no
+  download direto e mais `300s` no fallback
+- `android_vr` eliminou o gargalo: nos quatro pendentes do Batch 2, fallback de
+  audio levou `1.45s..4.27s`, Whisper `9.64s..22.40s` e OpenAI `46.60s..70.16s`
+- o Batch 2 fechou `10/10` no Supabase com `transcript_quality_status = usable`
+  para todos os videos
+
+Referencia:
+
+- `docs/external_data/59_VPS_CRON_CLASSIFICADOR_GPT_V2_RUNBOOK.md`
+- `docs/external_data/60_PO_TOKEN_YTDLP_TRANSCRICAO_VPS_R1.md`

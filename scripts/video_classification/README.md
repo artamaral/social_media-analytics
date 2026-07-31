@@ -232,18 +232,9 @@ python scripts/video_classification/classify_videos_gpt_v2.py \
 Quando os cookies vierem de uma chamada `requests` do navegador, passar tambem
 o `user-agent` da mesma chamada ajuda a manter a sessao coerente na VPS.
 
-Teste manual com PO Token Provider plugin do `yt-dlp`:
+Teste manual recomendado na VPS:
 
 ```bash
-python -m pip install -U yt-dlp bgutil-ytdlp-pot-provider
-```
-
-Se Docker estiver disponivel na VPS:
-
-```bash
-docker run --name bgutil-provider -d -p 127.0.0.1:4416:4416 --init brainicism/bgutil-ytdlp-pot-provider
-```
-
 Para IP de datacenter bloqueado pelo YouTube, usar WARP apenas isolado em
 container, expondo SOCKS5 local para o `yt-dlp`:
 
@@ -267,14 +258,16 @@ python scripts/video_classification/classify_videos_gpt_v2.py \
   --yt-dlp-user-agent "<user_agent_do_navegador>" \
   --yt-dlp-referer "https://www.youtube.com/" \
   --yt-dlp-proxy "socks5://127.0.0.1:11080" \
-  --yt-dlp-extractor-args "youtube:player-client=default,mweb" \
-  --yt-dlp-extractor-args "youtubepot-bgutilhttp:base_url=http://127.0.0.1:4416" \
+  --yt-dlp-extractor-args "youtube:player-client=android_vr" \
   --transcripts-output tmp/transcripts_po_token_test.csv \
   --dry-run
 ```
 
 O script apenas repassa `--plugin-dirs`, `--extractor-args` e `--proxy` ao
 `yt-dlp`. Plugins, PO Tokens, cookies e configuracoes locais ficam fora do Git.
+`mweb + bgutil` nao e mais o default operacional: em 2026-07-31, o provider
+retornou `HTTP 500` em `POST /get_pot` e fez o `yt-dlp` ficar preso ate
+timeout. Use `android_vr` como default na VPS.
 Quando `--yt-dlp-cookies` e usado, o script copia o arquivo para um cookies
 temporario em `audio-workdir`, usa essa copia no `yt-dlp` e apaga a copia ao
 final. Isso evita que o `yt-dlp` tente regravar o arquivo original da VPS ao
@@ -333,6 +326,8 @@ Reparos conservadores antes da gravacao:
   `mercado_produto__lancamentos`
 - `vehicle_entities[].entity_order` e reordenado pelo harness para evitar falha
   por indice `0` ou negativo retornado pelo modelo
+- `confidence_score` e `transcript_quality.quality_score` em escala percentual
+  (`85`, `92`) sao convertidos para escala `0..1` (`0.85`, `0.92`)
 
 Instalar dependencias:
 

@@ -306,25 +306,22 @@ tambem o `user-agent` da mesma chamada. Sem isso, a sessao pode funcionar na
 maquina local e ainda assim ser recusada na VPS por diferenca de ambiente.
 
 Se mesmo com cookies e headers o YouTube continuar exigindo validacao de bot,
-o proximo teste manual controlado e usar PO Token Provider plugin do `yt-dlp`.
-O script aceita as flags genericas:
+usar primeiro o client `android_vr` com WARP isolado em container. Este passou a
+ser o default operacional validado para a VPS, porque evita depender do provider
+HTTP de PO Token.
 
 ```bash
---yt-dlp-plugin-dir /opt/social-media-analytics/config/yt_dlp_plugins
---yt-dlp-extractor-args "youtube:player-client=default,mweb"
+--yt-dlp-extractor-args "youtube:player-client=android_vr"
 ```
 
-Primeira tentativa recomendada:
+O provider `bgutil` com `mweb` fica como opcao experimental. Na validacao de
+2026-07-31, o endpoint `POST /get_pot` retornou `HTTP 500`, o `yt-dlp` insistiu
+na geracao de PO Token e as chamadas ficaram presas ate `300s` por tentativa.
+Nao usar `mweb + youtubepot-bgutilhttp` como caminho padrao enquanto esse
+comportamento persistir.
 
 ```bash
-cd /opt/social-media-analytics
-source .venv/bin/activate
 python -m pip install -U yt-dlp bgutil-ytdlp-pot-provider
-```
-
-Se Docker estiver disponivel, subir o provider HTTP local:
-
-```bash
 docker run --name bgutil-provider -d -p 127.0.0.1:4416:4416 --init brainicism/bgutil-ytdlp-pot-provider
 ```
 
@@ -359,11 +356,18 @@ python3 bin/classify_videos_gpt_v2.py \
   --yt-dlp-user-agent "$UA" \
   --yt-dlp-referer "https://www.youtube.com/" \
   --yt-dlp-proxy "socks5://127.0.0.1:11080" \
-  --yt-dlp-extractor-args "youtube:player-client=default,mweb" \
-  --yt-dlp-extractor-args "youtubepot-bgutilhttp:base_url=http://127.0.0.1:4416" \
+  --yt-dlp-extractor-args "youtube:player-client=android_vr" \
   --transcripts-output /opt/social-media-analytics/tmp/transcripts_po_token_test.csv \
   --dry-run
 ```
+
+Tempos observados na validacao:
+
+- com `mweb + bgutil` quebrado: ate `300s` no download direto e mais `300s` no
+  fallback, sem concluir
+- com `android_vr`: fallback de audio entre `1.45s` e `4.27s`; Whisper entre
+  `9.64s` e `22.40s`; chamada OpenAI entre `46.60s` e `70.16s`
+- o Batch 2 fechou `10/10` no Supabase depois de trocar para `android_vr`
 
 Tokens, cookies e diretorios de plugin em `config/` sao segredo/configuracao
 operacional da VPS e nao devem ser versionados.

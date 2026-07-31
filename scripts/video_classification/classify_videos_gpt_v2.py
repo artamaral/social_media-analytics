@@ -25,7 +25,7 @@ TAXONOMY_VERSION = "taxonomia_video_v2"
 PROMPT_CONTRACT_VERSION = "video_taxonomy_v2_classifier_r2"
 OUTPUT_SCHEMA_VERSION = "video_taxonomy_v2_output_schema_r2"
 # Marcador operacional para confirmar se a copia local/VPS esta atualizada.
-SCRIPT_VERSION = "2026-07-31-r22-stage-timing"
+SCRIPT_VERSION = "2026-07-31-r23-score-scale-repair"
 DEFAULT_TITLE_MODEL = "gpt-5-nano"
 DEFAULT_TRANSCRIPT_MODEL = "gpt-5-nano"
 DEFAULT_MAX_OUTPUT_TOKENS = 6000
@@ -1461,6 +1461,7 @@ def validate_classification(result, schema, taxonomy, stage, post_id):
     }
 
     repair_topic_paths_for_validation(result, topic_codes)
+    normalize_score_scales_for_validation(result)
     normalize_technical_contexts_for_validation(result, compatibility_keys)
     normalize_vehicle_entities_for_validation(result)
 
@@ -1553,6 +1554,29 @@ def normalize_vehicle_entities_for_validation(result):
         entity["entity_order"] = index
         normalized_entities.append(entity)
     result["vehicle_entities"] = normalized_entities
+
+
+def normalize_score_scales_for_validation(result):
+    classification = result["classification_result"]
+    quality = result["transcript_quality"]
+    classification["confidence_score"] = normalize_unit_score(classification.get("confidence_score"))
+    quality["quality_score"] = normalize_unit_score(quality.get("quality_score"))
+
+
+def normalize_unit_score(value):
+    if value is None:
+        return None
+
+    if isinstance(value, str):
+        value = value.strip().replace(",", ".")
+        if not value:
+            return None
+        value = float(value)
+
+    if 1 < value <= 100:
+        return round(value / 100, 4)
+
+    return value
 
 
 def validate_transcript_quality(quality, classification, stage):

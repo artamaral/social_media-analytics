@@ -603,6 +603,28 @@ class ClassifierContractTests(unittest.TestCase):
 
         self.assertEqual([entity["entity_order"] for entity in result["vehicle_entities"]], [1, 2])
 
+    def test_normalize_score_scales_repairs_percent_values(self):
+        result = {
+            "classification_result": {"confidence_score": "92"},
+            "transcript_quality": {"quality_score": 85},
+        }
+
+        CLASSIFIER.normalize_score_scales_for_validation(result)
+
+        self.assertEqual(result["classification_result"]["confidence_score"], 0.92)
+        self.assertEqual(result["transcript_quality"]["quality_score"], 0.85)
+
+    def test_normalize_score_scales_keeps_null_quality_score(self):
+        result = {
+            "classification_result": {"confidence_score": 0.72},
+            "transcript_quality": {"quality_score": None},
+        }
+
+        CLASSIFIER.normalize_score_scales_for_validation(result)
+
+        self.assertEqual(result["classification_result"]["confidence_score"], 0.72)
+        self.assertIsNone(result["transcript_quality"]["quality_score"])
+
 
 if __name__ == "__main__":
     unittest.main()

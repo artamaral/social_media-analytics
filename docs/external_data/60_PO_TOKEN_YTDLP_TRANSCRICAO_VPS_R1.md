@@ -80,7 +80,17 @@ Se Docker nao estiver disponivel, a alternativa e instalar Node.js e seguir a
 instalacao nativa do provider. Essa alternativa deve ser documentada depois do
 teste, para nao transformar a VPS em ambiente complexo prematuramente.
 
-Exemplo com client `mweb`:
+Resultado da validacao de 2026-07-31:
+
+- WARP em container retornou `warp=on`
+- o provider `bgutil` respondeu na porta `4416`, mas `POST /get_pot` retornou
+  `HTTP 500`
+- com `mweb + youtubepot-bgutilhttp`, o `yt-dlp` insistiu na geracao de PO
+  Token e ficou preso ate `300s` por tentativa
+- com `android_vr`, sem `youtubepot-bgutilhttp`, o download/fallback voltou a
+  concluir em poucos segundos
+
+Default operacional recomendado na VPS:
 
 ```bash
 python bin/classify_videos_gpt_v2.py \
@@ -90,14 +100,15 @@ python bin/classify_videos_gpt_v2.py \
   --yt-dlp-cookies config/youtube_cookies.txt \
   --yt-dlp-user-agent "$(cat config/youtube_user_agent.txt)" \
   --yt-dlp-referer "https://www.youtube.com/" \
-  --yt-dlp-extractor-args "youtube:player-client=default,mweb" \
-  --yt-dlp-extractor-args "youtubepot-bgutilhttp:base_url=http://127.0.0.1:4416" \
+  --yt-dlp-proxy "socks5://127.0.0.1:11080" \
+  --yt-dlp-extractor-args "youtube:player-client=android_vr" \
   --transcripts-output tmp/transcripts_po_token_test.csv \
   --dry-run
 ```
 
+O client `mweb` com `bgutil` fica como fallback experimental, nao como default.
 Se for instalado um plugin manual fora do venv, usar tambem
-`--yt-dlp-plugin-dir <path>`.
+`--yt-dlp-plugin-dir <path>`, mas apenas em teste controlado.
 
 Quando o bloqueio vier da reputacao do IP da VPS, usar WARP apenas isolado em
 container. O teste validado usa `warproxy` como SOCKS5 local:
@@ -154,6 +165,6 @@ Um teste manual com PO Token so sera considerado aprovado se:
 
 Status atual: `em_teste_manual`.
 
-O classificador esta validado com CSV de transcript. A aquisicao automatica de
-audio na VPS segue como gargalo separado ate que o teste com PO Token seja
-concluido.
+O classificador esta validado com CSV de transcript e com aquisicao local via
+`android_vr + WARP SOCKS5 + cookies`. O caminho `mweb + bgutil` permanece em
+observacao por instabilidade do provider de PO Token.

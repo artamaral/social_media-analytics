@@ -4044,6 +4044,15 @@ Resultado:
 - a versao `2026-07-30-r17-audio-first-fallback` ajustou o fallback para baixar
   a fonte sem conversao pelo `yt-dlp`, preferindo audio leve `139/140` antes do
   progressivo `18`, e cortar/converter em etapa separada
+- em 2026-07-31, a validacao com `--timing` mostrou que `mweb + bgutil` estava
+  preso por falha `HTTP 500` em `POST /get_pot`; o caminho operacional foi
+  alterado para `youtube:player-client=android_vr`, sem
+  `youtubepot-bgutilhttp`
+- com `android_vr + WARP SOCKS5 + cookies`, os quatro pendentes do Batch 2
+  rodaram sem falhas; fallback de audio ficou em `1.45s..4.27s`, Whisper em
+  `9.64s..22.40s` e OpenAI em `46.60s..70.16s`
+- o Batch 2 fechou `10/10` no Supabase, todos com
+  `transcript_quality_status = usable`
 - o teste com PO Token fica limitado a execucao manual, sem cron
 - cookies, tokens, plugins e configuracoes locais permanecem fora do Git
 - `--transcripts-csv` continua sendo o fallback validado para testar o
