@@ -155,6 +155,27 @@ class ClassifierContractTests(unittest.TestCase):
             if output_path.exists():
                 output_path.unlink()
 
+    def test_ytdlp_common_options_passes_cookies_file(self):
+        options = CLASSIFIER.ytdlp_common_options(cookies_path="config/youtube_cookies.txt")
+
+        self.assertIn("--cookies", options)
+        self.assertIn("config/youtube_cookies.txt", options)
+        self.assertNotIn("--no-cookies-update", options)
+
+    def test_run_subprocess_returns_timeout_result(self):
+        timeout = CLASSIFIER.subprocess.TimeoutExpired(["cmd"], 3)
+        with patch.object(CLASSIFIER.subprocess, "run", side_effect=timeout):
+            result = CLASSIFIER.run_subprocess(["cmd"], timeout=3)
+
+        self.assertEqual(result.returncode, 124)
+        self.assertIn("timed out", result.stderr)
+
+    def test_timing_helpers_are_noops_when_disabled(self):
+        start = CLASSIFIER.timing_start(False)
+
+        self.assertIsNone(start)
+        self.assertEqual(CLASSIFIER.timing_elapsed(start), 0.0)
+
     def test_transcribe_post_local_uses_stable_audio_fallback(self):
         temp_dir = SCRIPT_PATH.parents[2] / "tmp" / "video_classification_tests"
         temp_dir.mkdir(parents=True, exist_ok=True)
@@ -204,6 +225,49 @@ class ClassifierContractTests(unittest.TestCase):
             "yt-dlp-source+ffmpeg-segment+faster-whisper-local",
         )
         fallback.assert_called_once()
+
+    def test_transcribe_post_local_uses_temporary_cookie_copy(self):
+        temp_dir = SCRIPT_PATH.parents[2] / "tmp" / "video_classification_tests"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        source_cookies = temp_dir / f"cookies_{uuid.uuid4().hex}.txt"
+        source_cookies.write_text("# Netscape\n.youtube.com\tTRUE\t/\tTRUE\t0\tSID\tabc\n", encoding="utf-8")
+
+        class Segment:
+            text = "texto transcrito"
+
+        class FakeModel:
+            def transcribe(self, audio_path, language, vad_filter):
+                return [Segment()], {}
+
+        args = SimpleNamespace(
+            transcript_seconds=90,
+            audio_workdir=temp_dir,
+            yt_dlp_cookies=source_cookies,
+            yt_dlp_user_agent=None,
+            yt_dlp_referer=None,
+            yt_dlp_extractor_args=[],
+            yt_dlp_plugin_dir=[],
+            yt_dlp_proxy=None,
+            whisper_language="pt",
+            whisper_model="small",
+            whisper_compute_type="int8",
+        )
+        seen = {}
+
+        def fake_download(*call_args):
+            seen["cookies_path"] = Path(call_args[4])
+            call_args[2].write_bytes(b"wav")
+
+        with patch.object(CLASSIFIER, "download_audio_segment", side_effect=fake_download):
+            CLASSIFIER.transcribe_post_local(
+                {"post_id": "video_cookie", "duration": 300},
+                {"ffmpeg_path": "ffmpeg", "model": FakeModel()},
+                args,
+            )
+
+        self.assertEqual(source_cookies.read_text(encoding="utf-8").splitlines()[0], "# Netscape")
+        self.assertNotEqual(seen["cookies_path"], source_cookies)
+        self.assertFalse(seen["cookies_path"].exists())
 
     def test_stable_source_download_prefers_progressive_format(self):
         temp_dir = SCRIPT_PATH.parents[2] / "tmp" / "video_classification_tests"
@@ -501,6 +565,43 @@ class ClassifierContractTests(unittest.TestCase):
 
         self.assertIn("topic_path representa a proposta principal", skill)
         self.assertIn("powertrain so e topic_path principal", skill)
+
+    def test_repair_topic_path_code_fixes_single_obvious_typo(self):
+        topic_codes = {
+            "mercado_produto__lancamentos",
+            "mercado_produto__mercado_eletrificados",
+        }
+
+        repaired = CLASSIFIER.repair_topic_path_code(
+            "mercado_procuto__lancamentos",
+            topic_codes,
+        )
+
+        self.assertEqual(repaired, "mercado_produto__lancamentos")
+
+    def test_normalize_vehicle_entities_resequences_invalid_orders(self):
+        result = {
+            "vehicle_entities": [
+                {
+                    "entity_order": 0,
+                    "vehicle_brand_raw": "Changan",
+                    "vehicle_model_raw": "Uni-T",
+                    "vehicle_year": 2026,
+                    "vehicle_generation": None,
+                },
+                {
+                    "entity_order": -1,
+                    "vehicle_brand_raw": "BYD",
+                    "vehicle_model_raw": "Dolphin",
+                    "vehicle_year": None,
+                    "vehicle_generation": None,
+                },
+            ]
+        }
+
+        CLASSIFIER.normalize_vehicle_entities_for_validation(result)
+
+        self.assertEqual([entity["entity_order"] for entity in result["vehicle_entities"]], [1, 2])
 
 
 if __name__ == "__main__":

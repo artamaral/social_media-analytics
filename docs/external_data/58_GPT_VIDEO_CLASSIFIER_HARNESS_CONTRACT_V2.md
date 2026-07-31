@@ -451,6 +451,13 @@ os termos condicionais iniciais sao `100`, `tipo`, `bora` e `link`. Exemplos:
 `bora para o canal`, `tipo SKD` e `link na descricao` nao devem gerar
 `vehicle_entity`.
 
+O harness pode aplicar reparos conservadores antes da gravacao quando o erro
+for mecanico e nao semantico. `topic_path` e `topic_path_secondary` podem ser
+corrigidos apenas quando houver um unico codigo canonico compativel na
+Taxonomia V2; por exemplo, `mercado_procuto__lancamentos` pode ser reparado
+para `mercado_produto__lancamentos`. `vehicle_entities[].entity_order` pode ser
+reordenado pelo harness para garantir sequencia iniciando em `1`.
+
 Obrigacao de extracao:
 
 - se marca/modelo e ano-modelo estiverem explicitamente no titulo, descricao ou

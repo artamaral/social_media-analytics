@@ -1,9 +1,11 @@
 import argparse
 import csv
+import difflib
 import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -23,7 +25,7 @@ TAXONOMY_VERSION = "taxonomia_video_v2"
 PROMPT_CONTRACT_VERSION = "video_taxonomy_v2_classifier_r2"
 OUTPUT_SCHEMA_VERSION = "video_taxonomy_v2_output_schema_r2"
 # Marcador operacional para confirmar se a copia local/VPS esta atualizada.
-SCRIPT_VERSION = "2026-07-30-r18-topic-context-vehicle-guards"
+SCRIPT_VERSION = "2026-07-31-r22-stage-timing"
 DEFAULT_TITLE_MODEL = "gpt-5-nano"
 DEFAULT_TRANSCRIPT_MODEL = "gpt-5-nano"
 DEFAULT_MAX_OUTPUT_TOKENS = 6000
@@ -923,16 +925,24 @@ def target_transcription_duration(post_duration, transcript_seconds):
 def run_subprocess(command, timeout):
     env = os.environ.copy()
     env["PYTHONWARNINGS"] = "ignore"
-    return subprocess.run(
-        command,
-        cwd=REPO_DIR,
-        env=env,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        timeout=timeout,
-        check=False,
-    )
+    try:
+        return subprocess.run(
+            command,
+            cwd=REPO_DIR,
+            env=env,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=timeout,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        return subprocess.CompletedProcess(
+            command,
+            returncode=124,
+            stdout=exc.stdout or "",
+            stderr=f"command timed out after {timeout} seconds",
+        )
 
 
 def ytdlp_common_options(cookies_path=None, user_agent=None, referer=None, extractor_args=None, plugin_dirs=None, proxy=None):
@@ -1120,8 +1130,23 @@ def download_audio_segment_stable(
                 candidate.unlink()
 
 
+def prepare_temporary_cookies(cookies_path, audio_workdir, post_id):
+    if not cookies_path:
+        return None
+
+    source = Path(cookies_path)
+    if not source.exists():
+        return source
+
+    audio_workdir.mkdir(parents=True, exist_ok=True)
+    target = audio_workdir / f"{post_id}_cookies.txt"
+    shutil.copyfile(source, target)
+    return target
+
+
 def transcribe_post_local(post, runtime, args):
     post_id = post["post_id"]
+    timing_enabled = bool(getattr(args, "timing", False))
     post_duration = to_optional_int(post.get("duration"))
     target_duration = target_transcription_duration(
         post_duration,
@@ -1129,41 +1154,49 @@ def transcribe_post_local(post, runtime, args):
     )
 
     audio_path = args.audio_workdir / f"{post_id}_{target_duration}s.wav"
+    cookies_path = prepare_temporary_cookies(args.yt_dlp_cookies, args.audio_workdir, post_id)
     source_method = "yt-dlp+faster-whisper-local"
     try:
         try:
+            step_timer = timing_start(timing_enabled)
             download_audio_segment(
                 post_id,
                 target_duration,
                 audio_path,
                 runtime["ffmpeg_path"],
-                args.yt_dlp_cookies,
+                cookies_path,
                 args.yt_dlp_user_agent,
                 args.yt_dlp_referer,
                 args.yt_dlp_extractor_args,
                 args.yt_dlp_plugin_dir,
                 args.yt_dlp_proxy,
             )
+            timing_print(timing_enabled, post_id, "audio_download_direct", timing_elapsed(step_timer))
         except RuntimeError as first_error:
             try:
+                timing_print(timing_enabled, post_id, "audio_download_direct_failed", timing_elapsed(step_timer))
+                step_timer = timing_start(timing_enabled)
                 download_audio_segment_stable(
                     post_id,
                     target_duration,
                     audio_path,
                     runtime["ffmpeg_path"],
-                    args.yt_dlp_cookies,
+                    cookies_path,
                     args.yt_dlp_user_agent,
                     args.yt_dlp_referer,
                     args.yt_dlp_extractor_args,
                     args.yt_dlp_plugin_dir,
                     args.yt_dlp_proxy,
                 )
+                timing_print(timing_enabled, post_id, "audio_download_fallback", timing_elapsed(step_timer))
                 source_method = "yt-dlp-source+ffmpeg-segment+faster-whisper-local"
             except RuntimeError as fallback_error:
+                timing_print(timing_enabled, post_id, "audio_download_fallback_failed", timing_elapsed(step_timer))
                 raise RuntimeError(
                     "falha no download/conversao de audio; "
                     f"tentativa_yt_dlp={first_error}; fallback_estavel={fallback_error}"
                 ) from fallback_error
+        step_timer = timing_start(timing_enabled)
         segments, _info = runtime["model"].transcribe(
             str(audio_path),
             language=args.whisper_language,
@@ -1173,6 +1206,7 @@ def transcribe_post_local(post, runtime, args):
             segment.text.strip() for segment in segments if segment.text.strip()
         )
         transcript = " ".join(transcript.split())
+        timing_print(timing_enabled, post_id, "whisper_transcribe", timing_elapsed(step_timer))
         metadata = build_transcription_metadata(
             transcript,
             source_method=source_method,
@@ -1185,6 +1219,8 @@ def transcribe_post_local(post, runtime, args):
     finally:
         if audio_path.exists():
             audio_path.unlink()
+        if cookies_path and Path(cookies_path) != Path(args.yt_dlp_cookies or "") and Path(cookies_path).exists():
+            Path(cookies_path).unlink()
 
 
 def write_transcription_rows(output_path, rows):
@@ -1424,7 +1460,9 @@ def validate_classification(result, schema, taxonomy, stage, post_id):
         for row in compatibility_rows
     }
 
+    repair_topic_paths_for_validation(result, topic_codes)
     normalize_technical_contexts_for_validation(result, compatibility_keys)
+    normalize_vehicle_entities_for_validation(result)
 
     if classification["post_id"] != post_id:
         raise ValueError("post_id da resposta difere do video enviado")
@@ -1480,6 +1518,41 @@ def validate_classification(result, schema, taxonomy, stage, post_id):
             ]
         ):
             raise ValueError("vehicle_entity sem valor bruto extraido")
+
+
+def repair_topic_paths_for_validation(result, topic_codes):
+    classification = result["classification_result"]
+    for field in ["topic_path", "topic_path_secondary"]:
+        classification[field] = repair_topic_path_code(classification.get(field), topic_codes)
+
+    for context in result["technical_contexts"]:
+        for field in ["topic_path", "topic_path_secondary"]:
+            context[field] = repair_topic_path_code(context.get(field), topic_codes)
+
+
+def repair_topic_path_code(value, topic_codes):
+    if not value or value in topic_codes:
+        return value
+
+    candidates = []
+    typo_repaired = value.replace("procuto", "produto")
+    if typo_repaired != value:
+        candidates.append(typo_repaired)
+
+    candidates.extend(difflib.get_close_matches(value, topic_codes, n=2, cutoff=0.96))
+    unique_candidates = [candidate for candidate in dict.fromkeys(candidates) if candidate in topic_codes]
+    if len(unique_candidates) == 1:
+        return unique_candidates[0]
+
+    return value
+
+
+def normalize_vehicle_entities_for_validation(result):
+    normalized_entities = []
+    for index, entity in enumerate(result["vehicle_entities"], start=1):
+        entity["entity_order"] = index
+        normalized_entities.append(entity)
+    result["vehicle_entities"] = normalized_entities
 
 
 def validate_transcript_quality(quality, classification, stage):
@@ -2190,6 +2263,21 @@ def transcription_output_row(post_id, transcript_record=None, error_message=""):
     }
 
 
+def timing_start(enabled):
+    return time.perf_counter() if enabled else None
+
+
+def timing_elapsed(start):
+    if start is None:
+        return 0.0
+    return time.perf_counter() - start
+
+
+def timing_print(enabled, post_id, label, seconds):
+    if enabled:
+        print(f"[timing] {post_id} {label}: {seconds:.2f}s")
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Classifica videos com GPT usando Taxonomia Video V2 e grava no Supabase."
@@ -2220,6 +2308,7 @@ def parse_args():
     parser.add_argument("--max-output-tokens", type=int, default=DEFAULT_MAX_OUTPUT_TOKENS)
     parser.add_argument("--sleep-seconds", type=float, default=0.5)
     parser.add_argument("--include-already-classified", action="store_true")
+    parser.add_argument("--timing", action="store_true", help="Imprime duracao por etapa para diagnostico.")
     parser.add_argument(
         "-V",
         "--version",
@@ -2322,6 +2411,8 @@ def main():
         print(f"- transcription_source: {source}")
         if not args.transcripts_csv:
             print(f"- transcript_seconds: {args.transcript_seconds}")
+    if args.timing:
+        print("- timing: enabled")
     print(f"- modo: {'write' if args.write else 'dry-run'}")
 
     if args.write:
@@ -2340,6 +2431,7 @@ def main():
     vehicle_catalog = None
     for idx, post in enumerate(posts, start=1):
         post_id = post["post_id"]
+        video_timer = timing_start(args.timing)
         transcript_record = None
 
         if args.stage == "transcript_90s":
@@ -2354,11 +2446,15 @@ def main():
             else:
                 print(f"[{idx}/{len(posts)}] transcrevendo {post_id}...")
                 try:
+                    step_timer = timing_start(args.timing)
                     transcript_record = transcribe_post_local(post, whisper_runtime, args)
+                    timing_print(args.timing, post_id, "transcription_total", timing_elapsed(step_timer))
+                    step_timer = timing_start(args.timing)
                     transcription_rows.append(
                         transcription_output_row(post_id, transcript_record)
                     )
                     write_transcription_rows(args.transcripts_output, transcription_rows)
+                    timing_print(args.timing, post_id, "transcription_csv_write", timing_elapsed(step_timer))
                 except Exception as exc:
                     failed += 1
                     message = f"{post_id}: falha na transcricao local: {exc}"
@@ -2376,6 +2472,7 @@ def main():
         )
         description_record = descriptions.get(post_id) or {}
         description = description_record.get("description") or None
+        step_timer = timing_start(args.timing)
         harness_input = build_harness_input(
             post,
             args.stage,
@@ -2385,9 +2482,11 @@ def main():
             transcription_metadata,
             description,
         )
+        timing_print(args.timing, post_id, "harness_build", timing_elapsed(step_timer))
         print(f"[{idx}/{len(posts)}] classificando {post_id}...")
 
         try:
+            step_timer = timing_start(args.timing)
             result, raw_response = call_openai(
                 model,
                 skill_text,
@@ -2395,10 +2494,16 @@ def main():
                 harness_input,
                 args.max_output_tokens,
             )
+            timing_print(args.timing, post_id, "openai_call", timing_elapsed(step_timer))
+            step_timer = timing_start(args.timing)
             validate_classification(result, schema, taxonomy, args.stage, post_id)
+            timing_print(args.timing, post_id, "validation", timing_elapsed(step_timer))
             topic_path = result["classification_result"].get("topic_path") or ""
             if vehicle_catalog is None and not topic_path.startswith("fora_escopo"):
+                step_timer = timing_start(args.timing)
                 vehicle_catalog = fetch_vehicle_catalog(base_url, headers)
+                timing_print(args.timing, post_id, "vehicle_catalog_fetch", timing_elapsed(step_timer))
+            step_timer = timing_start(args.timing)
             enrich_vehicle_entities_with_catalog(
                 base_url,
                 headers,
@@ -2406,8 +2511,10 @@ def main():
                 harness_input,
                 vehicle_catalog,
             )
+            timing_print(args.timing, post_id, "vehicle_enrichment", timing_elapsed(step_timer))
 
             if args.write:
+                step_timer = timing_start(args.timing)
                 write_classification(
                     base_url,
                     headers,
@@ -2418,6 +2525,7 @@ def main():
                     result,
                     raw_response,
                 )
+                timing_print(args.timing, post_id, "supabase_write", timing_elapsed(step_timer))
             else:
                 print(json.dumps(result, ensure_ascii=False, indent=2))
 
@@ -2430,6 +2538,7 @@ def main():
 
         if args.sleep_seconds:
             time.sleep(args.sleep_seconds)
+        timing_print(args.timing, post_id, "video_total", timing_elapsed(video_timer))
 
     if args.write and run_id:
         status = "completed" if failed == 0 else "failed"

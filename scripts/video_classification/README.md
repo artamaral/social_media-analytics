@@ -275,12 +275,27 @@ python scripts/video_classification/classify_videos_gpt_v2.py \
 
 O script apenas repassa `--plugin-dirs`, `--extractor-args` e `--proxy` ao
 `yt-dlp`. Plugins, PO Tokens, cookies e configuracoes locais ficam fora do Git.
+Quando `--yt-dlp-cookies` e usado, o script copia o arquivo para um cookies
+temporario em `audio-workdir`, usa essa copia no `yt-dlp` e apaga a copia ao
+final. Isso evita que o `yt-dlp` tente regravar o arquivo original da VPS ao
+encerrar e tambem evita depender de flags que variam por versao do `yt-dlp`.
 
 Se o caminho direto do `yt-dlp` falhar com `ffmpeg exited with code -11`, o
 classificador usa fallback estavel: baixa a fonte de audio/video sem conversao
 pelo `yt-dlp`, preferindo audio leve `139/140` antes do progressivo `18`, e
 corta/converte os primeiros `90s` com o `ffmpeg` do `imageio-ffmpeg` em uma
 etapa separada.
+Timeout de download tambem e tratado como falha recuperavel para permitir a
+tentativa pelo fallback estavel.
+
+Diagnostico de tempo:
+
+- use `--timing` para imprimir duracao por etapa sem alterar o fluxo de
+  classificacao
+- etapas medidas incluem download direto/fallback, Whisper, chamada OpenAI,
+  validacao, enriquecimento de veiculo e escrita no Supabase
+- para medir um unico video completo, rode com `--post-id <id>` e
+  `--include-already-classified`
 
 O transcript completo pode ser preservado no CSV temporario, mas nao e gravado
 no Supabase. O `input_payload` persistido contem apenas hash, tamanho, duracao e
@@ -309,6 +324,15 @@ Entidades de veiculo:
 - exemplos rejeitados sem marca proxima: `100%`, `bora para o canal`,
   `tipo SKD` e `link na descricao`
 - entidade explicita nao encontrada grava `not_found`
+
+Reparos conservadores antes da gravacao:
+
+- `topic_path` e `topic_path_secondary` com typo mecanico so sao corrigidos
+  quando existe exatamente um codigo canonico compativel na Taxonomia V2
+- exemplo aceito: `mercado_procuto__lancamentos` ->
+  `mercado_produto__lancamentos`
+- `vehicle_entities[].entity_order` e reordenado pelo harness para evitar falha
+  por indice `0` ou negativo retornado pelo modelo
 
 Instalar dependencias:
 
