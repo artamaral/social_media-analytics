@@ -2720,7 +2720,7 @@ Motivo:
 - `yt-dlp` com `--proxy socks5://127.0.0.1:11080` passou da barreira
   `Sign in to confirm you're not a bot` no teste manual
 - a rodada Batch 1 mostrou falhas `ffmpeg exited with code -11`; o classificador
-  passou a ter fallback estavel que baixa a fonte sem conversao pelo `yt-dlp`,
+  passou a ter caminho estavel que baixa a fonte sem conversao pelo `yt-dlp`,
   preferindo audio leve `139/140` antes do progressivo `18`, e corta/converte
   com `ffmpeg` em etapa separada
 
@@ -2755,6 +2755,12 @@ Motivo:
   audio levou `1.45s..4.27s`, Whisper `9.64s..22.40s` e OpenAI `46.60s..70.16s`
 - o Batch 2 fechou `10/10` no Supabase com `transcript_quality_status = usable`
   para todos os videos
+- a rodada Batch 1 mostrou que quase todos os downloads bem-sucedidos passavam
+  pelo caminho estavel; por isso, a partir de `2026-07-31-r24-stable-audio-first`,
+  o classificador tenta primeiro baixar a fonte leve `139/140/18` sem conversao
+  pelo `yt-dlp` e cortar/converter localmente com `ffmpeg`
+- a conversao direta antiga do `yt-dlp` fica apenas como recuperacao se o
+  caminho estavel falhar
 
 Referencia:
 

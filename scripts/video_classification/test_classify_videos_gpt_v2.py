@@ -176,7 +176,7 @@ class ClassifierContractTests(unittest.TestCase):
         self.assertIsNone(start)
         self.assertEqual(CLASSIFIER.timing_elapsed(start), 0.0)
 
-    def test_transcribe_post_local_uses_stable_audio_fallback(self):
+    def test_transcribe_post_local_uses_stable_audio_first(self):
         temp_dir = SCRIPT_PATH.parents[2] / "tmp" / "video_classification_tests"
         temp_dir.mkdir(parents=True, exist_ok=True)
 
@@ -208,11 +208,11 @@ class ClassifierContractTests(unittest.TestCase):
         def stable_download(*call_args):
             call_args[2].write_bytes(b"wav")
 
-        with patch.object(CLASSIFIER, "download_audio_segment", side_effect=RuntimeError("ffmpeg exited with code -11")), patch.object(
+        with patch.object(
             CLASSIFIER,
             "download_audio_segment_stable",
             side_effect=stable_download,
-        ) as fallback:
+        ) as stable, patch.object(CLASSIFIER, "download_audio_segment") as direct:
             record = CLASSIFIER.transcribe_post_local(
                 {"post_id": "video1", "duration": 300},
                 {"ffmpeg_path": "ffmpeg", "model": fake_model},
@@ -224,7 +224,56 @@ class ClassifierContractTests(unittest.TestCase):
             record["metadata"]["source_method"],
             "yt-dlp-source+ffmpeg-segment+faster-whisper-local",
         )
-        fallback.assert_called_once()
+        stable.assert_called_once()
+        direct.assert_not_called()
+
+    def test_transcribe_post_local_uses_direct_recovery_after_stable_failure(self):
+        temp_dir = SCRIPT_PATH.parents[2] / "tmp" / "video_classification_tests"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+
+        class Segment:
+            text = "texto transcrito"
+
+        class FakeModel:
+            def transcribe(self, audio_path, language, vad_filter):
+                return [Segment()], {}
+
+        args = SimpleNamespace(
+            transcript_seconds=90,
+            audio_workdir=temp_dir,
+            yt_dlp_cookies=None,
+            yt_dlp_user_agent=None,
+            yt_dlp_referer=None,
+            yt_dlp_extractor_args=[],
+            yt_dlp_plugin_dir=[],
+            yt_dlp_proxy="socks5://127.0.0.1:11080",
+            whisper_language="pt",
+            whisper_model="small",
+            whisper_compute_type="int8",
+        )
+
+        def direct_download(*call_args):
+            call_args[2].write_bytes(b"wav")
+
+        with patch.object(
+            CLASSIFIER,
+            "download_audio_segment_stable",
+            side_effect=RuntimeError("bot block"),
+        ) as stable, patch.object(
+            CLASSIFIER,
+            "download_audio_segment",
+            side_effect=direct_download,
+        ) as direct:
+            record = CLASSIFIER.transcribe_post_local(
+                {"post_id": "video1", "duration": 300},
+                {"ffmpeg_path": "ffmpeg", "model": FakeModel()},
+                args,
+            )
+
+        self.assertEqual(record["text"], "texto transcrito")
+        self.assertEqual(record["metadata"]["source_method"], "yt-dlp+faster-whisper-local")
+        stable.assert_called_once()
+        direct.assert_called_once()
 
     def test_transcribe_post_local_uses_temporary_cookie_copy(self):
         temp_dir = SCRIPT_PATH.parents[2] / "tmp" / "video_classification_tests"
@@ -258,7 +307,7 @@ class ClassifierContractTests(unittest.TestCase):
             seen["cookies_path"] = Path(call_args[4])
             call_args[2].write_bytes(b"wav")
 
-        with patch.object(CLASSIFIER, "download_audio_segment", side_effect=fake_download):
+        with patch.object(CLASSIFIER, "download_audio_segment_stable", side_effect=fake_download):
             CLASSIFIER.transcribe_post_local(
                 {"post_id": "video_cookie", "duration": 300},
                 {"ffmpeg_path": "ffmpeg", "model": FakeModel()},

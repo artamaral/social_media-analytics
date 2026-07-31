@@ -365,7 +365,7 @@ Tempos observados na validacao:
 
 - com `mweb + bgutil` quebrado: ate `300s` no download direto e mais `300s` no
   fallback, sem concluir
-- com `android_vr`: fallback de audio entre `1.45s` e `4.27s`; Whisper entre
+- com `android_vr`: caminho estavel de audio entre `1.45s` e `4.27s`; Whisper entre
   `9.64s` e `22.40s`; chamada OpenAI entre `46.60s` e `70.16s`
 - o Batch 2 fechou `10/10` no Supabase depois de trocar para `android_vr`
 
@@ -383,11 +383,11 @@ quando o transcript ja existir.
 O transcript usado nessa rotina vem de `faster-whisper` local. Um CSV existente
 pode ser passado com `--transcripts-csv` para replay e comparacao.
 
-Se a aquisicao direta falhar com `ffmpeg exited with code -11`, a versao
-`2026-07-30-r17-audio-first-fallback` tenta automaticamente um caminho mais
-estavel: baixar a fonte sem conversao pelo `yt-dlp`, preferindo audio leve
-`139/140` antes do progressivo `18`, e cortar/converter com o `ffmpeg` do
-`imageio-ffmpeg` fora do `yt-dlp`.
+A partir de `2026-07-31-r24-stable-audio-first`, a aquisicao usa primeiro o
+caminho mais estavel: baixar a fonte sem conversao pelo `yt-dlp`, preferindo
+audio leve `139/140` antes do progressivo `18`, e cortar/converter com o
+`ffmpeg` do `imageio-ffmpeg` fora do `yt-dlp`. A conversao direta antiga do
+`yt-dlp` fica apenas como recuperacao se o caminho estavel falhar.
 
 O transcript completo nao e gravado no Supabase. O banco recebe a avaliacao de
 qualidade, evidencias curtas e metadados sanitizados da transcricao.

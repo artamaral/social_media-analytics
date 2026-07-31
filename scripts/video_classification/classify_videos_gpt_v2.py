@@ -25,7 +25,7 @@ TAXONOMY_VERSION = "taxonomia_video_v2"
 PROMPT_CONTRACT_VERSION = "video_taxonomy_v2_classifier_r2"
 OUTPUT_SCHEMA_VERSION = "video_taxonomy_v2_output_schema_r2"
 # Marcador operacional para confirmar se a copia local/VPS esta atualizada.
-SCRIPT_VERSION = "2026-07-31-r23-score-scale-repair"
+SCRIPT_VERSION = "2026-07-31-r24-stable-audio-first"
 DEFAULT_TITLE_MODEL = "gpt-5-nano"
 DEFAULT_TRANSCRIPT_MODEL = "gpt-5-nano"
 DEFAULT_MAX_OUTPUT_TOKENS = 6000
@@ -1155,11 +1155,11 @@ def transcribe_post_local(post, runtime, args):
 
     audio_path = args.audio_workdir / f"{post_id}_{target_duration}s.wav"
     cookies_path = prepare_temporary_cookies(args.yt_dlp_cookies, args.audio_workdir, post_id)
-    source_method = "yt-dlp+faster-whisper-local"
+    source_method = "yt-dlp-source+ffmpeg-segment+faster-whisper-local"
     try:
         try:
             step_timer = timing_start(timing_enabled)
-            download_audio_segment(
+            download_audio_segment_stable(
                 post_id,
                 target_duration,
                 audio_path,
@@ -1171,12 +1171,12 @@ def transcribe_post_local(post, runtime, args):
                 args.yt_dlp_plugin_dir,
                 args.yt_dlp_proxy,
             )
-            timing_print(timing_enabled, post_id, "audio_download_direct", timing_elapsed(step_timer))
-        except RuntimeError as first_error:
+            timing_print(timing_enabled, post_id, "audio_download_stable", timing_elapsed(step_timer))
+        except RuntimeError as stable_error:
             try:
-                timing_print(timing_enabled, post_id, "audio_download_direct_failed", timing_elapsed(step_timer))
+                timing_print(timing_enabled, post_id, "audio_download_stable_failed", timing_elapsed(step_timer))
                 step_timer = timing_start(timing_enabled)
-                download_audio_segment_stable(
+                download_audio_segment(
                     post_id,
                     target_duration,
                     audio_path,
@@ -1188,14 +1188,14 @@ def transcribe_post_local(post, runtime, args):
                     args.yt_dlp_plugin_dir,
                     args.yt_dlp_proxy,
                 )
-                timing_print(timing_enabled, post_id, "audio_download_fallback", timing_elapsed(step_timer))
-                source_method = "yt-dlp-source+ffmpeg-segment+faster-whisper-local"
-            except RuntimeError as fallback_error:
-                timing_print(timing_enabled, post_id, "audio_download_fallback_failed", timing_elapsed(step_timer))
+                timing_print(timing_enabled, post_id, "audio_download_direct_recovery", timing_elapsed(step_timer))
+                source_method = "yt-dlp+faster-whisper-local"
+            except RuntimeError as direct_error:
+                timing_print(timing_enabled, post_id, "audio_download_direct_recovery_failed", timing_elapsed(step_timer))
                 raise RuntimeError(
                     "falha no download/conversao de audio; "
-                    f"tentativa_yt_dlp={first_error}; fallback_estavel={fallback_error}"
-                ) from fallback_error
+                    f"tentativa_estavel={stable_error}; tentativa_direta={direct_error}"
+                ) from direct_error
         step_timer = timing_start(timing_enabled)
         segments, _info = runtime["model"].transcribe(
             str(audio_path),

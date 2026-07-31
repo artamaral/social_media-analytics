@@ -134,9 +134,10 @@ O resultado esperado e `warp=on`. O classificador deve entao receber:
 Nao usar `warp-cli connect` global no host, pois esse modo ja causou falha de
 DNS/rota na VPS.
 
-Se o `yt-dlp` passar pela barreira de bot mas falhar em conversao com
-`ffmpeg exited with code -11`, o fallback do classificador deve preferir audio
-leve `139/140` antes do progressivo `18`. O formato `139` foi validado no teste
+Na VPS, o classificador deve usar `stable audio first`: baixar a fonte sem
+conversao pelo `yt-dlp`, preferindo audio leve `139/140` antes do progressivo
+`18`, e so depois converter/cortar localmente com `ffmpeg`. A conversao direta
+antiga do `yt-dlp` fica como recuperacao. O formato `139` foi validado no teste
 manual com WARP/PO Token para `JGzj254Kgs4`.
 
 ## Validacao

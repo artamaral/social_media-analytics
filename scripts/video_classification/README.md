@@ -273,19 +273,19 @@ temporario em `audio-workdir`, usa essa copia no `yt-dlp` e apaga a copia ao
 final. Isso evita que o `yt-dlp` tente regravar o arquivo original da VPS ao
 encerrar e tambem evita depender de flags que variam por versao do `yt-dlp`.
 
-Se o caminho direto do `yt-dlp` falhar com `ffmpeg exited with code -11`, o
-classificador usa fallback estavel: baixa a fonte de audio/video sem conversao
-pelo `yt-dlp`, preferindo audio leve `139/140` antes do progressivo `18`, e
-corta/converte os primeiros `90s` com o `ffmpeg` do `imageio-ffmpeg` em uma
-etapa separada.
+O caminho operacional padrao usa `stable audio first`: baixa a fonte de
+audio/video sem conversao pelo `yt-dlp`, preferindo audio leve `139/140` antes
+do progressivo `18`, e corta/converte os primeiros `90s` com o `ffmpeg` do
+`imageio-ffmpeg` em uma etapa separada. A conversao direta antiga do `yt-dlp`
+fica apenas como recuperacao se esse caminho estavel falhar.
 Timeout de download tambem e tratado como falha recuperavel para permitir a
-tentativa pelo fallback estavel.
+tentativa direta de recuperacao.
 
 Diagnostico de tempo:
 
 - use `--timing` para imprimir duracao por etapa sem alterar o fluxo de
   classificacao
-- etapas medidas incluem download direto/fallback, Whisper, chamada OpenAI,
+- etapas medidas incluem download estavel, recuperacao direta, Whisper, chamada OpenAI,
   validacao, enriquecimento de veiculo e escrita no Supabase
 - para medir um unico video completo, rode com `--post-id <id>` e
   `--include-already-classified`
