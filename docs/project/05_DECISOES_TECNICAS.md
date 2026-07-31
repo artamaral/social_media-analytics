@@ -2731,6 +2731,43 @@ Referencia:
 
 ---
 
+## Promocao conservadora de topic_path especifico no classificador V2
+
+Data:
+
+- 2026-07-31
+
+Decisao:
+
+- quando o GPT retornar um `topic_path` pai generico, mas
+  `technical_contexts[]` trouxer uma rota primaria/secundaria mais especifica
+  dentro da mesma arvore, o script pode promover o `topic_path` principal para
+  essa rota especifica
+- a promocao nao cruza dominios: um review nao vira `powertrain` apenas porque
+  citou motor turbo, cambio, bateria ou autonomia
+- a matriz `43_TAXONOMIA_VIDEO_V2_COMPATIBILIDADE_TECNICA.csv` foi expandida
+  de `91` para `104` regras para cobrir casos validos observados no Batch 1:
+  turbo/cambio em review, autonomia como atributo, pos-venda/oficinas/pecas e
+  detalhes internos de motor em diagnostico/reparo
+
+Motivo:
+
+- o teste `medium` do Batch 1 melhorou a qualidade textual, mas ainda gerou
+  regressao de especificidade em casos como `z55GnDEg7_U`
+- varios contextos tecnicos reais foram marcados como `needs_review` apenas por
+  ausencia de combinacao na matriz inicial
+- a solucao preserva a estrategia conservadora: nao inventa tema, nao cruza
+  dominios e continua bloqueando campos concatenados
+
+Referencia:
+
+- `docs/external_data/58_GPT_VIDEO_CLASSIFIER_HARNESS_CONTRACT_V2.md`
+- `docs/external_data/58_GPT_VIDEO_CLASSIFIER_SKILL_V2.md`
+- `docs/external_data/43_TAXONOMIA_VIDEO_V2_COMPATIBILIDADE_TECNICA.csv`
+- `sql/dml/seed_video_taxonomy_v2.sql`
+
+---
+
 ## Default VPS para audio YouTube: android_vr sem bgutil
 
 Data:

@@ -119,6 +119,16 @@ Antes de escolher um `topic_path` tematico, aplique esta ordem:
 - `motor` e `cambio` nao podem ser rotulos soltos de tema.
 - `motor` e `cambio` podem aparecer como sistema, componente ou rota
   contextualizada quando houver evidencia.
+- Quando a proposta principal estiver clara em uma rota especifica da
+  taxonomia, nao responda apenas com o no pai generico.
+  - Se houver desmontagem, falha e troca/reparo de motor, use
+    `manutencao_reparo__reparo_corretivo__reparo_motor`,
+    `manutencao_reparo__reparo_corretivo__troca_motor` ou
+    `diagnostico__falha_motor`, conforme a atividade dominante.
+  - Se houver limpeza preventiva de varios componentes, prefira
+    `manutencao_reparo__manutencao_preventiva__limpeza_componentes`.
+  - Se houver carro popular/barato/zero km acessivel como proposta de compra,
+    prefira `mercado_produto__compra_venda__carro_popular`.
 - `eletrico`, `hibrido`, `flex` e `diesel` pertencem a `powertrain`.
 - `bateria_12v` pertence a `eletrica_eletronica`.
 - `bateria_tracao` pertence a `powertrain`.
@@ -254,6 +264,9 @@ Antes de finalizar, confirme:
 - o `topic_path` existe na lista recebida;
 - `topic_path_secondary`, se usado, existe na lista recebida;
 - nenhum campo tecnico contem multiplos valores concatenados;
+- se houver varios problemas, componentes ou sistemas, cada um virou uma linha
+  separada em `technical_contexts[]` ou ficou `null` quando nao houver defeito
+  ou sintoma explicito;
 - se o video for review/mercado, nenhum detalhe de `powertrain` substituiu o
   tema principal sem evidencia de que o video e sobre powertrain;
 - cada contexto tecnico tem evidencia textual;
@@ -271,8 +284,15 @@ Antes de finalizar, confirme:
   `review_teste__teste_autonomia` como principal; `powertrain__eletrico__autonomia`
   pode ser secundario/contexto.
 - `z55GnDEg7_U`: se a transcricao mostra desmontagem, diagnostico e reparo de
-  motor, use `manutencao_reparo__reparo_corretivo__reparo_motor`, mesmo que o
-  titulo pareca apenas preco.
+  motor, use uma rota especifica como
+  `manutencao_reparo__reparo_corretivo__reparo_motor`,
+  `manutencao_reparo__reparo_corretivo__troca_motor` ou
+  `diagnostico__falha_motor`, conforme a atividade dominante; nao use apenas
+  `manutencao_reparo` ou `diagnostico`.
+- `JGzj254Kgs4`: se a transcricao mostra discussao de compra de carro popular,
+  barato ou zero km acessivel, use
+  `mercado_produto__compra_venda__carro_popular`; se o veiculo for eletrico,
+  `powertrain__eletrico` pode entrar como secundario/contexto.
 - `RTZHxSE2t5M`: se a transcricao mostra gargalo de oficinas, pecas e
   reparacao, use `pos_venda_reparacao` como principal.
 - `6qSnrkGd70I`: se a evidencia fala de radiador, aditivo, agua

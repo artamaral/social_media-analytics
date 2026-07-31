@@ -4059,6 +4059,14 @@ Resultado:
   cortando e convertendo localmente com `ffmpeg`
 - a conversao direta antiga do `yt-dlp` permanece apenas como recuperacao se a
   aquisicao estavel falhar
+- apos o reteste do Batch 1 com `faster-whisper medium`, foi implementado um
+  reforco conservador de especificidade: se o GPT retornar um `topic_path`
+  generico, mas os contextos tecnicos trouxerem rota mais especifica dentro da
+  mesma arvore, o script promove o `topic_path` para essa rota
+- a matriz tecnica V2 foi expandida de `91` para `104` regras para reduzir
+  `needs_review` em contextos validos observados no piloto, como turbo/cambio
+  em review, autonomia como atributo, pos-venda/oficinas/pecas e detalhes
+  internos de motor
 - o teste com PO Token fica limitado a execucao manual, sem cron
 - cookies, tokens, plugins e configuracoes locais permanecem fora do Git
 - `--transcripts-csv` continua sendo o fallback validado para testar o

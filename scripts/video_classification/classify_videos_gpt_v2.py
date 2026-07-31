@@ -25,7 +25,7 @@ TAXONOMY_VERSION = "taxonomia_video_v2"
 PROMPT_CONTRACT_VERSION = "video_taxonomy_v2_classifier_r2"
 OUTPUT_SCHEMA_VERSION = "video_taxonomy_v2_output_schema_r2"
 # Marcador operacional para confirmar se a copia local/VPS esta atualizada.
-SCRIPT_VERSION = "2026-07-31-r24-stable-audio-first"
+SCRIPT_VERSION = "2026-07-31-r25-specific-topic-promotion"
 DEFAULT_TITLE_MODEL = "gpt-5-nano"
 DEFAULT_TRANSCRIPT_MODEL = "gpt-5-nano"
 DEFAULT_MAX_OUTPUT_TOKENS = 6000
@@ -95,6 +95,13 @@ Regras obrigatorias:
 - topic_path e topic_path_secondary devem existir na lista recebida.
 - topic_path representa a proposta principal do video, nao o primeiro detalhe
   tecnico citado na transcricao.
+- Se a proposta principal estiver clara em uma rota especifica da taxonomia,
+  nao use apenas o no pai generico. Exemplo: se houver desmontagem, falha e
+  troca/reparo de motor, use manutencao_reparo__reparo_corretivo__reparo_motor
+  ou manutencao_reparo__reparo_corretivo__troca_motor, nao manutencao_reparo.
+- Se houver limpeza de varios componentes preventivos, prefira
+  manutencao_reparo__manutencao_preventiva__limpeza_componentes em vez de
+  manutencao_reparo__manutencao_preventiva.
 - topic_path_secondary so entra com segundo tema forte e explicito.
 - Em review_teste ou mercado_produto, motor, cambio, bateria, autonomia,
   turbo, flex ou eletrico devem ir para technical_contexts[] ou
@@ -104,6 +111,9 @@ Regras obrigatorias:
   motorizacao, autonomia, recarga, consumo, cambio ou tecnologia de propulsao.
 - technical_contexts[] so entra com evidencia explicita.
 - Cada technical_context representa uma unica combinacao de sistema, componente e problema.
+- Nunca coloque multiplos problemas, componentes ou sistemas concatenados no
+  mesmo campo. Crie outro item em technical_contexts[] ou escolha null quando
+  o problema nao for defeito/sintoma.
 - Se houver apenas dominio/topico generico, nao crie technical_context.
 - Se um contexto tecnico nao existir na matriz recebida, marque
   compatibility_status=needs_review e needs_human_review=true.
@@ -1463,6 +1473,7 @@ def validate_classification(result, schema, taxonomy, stage, post_id):
     repair_topic_paths_for_validation(result, topic_codes)
     normalize_score_scales_for_validation(result)
     normalize_technical_contexts_for_validation(result, compatibility_keys)
+    promote_specific_topic_path_from_contexts(result)
     normalize_vehicle_entities_for_validation(result)
 
     if classification["post_id"] != post_id:
@@ -1658,6 +1669,38 @@ def normalize_technical_contexts_for_validation(result, compatibility_keys):
         normalized_contexts.append(context)
 
     result["technical_contexts"] = normalized_contexts
+
+
+def promote_specific_topic_path_from_contexts(result):
+    classification = result["classification_result"]
+    current_topic = classification.get("topic_path")
+    if not current_topic or current_topic.startswith("fora_escopo") or current_topic == "sem_match_taxonomico":
+        return
+
+    candidates = []
+    for index, context in enumerate(result["technical_contexts"]):
+        context_topic = context.get("topic_path")
+        if not context_topic or context_topic == current_topic:
+            continue
+        if context.get("context_role") not in {"primary", "secondary"}:
+            continue
+        if not is_child_topic_path(current_topic, context_topic):
+            continue
+        candidates.append((topic_path_depth(context_topic), context.get("context_role") == "primary", -index, context_topic))
+
+    if not candidates:
+        return
+
+    _depth, _is_primary, _order, promoted_topic = max(candidates)
+    classification["topic_path"] = promoted_topic
+
+
+def is_child_topic_path(parent, child):
+    return child.startswith(f"{parent}__")
+
+
+def topic_path_depth(topic_path):
+    return len(topic_path.split("__")) if topic_path else 0
 
 
 def append_validation_issue(current, issue):

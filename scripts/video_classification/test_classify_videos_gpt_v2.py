@@ -344,6 +344,50 @@ class ClassifierContractTests(unittest.TestCase):
             if output_file.exists():
                 output_file.unlink()
 
+    def test_promote_specific_topic_path_from_primary_context(self):
+        result = {
+            "classification_result": {
+                "topic_path": "manutencao_reparo",
+            },
+            "technical_contexts": [
+                {
+                    "topic_path": "manutencao_reparo__reparo_corretivo__troca_motor",
+                    "context_role": "primary",
+                },
+                {
+                    "topic_path": "diagnostico__falha_motor",
+                    "context_role": "secondary",
+                },
+            ],
+        }
+
+        CLASSIFIER.promote_specific_topic_path_from_contexts(result)
+
+        self.assertEqual(
+            result["classification_result"]["topic_path"],
+            "manutencao_reparo__reparo_corretivo__troca_motor",
+        )
+
+    def test_promote_specific_topic_path_does_not_cross_domain(self):
+        result = {
+            "classification_result": {
+                "topic_path": "review_teste__review_veiculo",
+            },
+            "technical_contexts": [
+                {
+                    "topic_path": "powertrain__combustao__turbo",
+                    "context_role": "primary",
+                },
+            ],
+        }
+
+        CLASSIFIER.promote_specific_topic_path_from_contexts(result)
+
+        self.assertEqual(
+            result["classification_result"]["topic_path"],
+            "review_teste__review_veiculo",
+        )
+
     def test_write_persists_quality_and_redacts_transcript(self):
         result = {
             "classification_result": {

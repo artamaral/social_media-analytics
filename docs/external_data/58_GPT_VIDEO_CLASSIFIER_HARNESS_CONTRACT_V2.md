@@ -283,6 +283,12 @@ Campos de saida:
 - `topic_path` deve existir na Taxonomia V2.
 - `topic_path` representa a proposta principal do video, nao o primeiro detalhe
   tecnico forte citado na transcricao.
+- Quando houver evidencia clara de uma rota especifica, o classificador nao
+  deve responder apenas com o no pai generico. Exemplos:
+  `manutencao_reparo__reparo_corretivo__troca_motor` em vez de
+  `manutencao_reparo`, `diagnostico__falha_motor` em vez de `diagnostico`, e
+  `mercado_produto__compra_venda__carro_popular` em vez de
+  `mercado_produto`.
 - `topic_path_secondary` so entra quando houver segundo tema forte e explicito.
 - Em videos de `review_teste` ou `mercado_produto`, motor, cambio, bateria,
   autonomia, turbo, flex ou eletrico devem ficar em `technical_contexts[]` ou
@@ -309,6 +315,9 @@ Campos de saida:
 - Cada item tecnico representa uma unica combinacao coerente de sistema,
   componente e problema.
 - Nenhum campo tecnico pode conter multiplos valores concatenados.
+- Se houver varios sistemas, componentes ou problemas, cada combinacao deve
+  virar uma linha separada em `technical_contexts[]`; se nao houver defeito ou
+  sintoma explicito, `problem` deve ficar `null`.
 - Marca, modelo, ano e geracao so entram quando aparecerem explicitamente no
   titulo, descricao, transcricao ou metadado confiavel.
 - `motor` e `cambio` nunca sao rotulos soltos; entram apenas como sistema,
