@@ -388,6 +388,66 @@ class ClassifierContractTests(unittest.TestCase):
             "review_teste__review_veiculo",
         )
 
+    def test_promote_sem_match_autonomy_to_existing_review_topic(self):
+        result = {
+            "classification_result": {
+                "topic_path": "sem_match_taxonomico",
+                "confidence_score": 0.42,
+                "needs_human_review": True,
+                "validation_issues": "sem_match_taxonomico utilizado",
+            },
+            "technical_contexts": [],
+        }
+        harness = {
+            "video": {
+                "title": "Testei a autonomia do Byd Dolphin Mini Gs no extremo",
+                "description": None,
+                "transcript_90s": "Teste de autonomia do carro eletrico ate o limite.",
+            }
+        }
+        topic_codes = {
+            "sem_match_taxonomico",
+            "review_teste__teste_autonomia",
+            "powertrain__eletrico__autonomia",
+        }
+
+        CLASSIFIER.promote_topic_path_from_evidence(result, harness, topic_codes)
+
+        classification = result["classification_result"]
+        self.assertEqual(classification["topic_path"], "review_teste__teste_autonomia")
+        self.assertGreaterEqual(classification["confidence_score"], 0.70)
+        self.assertFalse(classification["needs_human_review"])
+        self.assertIsNone(classification["validation_issues"])
+
+    def test_promote_generic_maintenance_engine_repair_topic(self):
+        result = {
+            "classification_result": {
+                "topic_path": "manutencao_reparo",
+                "confidence_score": 0.78,
+                "needs_human_review": False,
+                "validation_issues": None,
+            },
+            "technical_contexts": [],
+        }
+        harness = {
+            "video": {
+                "title": "Quanto custa o motor do Kwid ?",
+                "description": None,
+                "transcript_90s": "O motor foi desmontado para avaliar falha, custo e reparo.",
+            }
+        }
+        topic_codes = {
+            "manutencao_reparo",
+            "manutencao_reparo__reparo_corretivo__reparo_motor",
+        }
+
+        CLASSIFIER.promote_topic_path_from_evidence(result, harness, topic_codes)
+
+        self.assertEqual(
+            result["classification_result"]["topic_path"],
+            "manutencao_reparo__reparo_corretivo__reparo_motor",
+        )
+
     def test_write_persists_quality_and_redacts_transcript(self):
         result = {
             "classification_result": {
@@ -631,7 +691,7 @@ class ClassifierContractTests(unittest.TestCase):
     def test_script_vehicle_match_rejects_common_words_without_manufacturer(self):
         harness = {
             "video": {
-                "title": "Bora para o canal, link na descricao e carro 100% eletrico",
+                "title": "Bora para o canal, amigo, picape, link na descricao e carro 100% eletrico",
                 "description": "Tipo SKD e CKD aparecem como contexto industrial.",
                 "transcript_90s": "O carro chega a 99 km por hora e nao chega a 100 por hora.",
             }
@@ -672,6 +732,24 @@ class ClassifierContractTests(unittest.TestCase):
                 "model_name": "Link",
                 "model_key": "link",
                 "model_year": 2014,
+            },
+            {
+                "catalog_row_id": 5,
+                "catalog_model_id": 50,
+                "manufacturer_name": "Isuzu",
+                "manufacturer_key": "isuzu",
+                "model_name": "Amigo",
+                "model_key": "amigo",
+                "model_year": 1998,
+            },
+            {
+                "catalog_row_id": 6,
+                "catalog_model_id": 60,
+                "manufacturer_name": "Shineray",
+                "manufacturer_key": "shineray",
+                "model_name": "Picape",
+                "model_key": "picape",
+                "model_year": 2024,
             },
         ]
 
@@ -758,6 +836,97 @@ class ClassifierContractTests(unittest.TestCase):
         self.assertEqual(models, {"Commander"})
         self.assertEqual(entities[0]["canonical_manufacturer_name"], "Jeep")
 
+    def test_script_vehicle_match_rejects_picape_without_matching_manufacturer(self):
+        harness = {
+            "video": {
+                "title": "Uma picape nova da Volkswagen aparece em testes",
+                "description": None,
+                "transcript_90s": None,
+            }
+        }
+        catalog_rows = [
+            {
+                "catalog_row_id": 1,
+                "catalog_model_id": 10,
+                "manufacturer_name": "Shineray",
+                "manufacturer_key": "shineray",
+                "model_name": "Picape",
+                "model_key": "picape",
+                "model_year": 2025,
+            }
+        ]
+
+        entities = CLASSIFIER.select_script_vehicle_candidates(harness, catalog_rows)
+
+        self.assertEqual(entities, [])
+
+    def test_script_vehicle_match_gr_yaris_does_not_create_gr_ares(self):
+        harness = {
+            "video": {
+                "title": "Avaliação GR Yaris manual",
+                "description": None,
+                "transcript_90s": "Toyota GR Yaris com cambio manual.",
+            }
+        }
+        catalog_rows = [
+            {
+                "catalog_row_id": 1,
+                "catalog_model_id": 10,
+                "manufacturer_name": "Toyota",
+                "manufacturer_key": "toyota",
+                "model_name": "Yaris",
+                "model_key": "yaris",
+                "model_year": 2025,
+            },
+            {
+                "catalog_row_id": 2,
+                "catalog_model_id": 20,
+                "manufacturer_name": "Ficticia",
+                "manufacturer_key": "ficticia",
+                "model_name": "GR-Ares",
+                "model_key": "gr ares",
+                "model_year": 2025,
+            },
+        ]
+
+        entities = CLASSIFIER.select_script_vehicle_candidates(harness, catalog_rows)
+        models = {entity["canonical_model_name"] for entity in entities}
+
+        self.assertEqual(models, {"Yaris"})
+
+    def test_merge_vehicle_entities_keeps_more_specific_model_year(self):
+        model_entity = {
+            "entity_order": 1,
+            "vehicle_brand_raw": "Jeep",
+            "vehicle_model_raw": "Commander",
+            "vehicle_year": None,
+            "catalog_model_id": 20,
+            "catalog_row_id": None,
+            "catalog_match_level": "model",
+            "canonical_manufacturer_name": "Jeep",
+            "canonical_model_name": "Commander",
+            "canonical_model_year": None,
+        }
+        model_year_entity = {
+            "entity_order": 2,
+            "vehicle_brand_raw": "Jeep",
+            "vehicle_model_raw": "Commander",
+            "vehicle_year": 2027,
+            "catalog_model_id": 20,
+            "catalog_row_id": 99,
+            "catalog_match_level": "model_year",
+            "canonical_manufacturer_name": "Jeep",
+            "canonical_model_name": "Commander",
+            "canonical_model_year": 2027,
+        }
+
+        merged = CLASSIFIER.merge_vehicle_entities([model_entity, model_year_entity], [])
+
+        self.assertEqual(len(merged), 1)
+        self.assertEqual(merged[0]["catalog_match_level"], "model_year")
+        self.assertEqual(merged[0]["canonical_model_year"], 2027)
+        self.assertEqual(merged[0]["entity_order"], 1)
+
     def test_default_skill_documents_topic_path_priority(self):
         skill = CLASSIFIER.DEFAULT_SKILL
 
@@ -801,6 +970,22 @@ class ClassifierContractTests(unittest.TestCase):
         )
 
         self.assertEqual(repaired, "mercado_produto__analise_mercado")
+
+    def test_repair_topic_path_code_demotes_traction_attribute_to_review_context(self):
+        topic_codes = {"review_teste__review_veiculo", "powertrain__transmissao"}
+
+        repaired = CLASSIFIER.repair_topic_path_code(
+            "powertrain__transmissao__tracao_integral",
+            topic_codes,
+        )
+
+        self.assertEqual(repaired, "review_teste__review_veiculo")
+
+    def test_normalize_unit_score_accepts_percent_string(self):
+        self.assertEqual(CLASSIFIER.normalize_unit_score("85%"), 0.85)
+
+    def test_normalize_unit_score_caps_invalid_high_value(self):
+        self.assertEqual(CLASSIFIER.normalize_unit_score(850), 1.0)
 
     def test_normalize_vehicle_entities_resequences_invalid_orders(self):
         result = {
@@ -1084,6 +1269,63 @@ class ClassifierContractTests(unittest.TestCase):
         self.assertEqual(context["component"], "motor_conjunto")
         self.assertEqual(context["problem"], "falha_de_motor")
         self.assertFalse(context["needs_human_review"])
+
+    def test_normalize_technical_contexts_drops_generic_market_context(self):
+        result = {
+            "technical_contexts": [
+                {
+                    "topic_path": "mercado_produto__analise_mercado",
+                    "automotive_system": "market",
+                    "component": None,
+                    "problem": None,
+                    "compatibility_status": "needs_review",
+                    "needs_human_review": True,
+                    "validation_issue": "generico",
+                }
+            ]
+        }
+
+        CLASSIFIER.normalize_technical_contexts_for_validation(result, set())
+
+        self.assertEqual(result["technical_contexts"], [])
+
+    def test_normalize_technical_contexts_drops_generic_motor_context(self):
+        result = {
+            "technical_contexts": [
+                {
+                    "topic_path": "review_teste__review_veiculo",
+                    "automotive_system": "motor",
+                    "component": "motor",
+                    "problem": None,
+                    "compatibility_status": "needs_review",
+                    "needs_human_review": True,
+                    "validation_issue": "generico",
+                }
+            ]
+        }
+
+        CLASSIFIER.normalize_technical_contexts_for_validation(result, set())
+
+        self.assertEqual(result["technical_contexts"], [])
+
+    def test_normalize_technical_contexts_drops_hybrid_light_as_problem_only(self):
+        result = {
+            "technical_contexts": [
+                {
+                    "topic_path": "mercado_produto__lancamentos",
+                    "automotive_system": None,
+                    "component": None,
+                    "problem": "hibrido_leve",
+                    "compatibility_status": "needs_review",
+                    "needs_human_review": True,
+                    "validation_issue": "atributo",
+                }
+            ]
+        }
+
+        CLASSIFIER.normalize_technical_contexts_for_validation(result, set())
+
+        self.assertEqual(result["technical_contexts"], [])
 
     def test_append_issue_text_handles_null_current(self):
         self.assertEqual(CLASSIFIER.append_issue_text(None, "novo"), "novo")

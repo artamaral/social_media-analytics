@@ -4175,6 +4175,12 @@ Resultado:
 - a rota foi adicionada como nivel 2 e deve parar nesse ponto nesta fase
 - o criterio do MVP passa a ser identificar do que trata o video, que tipo de
   produto automotivo referencia e qual veiculo aparece quando houver evidencia
+- apos a rodada r38, foi acrescentado reparo conservador para impedir que
+  `tracao_dianteira`, `tracao_traseira` e `tracao_integral` sejam tratados
+  como `topic_path`; esses termos permanecem como atributos de contexto tecnico
+- `confidence_score` e `transcript_quality.quality_score` passam por
+  normalizacao defensiva para escala `0..1`, inclusive quando o modelo retorna
+  percentual ou valor acima da escala esperada
 - entidades de veiculo passam a ser normalizadas no maximo como
   `ano + fabricante + modelo`; versao/acabamento como `XR`, `GS`, `SE`, `LTZ`
   ou similares fica apenas em evidencia textual
@@ -4186,6 +4192,27 @@ Resultado:
 - o catalogo Carros na Web continua sendo referencia operacional brasileira;
   veiculos fora da cobertura podem permanecer `not_found` sem virar obrigacao
   de cadastro global
+
+## Item Sprint 6 - Curadoria conservadora do classificador V2
+
+Status: implementado para validacao manual em 2026-08-03.
+
+Resultado:
+
+- apos a rodada operacional dos `10` videos, o gargalo principal deixou de ser
+  transcricao e passou a ser `needs_human_review` falso/evitavel por contexto
+  tecnico generico ou entidade de veiculo ruidosa
+- o classificador passou a remover contextos sem valor analitico antes de
+  gravar, como `market`, `motor/motor` e `powertrain/motor`
+- `sem_match_taxonomico` e nos pais genericos podem ser promovidos por script
+  para rota V2 especifica quando titulo/transcript sustentam claramente
+  autonomia/teste, lancamento ou reparo de motor
+- o matcher de veiculos passou a tratar palavras comuns como condicionais,
+  incluindo `amigo`, `picape`, `link`, `tipo`, `bora` e `100`
+- entidades duplicadas do mesmo modelo passam a manter o match mais especifico:
+  `model_year` antes de `model`
+- banco, ingestao, cron, pipeline e Taxonomia V2 canonica permanecem
+  inalterados nesta etapa
 
 ### Criterio de saida do planejamento
 

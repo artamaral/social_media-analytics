@@ -25,7 +25,7 @@ TAXONOMY_VERSION = "taxonomia_video_v2"
 PROMPT_CONTRACT_VERSION = "video_taxonomy_v2_classifier_r2"
 OUTPUT_SCHEMA_VERSION = "video_taxonomy_v2_output_schema_r2"
 # Marcador operacional para confirmar se a copia local/VPS esta atualizada.
-SCRIPT_VERSION = "2026-08-03-r37-lean-technical-context"
+SCRIPT_VERSION = "2026-08-03-r39-validation-repair"
 DEFAULT_TITLE_MODEL = "gpt-5-nano"
 DEFAULT_TRANSCRIPT_MODEL = "gpt-5-nano"
 DEFAULT_MAX_OUTPUT_TOKENS = 6000
@@ -34,7 +34,7 @@ DEFAULT_AUDIO_WORKDIR = Path("/opt/social-media-analytics/tmp/audio")
 if os.name == "nt":
     DEFAULT_AUDIO_WORKDIR = REPO_DIR / "tmp" / "video_classification_audio"
 
-CONDITIONAL_MODEL_KEYS = {"100", "bora", "link", "tipo"}
+CONDITIONAL_MODEL_KEYS = {"100", "amigo", "bora", "link", "picape", "tipo"}
 VEHICLE_TRIM_SUFFIX_KEYS = {
     "active",
     "advance",
@@ -70,6 +70,12 @@ TOPIC_PATH_ALIASES = {
     "manutencao_reparo__custo_reparo__orcamento": (
         "manutencao_reparo__custo_reparo__orcamento_manutencao"
     ),
+    "powertrain__tracao_dianteira": "review_teste__review_veiculo",
+    "powertrain__tracao_integral": "review_teste__review_veiculo",
+    "powertrain__tracao_traseira": "review_teste__review_veiculo",
+    "powertrain__transmissao__tracao_dianteira": "review_teste__review_veiculo",
+    "powertrain__transmissao__tracao_integral": "review_teste__review_veiculo",
+    "powertrain__transmissao__tracao_traseira": "review_teste__review_veiculo",
 }
 
 CONTEXT_PROBLEM_ALIASES = {
@@ -85,6 +91,7 @@ NON_TECHNICAL_CONTEXT_PROBLEMS = {
     "carbonizacao",
     "descarbonizacao",
     "geometria",
+    "hibrido_leve",
     "limpeza",
     "limpeza_polos",
     "manual_cambio",
@@ -95,6 +102,14 @@ PLEONASTIC_TECHNICAL_COMPONENTS = {
 }
 CONTEXT_COMPONENT_ALIASES = {
     "cilindro_bloco": "motor_conjunto",
+}
+GENERIC_TECHNICAL_CONTEXT_SYSTEMS = {
+    "market",
+    "mercado",
+}
+GENERIC_TECHNICAL_CONTEXT_PAIRS = {
+    ("motor", "motor"),
+    ("powertrain", "motor"),
 }
 
 GENERIC_TOPIC_PATHS = {
@@ -1887,12 +1902,20 @@ def normalize_unit_score(value):
 
     if isinstance(value, str):
         value = value.strip().replace(",", ".")
+        if value.endswith("%"):
+            value = value[:-1].strip()
         if not value:
             return None
         value = float(value)
 
+    if value < 0:
+        return 0.0
+
     if 1 < value <= 100:
         return round(value / 100, 4)
+
+    if value > 100:
+        return 1.0
 
     return value
 
@@ -1950,6 +1973,8 @@ def normalize_technical_contexts_for_validation(result, compatibility_keys):
     for context in result["technical_contexts"]:
         normalize_context_problem_alias(context)
         normalize_redundant_context_system(context)
+        if should_drop_generic_technical_context(context):
+            continue
         has_technical_value = any(
             normalize_nullable(context.get(field))
             for field in ["automotive_system", "component", "problem"]
@@ -1978,6 +2003,20 @@ def normalize_technical_contexts_for_validation(result, compatibility_keys):
         normalized_contexts.append(context)
 
     result["technical_contexts"] = normalized_contexts
+
+
+def should_drop_generic_technical_context(context):
+    system = normalize_nullable(context.get("automotive_system"))
+    component = normalize_nullable(context.get("component"))
+    problem = normalize_nullable(context.get("problem"))
+
+    if system in GENERIC_TECHNICAL_CONTEXT_SYSTEMS and not component and not problem:
+        return True
+
+    if (system, component) in GENERIC_TECHNICAL_CONTEXT_PAIRS and not problem:
+        return True
+
+    return False
 
 
 def normalize_context_problem_alias(context):
@@ -2039,6 +2078,79 @@ def promote_specific_topic_path_from_contexts(result):
 
     _depth, _is_primary, _order, promoted_topic = max(candidates)
     classification["topic_path"] = promoted_topic
+
+
+def promote_topic_path_from_evidence(result, harness_input, topic_codes):
+    classification = result["classification_result"]
+    current_topic = classification.get("topic_path")
+    if not current_topic or current_topic.startswith("fora_escopo"):
+        return
+
+    evidence = normalized_harness_evidence(harness_input)
+    promoted_topic = None
+
+    if current_topic == "sem_match_taxonomico":
+        promoted_topic = evidence_backed_topic_for_sem_match(evidence, topic_codes)
+    elif current_topic == "manutencao_reparo":
+        promoted_topic = evidence_backed_maintenance_topic(evidence, topic_codes)
+
+    if not promoted_topic or promoted_topic == current_topic:
+        return
+
+    classification["topic_path"] = promoted_topic
+    if current_topic == "sem_match_taxonomico":
+        classification["needs_human_review"] = False
+        classification["validation_issues"] = None
+        if classification.get("confidence_score") is not None:
+            classification["confidence_score"] = max(classification["confidence_score"], 0.70)
+
+
+def normalized_harness_evidence(harness_input):
+    video = harness_input.get("video") or {}
+    values = [
+        video.get("title"),
+        video.get("description"),
+        video.get("transcript_90s"),
+    ]
+    return normalize_catalog_key(" ".join(value for value in values if value))
+
+
+def evidence_backed_topic_for_sem_match(evidence, topic_codes):
+    if not evidence:
+        return None
+
+    autonomy_topic = "review_teste__teste_autonomia"
+    electric_autonomy_topic = "powertrain__eletrico__autonomia"
+    if "autonomia" in evidence and (
+        "test" in evidence or "teste" in evidence or "testei" in evidence
+    ):
+        if autonomy_topic in topic_codes:
+            return autonomy_topic
+        if electric_autonomy_topic in topic_codes:
+            return electric_autonomy_topic
+
+    if "lancamento" in evidence or "novo" in evidence or "estreia" in evidence:
+        launch_topic = "mercado_produto__lancamentos"
+        if launch_topic in topic_codes:
+            return launch_topic
+
+    return evidence_backed_maintenance_topic(evidence, topic_codes)
+
+
+def evidence_backed_maintenance_topic(evidence, topic_codes):
+    if not evidence:
+        return None
+
+    has_engine = "motor" in evidence or "cabecote" in evidence or "cilindro" in evidence
+    has_repair = any(
+        token in evidence
+        for token in ["reparo", "reparar", "troca", "trocar", "falha", "defeito", "desmont", "custa", "custo"]
+    )
+    repair_engine_topic = "manutencao_reparo__reparo_corretivo__reparo_motor"
+    if has_engine and has_repair and repair_engine_topic in topic_codes:
+        return repair_engine_topic
+
+    return None
 
 
 def is_child_topic_path(parent, child):
@@ -2480,15 +2592,53 @@ def vehicle_entity_dedupe_key(entity):
     )
 
 
+def vehicle_entity_family_key(entity):
+    if entity.get("catalog_model_id"):
+        return ("catalog_model", entity["catalog_model_id"])
+
+    manufacturer = normalize_catalog_key(
+        entity.get("canonical_manufacturer_name") or entity.get("vehicle_brand_raw")
+    )
+    model = normalize_catalog_key(entity.get("canonical_model_name") or entity.get("vehicle_model_raw"))
+    if manufacturer or model:
+        return ("canonical", manufacturer, model)
+
+    return vehicle_entity_dedupe_key(entity)
+
+
+def vehicle_entity_specificity_score(entity):
+    match_level = entity.get("catalog_match_level")
+    if match_level == "model_year" or entity.get("catalog_row_id"):
+        return 5
+    if match_level == "model" or entity.get("catalog_model_id"):
+        return 4
+    if match_level == "manufacturer":
+        return 3
+    if entity.get("vehicle_year"):
+        return 2
+    if entity.get("vehicle_brand_raw") or entity.get("vehicle_model_raw"):
+        return 1
+    return 0
+
+
 def merge_vehicle_entities(gpt_entities, script_entities):
-    merged = []
-    seen = set()
+    selected = {}
+    order = []
     for entity in list(script_entities) + list(gpt_entities):
-        key = vehicle_entity_dedupe_key(entity)
-        if key in seen:
+        exact_key = vehicle_entity_dedupe_key(entity)
+        family_key = vehicle_entity_family_key(entity)
+        key = family_key or exact_key
+        if key not in selected:
+            order.append(key)
+            selected[key] = dict(entity)
             continue
-        seen.add(key)
-        copied = dict(entity)
+
+        if vehicle_entity_specificity_score(entity) > vehicle_entity_specificity_score(selected[key]):
+            selected[key] = dict(entity)
+
+    merged = []
+    for key in order:
+        copied = selected[key]
         copied["entity_order"] = len(merged) + 1
         merged.append(copied)
     return merged
@@ -2781,6 +2931,9 @@ def classify_attempt(
     step_timer = timing_start(args.timing)
     validate_classification(result, schema, taxonomy, args.stage, post_id)
     timing_print(args.timing, post_id, "validation", timing_elapsed(step_timer))
+
+    topic_codes = {row["topic_path_code"] for row in taxonomy["topic_paths"]}
+    promote_topic_path_from_evidence(result, harness_input, topic_codes)
 
     topic_path = result["classification_result"].get("topic_path") or ""
     if vehicle_catalog is None and not topic_path.startswith("fora_escopo"):

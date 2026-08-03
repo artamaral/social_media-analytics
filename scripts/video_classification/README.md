@@ -25,6 +25,13 @@ Script minimo para classificar videos com GPT usando a Taxonomia Video V2.
   incompleta
 - marca contexto tecnico fora da matriz V2 como `needs_review`, em vez de
   gravar como compativel
+- remove contexto tecnico generico sem valor analitico antes de gravar, como
+  `market`, `motor/motor` e `powertrain/motor`
+- promove `topic_path` generico ou `sem_match_taxonomico` para rota V2
+  especifica quando titulo/transcript sustentam claramente autonomia,
+  lancamento ou reparo de motor
+- bloqueia falsos positivos de veiculo por palavras comuns e deduplica
+  entidades canonicas mantendo `model_year` antes de `model`
 - usa `docs/external_data/58_GPT_VIDEO_CLASSIFIER_SKILL_V2.md` como skill
   padrao, incluindo a regra documentada de `confidence_score`
 
@@ -154,10 +161,10 @@ Confirmar a versao do script copiado para a VPS:
 python scripts/video_classification/classify_videos_gpt_v2.py --version
 ```
 
-A versao esperada apos alinhar a skill oficial e a regra de confianca e:
+A versao esperada apos o reforco conservador de curadoria e:
 
 ```text
-classify_videos_gpt_v2.py 2026-07-24-r7-faster-whisper-quality
+classify_videos_gpt_v2.py 2026-08-03-r39-validation-repair
 ```
 
 Aliases equivalentes:
@@ -361,7 +368,13 @@ Reparos conservadores antes da gravacao:
 - `vehicle_entities[].entity_order` e reordenado pelo harness para evitar falha
   por indice `0` ou negativo retornado pelo modelo
 - `confidence_score` e `transcript_quality.quality_score` em escala percentual
-  (`85`, `92`) sao convertidos para escala `0..1` (`0.85`, `0.92`)
+  (`85`, `92`) ou com `%` sao convertidos para escala `0..1`; valores acima
+  da escala esperada sao limitados a `1.0` para evitar falha operacional por
+  formato de score
+- `tracao_dianteira`, `tracao_traseira` e `tracao_integral` sao atributos de
+  contexto tecnico, nao `topic_path`; se o GPT devolver essas rotas sob
+  `powertrain`, o script repara para `review_teste__review_veiculo` quando a
+  rota existir
 - contexto tecnico e enxugado antes da validacao: sensores preservam o nome do
   sensor e removem `limpeza` como problema, autonomia vira atributo,
   pleonasmos como `sistema_hibrido`/`manual_cambio` sao removidos, e detalhes

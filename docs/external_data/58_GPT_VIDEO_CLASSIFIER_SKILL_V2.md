@@ -126,9 +126,15 @@ Antes de escolher um `topic_path` tematico, aplique esta ordem:
   como `problem`. Exemplo: `sensor_maf + limpeza` deve virar
   `component=sensor_maf`, `problem=null`.
 - `autonomia` e atributo de produto/teste; nao usar como `problem`.
+- `hibrido_leve` e atributo de powertrain/mercado; nao usar como `problem`.
+- `tracao_dianteira`, `tracao_traseira` e `tracao_integral` sao atributos de
+  contexto tecnico; nao devem ser criados como `topic_path`.
 - Evite pleonasmos: se o `topic_path` ja indica hibrido, nao repetir
   `sistema_hibrido` como componente; se o componente e `cambio_manual`, nao
   usar `manual_cambio` como `problem`.
+- Nao crie contexto tecnico generico sem valor analitico. Exemplos a evitar:
+  `market`, `motor/motor`, `powertrain/motor` quando nao houver componente,
+  problema ou atributo especifico sustentado por evidencia.
 - Detalhes como `carbonizacao`, `borra`, `descarbonizacao` e `geometria` ficam
   como evidencia textual ou lacuna de auditoria quando uteis, nao como
   `problem` canonico.
@@ -157,10 +163,19 @@ Antes de escolher um `topic_path` tematico, aplique esta ordem:
 - Em teste de autonomia com formato de avaliacao/teste, prefira
   `review_teste__teste_autonomia` como principal e registre
   `powertrain__eletrico__autonomia` como secundario/contexto quando aplicavel.
+- Nao use `sem_match_taxonomico` quando houver rota evidente ja existente para
+  autonomia/teste, lancamento/review ou manutencao/reparo de motor.
 - `barulho` e sinal textual; o problema canonico e `ruido`.
 - Em review ou mercado, preencha problema tecnico apenas quando houver defeito
   ou sintoma explicito.
 - Marca/modelo/ano devem preservar o valor bruto encontrado no input.
+- Entidades de veiculo sao normalizadas por script contra Carros na Web. O GPT
+  deve preservar o raw, mas nao deve tratar palavra comum como modelo sem
+  marca/contexto forte. Exemplos condicionais: `amigo`, `picape`, `link`,
+  `tipo`, `bora`, `100`.
+- Quando houver duplicidade entre o mesmo modelo com e sem ano, a entidade
+  canonica final deve manter o match mais especifico (`model_year` antes de
+  `model`).
 
 ## Saida obrigatoria
 
@@ -233,6 +248,8 @@ Importante:
 Preencha obrigatoriamente:
 
 - `quality_score`: nota de `0` a `1`, ou `null` somente em `title_metadata`;
+  se o modelo usar escala percentual por engano, o harness normaliza para
+  `0..1` antes da validacao.
 - `quality_status`: `not_evaluated`, `usable`, `partially_usable`, `poor` ou
   `empty`;
 - `issues`: lista controlada, sem texto livre;
