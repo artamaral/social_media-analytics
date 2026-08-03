@@ -122,6 +122,16 @@ Antes de escolher um `topic_path` tematico, aplique esta ordem:
 - `motor` e `cambio` nao podem ser rotulos soltos de tema.
 - `motor` e `cambio` podem aparecer como sistema, componente ou rota
   contextualizada quando houver evidencia.
+- Em sensores, mantenha o componente pelo nome do sensor e nao use `limpeza`
+  como `problem`. Exemplo: `sensor_maf + limpeza` deve virar
+  `component=sensor_maf`, `problem=null`.
+- `autonomia` e atributo de produto/teste; nao usar como `problem`.
+- Evite pleonasmos: se o `topic_path` ja indica hibrido, nao repetir
+  `sistema_hibrido` como componente; se o componente e `cambio_manual`, nao
+  usar `manual_cambio` como `problem`.
+- Detalhes como `carbonizacao`, `borra`, `descarbonizacao` e `geometria` ficam
+  como evidencia textual ou lacuna de auditoria quando uteis, nao como
+  `problem` canonico.
 - Quando a proposta principal estiver clara em uma rota especifica da
   taxonomia, nao responda apenas com o no pai generico.
   - Se houver desmontagem, falha e troca/reparo de motor, use

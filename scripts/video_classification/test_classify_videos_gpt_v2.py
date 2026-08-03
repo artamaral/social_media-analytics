@@ -723,6 +723,41 @@ class ClassifierContractTests(unittest.TestCase):
         self.assertEqual(models, {"100", "Bora", "Tipo"})
         self.assertTrue(all(entity["resolved_entity_status"] == "matched" for entity in entities))
 
+    def test_script_vehicle_match_rejects_model_when_term_is_known_brand(self):
+        harness = {
+            "video": {
+                "title": "Jeep Commander hibrido chega ao mercado",
+                "description": None,
+                "transcript_90s": None,
+            }
+        }
+        catalog_rows = [
+            {
+                "catalog_row_id": 1,
+                "catalog_model_id": 10,
+                "manufacturer_name": "Ford",
+                "manufacturer_key": "ford",
+                "model_name": "Jeep",
+                "model_key": "jeep",
+                "model_year": 1967,
+            },
+            {
+                "catalog_row_id": 2,
+                "catalog_model_id": 20,
+                "manufacturer_name": "Jeep",
+                "manufacturer_key": "jeep",
+                "model_name": "Commander",
+                "model_key": "commander",
+                "model_year": 2027,
+            },
+        ]
+
+        entities = CLASSIFIER.select_script_vehicle_candidates(harness, catalog_rows)
+
+        models = {entity["vehicle_model_raw"] for entity in entities}
+        self.assertEqual(models, {"Commander"})
+        self.assertEqual(entities[0]["canonical_manufacturer_name"], "Jeep")
+
     def test_default_skill_documents_topic_path_priority(self):
         skill = CLASSIFIER.DEFAULT_SKILL
 
@@ -911,6 +946,144 @@ class ClassifierContractTests(unittest.TestCase):
         CLASSIFIER.normalize_technical_contexts_for_validation(result, set())
 
         self.assertEqual(result["technical_contexts"], [])
+
+    def test_normalize_technical_contexts_keeps_sensor_and_drops_cleaning_problem(self):
+        result = {
+            "technical_contexts": [
+                {
+                    "topic_path": "manutencao_reparo__manutencao_preventiva__limpeza_componentes",
+                    "automotive_system": "eletrica_eletronica",
+                    "component": "sensor_maf",
+                    "problem": "limpeza",
+                    "compatibility_status": "allowed",
+                    "needs_human_review": False,
+                    "validation_issue": None,
+                }
+            ]
+        }
+        compatibility_keys = {
+            (
+                "manutencao_reparo__manutencao_preventiva__limpeza_componentes",
+                "eletrica_eletronica",
+                "sensor_maf",
+                None,
+            )
+        }
+
+        CLASSIFIER.normalize_technical_contexts_for_validation(result, compatibility_keys)
+
+        context = result["technical_contexts"][0]
+        self.assertEqual(context["component"], "sensor_maf")
+        self.assertIsNone(context["problem"])
+        self.assertFalse(context["needs_human_review"])
+
+    def test_normalize_technical_contexts_turns_battery_autonomy_into_attribute(self):
+        result = {
+            "technical_contexts": [
+                {
+                    "topic_path": "review_teste__teste_autonomia",
+                    "automotive_system": "powertrain",
+                    "component": "bateria_tracao",
+                    "problem": "autonomia",
+                    "compatibility_status": "allowed",
+                    "needs_human_review": False,
+                    "validation_issue": None,
+                }
+            ]
+        }
+        compatibility_keys = {
+            (
+                "review_teste__teste_autonomia",
+                "powertrain",
+                "autonomia",
+                None,
+            )
+        }
+
+        CLASSIFIER.normalize_technical_contexts_for_validation(result, compatibility_keys)
+
+        context = result["technical_contexts"][0]
+        self.assertEqual(context["component"], "autonomia")
+        self.assertIsNone(context["problem"])
+        self.assertFalse(context["needs_human_review"])
+
+    def test_normalize_technical_contexts_drops_pleonastic_hybrid_context(self):
+        result = {
+            "technical_contexts": [
+                {
+                    "topic_path": "powertrain__hibrido__sistema_hibrido",
+                    "automotive_system": "powertrain",
+                    "component": "sistema_hibrido",
+                    "problem": None,
+                    "compatibility_status": "needs_review",
+                    "needs_human_review": True,
+                    "validation_issue": "pleonasmo",
+                }
+            ]
+        }
+
+        CLASSIFIER.normalize_technical_contexts_for_validation(result, set())
+
+        self.assertEqual(result["technical_contexts"], [])
+
+    def test_normalize_technical_contexts_drops_manual_transmission_problem(self):
+        result = {
+            "technical_contexts": [
+                {
+                    "topic_path": "review_teste__review_veiculo",
+                    "automotive_system": "transmissao",
+                    "component": "cambio_manual",
+                    "problem": "manual_cambio",
+                    "compatibility_status": "allowed",
+                    "needs_human_review": False,
+                    "validation_issue": None,
+                }
+            ]
+        }
+        compatibility_keys = {
+            (
+                "review_teste__review_veiculo",
+                "transmissao",
+                "cambio_manual",
+                None,
+            )
+        }
+
+        CLASSIFIER.normalize_technical_contexts_for_validation(result, compatibility_keys)
+
+        context = result["technical_contexts"][0]
+        self.assertEqual(context["component"], "cambio_manual")
+        self.assertIsNone(context["problem"])
+
+    def test_normalize_technical_contexts_simplifies_internal_engine_component(self):
+        result = {
+            "technical_contexts": [
+                {
+                    "topic_path": "manutencao_reparo__reparo_corretivo__retifica_motor",
+                    "automotive_system": "motor",
+                    "component": "cilindro_bloco",
+                    "problem": "retifica_motor",
+                    "compatibility_status": "allowed",
+                    "needs_human_review": False,
+                    "validation_issue": None,
+                }
+            ]
+        }
+        compatibility_keys = {
+            (
+                "manutencao_reparo__reparo_corretivo__retifica_motor",
+                "motor",
+                "motor_conjunto",
+                "falha_de_motor",
+            )
+        }
+
+        CLASSIFIER.normalize_technical_contexts_for_validation(result, compatibility_keys)
+
+        context = result["technical_contexts"][0]
+        self.assertEqual(context["component"], "motor_conjunto")
+        self.assertEqual(context["problem"], "falha_de_motor")
+        self.assertFalse(context["needs_human_review"])
 
     def test_append_issue_text_handles_null_current(self):
         self.assertEqual(CLASSIFIER.append_issue_text(None, "novo"), "novo")

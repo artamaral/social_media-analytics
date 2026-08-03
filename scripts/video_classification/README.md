@@ -362,6 +362,10 @@ Reparos conservadores antes da gravacao:
   por indice `0` ou negativo retornado pelo modelo
 - `confidence_score` e `transcript_quality.quality_score` em escala percentual
   (`85`, `92`) sao convertidos para escala `0..1` (`0.85`, `0.92`)
+- contexto tecnico e enxugado antes da validacao: sensores preservam o nome do
+  sensor e removem `limpeza` como problema, autonomia vira atributo,
+  pleonasmos como `sistema_hibrido`/`manual_cambio` sao removidos, e detalhes
+  como carbonizacao/borra/geometria ficam apenas em evidencia textual
 
 Instalar dependencias:
 

@@ -25,7 +25,7 @@ TAXONOMY_VERSION = "taxonomia_video_v2"
 PROMPT_CONTRACT_VERSION = "video_taxonomy_v2_classifier_r2"
 OUTPUT_SCHEMA_VERSION = "video_taxonomy_v2_output_schema_r2"
 # Marcador operacional para confirmar se a copia local/VPS esta atualizada.
-SCRIPT_VERSION = "2026-08-03-r36-market-analysis-vehicle-trim"
+SCRIPT_VERSION = "2026-08-03-r37-lean-technical-context"
 DEFAULT_TITLE_MODEL = "gpt-5-nano"
 DEFAULT_TRANSCRIPT_MODEL = "gpt-5-nano"
 DEFAULT_MAX_OUTPUT_TOKENS = 6000
@@ -60,6 +60,9 @@ VEHICLE_TRIM_SUFFIX_KEYS = {
     "xls",
     "xr",
 }
+VEHICLE_TRIM_PREFIX_KEYS = {
+    "gr",
+}
 
 TOPIC_PATH_ALIASES = {
     "mercado_produto__analise mercado": "mercado_produto__analise_mercado",
@@ -73,9 +76,26 @@ CONTEXT_PROBLEM_ALIASES = {
     "reparo_motor": "falha_de_motor",
     "retifica_motor": "falha_de_motor",
     "troca_motor": "falha_de_motor",
+    "falha_injecao": "falha_de_motor",
 }
 
-NON_TECHNICAL_CONTEXT_PROBLEMS = {"orcamento"}
+NON_TECHNICAL_CONTEXT_PROBLEMS = {
+    "autonomia",
+    "borra",
+    "carbonizacao",
+    "descarbonizacao",
+    "geometria",
+    "limpeza",
+    "limpeza_polos",
+    "manual_cambio",
+    "orcamento",
+}
+PLEONASTIC_TECHNICAL_COMPONENTS = {
+    "sistema_hibrido",
+}
+CONTEXT_COMPONENT_ALIASES = {
+    "cilindro_bloco": "motor_conjunto",
+}
 
 GENERIC_TOPIC_PATHS = {
     "diagnostico",
@@ -175,6 +195,15 @@ Regras obrigatorias:
 - Nunca coloque multiplos problemas, componentes ou sistemas concatenados no
   mesmo campo. Crie outro item em technical_contexts[] ou escolha null quando
   o problema nao for defeito/sintoma.
+- Em sensores, mantenha o componente pelo nome do sensor e nao use limpeza
+  como problem. Exemplo: sensor_maf + limpeza -> component=sensor_maf,
+  problem=null.
+- Autonomia e atributo de produto/teste; nao use autonomia como problem.
+- Evite pleonasmos: se o topic_path ja indica hibrido, nao repita
+  sistema_hibrido como componente; se o componente e cambio_manual, nao use
+  manual_cambio como problem.
+- Detalhes como carbonizacao, borra, descarbonizacao e geometria ficam em
+  evidence_text/taxonomy_gaps quando uteis, nao como problem canonico.
 - Se houver apenas dominio/topico generico, nao crie technical_context.
 - Se um contexto tecnico nao existir na matriz recebida, marque
   compatibility_status=needs_review e needs_human_review=true.
@@ -188,6 +217,9 @@ Regras obrigatorias:
   Exemplos: Yaris Cross XR -> Yaris Cross; Dolphin SE -> Dolphin;
   Dolphin Mini GS -> Dolphin Mini.
 - Termos fora da taxonomia devem ir para taxonomy_gaps, nunca para campo canonico.
+- Se um veiculo explicito nao existir no catalogo Carros na Web usado pelo
+  projeto, mantenha not_found/needs_review; nao tente cadastrar ou inferir
+  todos os veiculos globais.
 - confidence_score deve medir a forca da evidencia disponivel:
   0.90-1.00 evidencia direta, clara e especifica;
   0.70-0.89 evidencia boa, mas com alguma ambiguidade;
@@ -631,6 +663,8 @@ def strip_vehicle_trim_from_model_name(value):
         return str(value).strip()
 
     tokens = list(raw_tokens)
+    while len(tokens) > 1 and normalize_catalog_key(tokens[0]) in VEHICLE_TRIM_PREFIX_KEYS:
+        tokens.pop(0)
     while len(tokens) > 1 and normalize_catalog_key(tokens[-1]) in VEHICLE_TRIM_SUFFIX_KEYS:
         tokens.pop()
 
@@ -692,7 +726,14 @@ def model_key_requires_explicit_manufacturer(model_key):
     return model_key in CONDITIONAL_MODEL_KEYS
 
 
-def has_strong_vehicle_context_for_model(normalized_text, model_key, rows):
+def has_strong_vehicle_context_for_model(normalized_text, model_key, rows, manufacturer_keys=None):
+    manufacturer_keys = manufacturer_keys or set()
+    if model_key in manufacturer_keys:
+        return any(
+            has_nearby_catalog_phrase(normalized_text, model_key, row.get("manufacturer_key"))
+            for row in rows
+        )
+
     if not model_key_requires_explicit_manufacturer(model_key):
         return True
 
@@ -1908,6 +1949,7 @@ def normalize_technical_contexts_for_validation(result, compatibility_keys):
 
     for context in result["technical_contexts"]:
         normalize_context_problem_alias(context)
+        normalize_redundant_context_system(context)
         has_technical_value = any(
             normalize_nullable(context.get(field))
             for field in ["automotive_system", "component", "problem"]
@@ -1939,20 +1981,40 @@ def normalize_technical_contexts_for_validation(result, compatibility_keys):
 
 
 def normalize_context_problem_alias(context):
+    component = normalize_nullable(context.get("component"))
+    if component in PLEONASTIC_TECHNICAL_COMPONENTS:
+        context["automotive_system"] = None
+        context["component"] = None
+        component = None
+    elif component in CONTEXT_COMPONENT_ALIASES:
+        context["component"] = CONTEXT_COMPONENT_ALIASES[component]
+        component = context["component"]
+
     problem = normalize_nullable(context.get("problem"))
     if not problem:
+        return
+
+    if component == "bateria_tracao" and problem == "autonomia":
+        context["component"] = "autonomia"
+        context["problem"] = None
         return
 
     if problem in CONTEXT_PROBLEM_ALIASES:
         context["problem"] = CONTEXT_PROBLEM_ALIASES[problem]
         return
 
-    if (
-        problem in NON_TECHNICAL_CONTEXT_PROBLEMS
-        and not normalize_nullable(context.get("automotive_system"))
-        and not normalize_nullable(context.get("component"))
-    ):
+    if problem in NON_TECHNICAL_CONTEXT_PROBLEMS:
         context["problem"] = None
+
+
+def normalize_redundant_context_system(context):
+    if (
+        context.get("topic_path", "").startswith("powertrain__")
+        and normalize_nullable(context.get("automotive_system")) == "powertrain"
+        and not normalize_nullable(context.get("component"))
+        and not normalize_nullable(context.get("problem"))
+    ):
+        context["automotive_system"] = None
 
 
 def promote_specific_topic_path_from_contexts(result):
@@ -2290,11 +2352,15 @@ def resolve_vehicle_entity(base_url, headers, entity):
 
 def build_catalog_indexes(vehicle_catalog):
     by_model = {}
+    manufacturer_keys = set()
     for row in vehicle_catalog:
         model_key = row.get("model_key")
         if model_key:
             by_model.setdefault(model_key, []).append(row)
-    return {"by_model": by_model}
+        manufacturer_key = row.get("manufacturer_key")
+        if manufacturer_key:
+            manufacturer_keys.add(manufacturer_key)
+    return {"by_model": by_model, "manufacturer_keys": manufacturer_keys}
 
 
 def vehicle_evidence_sources(harness_input):
@@ -2339,7 +2405,12 @@ def select_script_vehicle_candidates(harness_input, vehicle_catalog):
 
         source_name, source_text, normalized_text = source_match
         rows = indexes["by_model"][model_key]
-        if not has_strong_vehicle_context_for_model(normalized_text, model_key, rows):
+        if not has_strong_vehicle_context_for_model(
+            normalized_text,
+            model_key,
+            rows,
+            indexes["manufacturer_keys"],
+        ):
             continue
 
         manufacturer_key = None

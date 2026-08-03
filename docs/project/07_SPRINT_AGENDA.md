@@ -4180,6 +4180,12 @@ Resultado:
   ou similares fica apenas em evidencia textual
 - exemplos operacionais: `Dolphin SE` -> `Dolphin`, `Dolphin Mini GS` ->
   `Dolphin Mini`, `Yaris Cross XR` -> `Yaris Cross`
+- o contexto tecnico foi mantido propositalmente enxuto: sensores preservam o
+  nome do sensor sem `limpeza` como problema, autonomia e atributo, e detalhes
+  como carbonizacao/borra/geometria ficam como evidencia textual
+- o catalogo Carros na Web continua sendo referencia operacional brasileira;
+  veiculos fora da cobertura podem permanecer `not_found` sem virar obrigacao
+  de cadastro global
 
 ### Criterio de saida do planejamento
 

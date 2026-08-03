@@ -332,6 +332,14 @@ Campos de saida:
 - Se houver varios sistemas, componentes ou problemas, cada combinacao deve
   virar uma linha separada em `technical_contexts[]`; se nao houver defeito ou
   sintoma explicito, `problem` deve ficar `null`.
+- Contexto tecnico deve ser enxuto. Em sensores, manter o componente pelo nome
+  do sensor e remover `limpeza` como `problem`.
+- `autonomia` e atributo de produto/teste, nao `problem`.
+- Evitar pleonasmos como `sistema_hibrido` dentro de topic_path hibrido ou
+  `manual_cambio` quando o componente ja e `cambio_manual`.
+- Detalhes como `carbonizacao`, `borra`, `descarbonizacao` e `geometria` devem
+  ficar como evidencia textual ou lacuna de auditoria, sem virar problem
+  canonico nesta fase.
 - Marca, modelo e ano so entram quando aparecerem explicitamente no titulo,
   descricao, transcricao ou metadado confiavel.
 - Versao/acabamento nao e dimensao analitica nesta etapa. Sufixos como `XR`,
@@ -478,6 +486,13 @@ Os campos `vehicle_brand_raw`, `vehicle_model_raw`, `vehicle_year`,
 `vehicle_generation` e `evidence_text` permanecem para auditoria da extracao.
 Quando houver match em nivel de modelo sem ano, `canonical_model_year` deve
 ficar `null`; nao escolher ano artificialmente.
+
+O catalogo Carros na Web e a referencia operacional atual e reflete o escopo
+de modelos disponiveis/cobertos no Brasil. Se um video citar explicitamente um
+veiculo fora desse catalogo, a entidade deve permanecer `not_found` ou
+`needs_review`; isso nao implica cadastrar todos os veiculos globais no banco.
+Exemplo: um video sobre Lotus fora da cobertura pode continuar sem entidade
+canonica, preservando apenas o raw e a evidencia.
 
 O harness tambem executa uma extracao deterministica de veiculos a partir de
 `title`, `description` e `transcript_90s`. Essa extracao por script e a fonte

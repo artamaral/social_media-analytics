@@ -2773,6 +2773,46 @@ Referencia:
 
 ---
 
+## Contexto tecnico enxuto e catalogo veicular brasileiro
+
+Data:
+
+- 2026-08-03
+
+Decisao:
+
+- em sensores, manter o componente pelo nome do sensor e remover `limpeza` como
+  `problem`; exemplo: `sensor_maf + limpeza` vira `component=sensor_maf`,
+  `problem=null`
+- `autonomia` deve ser tratada como atributo de produto/teste, nao como
+  `problem`
+- remover pleonasmos como `sistema_hibrido` em topic_path hibrido e
+  `manual_cambio` quando o componente ja e `cambio_manual`
+- detalhes como `carbonizacao`, `borra`, `descarbonizacao` e `geometria` ficam
+  em evidencia textual ou lacuna de auditoria, sem virar profundidade canonica
+  na matriz tecnica
+- `Jeep` deve ser tratado como marca quando aparecer como marca; nao deve virar
+  modelo `Ford Jeep` salvo evidencia textual explicita de fabricante/modelo
+- o catalogo Carros na Web permanece como referencia operacional do mercado
+  brasileiro; veiculos explicitos fora da cobertura podem ficar `not_found`
+  sem obrigar expansao global do banco
+
+Motivo:
+
+- a finalidade do MVP e identificar do que trata o video, o tipo de produto
+  automotivo referenciado e o veiculo canonico quando disponivel
+- granularidade excessiva em `problem` e `component` gerou `needs_review`
+  artificial e fragilizou a consistencia entre rodadas
+
+Referencia:
+
+- `docs/external_data/43_TAXONOMIA_VIDEO_V2_COMPATIBILIDADE_TECNICA.csv`
+- `docs/external_data/58_GPT_VIDEO_CLASSIFIER_HARNESS_CONTRACT_V2.md`
+- `docs/external_data/58_GPT_VIDEO_CLASSIFIER_SKILL_V2.md`
+- `scripts/video_classification/classify_videos_gpt_v2.py`
+
+---
+
 ## Fallback automatico `faster-whisper small -> medium`
 
 Data:
