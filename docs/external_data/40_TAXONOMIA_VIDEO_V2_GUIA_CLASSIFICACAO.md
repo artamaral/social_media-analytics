@@ -138,6 +138,12 @@ absorver toda a profundidade tecnica do video.
 Regra:
 
 - escolher o caminho mais especifico sustentado por evidencia
+- nao criar profundidade apenas porque apareceram termos adicionais no video
+- para mercado amplo, industria, setor, estrategia ou contexto comercial,
+  `mercado_produto > analise_mercado` e suficiente nesta fase
+- detalhes mais finos devem ficar em `evidence_summary`, `taxonomy_gaps`,
+  entidades de veiculo ou `technical_context[]`, nao necessariamente em novos
+  niveis de `topic_path`
 - nao preencher nivel profundo por inferencia fraca
 - quando o caminho ainda nao existir, manter o melhor pai canonico e registrar
   o termo em `taxonomy_gaps`
@@ -217,7 +223,8 @@ Campos:
 - `vehicle_model`
 - `year_reference_type`
 - `vehicle_year`
-- `vehicle_generation`
+- `vehicle_generation` apenas como campo legado/compatibilidade; nao usar para
+  versao ou acabamento no MVP
 
 Regras:
 
@@ -225,6 +232,11 @@ Regras:
   evidencia forte
 - `vehicle_model` precisa pertencer a `vehicle_brand` quando houver cadastro
   canonico
+- a entidade canonica de veiculo deve parar em fabricante, modelo e ano quando
+  disponivel
+- versao/acabamento como `XR`, `GS`, `SE`, `LTZ` ou similares fica apenas em
+  evidencia textual; exemplos: `Dolphin SE` vira `Dolphin`, `Dolphin Mini GS`
+  vira `Dolphin Mini`, `Yaris Cross XR` vira `Yaris Cross`
 - separar tipo de referencia temporal do valor:
   - `year_reference_type = exact_year`
   - `vehicle_year = 2026`
@@ -637,6 +649,7 @@ vehicle_year = 2021
 ```
 
 Nao inferir modelo pelo canal. Nao criar marca/modelo novo automaticamente.
+Nao transformar versao/acabamento em dimensao canonica de veiculo nesta fase.
 
 ### Passo 7 - Preencher contexto tecnico com compatibilidade
 

@@ -4162,6 +4162,25 @@ Resultado:
 - `--transcripts-csv` continua sendo replay controlado e nao aciona fallback
   automatico
 
+## Item Sprint 6 - Profundidade controlada de taxonomia e veiculo
+
+Status: implementado para validacao manual em 2026-08-03.
+
+Resultado:
+
+- a rodada `v2_transcript_90s_20260803T150649Z` reprocessou `20` videos com
+  `19` sucessos e `1` falha de validacao taxonomica
+- a falha de `KONPXAjlkn8` apontou a necessidade de
+  `mercado_produto__analise_mercado`
+- a rota foi adicionada como nivel 2 e deve parar nesse ponto nesta fase
+- o criterio do MVP passa a ser identificar do que trata o video, que tipo de
+  produto automotivo referencia e qual veiculo aparece quando houver evidencia
+- entidades de veiculo passam a ser normalizadas no maximo como
+  `ano + fabricante + modelo`; versao/acabamento como `XR`, `GS`, `SE`, `LTZ`
+  ou similares fica apenas em evidencia textual
+- exemplos operacionais: `Dolphin SE` -> `Dolphin`, `Dolphin Mini GS` ->
+  `Dolphin Mini`, `Yaris Cross XR` -> `Yaris Cross`
+
 ### Criterio de saida do planejamento
 
 O inicio do planejamento do Sprint 6 so deve ser considerado concluido quando

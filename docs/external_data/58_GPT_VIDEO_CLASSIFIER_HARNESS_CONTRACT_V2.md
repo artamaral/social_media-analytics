@@ -332,8 +332,13 @@ Campos de saida:
 - Se houver varios sistemas, componentes ou problemas, cada combinacao deve
   virar uma linha separada em `technical_contexts[]`; se nao houver defeito ou
   sintoma explicito, `problem` deve ficar `null`.
-- Marca, modelo, ano e geracao so entram quando aparecerem explicitamente no
-  titulo, descricao, transcricao ou metadado confiavel.
+- Marca, modelo e ano so entram quando aparecerem explicitamente no titulo,
+  descricao, transcricao ou metadado confiavel.
+- Versao/acabamento nao e dimensao analitica nesta etapa. Sufixos como `XR`,
+  `GS`, `SE`, `LTZ`, `Touring` ou similares ficam apenas em `evidence_text`;
+  o matcher grava a entidade canonica no maximo como fabricante, modelo e ano.
+  Exemplos: `Yaris Cross XR` -> `Yaris Cross`; `Dolphin SE` -> `Dolphin`;
+  `Dolphin Mini GS` -> `Dolphin Mini`.
 - `motor` e `cambio` nunca sao rotulos soltos; entram apenas como sistema,
   componente ou rota contextualizada.
 - Videos de moto permanecem `fora_escopo`.
@@ -461,6 +466,18 @@ O match com Carros na Web ocorre depois da extracao e antes da gravacao. O GPT
 nao deve retornar `catalog_row_id`, `catalog_model_id`, nem trocar a grafia
 bruta por uma grafia canonica sem evidencia. O identificador canonico deve vir
 de consulta deterministica a `public.v_carrosnaweb_vehicle_catalog`.
+
+Para consumo analitico e pesquisa de mercado, os tres campos de saida de
+veiculo sao os campos canonicos do Carros na Web:
+
+- `canonical_manufacturer_name`
+- `canonical_model_name`
+- `canonical_model_year`
+
+Os campos `vehicle_brand_raw`, `vehicle_model_raw`, `vehicle_year`,
+`vehicle_generation` e `evidence_text` permanecem para auditoria da extracao.
+Quando houver match em nivel de modelo sem ano, `canonical_model_year` deve
+ficar `null`; nao escolher ano artificialmente.
 
 O harness tambem executa uma extracao deterministica de veiculos a partir de
 `title`, `description` e `transcript_90s`. Essa extracao por script e a fonte

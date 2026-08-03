@@ -25,7 +25,7 @@ TAXONOMY_VERSION = "taxonomia_video_v2"
 PROMPT_CONTRACT_VERSION = "video_taxonomy_v2_classifier_r2"
 OUTPUT_SCHEMA_VERSION = "video_taxonomy_v2_output_schema_r2"
 # Marcador operacional para confirmar se a copia local/VPS esta atualizada.
-SCRIPT_VERSION = "2026-07-31-r26-medium-fallback"
+SCRIPT_VERSION = "2026-08-03-r36-market-analysis-vehicle-trim"
 DEFAULT_TITLE_MODEL = "gpt-5-nano"
 DEFAULT_TRANSCRIPT_MODEL = "gpt-5-nano"
 DEFAULT_MAX_OUTPUT_TOKENS = 6000
@@ -35,6 +35,47 @@ if os.name == "nt":
     DEFAULT_AUDIO_WORKDIR = REPO_DIR / "tmp" / "video_classification_audio"
 
 CONDITIONAL_MODEL_KEYS = {"100", "bora", "link", "tipo"}
+VEHICLE_TRIM_SUFFIX_KEYS = {
+    "active",
+    "advance",
+    "comfort",
+    "comfortline",
+    "exclusive",
+    "ex",
+    "gl",
+    "gls",
+    "gs",
+    "highline",
+    "limited",
+    "lt",
+    "ltz",
+    "lx",
+    "platinum",
+    "premium",
+    "se",
+    "sport",
+    "touring",
+    "x",
+    "xl",
+    "xls",
+    "xr",
+}
+
+TOPIC_PATH_ALIASES = {
+    "mercado_produto__analise mercado": "mercado_produto__analise_mercado",
+    "mercado_produto__analise": "mercado_produto__analise_mercado",
+    "manutencao_reparo__custo_reparo__orcamento": (
+        "manutencao_reparo__custo_reparo__orcamento_manutencao"
+    ),
+}
+
+CONTEXT_PROBLEM_ALIASES = {
+    "reparo_motor": "falha_de_motor",
+    "retifica_motor": "falha_de_motor",
+    "troca_motor": "falha_de_motor",
+}
+
+NON_TECHNICAL_CONTEXT_PROBLEMS = {"orcamento"}
 
 GENERIC_TOPIC_PATHS = {
     "diagnostico",
@@ -140,7 +181,12 @@ Regras obrigatorias:
 - Nao use valores concatenados por ponto e virgula.
 - motor e cambio nao sao rotulos soltos de tema.
 - barulho e sinal textual; problem canonico deve ser ruido.
-- Marca, modelo, ano e geracao devem preservar o valor bruto encontrado no input.
+- Marca, modelo e ano so entram com evidencia explicita no input.
+- Para veiculo, nao classifique versao/acabamento como entidade de mercado:
+  sufixos como XR, GS, SE, LTZ, Touring ou similares devem ficar apenas na
+  evidencia textual; o modelo deve parar no modelo base util para pesquisa.
+  Exemplos: Yaris Cross XR -> Yaris Cross; Dolphin SE -> Dolphin;
+  Dolphin Mini GS -> Dolphin Mini.
 - Termos fora da taxonomia devem ir para taxonomy_gaps, nunca para campo canonico.
 - confidence_score deve medir a forca da evidencia disponivel:
   0.90-1.00 evidencia direta, clara e especifica;
@@ -484,6 +530,11 @@ def schema_for_openai(schema):
 
 
 def validate_json_schema_shape(value, schema, path="$"):
+    if schema is None:
+        return
+    if not isinstance(schema, dict):
+        raise ValueError(f"{path}: schema interno invalido")
+
     expected_type = schema.get("type")
 
     if expected_type:
@@ -569,6 +620,32 @@ def normalize_catalog_key(value):
     value = strip_accents(value).lower()
     value = re.sub(r"[^a-z0-9]+", " ", value)
     return re.sub(r"\s+", " ", value).strip()
+
+
+def strip_vehicle_trim_from_model_name(value):
+    if not value:
+        return value
+
+    raw_tokens = str(value).strip().split()
+    if len(raw_tokens) <= 1:
+        return str(value).strip()
+
+    tokens = list(raw_tokens)
+    while len(tokens) > 1 and normalize_catalog_key(tokens[-1]) in VEHICLE_TRIM_SUFFIX_KEYS:
+        tokens.pop()
+
+    return " ".join(tokens).strip()
+
+
+def normalize_vehicle_entity_granularity(entity):
+    normalized = dict(entity)
+    normalized["vehicle_model_raw"] = strip_vehicle_trim_from_model_name(
+        normalized.get("vehicle_model_raw")
+    )
+    # A rodada operacional usa no maximo ano, marca e modelo. Versao/acabamento
+    # como XR, GS ou SE fica apenas na evidencia textual, nao como entidade.
+    normalized["vehicle_generation"] = None
+    return normalized
 
 
 def contains_catalog_phrase(normalized_text, normalized_phrase):
@@ -1530,12 +1607,21 @@ def extract_response_text(response):
 
 
 def validate_classification(result, schema, taxonomy, stage, post_id):
-    validate_json_schema_shape(result, schema)
+    validation_step("normalize_required_blocks", lambda: normalize_required_result_blocks(result))
+    validation_step("normalize_collections", lambda: normalize_result_collections(result))
+    validation_step("json_schema_shape", lambda: validate_json_schema_shape(result, schema))
     classification = result["classification_result"]
     transcript_quality = result["transcript_quality"]
 
-    topic_codes = {row["topic_path_code"] for row in taxonomy["topic_paths"]}
-    compatibility_rows = taxonomy["compatibility"]
+    topic_rows = validation_step(
+        "taxonomy_topic_rows",
+        lambda: validate_taxonomy_rows(taxonomy["topic_paths"], "topic_paths"),
+    )
+    compatibility_rows = validation_step(
+        "taxonomy_compatibility_rows",
+        lambda: validate_taxonomy_rows(taxonomy["compatibility"], "compatibility"),
+    )
+    topic_codes = {row["topic_path_code"] for row in topic_rows}
     compatibility_keys = {
         (
             row["topic_path_code"],
@@ -1546,11 +1632,15 @@ def validate_classification(result, schema, taxonomy, stage, post_id):
         for row in compatibility_rows
     }
 
-    repair_topic_paths_for_validation(result, topic_codes)
-    normalize_score_scales_for_validation(result)
-    normalize_technical_contexts_for_validation(result, compatibility_keys)
-    promote_specific_topic_path_from_contexts(result)
-    normalize_vehicle_entities_for_validation(result)
+    validation_step("repair_topic_paths", lambda: repair_topic_paths_for_validation(result, topic_codes))
+    validation_step("normalize_scores", lambda: normalize_score_scales_for_validation(result))
+    validation_step("normalize_transcript_quality_status", lambda: normalize_transcript_quality_status(result))
+    validation_step(
+        "normalize_technical_contexts",
+        lambda: normalize_technical_contexts_for_validation(result, compatibility_keys),
+    )
+    validation_step("promote_specific_topic_path", lambda: promote_specific_topic_path_from_contexts(result))
+    validation_step("normalize_vehicle_entities", lambda: normalize_vehicle_entities_for_validation(result))
 
     if classification["post_id"] != post_id:
         raise ValueError("post_id da resposta difere do video enviado")
@@ -1561,7 +1651,7 @@ def validate_classification(result, schema, taxonomy, stage, post_id):
     if classification["taxonomy_version"] != taxonomy["version"]:
         raise ValueError("taxonomy_version da resposta difere da versao carregada")
 
-    validate_transcript_quality(transcript_quality, classification, stage)
+    validation_step("transcript_quality", lambda: validate_transcript_quality(transcript_quality, classification, stage))
 
     if classification["topic_path"] not in topic_codes:
         raise ValueError(f"topic_path inexistente: {classification['topic_path']}")
@@ -1588,7 +1678,15 @@ def validate_classification(result, schema, taxonomy, stage, post_id):
             raise ValueError("sem_match_taxonomico exige validation_issues")
 
     for context in result["technical_contexts"]:
-        validate_context(context, topic_codes, compatibility_keys, classification["topic_path"])
+        validation_step(
+            "validate_context",
+            lambda context=context: validate_context(
+                context,
+                topic_codes,
+                compatibility_keys,
+                classification["topic_path"],
+            ),
+        )
 
     for entity in result["vehicle_entities"]:
         if entity["entity_order"] < 1:
@@ -1608,6 +1706,62 @@ def validate_classification(result, schema, taxonomy, stage, post_id):
             raise ValueError("vehicle_entity sem valor bruto extraido")
 
 
+def validation_step(name, callback):
+    try:
+        return callback()
+    except ValueError as exc:
+        raise ValueError(f"validacao:{name}: {exc}") from exc
+    except (AttributeError, TypeError, KeyError) as exc:
+        raise ValueError(f"validacao:{name}: erro interno: {exc}") from exc
+
+
+def validate_taxonomy_rows(rows, label):
+    if not isinstance(rows, list):
+        raise ValueError(f"{label} deve ser lista")
+
+    normalized = []
+    for index, row in enumerate(rows, start=1):
+        if not isinstance(row, dict):
+            raise ValueError(f"{label}[{index}] deve ser objeto")
+        normalized.append(row)
+    return normalized
+
+
+def normalize_required_result_blocks(result):
+    if not isinstance(result, dict):
+        raise ValueError("resposta GPT deve ser objeto JSON")
+
+    for key in ["classification_result", "transcript_quality"]:
+        value = result.get(key)
+        if value is None:
+            raise ValueError(f"{key} veio null na resposta GPT")
+        if not isinstance(value, dict):
+            raise ValueError(f"{key} deve ser objeto")
+
+    issues = result["transcript_quality"].get("issues")
+    if issues is None:
+        result["transcript_quality"]["issues"] = []
+
+
+def normalize_result_collections(result):
+    for key in ["technical_contexts", "vehicle_entities"]:
+        value = result.get(key)
+        if value is None:
+            result[key] = []
+            continue
+        if not isinstance(value, list):
+            raise ValueError(f"{key} deve ser lista")
+
+        normalized = []
+        for index, item in enumerate(value, start=1):
+            if item is None:
+                continue
+            if not isinstance(item, dict):
+                raise ValueError(f"{key}[{index}] deve ser objeto")
+            normalized.append(item)
+        result[key] = normalized
+
+
 def repair_topic_paths_for_validation(result, topic_codes):
     classification = result["classification_result"]
     for field in ["topic_path", "topic_path_secondary"]:
@@ -1623,6 +1777,10 @@ def repair_topic_path_code(value, topic_codes):
         return value
 
     candidates = []
+    alias = TOPIC_PATH_ALIASES.get(value)
+    if alias:
+        candidates.append(alias)
+
     typo_repaired = value.replace("procuto", "produto")
     if typo_repaired != value:
         candidates.append(typo_repaired)
@@ -1638,6 +1796,7 @@ def repair_topic_path_code(value, topic_codes):
 def normalize_vehicle_entities_for_validation(result):
     normalized_entities = []
     for index, entity in enumerate(result["vehicle_entities"], start=1):
+        entity = normalize_vehicle_entity_granularity(entity)
         entity["entity_order"] = index
         normalized_entities.append(entity)
     result["vehicle_entities"] = normalized_entities
@@ -1648,6 +1807,37 @@ def normalize_score_scales_for_validation(result):
     quality = result["transcript_quality"]
     classification["confidence_score"] = normalize_unit_score(classification.get("confidence_score"))
     quality["quality_score"] = normalize_unit_score(quality.get("quality_score"))
+
+
+def normalize_transcript_quality_status(result):
+    classification = result["classification_result"]
+    quality = result["transcript_quality"]
+    score = quality.get("quality_score")
+
+    if score is None:
+        return
+
+    if score >= 0.70:
+        quality["quality_status"] = "usable"
+        if quality.get("impact_on_classification") == "none":
+            quality["needs_retranscription"] = False
+        return
+
+    if score >= 0.50:
+        quality["quality_status"] = "partially_usable"
+        return
+
+    if score == 0:
+        quality["quality_status"] = "empty"
+    else:
+        quality["quality_status"] = "poor"
+
+    quality["needs_retranscription"] = True
+    classification["needs_human_review"] = True
+    append_validation_issue(
+        classification,
+        "transcript_quality abaixo de 0.50 exige revisao/retranscricao",
+    )
 
 
 def normalize_unit_score(value):
@@ -1717,6 +1907,7 @@ def normalize_technical_contexts_for_validation(result, compatibility_keys):
     normalized_contexts = []
 
     for context in result["technical_contexts"]:
+        normalize_context_problem_alias(context)
         has_technical_value = any(
             normalize_nullable(context.get(field))
             for field in ["automotive_system", "component", "problem"]
@@ -1738,13 +1929,30 @@ def normalize_technical_contexts_for_validation(result, compatibility_keys):
             )
             context["compatibility_status"] = "needs_review"
             context["needs_human_review"] = True
-            context["validation_issue"] = append_validation_issue(
+            context["validation_issue"] = append_issue_text(
                 context.get("validation_issue"), issue
             )
 
         normalized_contexts.append(context)
 
     result["technical_contexts"] = normalized_contexts
+
+
+def normalize_context_problem_alias(context):
+    problem = normalize_nullable(context.get("problem"))
+    if not problem:
+        return
+
+    if problem in CONTEXT_PROBLEM_ALIASES:
+        context["problem"] = CONTEXT_PROBLEM_ALIASES[problem]
+        return
+
+    if (
+        problem in NON_TECHNICAL_CONTEXT_PROBLEMS
+        and not normalize_nullable(context.get("automotive_system"))
+        and not normalize_nullable(context.get("component"))
+    ):
+        context["problem"] = None
 
 
 def promote_specific_topic_path_from_contexts(result):
@@ -1900,6 +2108,7 @@ def fetch_vehicle_catalog(base_url, headers):
 
 
 def fetch_vehicle_catalog_candidates(base_url, headers, entity):
+    entity = normalize_vehicle_entity_granularity(entity)
     brand_key = normalize_catalog_key(entity.get("vehicle_brand_raw"))
     model_key = normalize_catalog_key(entity.get("vehicle_model_raw"))
     vehicle_year = entity.get("vehicle_year")
@@ -1982,6 +2191,7 @@ def first_model_year_row(rows, vehicle_year=None):
 
 
 def resolve_vehicle_entity_from_candidates(entity, candidates):
+    entity = normalize_vehicle_entity_granularity(entity)
     resolved = {
         "entity_status": entity["entity_status"],
         "canonical_manufacturer_name": None,
@@ -2214,6 +2424,7 @@ def merge_vehicle_entities(gpt_entities, script_entities):
 
 
 def build_vehicle_entity_row(base_url, headers, result_id, entity):
+    entity = normalize_vehicle_entity_granularity(entity)
     resolved = {
         "entity_status": entity.get("resolved_entity_status"),
         "canonical_manufacturer_name": entity.get("canonical_manufacturer_name"),
@@ -2251,6 +2462,7 @@ def build_vehicle_entity_row(base_url, headers, result_id, entity):
 
 
 def resolve_vehicle_entity_with_catalog(entity, vehicle_catalog):
+    entity = normalize_vehicle_entity_granularity(entity)
     indexes = build_catalog_indexes(vehicle_catalog)
     model_key = normalize_catalog_key(entity.get("vehicle_model_raw"))
     brand_key = normalize_catalog_key(entity.get("vehicle_brand_raw"))
@@ -2301,6 +2513,32 @@ def enrich_vehicle_entities_with_catalog(base_url, headers, result, harness_inpu
         )
         enriched.append(enriched_entity)
     result["vehicle_entities"] = merge_vehicle_entities(enriched, script_entities)
+    return result
+
+
+def propagate_child_review_flags(result):
+    classification = result["classification_result"]
+    review_reasons = []
+
+    for context in result.get("technical_contexts") or []:
+        if context.get("needs_human_review") or context.get("compatibility_status") == "needs_review":
+            review_reasons.append("technical_context_needs_review")
+            break
+
+    for entity in result.get("vehicle_entities") or []:
+        status = entity.get("resolved_entity_status") or entity.get("entity_status")
+        if entity.get("validation_issue") or status in {"ambiguous", "needs_review", "not_found"}:
+            review_reasons.append("vehicle_entity_needs_review")
+            break
+
+    if not review_reasons:
+        return result
+
+    classification["needs_human_review"] = True
+    append_validation_issue(
+        classification,
+        "revisao humana exigida por filho: " + ", ".join(sorted(set(review_reasons))),
+    )
     return result
 
 
@@ -2397,6 +2635,14 @@ def append_validation_issue(classification, issue):
         classification["validation_issues"] = issue
 
 
+def append_issue_text(current, issue):
+    if current:
+        if issue not in current:
+            return f"{current}; {issue}"
+        return current
+    return issue
+
+
 def attach_fallback_summary(harness_input, initial_result, fallback_reasons, args, fallback_error=None):
     if not fallback_reasons:
         return harness_input
@@ -2479,6 +2725,7 @@ def classify_attempt(
         harness_input,
         vehicle_catalog,
     )
+    propagate_child_review_flags(result)
     timing_print(args.timing, post_id, "vehicle_enrichment", timing_elapsed(step_timer))
     return harness_input, result, raw_response, vehicle_catalog
 
@@ -2949,7 +3196,7 @@ def main():
                     args.yt_dlp_cookies,
                 )
 
-        if args.sleep_seconds:
+        if args.sleep_seconds and idx < len(posts):
             time.sleep(args.sleep_seconds)
         timing_print(args.timing, post_id, "video_total", timing_elapsed(video_timer))
 

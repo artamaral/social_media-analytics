@@ -30,7 +30,6 @@ Nao use conhecimento externo para completar:
 - marca;
 - modelo;
 - ano;
-- geracao;
 - sistema tecnico;
 - componente;
 - problema;
@@ -82,8 +81,12 @@ Uso operacional recomendado:
    - Se marca/modelo e ano-modelo aparecerem no titulo, descricao ou
      transcricao, preencha `vehicle_year`; nao deixe o ano nulo.
    - Exemplos: `Uni-T 2026`, `BYD Dolphin 2025`, `Kwid 2021`.
-   - Preserve apenas o valor bruto observado; a normalizacao Carros na Web e
-     feita por script depois da resposta.
+   - Nao trate versao/acabamento como entidade de mercado. Sufixos como `XR`,
+     `GS`, `SE`, `LTZ`, `Touring` ou similares devem ficar apenas na evidencia
+     textual. O modelo deve parar no modelo base util para pesquisa.
+   - Exemplos: `Yaris Cross XR` -> `Yaris Cross`; `Dolphin SE` -> `Dolphin`;
+     `Dolphin Mini GS` -> `Dolphin Mini`.
+   - A normalizacao Carros na Web e feita por script depois da resposta.
 10. Preencha `technical_contexts[]` somente quando sistema, componente ou
    problema estiverem explicitamente citados.
 11. Registre lacunas sem criar codigo canonico novo.

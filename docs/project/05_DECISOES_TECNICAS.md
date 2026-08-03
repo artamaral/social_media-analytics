@@ -2731,6 +2731,48 @@ Referencia:
 
 ---
 
+## Profundidade controlada de topic_path e entidade veicular canonica
+
+Data:
+
+- 2026-08-03
+
+Decisao:
+
+- adicionar `mercado_produto__analise_mercado` como rota canonica de nivel 2
+  para videos cuja proposta e leitura ampla de mercado, industria, setor,
+  competicao ou contexto comercial
+- nao aprofundar automaticamente `analise_mercado` em subrotas mais especificas
+  nesta etapa; detalhes devem ficar em evidencias, `taxonomy_gaps` ou campos
+  complementares
+- a entidade veicular canonica para pesquisa de mercado deve parar no maximo em
+  `ano + fabricante + modelo`
+- versao/acabamento como `XR`, `GS`, `SE`, `LTZ`, `Touring` ou similares nao e
+  dimensao analitica nesta fase; esses termos ficam apenas em `evidence_text`
+- exemplos operacionais: `Dolphin SE` -> `Dolphin`, `Dolphin Mini GS` ->
+  `Dolphin Mini`, `Yaris Cross XR` -> `Yaris Cross`
+
+Motivo:
+
+- a rodada `v2_transcript_90s_20260803T150649Z` falhou apenas em
+  `KONPXAjlkn8` porque o GPT retornou `mercado_produto__analise_mercado`, que
+  ainda nao existia como `topic_path`
+- criar profundidade excessiva de subnichos aumenta risco de fragmentacao e
+  reduz utilidade para pesquisa de mercado
+- para veiculos, o objetivo analitico e identificar de que carro se fala; versao
+  e acabamento aumentam falso negativo no catalogo e nao sao necessarios para o
+  MVP
+
+Referencia:
+
+- `docs/external_data/42_TAXONOMIA_VIDEO_V2_TOPIC_PATHS.csv`
+- `docs/external_data/58_GPT_VIDEO_CLASSIFIER_HARNESS_CONTRACT_V2.md`
+- `docs/external_data/58_GPT_VIDEO_CLASSIFIER_SKILL_V2.md`
+- `scripts/video_classification/classify_videos_gpt_v2.py`
+- `sql/dml/seed_video_taxonomy_v2.sql`
+
+---
+
 ## Fallback automatico `faster-whisper small -> medium`
 
 Data:

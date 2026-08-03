@@ -324,6 +324,16 @@ Entidades de veiculo:
   `vehicle_year`, `vehicle_generation` e evidencia textual
 - o script tambem extrai veiculos diretamente de `title`, `description` e
   `transcript_90s`, sem enviar o catalogo Carros na Web ao GPT
+- a entidade canonica de mercado para veiculo para no maximo em
+  fabricante/modelo/ano; versao ou acabamento como `XR`, `GS`, `SE`, `LTZ` ou
+  similares fica apenas na evidencia textual
+- exemplos: `Yaris Cross XR` -> `Yaris Cross`, `Dolphin SE` -> `Dolphin`,
+  `Dolphin Mini GS` -> `Dolphin Mini`
+- para consumo analitico, usar os campos canonicos vindos do Carros na Web:
+  `canonical_manufacturer_name`, `canonical_model_name` e
+  `canonical_model_year`; os campos `*_raw` ficam para auditoria
+- se houver match em nivel de modelo sem ano, `canonical_model_year` permanece
+  nulo; o script nao escolhe ano artificialmente
 - o script consulta `v_carrosnaweb_vehicle_catalog` antes de inserir em
   `video_classification_vehicle_entities`; em `--dry-run`, o JSON impresso
   tambem inclui os campos resolvidos e entidades encontradas pelo script apos a

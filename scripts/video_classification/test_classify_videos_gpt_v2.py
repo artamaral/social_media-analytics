@@ -518,6 +518,74 @@ class ClassifierContractTests(unittest.TestCase):
         self.assertEqual(row["canonical_model_name"], "Kwid")
         self.assertIsNone(row["validation_issue"])
 
+    def test_vehicle_entity_trim_suffix_is_not_canonical_dimension(self):
+        entity = {
+            "entity_order": 1,
+            "vehicle_brand_raw": "BYD",
+            "vehicle_model_raw": "Dolphin SE",
+            "vehicle_year": None,
+            "vehicle_generation": "SE",
+            "evidence_text": "NOVO BYD Dolphin SE",
+            "entity_status": "extracted",
+        }
+        catalog_rows = [
+            {
+                "catalog_row_id": 1,
+                "catalog_model_id": 20,
+                "manufacturer_name": "BYD",
+                "manufacturer_key": "byd",
+                "model_name": "Dolphin",
+                "model_key": "dolphin",
+                "model_year": 2025,
+            }
+        ]
+
+        with patch.object(CLASSIFIER, "request_json", return_value=catalog_rows):
+            row = CLASSIFIER.build_vehicle_entity_row(
+                "https://example.supabase.co",
+                {"apikey": "test"},
+                10,
+                entity,
+            )
+
+        self.assertEqual(row["vehicle_model_raw"], "Dolphin")
+        self.assertIsNone(row["vehicle_generation"])
+        self.assertEqual(row["canonical_model_name"], "Dolphin")
+        self.assertEqual(row["catalog_match_level"], "model")
+
+    def test_vehicle_entity_yaris_cross_xr_drops_trim_suffix(self):
+        entity = {
+            "entity_order": 1,
+            "vehicle_brand_raw": "Toyota",
+            "vehicle_model_raw": "Yaris Cross XR",
+            "vehicle_year": 2026,
+            "vehicle_generation": "XR",
+            "evidence_text": "Toyota Yaris Cross XR 2026",
+            "entity_status": "extracted",
+        }
+        catalog_row = {
+            "catalog_row_id": 1,
+            "catalog_model_id": 30,
+            "manufacturer_name": "Toyota",
+            "manufacturer_key": "toyota",
+            "model_name": "Yaris Cross",
+            "model_key": "yaris cross",
+            "model_year": 2026,
+        }
+
+        with patch.object(CLASSIFIER, "request_json", return_value=[catalog_row]):
+            row = CLASSIFIER.build_vehicle_entity_row(
+                "https://example.supabase.co",
+                {"apikey": "test"},
+                10,
+                entity,
+            )
+
+        self.assertEqual(row["vehicle_model_raw"], "Yaris Cross")
+        self.assertIsNone(row["vehicle_generation"])
+        self.assertEqual(row["canonical_model_name"], "Yaris Cross")
+        self.assertEqual(row["catalog_match_level"], "model_year")
+
     def test_script_vehicle_match_fills_unique_manufacturer_from_model(self):
         harness = {
             "video": {
@@ -554,6 +622,8 @@ class ClassifierContractTests(unittest.TestCase):
         self.assertEqual(entities[0]["vehicle_model_raw"], "Kwid")
         self.assertEqual(entities[0]["resolved_entity_status"], "matched")
         self.assertEqual(entities[0]["canonical_manufacturer_name"], "Renault")
+        self.assertEqual(entities[0]["canonical_model_name"], "Kwid")
+        self.assertIsNone(entities[0]["canonical_model_year"])
         self.assertEqual(entities[0]["catalog_model_id"], 10)
         self.assertIsNone(entities[0]["catalog_row_id"])
         self.assertEqual(entities[0]["catalog_match_level"], "model")
@@ -672,6 +742,31 @@ class ClassifierContractTests(unittest.TestCase):
 
         self.assertEqual(repaired, "mercado_produto__lancamentos")
 
+    def test_repair_topic_path_code_fixes_orcamento_alias(self):
+        topic_codes = {
+            "manutencao_reparo__custo_reparo__orcamento_manutencao",
+        }
+
+        repaired = CLASSIFIER.repair_topic_path_code(
+            "manutencao_reparo__custo_reparo__orcamento",
+            topic_codes,
+        )
+
+        self.assertEqual(
+            repaired,
+            "manutencao_reparo__custo_reparo__orcamento_manutencao",
+        )
+
+    def test_repair_topic_path_code_fixes_market_analysis_alias(self):
+        topic_codes = {"mercado_produto__analise_mercado"}
+
+        repaired = CLASSIFIER.repair_topic_path_code(
+            "mercado_produto__analise mercado",
+            topic_codes,
+        )
+
+        self.assertEqual(repaired, "mercado_produto__analise_mercado")
+
     def test_normalize_vehicle_entities_resequences_invalid_orders(self):
         result = {
             "vehicle_entities": [
@@ -696,6 +791,178 @@ class ClassifierContractTests(unittest.TestCase):
 
         self.assertEqual([entity["entity_order"] for entity in result["vehicle_entities"]], [1, 2])
 
+    def test_normalize_result_collections_drops_null_items(self):
+        result = {
+            "technical_contexts": [None, {"context_order": 1}],
+            "vehicle_entities": None,
+        }
+
+        CLASSIFIER.normalize_result_collections(result)
+
+        self.assertEqual(result["technical_contexts"], [{"context_order": 1}])
+        self.assertEqual(result["vehicle_entities"], [])
+
+    def test_normalize_result_collections_rejects_non_list(self):
+        result = {
+            "technical_contexts": {},
+            "vehicle_entities": [],
+        }
+
+        with self.assertRaisesRegex(ValueError, "technical_contexts deve ser lista"):
+            CLASSIFIER.normalize_result_collections(result)
+
+    def test_normalize_required_result_blocks_rejects_null_classification(self):
+        result = {
+            "classification_result": None,
+            "transcript_quality": {"issues": []},
+        }
+
+        with self.assertRaisesRegex(ValueError, "classification_result veio null"):
+            CLASSIFIER.normalize_required_result_blocks(result)
+
+    def test_normalize_required_result_blocks_defaults_null_issues(self):
+        result = {
+            "classification_result": {},
+            "transcript_quality": {"issues": None},
+        }
+
+        CLASSIFIER.normalize_required_result_blocks(result)
+
+        self.assertEqual(result["transcript_quality"]["issues"], [])
+
+    def test_validate_json_schema_shape_ignores_null_schema_branch(self):
+        CLASSIFIER.validate_json_schema_shape("qualquer", None)
+
+    def test_validation_step_wraps_attribute_error(self):
+        with self.assertRaisesRegex(ValueError, "validacao:teste: erro interno"):
+            CLASSIFIER.validation_step("teste", lambda: None.get("x"))
+
+    def test_validate_taxonomy_rows_rejects_null_row(self):
+        with self.assertRaisesRegex(ValueError, "compatibility\\[1\\] deve ser objeto"):
+            CLASSIFIER.validate_taxonomy_rows([None], "compatibility")
+
+    def test_normalize_technical_contexts_marks_missing_compatibility_issue(self):
+        result = {
+            "technical_contexts": [
+                {
+                    "topic_path": "diagnostico__falha_motor",
+                    "automotive_system": "motor",
+                    "component": "cilindro",
+                    "problem": "falha_de_motor",
+                    "compatibility_status": "allowed",
+                    "needs_human_review": False,
+                    "validation_issue": None,
+                }
+            ]
+        }
+
+        CLASSIFIER.normalize_technical_contexts_for_validation(result, set())
+
+        context = result["technical_contexts"][0]
+        self.assertEqual(context["compatibility_status"], "needs_review")
+        self.assertTrue(context["needs_human_review"])
+        self.assertIn("technical_context sem combinacao compativel", context["validation_issue"])
+
+    def test_normalize_technical_contexts_repairs_motor_action_problem_alias(self):
+        result = {
+            "technical_contexts": [
+                {
+                    "topic_path": "manutencao_reparo__reparo_corretivo__troca_motor",
+                    "automotive_system": "motor",
+                    "component": "motor_conjunto",
+                    "problem": "troca_motor",
+                    "compatibility_status": "allowed",
+                    "needs_human_review": False,
+                    "validation_issue": None,
+                }
+            ]
+        }
+        compatibility_keys = {
+            (
+                "manutencao_reparo__reparo_corretivo__troca_motor",
+                "motor",
+                "motor_conjunto",
+                "falha_de_motor",
+            )
+        }
+
+        CLASSIFIER.normalize_technical_contexts_for_validation(result, compatibility_keys)
+
+        context = result["technical_contexts"][0]
+        self.assertEqual(context["problem"], "falha_de_motor")
+        self.assertEqual(context["compatibility_status"], "allowed")
+        self.assertFalse(context["needs_human_review"])
+
+    def test_normalize_technical_contexts_drops_nontechnical_budget_problem(self):
+        result = {
+            "technical_contexts": [
+                {
+                    "topic_path": "manutencao_reparo__custo_reparo__orcamento_manutencao",
+                    "automotive_system": None,
+                    "component": None,
+                    "problem": "orcamento",
+                    "compatibility_status": "needs_review",
+                    "needs_human_review": True,
+                    "validation_issue": "orcamento usado como problema",
+                }
+            ]
+        }
+
+        CLASSIFIER.normalize_technical_contexts_for_validation(result, set())
+
+        self.assertEqual(result["technical_contexts"], [])
+
+    def test_append_issue_text_handles_null_current(self):
+        self.assertEqual(CLASSIFIER.append_issue_text(None, "novo"), "novo")
+        self.assertEqual(CLASSIFIER.append_issue_text("antigo", "novo"), "antigo; novo")
+        self.assertEqual(CLASSIFIER.append_issue_text("antigo", "antigo"), "antigo")
+
+    def test_propagate_child_review_flags_marks_parent_review(self):
+        result = {
+            "classification_result": {
+                "needs_human_review": False,
+                "validation_issues": None,
+            },
+            "technical_contexts": [
+                {
+                    "needs_human_review": True,
+                    "compatibility_status": "needs_review",
+                }
+            ],
+            "vehicle_entities": [],
+        }
+
+        CLASSIFIER.propagate_child_review_flags(result)
+
+        classification = result["classification_result"]
+        self.assertTrue(classification["needs_human_review"])
+        self.assertIn("technical_context_needs_review", classification["validation_issues"])
+
+    def test_propagate_child_review_flags_keeps_clean_parent(self):
+        result = {
+            "classification_result": {
+                "needs_human_review": False,
+                "validation_issues": None,
+            },
+            "technical_contexts": [
+                {
+                    "needs_human_review": False,
+                    "compatibility_status": "allowed",
+                }
+            ],
+            "vehicle_entities": [
+                {
+                    "resolved_entity_status": "matched",
+                    "validation_issue": None,
+                }
+            ],
+        }
+
+        CLASSIFIER.propagate_child_review_flags(result)
+
+        self.assertFalse(result["classification_result"]["needs_human_review"])
+        self.assertIsNone(result["classification_result"]["validation_issues"])
+
     def test_normalize_score_scales_repairs_percent_values(self):
         result = {
             "classification_result": {"confidence_score": "92"},
@@ -717,6 +984,46 @@ class ClassifierContractTests(unittest.TestCase):
 
         self.assertEqual(result["classification_result"]["confidence_score"], 0.72)
         self.assertIsNone(result["transcript_quality"]["quality_score"])
+
+    def test_normalize_transcript_quality_status_uses_score_as_source(self):
+        result = {
+            "classification_result": {
+                "needs_human_review": False,
+                "validation_issues": None,
+            },
+            "transcript_quality": {
+                "quality_score": 0.85,
+                "quality_status": "partially_usable",
+                "impact_on_classification": "low",
+                "needs_retranscription": False,
+            },
+        }
+
+        CLASSIFIER.normalize_transcript_quality_status(result)
+
+        self.assertEqual(result["transcript_quality"]["quality_status"], "usable")
+        self.assertFalse(result["classification_result"]["needs_human_review"])
+
+    def test_normalize_transcript_quality_status_marks_poor_for_low_score(self):
+        result = {
+            "classification_result": {
+                "needs_human_review": False,
+                "validation_issues": None,
+            },
+            "transcript_quality": {
+                "quality_score": 0.42,
+                "quality_status": "usable",
+                "impact_on_classification": "high",
+                "needs_retranscription": False,
+            },
+        }
+
+        CLASSIFIER.normalize_transcript_quality_status(result)
+
+        self.assertEqual(result["transcript_quality"]["quality_status"], "poor")
+        self.assertTrue(result["transcript_quality"]["needs_retranscription"])
+        self.assertTrue(result["classification_result"]["needs_human_review"])
+        self.assertIn("transcript_quality abaixo", result["classification_result"]["validation_issues"])
 
     def test_parse_args_defaults_to_sixty_second_sleep_and_medium_fallback(self):
         with patch("sys.argv", ["classifier", "--dry-run"]):
