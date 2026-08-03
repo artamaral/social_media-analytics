@@ -2731,6 +2731,54 @@ Referencia:
 
 ---
 
+## Fallback automatico `faster-whisper small -> medium`
+
+Data:
+
+- 2026-07-31
+
+Decisao:
+
+- manter `faster-whisper small`, CPU e `int8` como primeira transcricao local
+  dos `90s`
+- acionar `faster-whisper medium` automaticamente, uma unica vez, quando a
+  classificacao indicar risco objetivo de perda de informacao
+- aplicar o fallback apenas no fluxo local `--stage transcript_90s` sem
+  `--transcripts-csv`
+- alterar o intervalo padrao entre videos para `60s`
+- gravar no Supabase apenas a classificacao final; a tentativa inicial fica
+  como metadado sanitizado no `input_payload`
+
+Gatilhos:
+
+- `transcript_quality_score < 0.70`
+- `transcript_quality_status = poor` ou `empty`
+- `topic_path` permanece generico apos validacao/promocao conservadora
+- `vehicle_entities[]` retorna entidade explicita como `needs_review`,
+  `not_found` ou ambigua
+- `technical_contexts[]` retorna `needs_review` ou `validation_issue`
+- texto traz termo tecnico estrategico, mas nenhum contexto tecnico foi
+  preenchido
+
+Motivo:
+
+- a VPS nao precisa otimizar throughput neste momento; estabilidade e reducao de
+  reprocessamento manual sao mais importantes
+- o teste com `medium` mostrou potencial de melhorar a leitura textual, mas nao
+  deve substituir sempre o `small` por custo/tempo
+- o fallback precisa reaproveitar o mesmo audio local para evitar novo download
+  do YouTube
+- o intervalo maior reduz pressao em OpenAI, Supabase e YouTube/WARP sem afetar
+  o objetivo de validacao manual
+
+Referencia:
+
+- `scripts/video_classification/classify_videos_gpt_v2.py`
+- `scripts/video_classification/README.md`
+- `docs/external_data/58_GPT_VIDEO_CLASSIFIER_HARNESS_CONTRACT_V2.md`
+
+---
+
 ## Promocao conservadora de topic_path especifico no classificador V2
 
 Data:

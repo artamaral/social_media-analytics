@@ -4141,6 +4141,27 @@ Resultado:
   `6qSnrkGd70I`
 - banco, ingestao, cron e pipeline permanecem inalterados
 
+## Item Sprint 6 - Fallback automatico Whisper medium
+
+Status: implementado para validacao manual em 2026-07-31.
+
+Resultado:
+
+- o classificador passa a tentar `faster-whisper small` primeiro e acionar
+  `faster-whisper medium` automaticamente quando houver risco objetivo de perda
+  de informacao
+- os gatilhos cobrem baixa qualidade textual, `topic_path` generico, entidade
+  de veiculo mal resolvida, contexto tecnico em revisao ou termo tecnico
+  estrategico sem contexto preenchido
+- o fallback reutiliza o mesmo audio ja baixado/cortado, sem novo download do
+  YouTube
+- apenas a classificacao final e gravada no Supabase; a tentativa inicial fica
+  como metadado sanitizado em `input_payload`
+- o intervalo padrao entre videos passou para `60s`, pois a VPS privilegia
+  estabilidade e menor reprocessamento manual sobre velocidade
+- `--transcripts-csv` continua sendo replay controlado e nao aciona fallback
+  automatico
+
 ### Criterio de saida do planejamento
 
 O inicio do planejamento do Sprint 6 so deve ser considerado concluido quando

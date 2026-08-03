@@ -9,6 +9,8 @@ Script minimo para classificar videos com GPT usando a Taxonomia Video V2.
 - chama `gpt-5-nano` para `title_metadata`
 - baixa e corta os primeiros `90s` de audio com `yt-dlp` e `imageio-ffmpeg`
 - transcreve localmente com `faster-whisper small`, CPU e `int8`
+- reprocessa automaticamente o mesmo audio com `faster-whisper medium` quando a
+  qualidade, especificidade ou extracao de entidades/contexto indicar risco
 - usa `transcript_90s` como classificacao operacional quando a transcricao
   estiver disponivel, combinando titulo, metadados e transcript em uma chamada
 - avalia a qualidade textual do transcript na mesma chamada `gpt-5-nano`
@@ -33,7 +35,6 @@ Fora de escopo nesta versao:
 - transcricao por API
 - ingestao persistente de descricao do YouTube
 - dashboard
-- fallback automatico para modelo maior
 
 ## Decisao de uso
 
@@ -281,6 +282,25 @@ fica apenas como recuperacao se esse caminho estavel falhar.
 Timeout de download tambem e tratado como falha recuperavel para permitir a
 tentativa direta de recuperacao.
 
+Fallback automatico para `medium`:
+
+- no `--stage transcript_90s` sem `--transcripts-csv`, o default e transcrever
+  primeiro com `small` e acionar `medium` uma unica vez quando houver risco
+  objetivo
+- gatilhos: `transcript_quality_score < 0.70`, `quality_status=poor|empty`,
+  `topic_path` ainda generico, `vehicle_entities[]` com `needs_review` /
+  `not_found`, `technical_contexts[]` com `needs_review` ou termo tecnico
+  estrategico sem contexto preenchido
+- o audio baixado/cortado e reaproveitado; o fallback nao baixa o video de novo
+- somente a classificacao final e gravada no Supabase; a tentativa inicial fica
+  registrada de forma sanitizada em `input_payload.video.transcription_metadata`
+- `--fallback-whisper-model medium`, `--fallback-quality-threshold 0.70` e
+  `--disable-medium-fallback` controlam o comportamento
+- quando `--transcripts-output` for usado, o CSV registra uma linha por
+  tentativa, diferenciando `whisper_model`
+- se o `medium` falhar, o script preserva a classificacao valida do `small`,
+  marca `needs_human_review=true` e registra `fallback_error`
+
 Diagnostico de tempo:
 
 - use `--timing` para imprimir duracao por etapa sem alterar o fluxo de
@@ -289,10 +309,14 @@ Diagnostico de tempo:
   validacao, enriquecimento de veiculo e escrita no Supabase
 - para medir um unico video completo, rode com `--post-id <id>` e
   `--include-already-classified`
+- o intervalo padrao entre videos e `--sleep-seconds 60.0`, porque a VPS nao
+  precisa priorizar velocidade e reprocessamento custa mais que uma pausa maior
 
 O transcript completo pode ser preservado no CSV temporario, mas nao e gravado
 no Supabase. O `input_payload` persistido contem apenas hash, tamanho, duracao e
-proveniencia da transcricao.
+proveniencia da transcricao. Quando houver fallback automatico, o payload
+sanitizado tambem registra motivo, modelo inicial, modelo final e qualidade
+inicial, sem gravar o texto completo.
 
 Entidades de veiculo:
 

@@ -196,6 +196,8 @@ Versao inicial:
 - `output_schema_version = video_taxonomy_v2_output_schema_r2`
 - modelo de classificacao por titulo/metadados: `gpt-5-nano`
 - modelo de transcricao local dos `90s`: `faster-whisper small`
+- fallback de transcricao local: `faster-whisper medium`, acionado uma unica
+  vez por gatilhos objetivos de qualidade ou perda de informacao
 - modelo de classificacao operacional com titulo/metadados/transcricao:
   `gpt-5-nano`
 - skill: `docs/external_data/58_GPT_VIDEO_CLASSIFIER_SKILL_V2.md`
@@ -212,11 +214,23 @@ Decisao operacional:
 - usar `gpt-5-nano` para `title_metadata` apenas em diagnostico/calibracao
 - usar `faster-whisper small` localmente para transformar audio em texto, sem
   chamada OpenAI de transcricao
+- usar `faster-whisper medium` como fallback automatico quando a tentativa
+  `small` indicar risco objetivo: `transcript_quality_score < 0.70`,
+  `quality_status=poor|empty`, `topic_path` generico, entidade de veiculo mal
+  resolvida, contexto tecnico em `needs_review` ou termo tecnico estrategico sem
+  contexto preenchido
 - usar `gpt-5-nano` para a classificacao operacional `transcript_90s`, com
   titulo, metadados e transcricao no mesmo input
 - nao aplicar fallback automatico para `gpt-5.4-mini` nesta fase
 - avaliar a qualidade real do `gpt-5-nano` depois da primeira implementacao e
   comparar com o baseline humano/GPT ja documentado
+
+O fallback `medium` nao altera o contrato do banco nem cria duas classificacoes
+operacionais. A tentativa inicial fica apenas como metadado sanitizado em
+`input_payload.video.transcription_metadata`, com motivo do fallback, modelo
+inicial, modelo final, `topic_path` inicial e qualidade inicial. O transcript
+completo continua fora do Supabase. Se o fallback falhar, a classificacao valida
+do `small` pode ser gravada com `needs_human_review=true` e `fallback_error`.
 
 Instrucao central da skill:
 
@@ -557,4 +571,6 @@ A resposta deve ser rejeitada ou marcada para revisao quando:
 - A resposta aceitavel impede achismos e exige evidencia.
 - O executor manual gera os `90s` com `faster-whisper` e usa uma unica chamada
   `gpt-5-nano` para qualidade textual e classificacao.
+- O executor usa pausa padrao de `60s` entre videos em lote e fallback
+  automatico `small -> medium` apenas no fluxo local de `transcript_90s`.
 - O cron permanece desativado ate validacao manual do classificador.

@@ -25,7 +25,7 @@ TAXONOMY_VERSION = "taxonomia_video_v2"
 PROMPT_CONTRACT_VERSION = "video_taxonomy_v2_classifier_r2"
 OUTPUT_SCHEMA_VERSION = "video_taxonomy_v2_output_schema_r2"
 # Marcador operacional para confirmar se a copia local/VPS esta atualizada.
-SCRIPT_VERSION = "2026-07-31-r25-specific-topic-promotion"
+SCRIPT_VERSION = "2026-07-31-r26-medium-fallback"
 DEFAULT_TITLE_MODEL = "gpt-5-nano"
 DEFAULT_TRANSCRIPT_MODEL = "gpt-5-nano"
 DEFAULT_MAX_OUTPUT_TOKENS = 6000
@@ -35,6 +35,26 @@ if os.name == "nt":
     DEFAULT_AUDIO_WORKDIR = REPO_DIR / "tmp" / "video_classification_audio"
 
 CONDITIONAL_MODEL_KEYS = {"100", "bora", "link", "tipo"}
+
+GENERIC_TOPIC_PATHS = {
+    "diagnostico",
+    "fora_escopo",
+    "manutencao_reparo",
+    "mercado_produto",
+    "off_road",
+    "pos_venda_reparacao",
+    "powertrain",
+    "review_teste",
+}
+
+STRATEGIC_CONTEXT_DOMAINS = {
+    "diagnostico",
+    "manutencao_reparo",
+    "mercado_produto",
+    "pos_venda_reparacao",
+    "powertrain",
+    "review_teste",
+}
 
 TRANSCRIPT_QUALITY_ISSUES = [
     "too_short",
@@ -919,6 +939,19 @@ def ensure_whisper_runtime(model_name, device, compute_type):
     return {"model": model, "ffmpeg_path": ffmpeg_path}
 
 
+def ensure_cached_whisper_runtime(cache, model_name, device, compute_type):
+    key = (model_name, device, compute_type)
+    if key not in cache:
+        cache[key] = ensure_whisper_runtime(model_name, device, compute_type)
+    return cache[key]
+
+
+def args_with_whisper_model(args, model_name):
+    copied = argparse.Namespace(**vars(args))
+    copied.whisper_model = model_name
+    return copied
+
+
 def seconds_to_timestamp(seconds):
     minutes, remainder = divmod(seconds, 60)
     hours, minutes = divmod(minutes, 60)
@@ -1154,7 +1187,7 @@ def prepare_temporary_cookies(cookies_path, audio_workdir, post_id):
     return target
 
 
-def transcribe_post_local(post, runtime, args):
+def download_audio_for_transcription(post, runtime, args):
     post_id = post["post_id"]
     timing_enabled = bool(getattr(args, "timing", False))
     post_duration = to_optional_int(post.get("duration"))
@@ -1206,31 +1239,74 @@ def transcribe_post_local(post, runtime, args):
                     "falha no download/conversao de audio; "
                     f"tentativa_estavel={stable_error}; tentativa_direta={direct_error}"
                 ) from direct_error
-        step_timer = timing_start(timing_enabled)
-        segments, _info = runtime["model"].transcribe(
-            str(audio_path),
-            language=args.whisper_language,
-            vad_filter=True,
+        return {
+            "audio_path": audio_path,
+            "cookies_path": cookies_path,
+            "target_duration": target_duration,
+            "source_method": source_method,
+        }
+    except Exception:
+        cleanup_transcription_files(audio_path, cookies_path, args.yt_dlp_cookies)
+        raise
+
+
+def transcribe_audio_file(post_id, audio_path, runtime, args, target_duration, source_method):
+    timing_enabled = bool(getattr(args, "timing", False))
+    step_timer = timing_start(timing_enabled)
+    segments, _info = runtime["model"].transcribe(
+        str(audio_path),
+        language=args.whisper_language,
+        vad_filter=True,
+    )
+    transcript = " ".join(
+        segment.text.strip() for segment in segments if segment.text.strip()
+    )
+    transcript = " ".join(transcript.split())
+    timing_print(
+        timing_enabled,
+        post_id,
+        f"whisper_transcribe_{args.whisper_model}",
+        timing_elapsed(step_timer),
+    )
+    metadata = build_transcription_metadata(
+        transcript,
+        source_method=source_method,
+        model=args.whisper_model,
+        compute_type=args.whisper_compute_type,
+        language=args.whisper_language,
+        duration_seconds=target_duration,
+    )
+    return {"text": transcript, "metadata": metadata, "status": "success" if transcript else "partial"}
+
+
+def cleanup_transcription_files(audio_path, cookies_path, original_cookies_path):
+    if audio_path and Path(audio_path).exists():
+        Path(audio_path).unlink()
+    if (
+        cookies_path
+        and Path(cookies_path) != Path(original_cookies_path or "")
+        and Path(cookies_path).exists()
+    ):
+        Path(cookies_path).unlink()
+
+
+def transcribe_post_local(post, runtime, args):
+    resource = download_audio_for_transcription(post, runtime, args)
+    try:
+        return transcribe_audio_file(
+            post["post_id"],
+            resource["audio_path"],
+            runtime,
+            args,
+            resource["target_duration"],
+            resource["source_method"],
         )
-        transcript = " ".join(
-            segment.text.strip() for segment in segments if segment.text.strip()
-        )
-        transcript = " ".join(transcript.split())
-        timing_print(timing_enabled, post_id, "whisper_transcribe", timing_elapsed(step_timer))
-        metadata = build_transcription_metadata(
-            transcript,
-            source_method=source_method,
-            model=args.whisper_model,
-            compute_type=args.whisper_compute_type,
-            language=args.whisper_language,
-            duration_seconds=target_duration,
-        )
-        return {"text": transcript, "metadata": metadata, "status": "success" if transcript else "partial"}
     finally:
-        if audio_path.exists():
-            audio_path.unlink()
-        if cookies_path and Path(cookies_path) != Path(args.yt_dlp_cookies or "") and Path(cookies_path).exists():
-            Path(cookies_path).unlink()
+        cleanup_transcription_files(
+            resource.get("audio_path"),
+            resource.get("cookies_path"),
+            args.yt_dlp_cookies,
+        )
 
 
 def write_transcription_rows(output_path, rows):
@@ -2228,6 +2304,185 @@ def enrich_vehicle_entities_with_catalog(base_url, headers, result, harness_inpu
     return result
 
 
+def text_contains_strategic_terms(harness_input):
+    video = harness_input.get("video") or {}
+    combined = " ".join(
+        str(video.get(field) or "")
+        for field in ("title", "description", "transcript_90s")
+    )
+    normalized = normalize_catalog_key(combined)
+    strategic_terms = {
+        "aditivo",
+        "arrefecimento",
+        "autonomia",
+        "bateria",
+        "cambio",
+        "diesel",
+        "eletrico",
+        "flex",
+        "freio",
+        "hibrido",
+        "injecao",
+        "motor",
+        "obd2",
+        "pneu",
+        "radiador",
+        "scanner",
+        "suspensao",
+        "turbo",
+    }
+    return any(contains_catalog_phrase(normalized, term) for term in strategic_terms)
+
+
+def medium_fallback_reasons(result, harness_input, args):
+    if (
+        args.stage != "transcript_90s"
+        or args.transcripts_csv
+        or args.disable_medium_fallback
+        or args.whisper_model == args.fallback_whisper_model
+    ):
+        return []
+
+    reasons = []
+    classification = result["classification_result"]
+    quality = result["transcript_quality"]
+    quality_score = quality.get("quality_score")
+    quality_status = quality.get("quality_status")
+    topic_path = classification.get("topic_path")
+
+    if quality_score is not None and quality_score < args.fallback_quality_threshold:
+        reasons.append("transcript_quality_below_threshold")
+
+    if quality_status in {"poor", "empty"}:
+        reasons.append(f"transcript_quality_status_{quality_status}")
+
+    if (
+        topic_path in GENERIC_TOPIC_PATHS
+        and classification.get("automotive_domain") != "fora_escopo"
+    ):
+        reasons.append("topic_path_generico")
+
+    for entity in result.get("vehicle_entities") or []:
+        status = (
+            entity.get("resolved_entity_status")
+            or entity.get("entity_status")
+            or entity.get("catalog_match_level")
+        )
+        has_raw_vehicle = entity.get("vehicle_brand_raw") or entity.get("vehicle_model_raw")
+        if has_raw_vehicle and status in {"ambiguous", "needs_review", "not_found"}:
+            reasons.append("vehicle_entity_mal_resolvida")
+            break
+
+    for context in result.get("technical_contexts") or []:
+        if context.get("compatibility_status") == "needs_review" or context.get("validation_issue"):
+            reasons.append("technical_context_needs_review")
+            break
+
+    if (
+        not result.get("technical_contexts")
+        and classification.get("automotive_domain") in STRATEGIC_CONTEXT_DOMAINS
+        and text_contains_strategic_terms(harness_input)
+    ):
+        reasons.append("termo_tecnico_estrategico_sem_contexto")
+
+    return sorted(set(reasons))
+
+
+def append_validation_issue(classification, issue):
+    current = classification.get("validation_issues")
+    if current:
+        if issue not in current:
+            classification["validation_issues"] = f"{current}; {issue}"
+    else:
+        classification["validation_issues"] = issue
+
+
+def attach_fallback_summary(harness_input, initial_result, fallback_reasons, args, fallback_error=None):
+    if not fallback_reasons:
+        return harness_input
+
+    enriched = json.loads(json.dumps(harness_input))
+    video = enriched.setdefault("video", {})
+    metadata = video.setdefault("transcription_metadata", {}) or {}
+    initial_classification = initial_result.get("classification_result") or {}
+    initial_quality = initial_result.get("transcript_quality") or {}
+    metadata["fallback_triggered"] = True
+    metadata["fallback_trigger_reasons"] = fallback_reasons
+    metadata["initial_whisper_model"] = args.whisper_model
+    metadata["fallback_whisper_model"] = args.fallback_whisper_model
+    metadata["initial_topic_path"] = initial_classification.get("topic_path")
+    metadata["initial_confidence_score"] = initial_classification.get("confidence_score")
+    metadata["initial_transcript_quality_score"] = initial_quality.get("quality_score")
+    metadata["initial_transcript_quality_status"] = initial_quality.get("quality_status")
+    if fallback_error:
+        metadata["fallback_error"] = compact_text(fallback_error, 500)
+    video["transcription_metadata"] = metadata
+    return enriched
+
+
+def classify_attempt(
+    base_url,
+    headers,
+    post,
+    args,
+    taxonomy,
+    terms,
+    schema,
+    skill_text,
+    model,
+    transcript_record,
+    description,
+    vehicle_catalog,
+):
+    post_id = post["post_id"]
+    step_timer = timing_start(args.timing)
+    transcript = transcript_record["text"] if transcript_record else None
+    transcription_metadata = (
+        transcript_record["metadata"] if transcript_record else None
+    )
+    harness_input = build_harness_input(
+        post,
+        args.stage,
+        taxonomy,
+        terms,
+        transcript,
+        transcription_metadata,
+        description,
+    )
+    timing_print(args.timing, post_id, "harness_build", timing_elapsed(step_timer))
+
+    step_timer = timing_start(args.timing)
+    result, raw_response = call_openai(
+        model,
+        skill_text,
+        schema,
+        harness_input,
+        args.max_output_tokens,
+    )
+    timing_print(args.timing, post_id, "openai_call", timing_elapsed(step_timer))
+
+    step_timer = timing_start(args.timing)
+    validate_classification(result, schema, taxonomy, args.stage, post_id)
+    timing_print(args.timing, post_id, "validation", timing_elapsed(step_timer))
+
+    topic_path = result["classification_result"].get("topic_path") or ""
+    if vehicle_catalog is None and not topic_path.startswith("fora_escopo"):
+        step_timer = timing_start(args.timing)
+        vehicle_catalog = fetch_vehicle_catalog(base_url, headers)
+        timing_print(args.timing, post_id, "vehicle_catalog_fetch", timing_elapsed(step_timer))
+
+    step_timer = timing_start(args.timing)
+    enrich_vehicle_entities_with_catalog(
+        base_url,
+        headers,
+        result,
+        harness_input,
+        vehicle_catalog,
+    )
+    timing_print(args.timing, post_id, "vehicle_enrichment", timing_elapsed(step_timer))
+    return harness_input, result, raw_response, vehicle_catalog
+
+
 def write_classification(base_url, headers, run_id, taxonomy_id, model, harness_input, result, raw_response):
     classification = result["classification_result"]
     transcript_quality = result["transcript_quality"]
@@ -2361,6 +2616,9 @@ def parse_args():
     parser.add_argument("--transcripts-csv")
     parser.add_argument("--transcripts-output", type=Path)
     parser.add_argument("--whisper-model", default="small")
+    parser.add_argument("--fallback-whisper-model", default="medium")
+    parser.add_argument("--fallback-quality-threshold", type=float, default=0.70)
+    parser.add_argument("--disable-medium-fallback", action="store_true")
     parser.add_argument("--whisper-device", default="cpu")
     parser.add_argument("--whisper-compute-type", default="int8")
     parser.add_argument("--whisper-language", default="pt")
@@ -2373,7 +2631,7 @@ def parse_args():
     parser.add_argument("--yt-dlp-plugin-dir", action="append", type=Path, default=[])
     parser.add_argument("--yt-dlp-proxy")
     parser.add_argument("--max-output-tokens", type=int, default=DEFAULT_MAX_OUTPUT_TOKENS)
-    parser.add_argument("--sleep-seconds", type=float, default=0.5)
+    parser.add_argument("--sleep-seconds", type=float, default=60.0)
     parser.add_argument("--include-already-classified", action="store_true")
     parser.add_argument("--timing", action="store_true", help="Imprime duracao por etapa para diagnostico.")
     parser.add_argument(
@@ -2398,6 +2656,9 @@ def parse_args():
 
     if args.transcript_seconds < 1:
         parser.error("--transcript-seconds deve ser >= 1")
+
+    if args.fallback_quality_threshold < 0 or args.fallback_quality_threshold > 1:
+        parser.error("--fallback-quality-threshold deve ficar entre 0 e 1")
 
     if args.transcripts_output and args.stage != "transcript_90s":
         parser.error("--transcripts-output so pode ser usado com --stage transcript_90s")
@@ -2424,7 +2685,7 @@ def main():
     skill_text, skill_source = load_skill_text(args.skill_path)
     descriptions = load_descriptions_csv(args.descriptions_csv)
     transcripts = load_transcripts_csv(args.transcripts_csv)
-    whisper_runtime = None
+    whisper_runtimes = {}
     transcription_rows = []
     model = os.environ.get(
         "CLASSIFIER_MODEL_TRANSCRIPT" if args.stage == "transcript_90s" else "CLASSIFIER_MODEL_TITLE",
@@ -2449,7 +2710,8 @@ def main():
             f"model={args.whisper_model} device={args.whisper_device} "
             f"compute_type={args.whisper_compute_type}..."
         )
-        whisper_runtime = ensure_whisper_runtime(
+        ensure_cached_whisper_runtime(
+            whisper_runtimes,
             args.whisper_model,
             args.whisper_device,
             args.whisper_compute_type,
@@ -2478,6 +2740,11 @@ def main():
         print(f"- transcription_source: {source}")
         if not args.transcripts_csv:
             print(f"- transcript_seconds: {args.transcript_seconds}")
+            print(
+                "- medium_fallback: "
+                f"{'disabled' if args.disable_medium_fallback else args.fallback_whisper_model} "
+                f"threshold={args.fallback_quality_threshold}"
+            )
     if args.timing:
         print("- timing: enabled")
     print(f"- modo: {'write' if args.write else 'dry-run'}")
@@ -2500,21 +2767,36 @@ def main():
         post_id = post["post_id"]
         video_timer = timing_start(args.timing)
         transcript_record = None
+        audio_resource = None
 
-        if args.stage == "transcript_90s":
-            if args.transcripts_csv:
-                transcript_record = transcripts.get(post_id)
-                if transcript_record is None:
-                    failed += 1
-                    message = f"{post_id}: transcript_90s ausente no CSV"
-                    errors.append(message)
-                    print(f"[{idx}/{len(posts)}] {message}")
-                    continue
-            else:
-                print(f"[{idx}/{len(posts)}] transcrevendo {post_id}...")
-                try:
+        try:
+            if args.stage == "transcript_90s":
+                if args.transcripts_csv:
+                    transcript_record = transcripts.get(post_id)
+                    if transcript_record is None:
+                        failed += 1
+                        message = f"{post_id}: transcript_90s ausente no CSV"
+                        errors.append(message)
+                        print(f"[{idx}/{len(posts)}] {message}")
+                        continue
+                else:
+                    print(f"[{idx}/{len(posts)}] transcrevendo {post_id}...")
                     step_timer = timing_start(args.timing)
-                    transcript_record = transcribe_post_local(post, whisper_runtime, args)
+                    primary_runtime = ensure_cached_whisper_runtime(
+                        whisper_runtimes,
+                        args.whisper_model,
+                        args.whisper_device,
+                        args.whisper_compute_type,
+                    )
+                    audio_resource = download_audio_for_transcription(post, primary_runtime, args)
+                    transcript_record = transcribe_audio_file(
+                        post_id,
+                        audio_resource["audio_path"],
+                        primary_runtime,
+                        args,
+                        audio_resource["target_duration"],
+                        audio_resource["source_method"],
+                    )
                     timing_print(args.timing, post_id, "transcription_total", timing_elapsed(step_timer))
                     step_timer = timing_start(args.timing)
                     transcription_rows.append(
@@ -2522,63 +2804,112 @@ def main():
                     )
                     write_transcription_rows(args.transcripts_output, transcription_rows)
                     timing_print(args.timing, post_id, "transcription_csv_write", timing_elapsed(step_timer))
-                except Exception as exc:
-                    failed += 1
-                    message = f"{post_id}: falha na transcricao local: {exc}"
-                    errors.append(message)
-                    transcription_rows.append(
-                        transcription_output_row(post_id, error_message=str(exc))
-                    )
-                    write_transcription_rows(args.transcripts_output, transcription_rows)
-                    print(f"ERRO: {message}")
-                    continue
 
-        transcript = transcript_record["text"] if transcript_record else None
-        transcription_metadata = (
-            transcript_record["metadata"] if transcript_record else None
-        )
-        description_record = descriptions.get(post_id) or {}
-        description = description_record.get("description") or None
-        step_timer = timing_start(args.timing)
-        harness_input = build_harness_input(
-            post,
-            args.stage,
-            taxonomy,
-            terms,
-            transcript,
-            transcription_metadata,
-            description,
-        )
-        timing_print(args.timing, post_id, "harness_build", timing_elapsed(step_timer))
-        print(f"[{idx}/{len(posts)}] classificando {post_id}...")
+            description_record = descriptions.get(post_id) or {}
+            description = description_record.get("description") or None
+            print(f"[{idx}/{len(posts)}] classificando {post_id}...")
 
-        try:
-            step_timer = timing_start(args.timing)
-            result, raw_response = call_openai(
-                model,
-                skill_text,
-                schema,
-                harness_input,
-                args.max_output_tokens,
-            )
-            timing_print(args.timing, post_id, "openai_call", timing_elapsed(step_timer))
-            step_timer = timing_start(args.timing)
-            validate_classification(result, schema, taxonomy, args.stage, post_id)
-            timing_print(args.timing, post_id, "validation", timing_elapsed(step_timer))
-            topic_path = result["classification_result"].get("topic_path") or ""
-            if vehicle_catalog is None and not topic_path.startswith("fora_escopo"):
-                step_timer = timing_start(args.timing)
-                vehicle_catalog = fetch_vehicle_catalog(base_url, headers)
-                timing_print(args.timing, post_id, "vehicle_catalog_fetch", timing_elapsed(step_timer))
-            step_timer = timing_start(args.timing)
-            enrich_vehicle_entities_with_catalog(
+            harness_input, result, raw_response, vehicle_catalog = classify_attempt(
                 base_url,
                 headers,
-                result,
-                harness_input,
+                post,
+                args,
+                taxonomy,
+                terms,
+                schema,
+                skill_text,
+                model,
+                transcript_record,
+                description,
                 vehicle_catalog,
             )
-            timing_print(args.timing, post_id, "vehicle_enrichment", timing_elapsed(step_timer))
+
+            initial_result_for_fallback = json.loads(json.dumps(result))
+            fallback_reasons = medium_fallback_reasons(result, harness_input, args)
+            if fallback_reasons:
+                print(
+                    f"[{idx}/{len(posts)}] fallback whisper {args.fallback_whisper_model} "
+                    f"para {post_id}: {', '.join(fallback_reasons)}"
+                )
+                try:
+                    fallback_args = args_with_whisper_model(args, args.fallback_whisper_model)
+                    print(
+                        "Carregando faster-whisper "
+                        f"model={fallback_args.whisper_model} device={fallback_args.whisper_device} "
+                        f"compute_type={fallback_args.whisper_compute_type}..."
+                    )
+                    fallback_runtime = ensure_cached_whisper_runtime(
+                        whisper_runtimes,
+                        fallback_args.whisper_model,
+                        fallback_args.whisper_device,
+                        fallback_args.whisper_compute_type,
+                    )
+                    step_timer = timing_start(args.timing)
+                    transcript_record = transcribe_audio_file(
+                        post_id,
+                        audio_resource["audio_path"],
+                        fallback_runtime,
+                        fallback_args,
+                        audio_resource["target_duration"],
+                        audio_resource["source_method"],
+                    )
+                    timing_print(
+                        args.timing,
+                        post_id,
+                        "medium_fallback_transcription_total",
+                        timing_elapsed(step_timer),
+                    )
+                    step_timer = timing_start(args.timing)
+                    transcription_rows.append(
+                        transcription_output_row(post_id, transcript_record)
+                    )
+                    write_transcription_rows(args.transcripts_output, transcription_rows)
+                    timing_print(args.timing, post_id, "transcription_csv_write", timing_elapsed(step_timer))
+                    print(f"[{idx}/{len(posts)}] reclassificando {post_id} com transcript {fallback_args.whisper_model}...")
+                    (
+                        fallback_harness_input,
+                        result,
+                        raw_response,
+                        vehicle_catalog,
+                    ) = classify_attempt(
+                        base_url,
+                        headers,
+                        post,
+                        fallback_args,
+                        taxonomy,
+                        terms,
+                        schema,
+                        skill_text,
+                        model,
+                        transcript_record,
+                        description,
+                        vehicle_catalog,
+                    )
+                    harness_input = attach_fallback_summary(
+                        fallback_harness_input,
+                        initial_result_for_fallback,
+                        fallback_reasons,
+                        args,
+                    )
+                except Exception as fallback_exc:
+                    result = initial_result_for_fallback
+                    classification = result["classification_result"]
+                    classification["needs_human_review"] = True
+                    append_validation_issue(
+                        classification,
+                        f"fallback_whisper_medium_failed: {compact_text(fallback_exc, 300)}",
+                    )
+                    harness_input = attach_fallback_summary(
+                        harness_input,
+                        initial_result_for_fallback,
+                        fallback_reasons,
+                        args,
+                        str(fallback_exc),
+                    )
+                    print(
+                        f"AVISO: {post_id}: fallback whisper {args.fallback_whisper_model} "
+                        f"falhou; mantendo classificacao inicial com revisao humana."
+                    )
 
             if args.write:
                 step_timer = timing_start(args.timing)
@@ -2599,9 +2930,24 @@ def main():
             succeeded += 1
         except Exception as exc:
             failed += 1
-            message = f"{post_id}: {exc}"
+            if args.stage == "transcript_90s" and not args.transcripts_csv and transcript_record is None:
+                message = f"{post_id}: falha na transcricao local: {exc}"
+            else:
+                message = f"{post_id}: {exc}"
             errors.append(message)
+            if args.stage == "transcript_90s" and not args.transcripts_csv and transcript_record is None:
+                transcription_rows.append(
+                    transcription_output_row(post_id, error_message=str(exc))
+                )
+                write_transcription_rows(args.transcripts_output, transcription_rows)
             print(f"ERRO: {message}")
+        finally:
+            if audio_resource:
+                cleanup_transcription_files(
+                    audio_resource.get("audio_path"),
+                    audio_resource.get("cookies_path"),
+                    args.yt_dlp_cookies,
+                )
 
         if args.sleep_seconds:
             time.sleep(args.sleep_seconds)

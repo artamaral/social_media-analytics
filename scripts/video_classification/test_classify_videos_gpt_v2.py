@@ -718,6 +718,163 @@ class ClassifierContractTests(unittest.TestCase):
         self.assertEqual(result["classification_result"]["confidence_score"], 0.72)
         self.assertIsNone(result["transcript_quality"]["quality_score"])
 
+    def test_parse_args_defaults_to_sixty_second_sleep_and_medium_fallback(self):
+        with patch("sys.argv", ["classifier", "--dry-run"]):
+            args = CLASSIFIER.parse_args()
+
+        self.assertEqual(args.sleep_seconds, 60.0)
+        self.assertEqual(args.fallback_whisper_model, "medium")
+        self.assertEqual(args.fallback_quality_threshold, 0.70)
+        self.assertFalse(args.disable_medium_fallback)
+
+    def test_medium_fallback_reasons_for_low_quality(self):
+        result = {
+            "classification_result": {
+                "automotive_domain": "review_teste",
+                "topic_path": "review_teste__review_veiculo",
+            },
+            "transcript_quality": {
+                "quality_score": 0.69,
+                "quality_status": "partially_usable",
+            },
+            "technical_contexts": [],
+            "vehicle_entities": [],
+        }
+        args = SimpleNamespace(
+            stage="transcript_90s",
+            transcripts_csv=None,
+            disable_medium_fallback=False,
+            whisper_model="small",
+            fallback_whisper_model="medium",
+            fallback_quality_threshold=0.70,
+        )
+
+        reasons = CLASSIFIER.medium_fallback_reasons(result, {"video": {}}, args)
+
+        self.assertEqual(reasons, ["transcript_quality_below_threshold"])
+
+    def test_medium_fallback_reasons_ignores_csv_transcripts(self):
+        result = {
+            "classification_result": {
+                "automotive_domain": "diagnostico",
+                "topic_path": "diagnostico",
+            },
+            "transcript_quality": {"quality_score": 0.30, "quality_status": "poor"},
+            "technical_contexts": [],
+            "vehicle_entities": [],
+        }
+        args = SimpleNamespace(
+            stage="transcript_90s",
+            transcripts_csv=Path("transcripts.csv"),
+            disable_medium_fallback=False,
+            whisper_model="small",
+            fallback_whisper_model="medium",
+            fallback_quality_threshold=0.70,
+        )
+
+        self.assertEqual(CLASSIFIER.medium_fallback_reasons(result, {"video": {}}, args), [])
+
+    def test_medium_fallback_reasons_for_generic_topic_vehicle_and_context(self):
+        result = {
+            "classification_result": {
+                "automotive_domain": "diagnostico",
+                "topic_path": "diagnostico",
+            },
+            "transcript_quality": {"quality_score": 0.86, "quality_status": "usable"},
+            "technical_contexts": [
+                {
+                    "compatibility_status": "needs_review",
+                    "validation_issue": "sem combinacao compativel",
+                }
+            ],
+            "vehicle_entities": [
+                {
+                    "vehicle_brand_raw": None,
+                    "vehicle_model_raw": "Modelo X",
+                    "resolved_entity_status": "not_found",
+                }
+            ],
+        }
+        args = SimpleNamespace(
+            stage="transcript_90s",
+            transcripts_csv=None,
+            disable_medium_fallback=False,
+            whisper_model="small",
+            fallback_whisper_model="medium",
+            fallback_quality_threshold=0.70,
+        )
+
+        reasons = CLASSIFIER.medium_fallback_reasons(result, {"video": {}}, args)
+
+        self.assertEqual(
+            reasons,
+            [
+                "technical_context_needs_review",
+                "topic_path_generico",
+                "vehicle_entity_mal_resolvida",
+            ],
+        )
+
+    def test_medium_fallback_reasons_for_strategic_term_without_context(self):
+        result = {
+            "classification_result": {
+                "automotive_domain": "manutencao_reparo",
+                "topic_path": "manutencao_reparo__manutencao_preventiva",
+            },
+            "transcript_quality": {"quality_score": 0.90, "quality_status": "usable"},
+            "technical_contexts": [],
+            "vehicle_entities": [],
+        }
+        harness_input = {"video": {"title": "Como cuidar do radiador do carro"}}
+        args = SimpleNamespace(
+            stage="transcript_90s",
+            transcripts_csv=None,
+            disable_medium_fallback=False,
+            whisper_model="small",
+            fallback_whisper_model="medium",
+            fallback_quality_threshold=0.70,
+        )
+
+        reasons = CLASSIFIER.medium_fallback_reasons(result, harness_input, args)
+
+        self.assertEqual(reasons, ["termo_tecnico_estrategico_sem_contexto"])
+
+    def test_attach_fallback_summary_adds_initial_attempt_metadata(self):
+        harness_input = {
+            "video": {
+                "transcription_metadata": {
+                    "model": "medium",
+                    "transcript_sha256": "abc",
+                }
+            }
+        }
+        initial_result = {
+            "classification_result": {
+                "topic_path": "diagnostico",
+                "confidence_score": 0.62,
+            },
+            "transcript_quality": {
+                "quality_score": 0.68,
+                "quality_status": "partially_usable",
+            },
+        }
+        args = SimpleNamespace(whisper_model="small", fallback_whisper_model="medium")
+
+        enriched = CLASSIFIER.attach_fallback_summary(
+            harness_input,
+            initial_result,
+            ["topic_path_generico"],
+            args,
+        )
+
+        metadata = enriched["video"]["transcription_metadata"]
+        self.assertTrue(metadata["fallback_triggered"])
+        self.assertEqual(metadata["fallback_trigger_reasons"], ["topic_path_generico"])
+        self.assertEqual(metadata["initial_whisper_model"], "small")
+        self.assertEqual(metadata["fallback_whisper_model"], "medium")
+        self.assertEqual(metadata["initial_topic_path"], "diagnostico")
+        self.assertEqual(metadata["initial_confidence_score"], 0.62)
+
 
 if __name__ == "__main__":
     unittest.main()
