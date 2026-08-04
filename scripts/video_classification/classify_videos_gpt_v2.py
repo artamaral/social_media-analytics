@@ -25,7 +25,7 @@ TAXONOMY_VERSION = "taxonomia_video_v2"
 PROMPT_CONTRACT_VERSION = "video_taxonomy_v2_classifier_r2"
 OUTPUT_SCHEMA_VERSION = "video_taxonomy_v2_output_schema_r2"
 # Marcador operacional para confirmar se a copia local/VPS esta atualizada.
-SCRIPT_VERSION = "2026-08-04-r41-turbo-feature-normalization"
+SCRIPT_VERSION = "2026-08-04-r42-fallback-regression-guard"
 DEFAULT_TITLE_MODEL = "gpt-5-nano"
 DEFAULT_TRANSCRIPT_MODEL = "gpt-5-nano"
 DEFAULT_MAX_OUTPUT_TOKENS = 6000
@@ -2924,6 +2924,55 @@ def medium_fallback_reasons(result, harness_input, args):
     return sorted(set(reasons))
 
 
+def topic_path_specificity(topic_path):
+    if not topic_path:
+        return 0
+    return 1 + str(topic_path).count("__")
+
+
+def has_any_technical_context(result):
+    return bool(result.get("technical_contexts") or [])
+
+
+def fallback_regression_reasons(initial_result, fallback_result):
+    initial = initial_result["classification_result"]
+    fallback = fallback_result["classification_result"]
+    initial_topic = initial.get("topic_path")
+    fallback_topic = fallback.get("topic_path")
+    initial_domain = initial.get("automotive_domain")
+    fallback_domain = fallback.get("automotive_domain")
+    reasons = []
+
+    if fallback_domain == "sem_match_taxonomico" and fallback_topic != "sem_match_taxonomico":
+        reasons.append("fallback_domain_topic_inconsistente")
+
+    if fallback_topic == "sem_match_taxonomico" and initial_topic != "sem_match_taxonomico":
+        reasons.append("fallback_sem_match")
+
+    if (
+        initial_topic not in GENERIC_TOPIC_PATHS
+        and fallback_topic in GENERIC_TOPIC_PATHS
+        and fallback_topic != initial_topic
+    ):
+        reasons.append("fallback_topic_generico")
+
+    if topic_path_specificity(fallback_topic) < topic_path_specificity(initial_topic):
+        reasons.append("fallback_topic_menos_especifico")
+
+    if has_any_technical_context(initial_result) and not has_any_technical_context(fallback_result):
+        reasons.append("fallback_perdeu_contexto_tecnico")
+
+    initial_confidence = initial.get("confidence_score") or 0
+    fallback_confidence = fallback.get("confidence_score") or 0
+    if fallback_confidence + 0.10 < initial_confidence:
+        reasons.append("fallback_confidence_menor")
+
+    if initial_domain != "sem_match_taxonomico" and fallback_domain == "sem_match_taxonomico":
+        reasons.append("fallback_domain_sem_match")
+
+    return sorted(set(reasons))
+
+
 def append_validation_issue(classification, issue):
     current = classification.get("validation_issues")
     if current:
@@ -2941,7 +2990,14 @@ def append_issue_text(current, issue):
     return issue
 
 
-def attach_fallback_summary(harness_input, initial_result, fallback_reasons, args, fallback_error=None):
+def attach_fallback_summary(
+    harness_input,
+    initial_result,
+    fallback_reasons,
+    args,
+    fallback_error=None,
+    fallback_rejected_reasons=None,
+):
     if not fallback_reasons:
         return harness_input
 
@@ -2958,6 +3014,9 @@ def attach_fallback_summary(harness_input, initial_result, fallback_reasons, arg
     metadata["initial_confidence_score"] = initial_classification.get("confidence_score")
     metadata["initial_transcript_quality_score"] = initial_quality.get("quality_score")
     metadata["initial_transcript_quality_status"] = initial_quality.get("quality_status")
+    if fallback_rejected_reasons:
+        metadata["fallback_rejected"] = True
+        metadata["fallback_rejected_reasons"] = fallback_rejected_reasons
     if fallback_error:
         metadata["fallback_error"] = compact_text(fallback_error, 500)
     video["transcription_metadata"] = metadata
@@ -3416,8 +3475,8 @@ def main():
                     print(f"[{idx}/{len(posts)}] reclassificando {post_id} com transcript {fallback_args.whisper_model}...")
                     (
                         fallback_harness_input,
-                        result,
-                        raw_response,
+                        fallback_result,
+                        fallback_raw_response,
                         vehicle_catalog,
                     ) = classify_attempt(
                         base_url,
@@ -3433,12 +3492,32 @@ def main():
                         description,
                         vehicle_catalog,
                     )
-                    harness_input = attach_fallback_summary(
-                        fallback_harness_input,
+                    regression_reasons = fallback_regression_reasons(
                         initial_result_for_fallback,
-                        fallback_reasons,
-                        args,
+                        fallback_result,
                     )
+                    if regression_reasons:
+                        result = initial_result_for_fallback
+                        harness_input = attach_fallback_summary(
+                            harness_input,
+                            initial_result_for_fallback,
+                            fallback_reasons,
+                            args,
+                            fallback_rejected_reasons=regression_reasons,
+                        )
+                        print(
+                            f"AVISO: {post_id}: fallback whisper {args.fallback_whisper_model} "
+                            f"rejeitado por regressao: {', '.join(regression_reasons)}"
+                        )
+                    else:
+                        result = fallback_result
+                        raw_response = fallback_raw_response
+                        harness_input = attach_fallback_summary(
+                            fallback_harness_input,
+                            initial_result_for_fallback,
+                            fallback_reasons,
+                            args,
+                        )
                 except Exception as fallback_exc:
                     result = initial_result_for_fallback
                     classification = result["classification_result"]

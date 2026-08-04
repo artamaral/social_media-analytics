@@ -1,0 +1,41 @@
+execution_rank,post_id,source_lot,video_type,creator,title,selection_reason
+1,pINW53ErjQI,batch_1_piloto,short,edumartins car,MUITO CUIDADO AO DIRIGIR!,piloto original; titulo ambiguo; caso de fora_escopo/transito_comportamento
+2,_j1gOOnjgcU,batch_1_piloto,short,carupdicasautomotivas,Quase ninguem faz! #dicasautomotivas #mecanicadescomplicada #mecanicaautomotiva,piloto original; manutencao preventiva em short
+3,z55GnDEg7_U,batch_1_piloto,short,Carros com Tiago,Quanto custa o motor do Kwid ?,piloto original; reparo/custo de motor com entidade veicular
+4,CjFrJg6VCjc,batch_1_piloto,short,Carros com Tiago,Testei a autonomia do Byd Dolphin Mini Gs no extremo,piloto original; teste de autonomia e powertrain eletrico
+5,nP0q6x1Uqs0,batch_1_piloto,short,Eletricarbr,Brasil Cheio de Eletricos por Culpa Dele: NOVO BYD Dolphin SE - R$ 159 Mil,piloto original; mercado/produto eletrificado
+6,JGzj254Kgs4,batch_1_piloto,long,CarroChefe,O CARRO POPULAR DE VERDADE! 25 SALARIOS MIMOS POR UM UM ZERO KM COMPLETO! VC TERIA?,piloto original; compra_venda/review com titulo editorial
+7,6qSnrkGd70I,batch_1_piloto,long,MEGA DICAS AUTOMOTIVAS,NAO TIRO MAIS DO CARRO! COMO MELHORAR E DEIXAR A AGUA DO RADIADOR REALMENTE LIMPA PRA SEMPRE!,piloto original; manutencao preventiva/arrefecimento
+8,aXbFPJMVGKw,batch_1_piloto,long,CarroChefe,ACABOU PRA VW JEEP E TOYOTA! Avaliacao Changan Uni-T 2026,piloto original; review com atributos de mercado e powertrain
+9,RTZHxSE2t5M,batch_1_piloto,long,Meu Carro Life Style,MECANICOS EM PANICO? MILHARES DE CARROS DESCARTAVEIS DESPEJADOS em nosso MERCADO! E AGORA?,piloto original; pos_venda/mercado editorial
+10,UtWYJfldWHA,batch_1_piloto,long,Quatrorodas,R$ 169.990! Caoa Changan Uni-T estreia NACIONAL FLEX e e equipado como CARRO DE LUXO,piloto original; lancamento/review com marca modelo ano
+11,KwZFtY1w8FY,batch_2_amostra_aleatoria,long,CarroChefe,ESPORTIVO RAIZ COM CAMBIO MANUAL! SIMPLESMENTE ANIMAL PENA QUE E CARO - Avaliacao GR Yaris MANUAL,amostra aleatoria; review com cambio/manual/turbo e entidade veicular
+12,0YeiiIpSrP0,batch_2_amostra_aleatoria,long,OpiniaoSincera,Novo Jeep Commander HIBRIDO: O que e e como funciona o MHEV? E bom? Gasta menos? Preco problemas,amostra aleatoria; hibrido leve/powertrain e review
+13,KONPXAjlkn8,batch_2_amostra_aleatoria,long,Portimus,T-CROSS E MELHOR QUE CARRO CHINES? OPINIAO DO MECANICO,amostra aleatoria; mercado/review com analise de mercado
+14,cwQIxaJDJAE,batch_2_amostra_aleatoria,long,garagem do bellote,MOTOS CLASSICAS EM SOCORRO: o Centro Cultural Movimento | Garagem Moto,amostra aleatoria; fora_escopo por moto/duas rodas
+15,cLH17x4LiCA,batch_2_amostra_aleatoria,long,stanleyravagnani,NOVO TOYOTA YARIS CROSS XR EM SUA VERSAO DE ENTRADA 2026 | MOSTREI OS PONTOS POSITIVOS E NEGATIVOS!!,amostra aleatoria; review veiculo com marca modelo ano
+16,fvt-UH964yA,batch_2_amostra_aleatoria,long,stanleyravagnani,CAOACHERY TIGGO 7 2027 | QUAL VALE MAIS A PENA? | AGORA COM 7 ANOS DE GARANTIA!!,amostra aleatoria; comparativo/review com garantia e marca modelo
+17,Yel1puu2qGQ,batch_2_amostra_aleatoria,short,AutoPapo,Uma picape nova da Volkswagen nao aparece camuflada por acaso. #Shorts,amostra aleatoria; flagra/lancamento com risco de falso positivo de modelo
+18,UMEYwVvLsGM,batch_2_amostra_aleatoria,short,Eletricarbr,"+ R$ 30 Milhoes por 2.000 cv, 4 Motores e 0-300 km/h em 9 segundos: Lotus",amostra aleatoria; veiculo fora do catalogo brasileiro e powertrain extremo
+19,Sth4l0Kc2NY,batch_2_amostra_aleatoria,short,Quatrorodas,ASFALTO BRASILEIRO NA CHINA,amostra aleatoria; titulo ambiguo que depende de transcricao
+20,yAytAka2dfg,batch_2_amostra_aleatoria,short,canal da mecanica,"Se voce para de aprender, fica pra tras! #oficina #alinhamento3d #geometriaveicular",amostra aleatoria; conteudo profissional/oficina
+21,R3y-lSe0K4s,batch_3_mvp_novos,long,MEGA DICAS AUTOMOTIVAS,VOCE ESTA SENDO ENGANADO? ESSE SCANNER PROVA O KM VERDADEIRO!,novo elegivel; long; diagnostico/scanner; filtros followers e engagement
+22,BrKVhF-oG80,batch_3_mvp_novos,long,MEGA DICAS AUTOMOTIVAS,CARRO CONSUMINDO MUITO E FALHANDO? O FAMOSO RESET DE BATERIA RESOLVE A MARCHA LENTA E SENSORES!,novo elegivel; long; diagnostico/manutencao com bateria e sensores
+23,NuLcOS208w0,batch_3_mvp_novos,long,stanleyravagnani,TEST DRIVE E AVALIACAO GWM HAVAL H6 HEV2 2026 | MELHOR HIBRIDO PLENO DA CATEGORIA!!,novo elegivel; long; review hibrido com marca modelo ano
+24,Xx1TYZnPYK8,batch_3_mvp_novos,long,Meu Carro Life Style,BOTA QUALQUER SUV PRA MAMAR mas NINGUEM QUER SABER! GM CRUZE HATCH TURBO! (Avaliacao),novo elegivel; long; review usado/combustao turbo
+25,ZspY7eFGJXo,batch_3_mvp_novos,long,Quatrorodas,R$ 159.000: GWM Ora 5 eletrico mira em SUVS A COMBUSTAO e poe irmao em risco,novo elegivel; long; mercado/produto eletrico
+26,fgjijU3h7Cw,batch_3_mvp_novos,long,CarroChefe,Avaliacao RAM Rampage RT - A MAIS RAPIDA E MAIS ESPORTIVA RAMPAGE,novo elegivel; long; review desempenho/picape
+27,DWYtJ3UHTXs,batch_3_mvp_novos,long,canal da mecanica,A TOYOTA NAO VAI GOSTAR DESSE VIDEO.,novo elegivel; long; titulo ambiguo; requer transcricao
+28,4_qw9-un9D0,batch_3_mvp_novos,long,bfms,ENCONTREI OS MELHORES PROJETOS DE CAMINHONETE DE PALMAS-TO!!,novo elegivel; long; projetos/caminhonete
+29,4VPqBe4zjpo,batch_3_mvp_novos,long,DR Auto Mecanica,"ONIX COM 140MIL KM, Troca de Correia, Valvula Termostatica, Vazamentos e Suspensao",novo elegivel; long; manutencao multi-contexto com modelo
+30,FaobcvNYgUc,batch_3_mvp_novos,long,OpiniaoSincera,"Renault SANDERO Stepway Automatico: e BOA COMPRA? Preco, problemas, defeito, avaliacao, review. Vale",novo elegivel; long; review usado com problema/preco/modelo
+31,9jdCcUr6KDI,batch_3_mvp_novos,short,canal da mecanica,Erro muito comum nos carros da linha Volkswagen #alinhamento #Volkswagen #carros,novo elegivel; short; diagnostico/manutencao com marca
+32,TukIrroE8Z4,batch_3_mvp_novos,short,carroscomtiago,Esse galao de reabastecimento e muito pratico,novo elegivel; short; acessorio/uso pratico
+33,Bcf0ikE2Aac,batch_3_mvp_novos,short,Eletricarbr,Proxima Aposta dos Chineses: Super Hibridos,novo elegivel; short; mercado/powertrain hibrido
+34,4FsnWZmuiQ0,batch_3_mvp_novos,short,CarroChefe,UNICO CARRO MAIS LEGAL QUE UM CIVIC SI,novo elegivel; short; comparativo/review com entidade veicular
+35,ouOjW0d1hxw,batch_3_mvp_novos,short,Eletricarbr,UTI de um Hospital nao pode Parar! Torre de Voo tambem nao! Nobreak! E as Baterias?,novo elegivel; short; possivel fora_escopo ou baterias sem carro
+36,OlnXxCHKisM,batch_3_mvp_novos,short,OMecaniconline,Novidades da PHINIA direto do Salao do Automovel de Pequim,novo elegivel; short; produto/fornecedor automotivo
+37,XSkI9I7hEIw,batch_3_mvp_novos,short,Autoesporte,JEEP AVENGER: VEJA A LINHA DE PRODUCAO DO SUV QUE CHEGA EM BREVE!,novo elegivel; short; lancamento/producao com marca modelo
+38,PusuX6OzOC0,batch_3_mvp_novos,short,Eletricarbr,Mercedes-Benz Lanca Eletrico de 1.153 cv e Ronco de V8 Simulado,novo elegivel; short; powertrain eletrico/feature sonora
+39,VzRl2S0RkPc,batch_3_mvp_novos,short,Quatrorodas,HIBRIDO NA TERRA,novo elegivel; short; powertrain hibrido/off-road possivel
+40,5oLUBF-Iu6k,batch_3_mvp_novos,short,autoignicao,SONIC RS 2027,novo elegivel; short; produto/modelo com ano

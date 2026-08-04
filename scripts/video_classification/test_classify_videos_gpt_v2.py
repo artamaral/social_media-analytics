@@ -1660,6 +1660,63 @@ class ClassifierContractTests(unittest.TestCase):
 
         self.assertEqual(reasons, ["termo_tecnico_estrategico_sem_contexto"])
 
+    def test_fallback_regression_reasons_rejects_semantic_loss(self):
+        initial = {
+            "classification_result": {
+                "automotive_domain": "review_teste",
+                "topic_path": "review_teste__review_veiculo",
+                "confidence_score": 0.92,
+            },
+            "technical_contexts": [
+                {
+                    "automotive_system": "motor",
+                    "component": "turbo",
+                    "problem": None,
+                }
+            ],
+        }
+        fallback = {
+            "classification_result": {
+                "automotive_domain": "sem_match_taxonomico",
+                "topic_path": "mercado_produto__lancamentos",
+                "confidence_score": 0.70,
+            },
+            "technical_contexts": [],
+        }
+
+        reasons = CLASSIFIER.fallback_regression_reasons(initial, fallback)
+
+        self.assertIn("fallback_domain_topic_inconsistente", reasons)
+        self.assertIn("fallback_domain_sem_match", reasons)
+        self.assertIn("fallback_perdeu_contexto_tecnico", reasons)
+        self.assertIn("fallback_confidence_menor", reasons)
+
+    def test_fallback_regression_reasons_accepts_more_specific_result(self):
+        initial = {
+            "classification_result": {
+                "automotive_domain": "review_teste",
+                "topic_path": "review_teste",
+                "confidence_score": 0.62,
+            },
+            "technical_contexts": [],
+        }
+        fallback = {
+            "classification_result": {
+                "automotive_domain": "review_teste",
+                "topic_path": "review_teste__review_veiculo",
+                "confidence_score": 0.82,
+            },
+            "technical_contexts": [
+                {
+                    "automotive_system": "motor",
+                    "component": "turbo",
+                    "problem": None,
+                }
+            ],
+        }
+
+        self.assertEqual(CLASSIFIER.fallback_regression_reasons(initial, fallback), [])
+
     def test_attach_fallback_summary_adds_initial_attempt_metadata(self):
         harness_input = {
             "video": {
@@ -1695,6 +1752,35 @@ class ClassifierContractTests(unittest.TestCase):
         self.assertEqual(metadata["fallback_whisper_model"], "medium")
         self.assertEqual(metadata["initial_topic_path"], "diagnostico")
         self.assertEqual(metadata["initial_confidence_score"], 0.62)
+
+    def test_attach_fallback_summary_records_rejected_regression(self):
+        harness_input = {"video": {"transcription_metadata": {}}}
+        initial_result = {
+            "classification_result": {
+                "topic_path": "review_teste__review_veiculo",
+                "confidence_score": 0.92,
+            },
+            "transcript_quality": {
+                "quality_score": 0.72,
+                "quality_status": "usable",
+            },
+        }
+        args = SimpleNamespace(whisper_model="small", fallback_whisper_model="medium")
+
+        enriched = CLASSIFIER.attach_fallback_summary(
+            harness_input,
+            initial_result,
+            ["technical_context_needs_review"],
+            args,
+            fallback_rejected_reasons=["fallback_perdeu_contexto_tecnico"],
+        )
+
+        metadata = enriched["video"]["transcription_metadata"]
+        self.assertTrue(metadata["fallback_rejected"])
+        self.assertEqual(
+            metadata["fallback_rejected_reasons"],
+            ["fallback_perdeu_contexto_tecnico"],
+        )
 
 
 if __name__ == "__main__":

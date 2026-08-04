@@ -123,6 +123,8 @@ considerada incompleta.
 - [58_GPT_VIDEO_CLASSIFIER_OUTPUT_SCHEMA_V2.json](/C:/social_media-analytics/docs/external_data/58_GPT_VIDEO_CLASSIFIER_OUTPUT_SCHEMA_V2.json)
 - [59_VPS_CRON_CLASSIFICADOR_GPT_V2_RUNBOOK.md](/C:/social_media-analytics/docs/external_data/59_VPS_CRON_CLASSIFICADOR_GPT_V2_RUNBOOK.md)
 - [60_PO_TOKEN_YTDLP_TRANSCRICAO_VPS_R1.md](/C:/social_media-analytics/docs/external_data/60_PO_TOKEN_YTDLP_TRANSCRICAO_VPS_R1.md)
+- [61_RODADA_MVP_40_VIDEOS_CLASSIFICADOR_V2.md](/C:/social_media-analytics/docs/external_data/61_RODADA_MVP_40_VIDEOS_CLASSIFICADOR_V2.md)
+- [61_RODADA_MVP_40_VIDEOS_CLASSIFICADOR_V2.csv](/C:/social_media-analytics/docs/external_data/61_RODADA_MVP_40_VIDEOS_CLASSIFICADOR_V2.csv)
 
 SQL operacional relacionado:
 
@@ -133,6 +135,7 @@ SQL operacional relacionado:
 - [023_create_v_video_classification_latest.sql](/C:/social_media-analytics/sql/ddl/views/023_create_v_video_classification_latest.sql)
 - [011_test_video_taxonomy_classification.sql](/C:/social_media-analytics/sql/ddl/tests/011_test_video_taxonomy_classification.sql)
 - [seed_video_taxonomy_v2.sql](/C:/social_media-analytics/sql/dml/seed_video_taxonomy_v2.sql)
+- [update_video_taxonomy_v2_turbo_compatibility.sql](/C:/social_media-analytics/sql/dml/update_video_taxonomy_v2_turbo_compatibility.sql)
 
 ## 3. Dashboard
 

@@ -4188,6 +4188,13 @@ Resultado:
 - `turbo` foi consolidado como componente/feature de powertrain, nao como
   `problem`; o script normaliza `problem=turbo` para `component=turbo` quando
   o contexto vier com componente generico de motor
+- a matriz de compatibilidade tecnica foi alinhada ao contrato de `turbo` como
+  componente/feature, usando `component=turbo` e `problem=null` para review e
+  powertrain
+- o fallback `small -> medium` ganhou trava contra regressao semantica: se o
+  `medium` perder contexto tecnico, cair em `sem_match_taxonomico`, gerar
+  dominio/topico inconsistente ou reduzir muito a confianca, o resultado valido
+  do `small` e preservado e a rejeicao fica auditavel no payload sanitizado
 - entidades de veiculo passam a ser normalizadas no maximo como
   `ano + fabricante + modelo`; versao/acabamento como `XR`, `GS`, `SE`, `LTZ`
   ou similares fica apenas em evidencia textual
@@ -4220,6 +4227,54 @@ Resultado:
   `model_year` antes de `model`
 - banco, ingestao, cron, pipeline e Taxonomia V2 canonica permanecem
   inalterados nesta etapa
+
+## Item Sprint 6 - Rodada MVP de 40 videos do classificador V2
+
+Status: preparado para execucao manual em 2026-08-04.
+
+Objetivo:
+
+- validar estabilidade do harness V2 em escala maior antes de discutir cron;
+- sair do ciclo de correcao video a video e observar recorrencia em uma amostra
+  maior;
+- usar somente o estagio operacional `transcript_90s`, com titulo, metadados e
+  transcricao de `90s` no mesmo input;
+- medir falhas de download/transcricao, fallback, `needs_human_review`,
+  `taxonomy_gaps`, contextos tecnicos em revisao e qualidade de entidades de
+  veiculo.
+
+Resultado preparado:
+
+- criado o CSV canonico
+  `docs/external_data/61_RODADA_MVP_40_VIDEOS_CLASSIFICADOR_V2.csv` com `40`
+  videos;
+- os `20` ja conhecidos combinam Batch 1 piloto e Batch 2/amostra aleatoria;
+- os `20` novos foram selecionados no Supabase com os filtros originais:
+  `followers >= 150000`, `engagement_pct >= 2.0`, `video_type in (long, short)`
+  e exclusao de `Acelerados`, `ACF` e `Tcar`;
+- os novos videos ficaram balanceados em `10 long` e `10 short`;
+- criado o runbook/analise
+  `docs/external_data/61_RODADA_MVP_40_VIDEOS_CLASSIFICADOR_V2.md` com comandos
+  de VPS por lote, regras de parada e criterio de MVP.
+
+Criterio de MVP registrado:
+
+- pelo menos `85%` dos videos gravados sem falha operacional;
+- menos de `25%` com `needs_human_review`;
+- ausencia de erro recorrente que exija correcao manual video a video;
+- entidades de veiculo canonicas limitadas a `fabricante/modelo/ano`, sem
+  versao/acabamento como entidade;
+- `technical_contexts[]` sem features gravadas como `problem`;
+- fallback `medium` nao deve substituir resultado melhor do `small` quando
+  houver regressao semantica.
+
+Fora do escopo:
+
+- ativar cron;
+- criar ingestao nova;
+- alterar dashboard;
+- expandir taxonomia por versao/acabamento;
+- corrigir videos individualmente durante a rodada, salvo bloqueio sistemico.
 
 ### Criterio de saida do planejamento
 

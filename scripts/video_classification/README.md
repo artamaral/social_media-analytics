@@ -164,7 +164,7 @@ python scripts/video_classification/classify_videos_gpt_v2.py --version
 A versao esperada apos o reforco conservador de curadoria e:
 
 ```text
-classify_videos_gpt_v2.py 2026-08-04-r41-turbo-feature-normalization
+classify_videos_gpt_v2.py 2026-08-04-r42-fallback-regression-guard
 ```
 
 Aliases equivalentes:
@@ -307,6 +307,10 @@ Fallback automatico para `medium`:
   tentativa, diferenciando `whisper_model`
 - se o `medium` falhar, o script preserva a classificacao valida do `small`,
   marca `needs_human_review=true` e registra `fallback_error`
+- se o `medium` gerar regressao semantica clara, como perder contexto tecnico,
+  cair em `sem_match_taxonomico`, trocar para `topic_path` menos especifico ou
+  reduzir muito a confianca, o script preserva a classificacao do `small` e
+  registra `fallback_rejected_reasons`
 
 Diagnostico de tempo:
 

@@ -24,10 +24,10 @@ A versao operacional inicial da V2 usa:
 
 Snapshot documentado:
 
-- topic paths: `104`
-- regras de compatibilidade tecnica: `91`
-- sha256 `42`: `E35004D64E81AAFB8B1FF8615FA67D52B1994D0D859F25C803FEEB43E6793298`
-- sha256 `43`: `F3376D76F841871C961BEEA6B4CEDAF308A0755E43DE816C122B81BCCDAF5AB2`
+- topic paths: `106`
+- regras de compatibilidade tecnica: `112`
+- sha256 `42`: `8DF03111F435B11651EC4A0ED4278D97EA8A1C145F721B2FF70B8C87815ECA51`
+- sha256 `43`: `879A312E9A43A1C71776B04BCF8BD15ADDE37FC87A5B896C71F214664EB064FD`
 
 ## Estrutura Supabase
 
@@ -231,6 +231,11 @@ operacionais. A tentativa inicial fica apenas como metadado sanitizado em
 inicial, modelo final, `topic_path` inicial e qualidade inicial. O transcript
 completo continua fora do Supabase. Se o fallback falhar, a classificacao valida
 do `small` pode ser gravada com `needs_human_review=true` e `fallback_error`.
+Se o fallback `medium` produzir regressao semantica clara, como perder contexto
+tecnico, cair em `sem_match_taxonomico`, gerar dominio/topico inconsistente,
+reduzir especificidade ou reduzir muito a confianca, o harness deve preservar a
+classificacao valida do `small` e registrar `fallback_rejected_reasons` no
+payload sanitizado.
 
 Instrucao central da skill:
 
