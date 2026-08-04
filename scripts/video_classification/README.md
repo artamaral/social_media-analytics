@@ -164,7 +164,7 @@ python scripts/video_classification/classify_videos_gpt_v2.py --version
 A versao esperada apos o reforco conservador de curadoria e:
 
 ```text
-classify_videos_gpt_v2.py 2026-08-04-r40-drop-weak-vehicle-not-found
+classify_videos_gpt_v2.py 2026-08-04-r41-turbo-feature-normalization
 ```
 
 Aliases equivalentes:
@@ -382,8 +382,9 @@ Reparos conservadores antes da gravacao:
   rota existir
 - contexto tecnico e enxugado antes da validacao: sensores preservam o nome do
   sensor e removem `limpeza` como problema, autonomia vira atributo,
-  pleonasmos como `sistema_hibrido`/`manual_cambio` sao removidos, e detalhes
-  como carbonizacao/borra/geometria ficam apenas em evidencia textual
+  `turbo` vira componente/feature, pleonasmos como
+  `sistema_hibrido`/`manual_cambio` sao removidos, e detalhes como
+  carbonizacao/borra/geometria ficam apenas em evidencia textual
 
 Instalar dependencias:
 

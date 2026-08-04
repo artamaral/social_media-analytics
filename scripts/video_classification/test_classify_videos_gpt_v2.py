@@ -1309,6 +1309,36 @@ class ClassifierContractTests(unittest.TestCase):
         self.assertEqual(context["component"], "cambio_manual")
         self.assertIsNone(context["problem"])
 
+    def test_normalize_technical_contexts_turns_turbo_problem_into_component(self):
+        result = {
+            "technical_contexts": [
+                {
+                    "topic_path": "powertrain__combustao__turbo",
+                    "automotive_system": "motor",
+                    "component": "motor",
+                    "problem": "turbo",
+                    "compatibility_status": "allowed",
+                    "needs_human_review": False,
+                    "validation_issue": None,
+                }
+            ]
+        }
+        compatibility_keys = {
+            (
+                "powertrain__combustao__turbo",
+                "motor",
+                "turbo",
+                None,
+            )
+        }
+
+        CLASSIFIER.normalize_technical_contexts_for_validation(result, compatibility_keys)
+
+        context = result["technical_contexts"][0]
+        self.assertEqual(context["component"], "turbo")
+        self.assertIsNone(context["problem"])
+        self.assertFalse(context["needs_human_review"])
+
     def test_normalize_technical_contexts_simplifies_internal_engine_component(self):
         result = {
             "technical_contexts": [

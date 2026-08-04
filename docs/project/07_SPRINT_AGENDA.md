@@ -4185,6 +4185,9 @@ Resultado:
   de transcricao sem marca explicita, como uma forma fonetica de versao ou
   acabamento, pode ser descartado antes da gravacao quando ja existe match
   canonico forte no mesmo video
+- `turbo` foi consolidado como componente/feature de powertrain, nao como
+  `problem`; o script normaliza `problem=turbo` para `component=turbo` quando
+  o contexto vier com componente generico de motor
 - entidades de veiculo passam a ser normalizadas no maximo como
   `ano + fabricante + modelo`; versao/acabamento como `XR`, `GS`, `SE`, `LTZ`
   ou similares fica apenas em evidencia textual

@@ -131,6 +131,7 @@ Antes de escolher um `topic_path` tematico, aplique esta ordem:
   `component=sensor_maf`, `problem=null`.
 - `autonomia` e atributo de produto/teste; nao usar como `problem`.
 - `hibrido_leve` e atributo de powertrain/mercado; nao usar como `problem`.
+- `turbo` e componente/feature de powertrain; nao usar como `problem`.
 - `tracao_dianteira`, `tracao_traseira` e `tracao_integral` sao atributos de
   contexto tecnico; nao devem ser criados como `topic_path`.
 - Evite pleonasmos: se o `topic_path` ja indica hibrido, nao repetir
