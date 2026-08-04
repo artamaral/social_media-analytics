@@ -2457,3 +2457,42 @@ Referencia:
 
 - `docs/external_data/58_GPT_VIDEO_CLASSIFIER_HARNESS_CONTRACT_V2.md`
 - `docs/external_data/58_GPT_VIDEO_CLASSIFIER_SKILL_V2.md`
+
+---
+
+## Exclusao de dead posts das estatisticas analiticas e RPC de confirmacao
+
+Data:
+
+- 2026-08-04
+
+Decisao:
+
+- views analiticas de creators, crescimento, qualidade e cobertura devem
+  excluir posts com `status = 'unavailable'` na propria SQL, usando
+  `NOT EXISTS` ou CTE `active_posts`, para evitar reentrada acidental em
+  rankings e agregacoes
+- `v_dashboard_creator_summary`, `v_dashboard_post_growth_7d`,
+  `v_dashboard_data_quality_status`, `v_dashboard_guardrail_coverage_status`,
+  `v_dashboard_queue_bottleneck_status`, `v_dashboard_creator_weekly_timeseries`
+  e `v_dashboard_creator_weekly_activity` ficam como contrato analitico
+  padronizado com exclusao de `unavailable`
+- a tela de Sanitizacao Operacional chama a RPC
+  `public.confirm_unavailable_posts(text[], text, text)` para confirmar em
+  lote os posts revisados
+- a RPC deve apenas consolidar auditoria humana em `post_collection_failures`,
+  sem apagar historico, snapshots ou posts
+
+Motivo:
+
+- impedir que dead posts contaminem estatisticas ativas
+- preservar o historico para auditoria e rastreabilidade humana
+- centralizar a confirmacao em banco, nao em SQL solto no Streamlit
+
+Validacao local:
+
+- teste estrutural do contrato SQL confirmou a presenca de guardrail de
+  exclusao de `unavailable` nas views analiticas afetadas
+- nao foi possivel executar consulta viva no Supabase nesta maquina porque as
+  credenciais `SUPABASE_URL` e `SUPABASE_ANON_KEY` nao estao configuradas no
+  ambiente local

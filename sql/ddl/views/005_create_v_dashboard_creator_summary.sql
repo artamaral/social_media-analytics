@@ -26,7 +26,6 @@ SELECT
   c.platform,
   c.username,
   c.channel_id,
-  c.avatar_url,
   c.followers,
   COALESCE(pr.post_count, 0) AS post_count,
   COALESCE(pr.total_views, 0) AS total_views,
@@ -39,7 +38,8 @@ SELECT
   END AS engagement_rate_pct,
   pr.latest_post_date,
   pr.latest_collected_at,
-  c.is_active
+  c.is_active,
+  c.avatar_url
 FROM public.creators c
 JOIN public.entities e ON e.id = c.entity_id
 LEFT JOIN post_rollup pr ON pr.creator_id = c.id;
