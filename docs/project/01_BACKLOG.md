@@ -19,7 +19,6 @@ Itens ja concluidos ficam consolidados no historico ao fim do arquivo.
 
 - [ ] [ops] Identificar creators sem coleta recente (>30d). Monitorar creators sem novos posts por janela definida para decidir pausa do discovery, introduzir status `on_hold_discovery` e evitar seguir descobrindo posts de creators que ficaram inativos por tempo relevante.
 - [ ] [ops] Revisar periodicamente a regra de `next_check` e a capacidade diaria da fila, porque o volume total de checagens tende a crescer junto com a base de posts; a monitoracao existe, mas o problema escala com o tempo e exige manter cada post com mais de `3` snapshots para formar historico rapido dentro da prioridade da fila.
-- [x] [bug] Padronizar exclusao de `dead posts` das metricas e views analiticas, mantendo esses posts apenas em auditoria e revisao humana para nao contaminar a leitura da base ativa. Fechado em 2026-08-04 com exclusao por `NOT EXISTS`/`active_posts` nas views analiticas, RPC `confirm_unavailable_posts(...)` e validacao estrutural do contrato SQL.
 
 ## Analytics
 
