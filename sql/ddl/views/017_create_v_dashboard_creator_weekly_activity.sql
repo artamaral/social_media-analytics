@@ -14,6 +14,12 @@ WITH creator_posts AS (
   JOIN public.creators c ON c.id = p.creator_id
   JOIN public.entities e ON e.id = c.entity_id
   WHERE p.creator_id IS NOT NULL
+    AND NOT EXISTS (
+      SELECT 1
+      FROM public.post_collection_failures f
+      WHERE f.post_id = p.post_id
+        AND f.status = 'unavailable'
+    )
 ),
 closed_weeks AS (
   SELECT DISTINCT

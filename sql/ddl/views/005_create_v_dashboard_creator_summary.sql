@@ -9,6 +9,12 @@ WITH post_rollup AS (
     MAX(p.post_date) AS latest_post_date,
     MAX(p.collected_at) AS latest_collected_at
   FROM public.posts p
+  WHERE NOT EXISTS (
+    SELECT 1
+    FROM public.post_collection_failures f
+    WHERE f.post_id = p.post_id
+      AND f.status = 'unavailable'
+  )
   GROUP BY p.creator_id
 )
 SELECT

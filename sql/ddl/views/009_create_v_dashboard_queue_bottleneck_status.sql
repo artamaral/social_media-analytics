@@ -53,10 +53,13 @@ classified as (
     on c.post_id = q.post_id
   left join current_batch b
     on b.post_id = q.post_id
-  left join public.post_collection_failures f
-    on f.post_id = q.post_id
   where q.needs_update = true
-    and coalesce(f.status, 'active') <> 'unavailable'
+    and not exists (
+      select 1
+      from public.post_collection_failures f
+      where f.post_id = q.post_id
+        and f.status = 'unavailable'
+    )
 )
 select
   priority_band,

@@ -74,7 +74,13 @@ JOIN snapshot_counts sc ON sc.post_id = ls.post_id
 JOIN public.posts p ON p.post_id = ls.post_id
 JOIN public.creators c ON c.id = p.creator_id
 JOIN public.entities e ON e.id = c.entity_id
-WHERE ls.latest_collected_at > fs.first_collected_at;
+WHERE ls.latest_collected_at > fs.first_collected_at
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.post_collection_failures f
+    WHERE f.post_id = p.post_id
+      AND f.status = 'unavailable'
+  );
 
 GRANT SELECT ON public.v_dashboard_post_growth_7d TO anon;
 GRANT SELECT ON public.v_dashboard_post_growth_7d TO authenticated;

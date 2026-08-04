@@ -28,9 +28,12 @@ coverage as (
   from public.posts p
   left join checks c
     on c.post_id = p.post_id
-  left join public.post_collection_failures f
-    on f.post_id = p.post_id
-  where coalesce(f.status, 'active') <> 'unavailable'
+  where not exists (
+    select 1
+    from public.post_collection_failures f
+    where f.post_id = p.post_id
+      and f.status = 'unavailable'
+  )
 ),
 labeled as (
   select

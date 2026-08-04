@@ -19,6 +19,12 @@ WITH base_history AS (
   JOIN public.entities e ON e.id = c.entity_id
   WHERE h.collected_at IS NOT NULL
     AND p.creator_id IS NOT NULL
+    AND NOT EXISTS (
+      SELECT 1
+      FROM public.post_collection_failures f
+      WHERE f.post_id = p.post_id
+        AND f.status = 'unavailable'
+    )
 ),
 completed_week_history AS (
   SELECT *

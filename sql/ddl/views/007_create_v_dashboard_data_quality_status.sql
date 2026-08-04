@@ -1,18 +1,28 @@
 CREATE OR REPLACE VIEW public.v_dashboard_data_quality_status AS
-WITH posts_without_history AS (
-  SELECT COUNT(*) AS total
+WITH active_posts AS (
+  SELECT p.*
   FROM public.posts p
+  WHERE NOT EXISTS (
+    SELECT 1
+    FROM public.post_collection_failures f
+    WHERE f.post_id = p.post_id
+      AND f.status = 'unavailable'
+  )
+),
+posts_without_history AS (
+  SELECT COUNT(*) AS total
+  FROM active_posts p
   LEFT JOIN public.post_metrics_history h ON h.post_id = p.post_id
   WHERE h.post_id IS NULL
 ),
 posts_with_null_collected_at AS (
   SELECT COUNT(*) AS total
-  FROM public.posts p
+  FROM active_posts p
   WHERE p.collected_at IS NULL
 ),
 posts_stale_24h AS (
   SELECT COUNT(*) AS total
-  FROM public.posts p
+  FROM active_posts p
   LEFT JOIN (
     SELECT
       h.post_id,
@@ -26,7 +36,7 @@ posts_stale_24h AS (
 creators_without_posts AS (
   SELECT COUNT(*) AS total
   FROM public.creators c
-  LEFT JOIN public.posts p ON p.creator_id = c.id
+  LEFT JOIN active_posts p ON p.creator_id = c.id
   WHERE p.id IS NULL
 )
 SELECT

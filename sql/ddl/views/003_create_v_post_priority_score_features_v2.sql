@@ -7,6 +7,12 @@ with current_posts as (
     p.comments,
     coalesce(p.collected_at, now()::timestamp without time zone) as current_collected_at
   from public.posts p
+  where not exists (
+    select 1
+    from public.post_collection_failures f
+    where f.post_id = p.post_id
+      and f.status = 'unavailable'
+  )
 ),
 snapshots as (
   select
