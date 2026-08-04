@@ -372,7 +372,17 @@ Resultado esperado:
 
 ## Status
 
-Implementacao preparada no repositorio.
+Implementacao concluida e validada no repositorio.
+
+Validacao operacional em 2026-08-04:
+
+- a RPC `public.confirm_unavailable_posts(text[], text, text)` foi publicada e
+  respondeu `200` no Supabase
+- a view `v_dashboard_creator_summary` passou a excluir `unavailable`
+- o spot-check em creator com dead posts confirmou que a contagem ativa da view
+  bate com a base filtrada
+- o contrato de fila, auditoria e dashboard segue preservado: `unavailable`
+  permanece visivel em revisao, mas sai das metricas ativas
 
 Arquivos SQL:
 
@@ -458,8 +468,9 @@ rotina nao deve ser liberada para producao ate a causa ser corrigida.
 
 Ainda falta executar no Supabase:
 
-1. Criar a tabela `post_collection_failures`.
-2. Criar a funcao `register_post_collection_result(...)`.
-3. Criar a view `v_dashboard_unavailable_video_review`.
-4. Recriar as views de fila para aplicar a exclusao de `status = 'unavailable'`.
-5. Rodar o teste SQL transacional antes de liberar a rotina em producao.
+1. `post_collection_failures` e os objetos de fila ja estao publicados no
+   ambiente validado.
+2. Se algum ambiente paralelo ainda nao tiver recebido o DDL, aplicar a migration
+   correspondente.
+3. Rodar o teste SQL transacional apenas em ambientes que ainda nao tenham os
+   objetos de suporte.

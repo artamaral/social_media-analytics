@@ -28,6 +28,21 @@ A melhoria proposta e criar um fluxo no dashboard:
 4. confirmar selecionados como dead/unavailable via botao
 5. registrar auditoria humana no banco
 
+## Status da implementacao
+
+Concluida em 2026-08-04 na branch `codex/dashboard-streamlit-mvp`.
+
+Validacao executada:
+
+- a RPC `public.confirm_unavailable_posts(text[], text, text)` ficou disponivel
+  no Supabase e respondeu `200`
+- a view `v_dashboard_creator_summary` passou a excluir `unavailable` e foi
+  validada com creators que possuem dead posts
+- a analise de spot-check em `creator_id = 43` mostrou `post_count = 242` na
+  view, batendo com o total ativo calculado a partir dos posts da base
+- o dashboard continua exibindo os candidatos em auditoria, enquanto a camada
+  analitica ignora os posts confirmados como `unavailable`
+
 ## Escopo
 
 Incluido:
@@ -46,6 +61,7 @@ Fora do escopo inicial:
 - controlar navegador local a partir do Streamlit Cloud
 - apagar posts, historico ou snapshots
 - corrigir todas as views analiticas que ainda exibem dead posts confirmados
+  foi incorporado ao contrato analitico da branch e validado no Supabase
 
 ## Observacoes importantes
 
