@@ -25,7 +25,7 @@ TAXONOMY_VERSION = "taxonomia_video_v2"
 PROMPT_CONTRACT_VERSION = "video_taxonomy_v2_classifier_r2"
 OUTPUT_SCHEMA_VERSION = "video_taxonomy_v2_output_schema_r2"
 # Marcador operacional para confirmar se a copia local/VPS esta atualizada.
-SCRIPT_VERSION = "2026-08-03-r39-validation-repair"
+SCRIPT_VERSION = "2026-08-04-r40-drop-weak-vehicle-not-found"
 DEFAULT_TITLE_MODEL = "gpt-5-nano"
 DEFAULT_TRANSCRIPT_MODEL = "gpt-5-nano"
 DEFAULT_MAX_OUTPUT_TOKENS = 6000
@@ -684,6 +684,14 @@ def strip_vehicle_trim_from_model_name(value):
         tokens.pop()
 
     return " ".join(tokens).strip()
+
+
+def has_vehicle_trim_prefix(value):
+    if not value:
+        return False
+
+    tokens = normalize_catalog_key(value).split()
+    return bool(tokens and tokens[0] in VEHICLE_TRIM_PREFIX_KEYS)
 
 
 def normalize_vehicle_entity_granularity(entity):
@@ -2621,6 +2629,67 @@ def vehicle_entity_specificity_score(entity):
     return 0
 
 
+def entity_model_mentions(entity, harness_input):
+    model_key = normalize_catalog_key(entity.get("vehicle_model_raw"))
+    if not model_key:
+        return {"title_description": 0, "transcript": 0, "total": 0}
+
+    video = harness_input.get("video") if harness_input else {}
+    title_description = " ".join(
+        str(video.get(field) or "")
+        for field in ("title", "description")
+    )
+    transcript = str(video.get("transcript_90s") or "")
+    title_description_count = normalize_catalog_key(title_description).count(model_key)
+    transcript_count = normalize_catalog_key(transcript).count(model_key)
+    return {
+        "title_description": title_description_count,
+        "transcript": transcript_count,
+        "total": title_description_count + transcript_count,
+    }
+
+
+def is_strong_vehicle_match(entity):
+    status = entity.get("resolved_entity_status") or entity.get("entity_status")
+    match_level = entity.get("catalog_match_level")
+    return status == "matched" and match_level in {"model", "model_year"}
+
+
+def should_drop_weak_not_found_vehicle_entity(entity, harness_input, peer_entities):
+    status = entity.get("resolved_entity_status") or entity.get("entity_status")
+    match_level = entity.get("catalog_match_level")
+    if status != "not_found" and match_level != "not_found":
+        return False
+
+    if entity.get("vehicle_brand_raw"):
+        return False
+
+    mentions = entity_model_mentions(entity, harness_input)
+    has_title_description_support = mentions["title_description"] > 0
+    repeated_transcript_support = mentions["transcript"] > 1
+    has_strong_peer_match = any(
+        other is not entity and is_strong_vehicle_match(other)
+        for other in peer_entities
+    )
+    looks_like_trim_noise = has_vehicle_trim_prefix(entity.get("vehicle_model_raw"))
+
+    if has_title_description_support or repeated_transcript_support:
+        return False
+
+    return looks_like_trim_noise or has_strong_peer_match
+
+
+def filter_weak_vehicle_entities(result, harness_input, script_entities):
+    entities = list(result.get("vehicle_entities") or [])
+    peers = entities + list(script_entities or [])
+    result["vehicle_entities"] = [
+        entity
+        for entity in entities
+        if not should_drop_weak_not_found_vehicle_entity(entity, harness_input, peers)
+    ]
+    return result
+
+
 def merge_vehicle_entities(gpt_entities, script_entities):
     selected = {}
     order = []
@@ -2733,7 +2802,9 @@ def enrich_vehicle_entities_with_catalog(base_url, headers, result, harness_inpu
             }
         )
         enriched.append(enriched_entity)
-    result["vehicle_entities"] = merge_vehicle_entities(enriched, script_entities)
+    result["vehicle_entities"] = enriched
+    filter_weak_vehicle_entities(result, harness_input or {}, script_entities)
+    result["vehicle_entities"] = merge_vehicle_entities(result["vehicle_entities"], script_entities)
     return result
 
 

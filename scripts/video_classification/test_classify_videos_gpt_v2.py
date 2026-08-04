@@ -894,6 +894,75 @@ class ClassifierContractTests(unittest.TestCase):
 
         self.assertEqual(models, {"Yaris"})
 
+    def test_filter_weak_vehicle_entities_drops_transcript_trim_noise(self):
+        result = {
+            "vehicle_entities": [
+                {
+                    "entity_order": 1,
+                    "vehicle_brand_raw": None,
+                    "vehicle_model_raw": "GR-Ares",
+                    "vehicle_year": None,
+                    "vehicle_generation": None,
+                    "evidence_text": "transcript menciona GR-Ares",
+                    "entity_status": "not_found",
+                    "resolved_entity_status": "not_found",
+                    "catalog_match_level": "not_found",
+                }
+            ]
+        }
+        harness = {
+            "video": {
+                "title": "Avaliacao GR Yaris manual",
+                "description": None,
+                "transcript_90s": "O narrador fala algo parecido com GR-Ares uma vez.",
+            }
+        }
+        script_entities = [
+            {
+                "entity_order": 1,
+                "vehicle_brand_raw": None,
+                "vehicle_model_raw": "Yaris",
+                "entity_status": "matched",
+                "resolved_entity_status": "matched",
+                "catalog_model_id": 1361,
+                "catalog_match_level": "model",
+                "canonical_manufacturer_name": "Toyota",
+                "canonical_model_name": "Yaris",
+            }
+        ]
+
+        CLASSIFIER.filter_weak_vehicle_entities(result, harness, script_entities)
+
+        self.assertEqual(result["vehicle_entities"], [])
+
+    def test_filter_weak_vehicle_entities_keeps_explicit_brand_not_found(self):
+        result = {
+            "vehicle_entities": [
+                {
+                    "entity_order": 1,
+                    "vehicle_brand_raw": "Lotus",
+                    "vehicle_model_raw": "Evija",
+                    "vehicle_year": None,
+                    "vehicle_generation": None,
+                    "evidence_text": "Lotus Evija aparece no titulo",
+                    "entity_status": "not_found",
+                    "resolved_entity_status": "not_found",
+                    "catalog_match_level": "not_found",
+                }
+            ]
+        }
+        harness = {
+            "video": {
+                "title": "Review Lotus Evija no Brasil",
+                "description": None,
+                "transcript_90s": None,
+            }
+        }
+
+        CLASSIFIER.filter_weak_vehicle_entities(result, harness, [])
+
+        self.assertEqual(len(result["vehicle_entities"]), 1)
+
     def test_merge_vehicle_entities_keeps_more_specific_model_year(self):
         model_entity = {
             "entity_order": 1,

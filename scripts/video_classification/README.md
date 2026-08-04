@@ -164,7 +164,7 @@ python scripts/video_classification/classify_videos_gpt_v2.py --version
 A versao esperada apos o reforco conservador de curadoria e:
 
 ```text
-classify_videos_gpt_v2.py 2026-08-03-r39-validation-repair
+classify_videos_gpt_v2.py 2026-08-04-r40-drop-weak-vehicle-not-found
 ```
 
 Aliases equivalentes:
@@ -357,7 +357,12 @@ Entidades de veiculo:
   `bora` e `link`
 - exemplos rejeitados sem marca proxima: `100%`, `bora para o canal`,
   `tipo SKD` e `link na descricao`
-- entidade explicita nao encontrada grava `not_found`
+- entidade explicita nao encontrada grava `not_found` apenas quando houver
+  evidencia forte, como marca explicita, ocorrencia no titulo/descricao ou
+  repeticao clara na transcricao
+- candidatos `not_found` fracos, sem marca e sustentados apenas por uma mencao
+  ruidosa da transcricao, sao descartados quando ja existe match canonico forte
+  no mesmo video; exemplo: `GR-Ares` nao deve competir com `Toyota/Yaris`
 
 Reparos conservadores antes da gravacao:
 

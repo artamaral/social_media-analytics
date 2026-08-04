@@ -4181,6 +4181,10 @@ Resultado:
 - `confidence_score` e `transcript_quality.quality_score` passam por
   normalizacao defensiva para escala `0..1`, inclusive quando o modelo retorna
   percentual ou valor acima da escala esperada
+- entidades veiculares `not_found` passam a exigir evidencia forte; ruido fraco
+  de transcricao sem marca explicita, como uma forma fonetica de versao ou
+  acabamento, pode ser descartado antes da gravacao quando ja existe match
+  canonico forte no mesmo video
 - entidades de veiculo passam a ser normalizadas no maximo como
   `ano + fabricante + modelo`; versao/acabamento como `XR`, `GS`, `SE`, `LTZ`
   ou similares fica apenas em evidencia textual

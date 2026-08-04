@@ -86,6 +86,10 @@ Uso operacional recomendado:
      textual. O modelo deve parar no modelo base util para pesquisa.
    - Exemplos: `Yaris Cross XR` -> `Yaris Cross`; `Dolphin SE` -> `Dolphin`;
      `Dolphin Mini GS` -> `Dolphin Mini`.
+   - Se a transcricao gerar forma ruidosa de versao/acabamento ou pronuncia,
+     nao crie nova entidade. Exemplo: em `GR Yaris`, `GR` fica no raw/evidencia
+     e o modelo canonico e `Yaris`; uma forma como `GR-Ares` nao deve virar
+     entidade nova.
    - A normalizacao Carros na Web e feita por script depois da resposta.
 10. Preencha `technical_contexts[]` somente quando sistema, componente ou
    problema estiverem explicitamente citados.

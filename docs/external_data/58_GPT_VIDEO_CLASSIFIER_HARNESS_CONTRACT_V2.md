@@ -494,6 +494,14 @@ veiculo fora desse catalogo, a entidade deve permanecer `not_found` ou
 Exemplo: um video sobre Lotus fora da cobertura pode continuar sem entidade
 canonica, preservando apenas o raw e a evidencia.
 
+`not_found` nao deve ser usado para transformar ruido fraco de transcricao em
+entidade operacional. Quando uma entidade sem marca explicita aparece apenas
+uma vez na transcricao, parece versao/acabamento ou ruido fonetico, e ja existe
+um match canonico forte no mesmo video, o harness pode descartar a entidade
+antes da gravacao. Exemplo: em um video sobre `GR Yaris`, `GR` permanece como
+raw/acabamento e o canonico fica `Toyota/Yaris`; uma forma ruidosa como
+`GR-Ares` nao deve ser gravada como novo veiculo.
+
 O harness tambem executa uma extracao deterministica de veiculos a partir de
 `title`, `description` e `transcript_90s`. Essa extracao por script e a fonte
 operacional de verdade para marca/modelo canonicos, porque evita enviar a lista
@@ -535,7 +543,8 @@ Regra de prontidao:
   `catalog_match_level = model` e deixar `catalog_row_id = null`;
 - se a entidade explicita nao existir no catalogo, gravar
   `entity_status = not_found`, `catalog_match_level = not_found` e
-  `validation_issue`;
+  `validation_issue`, desde que a evidencia seja forte o suficiente para nao
+  ser apenas ruido de transcricao;
 - se houver varios matches possiveis, gravar `needs_review`.
 
 Na pratica, a classificacao so deve ser considerada pronta para pesquisa de
