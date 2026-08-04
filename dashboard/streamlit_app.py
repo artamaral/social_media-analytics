@@ -1629,6 +1629,95 @@ def get_filtered_rows(
 
 
 @st.cache_data(ttl=300, show_spinner=False)
+def load_confirmed_unavailable_post_ids() -> tuple[str, ...]:
+    rows = load_view_rows("v_dashboard_unavailable_video_review")
+    return tuple(
+        sorted(
+            {
+                str(row.get("post_id") or "").strip()
+                for row in rows
+                if str(row.get("post_id") or "").strip() and str(row.get("status") or "").strip().lower() == "unavailable"
+            }
+        )
+    )
+
+
+def get_confirmed_unavailable_post_ids() -> tuple[tuple[str, ...], str | None]:
+    if not is_supabase_configured():
+        trace_startup("get_confirmed_unavailable_post_ids skipped (not configured)")
+        return (), "Supabase ainda nao configurado. Adicione SUPABASE_URL e SUPABASE_ANON_KEY nos secrets."
+
+    try:
+        trace_startup("get_confirmed_unavailable_post_ids start")
+        post_ids = load_confirmed_unavailable_post_ids()
+        trace_startup(f"get_confirmed_unavailable_post_ids end count={len(post_ids)}")
+        return post_ids, None
+    except Exception as exc:
+        return (), f"Falha ao consultar posts confirmados como unavailable: {exc}"
+
+
+def clear_dashboard_cache_for_unavailable_reviews() -> None:
+    load_view_rows.clear()
+    load_single_row_view.clear()
+    load_filtered_rows.clear()
+    load_confirmed_unavailable_post_ids.clear()
+    load_creator_posts_rollup.clear()
+
+
+def rpc_confirm_unavailable_posts(
+    post_ids: list[str],
+    reviewed_by: str,
+    notes: str,
+) -> tuple[int | None, dict[str, Any] | list[Any] | None, str | None]:
+    client = get_supabase_client()
+    if client is None:
+        return None, None, "Supabase ainda nao configurado. Adicione SUPABASE_URL e SUPABASE_ANON_KEY nos secrets."
+
+    if not post_ids:
+        return 0, None, None
+
+    params = {
+        "p_post_ids": post_ids,
+        "p_reviewed_by": reviewed_by,
+        "p_notes": notes,
+    }
+
+    try:
+        trace_startup(f"rpc_confirm_unavailable_posts start count={len(post_ids)}")
+        response = client.rpc("confirm_unavailable_posts", params).execute()
+    except Exception as exc:
+        return None, None, f"Falha ao confirmar posts indisponiveis via RPC: {exc}"
+
+    response_data = response.data
+    affected_count: int | None = None
+
+    if isinstance(response_data, list):
+        if response_data and isinstance(response_data[0], dict):
+            first_row = response_data[0]
+            for candidate_key in ("updated_count", "affected_rows", "rows_updated", "count", "total"):
+                candidate_value = first_row.get(candidate_key)
+                if candidate_value is not None:
+                    affected_count = nullable_int(candidate_value)
+                    if affected_count is not None:
+                        break
+        if affected_count is None:
+            affected_count = len(response_data)
+    elif isinstance(response_data, dict):
+        for candidate_key in ("updated_count", "affected_rows", "rows_updated", "count", "total"):
+            candidate_value = response_data.get(candidate_key)
+            if candidate_value is not None:
+                affected_count = nullable_int(candidate_value)
+                if affected_count is not None:
+                    break
+
+    if affected_count is None:
+        affected_count = len(post_ids)
+
+    trace_startup(f"rpc_confirm_unavailable_posts end affected_count={affected_count}")
+    return affected_count, response_data, None
+
+
+@st.cache_data(ttl=300, show_spinner=False)
 def load_creator_posts_rollup(
     creator_ids: tuple[int, ...],
     video_type: str,
@@ -1636,6 +1725,8 @@ def load_creator_posts_rollup(
     client = get_supabase_client()
     if client is None or not creator_ids:
         return {}
+
+    unavailable_post_ids = set(load_confirmed_unavailable_post_ids())
 
     page_size = 1000
     creator_batch_size = 25
@@ -1648,7 +1739,7 @@ def load_creator_posts_rollup(
         while True:
             query = (
                 client.table("posts")
-                .select("creator_id,views,likes,comments")
+                .select("post_id,creator_id,views,likes,comments")
                 .in_("creator_id", creator_batch)
                 .eq("video_type", video_type)
                 .range(offset, offset + page_size - 1)
@@ -1657,6 +1748,9 @@ def load_creator_posts_rollup(
             rows = response.data or []
 
             for row in rows:
+                post_id = str(row.get("post_id") or "").strip()
+                if post_id and post_id in unavailable_post_ids:
+                    continue
                 creator_id = nullable_int(row.get("creator_id"))
                 if creator_id is None:
                     continue
@@ -2916,6 +3010,25 @@ def render_youtube_best_7d_page() -> None:
         )
         return
 
+    unavailable_post_ids, unavailable_error = get_confirmed_unavailable_post_ids()
+    if unavailable_error:
+        render_connection_notice(unavailable_error)
+    unavailable_post_id_set = set(unavailable_post_ids)
+    if unavailable_post_id_set:
+        filtered_rows = []
+        filtered_count = 0
+        for row in rows:
+            post_id = str(row.get("post_id") or "").strip()
+            if post_id and post_id in unavailable_post_id_set:
+                filtered_count += 1
+                continue
+            filtered_rows.append(row)
+        rows = filtered_rows
+        if filtered_count > 0:
+            st.caption(
+                f"{format_int(filtered_count)} posts confirmados como unavailable foram excluidos desta leitura analitica."
+            )
+
     if not rows:
         placeholder_card(
             "Sem dados para ranking semanal",
@@ -3329,6 +3442,25 @@ def render_youtube_hot_now_page() -> None:
         )
         return
 
+    unavailable_post_ids, unavailable_error = get_confirmed_unavailable_post_ids()
+    if unavailable_error:
+        render_connection_notice(unavailable_error)
+    unavailable_post_id_set = set(unavailable_post_ids)
+    if unavailable_post_id_set:
+        filtered_rows = []
+        filtered_count = 0
+        for row in rows:
+            post_id = str(row.get("post_id") or "").strip()
+            if post_id and post_id in unavailable_post_id_set:
+                filtered_count += 1
+                continue
+            filtered_rows.append(row)
+        rows = filtered_rows
+        if filtered_count > 0:
+            st.caption(
+                f"{format_int(filtered_count)} posts confirmados como unavailable foram excluidos desta leitura analitica."
+            )
+
     if not rows:
         placeholder_card(
             "Sem videos elegiveis para Hot now",
@@ -3475,6 +3607,14 @@ def render_data_quality_page() -> None:
     trace_startup("render_data_quality context loaded")
     page_header("Data quality", "Confiabilidade operacional antes das análises")
     render_connection_notice(errors[0] if errors else None)
+    st.write("")
+    if st.button(
+        "Abrir Sanitizacao operacional",
+        key="dq_open_sanitizacao_operacional",
+        use_container_width=False,
+    ):
+        st.session_state["nav_page"] = "Sanitizacao operacional"
+        st.rerun()
     trace_startup("render_data_quality cards start")
     render_data_quality_cards(guardrail_rows, dead_posts, errors)
     trace_startup("render_data_quality queue start")
@@ -3484,6 +3624,449 @@ def render_data_quality_page() -> None:
     trace_startup("render_data_quality raw tables start")
     render_data_quality_raw_tables(guardrail_rows, dead_posts, queue_rows)
     trace_startup("render_data_quality end")
+
+
+def render_sanitizacao_operacional_page() -> None:
+    trace_startup("render_sanitizacao_operacional start")
+    review_rows, review_error = get_view_rows("v_dashboard_unavailable_video_review")
+    dead_posts, dead_posts_error = get_single_row_view("v_dashboard_dead_post_validation_status")
+    errors = [error for error in [review_error, dead_posts_error] if error]
+
+    page_header("Sanitizacao operacional", "Revisao manual e confirmacao de casos operacionais")
+    st.caption(
+        "Esta pagina concentra a revisao humana de videos indisponiveis. A leitura ativa do dashboard continua separada da auditoria."
+    )
+    render_connection_notice(errors[0] if errors else None)
+
+    if dead_posts:
+        total_dead_posts = int(dead_posts.get("total_dead_posts") or 0)
+        pending_review = int(dead_posts.get("pending_human_review") or 0)
+        confirmed = int(dead_posts.get("confirmed_unavailable") or 0)
+        candidates = int(dead_posts.get("unavailable_candidates") or 0)
+        review_ready = bool(dead_posts.get("dead_posts_review_ready"))
+        reviewed_today = 0
+        if review_rows:
+            review_df_tmp = pd.DataFrame(review_rows)
+            if "human_review_status" in review_df_tmp.columns and "human_reviewed_at" in review_df_tmp.columns:
+                reviewed_at = pd.to_datetime(review_df_tmp["human_reviewed_at"], errors="coerce", utc=True)
+                today_br = pd.Timestamp.now(tz="America/Sao_Paulo").normalize()
+                reviewed_today = int(
+                    (
+                        review_df_tmp["human_review_status"].fillna("").astype(str).eq("confirmed_unavailable")
+                        & reviewed_at.dt.tz_convert("America/Sao_Paulo").dt.normalize().eq(today_br)
+                    ).fillna(False).sum()
+                )
+
+        kpi_cols = st.columns(4)
+        with kpi_cols[0]:
+            st.markdown(
+                dq_kpi_card(
+                    "Pendentes de revisao",
+                    format_int(pending_review),
+                    "Casos ainda sem validacao humana",
+                    "#f2c14e",
+                    [
+                        dq_chip("Candidatos", format_int(candidates), "neutral"),
+                        dq_chip("Hoje", format_int(reviewed_today), "ok-green"),
+                    ],
+                ),
+                unsafe_allow_html=True,
+            )
+        with kpi_cols[1]:
+            st.markdown(
+                dq_kpi_card(
+                    "Posts mortos monitorados",
+                    format_int(total_dead_posts),
+                    "Total em review operacional",
+                    "#ff8069",
+                    [
+                        dq_chip("Confirmados", format_int(confirmed), "neutral"),
+                        dq_chip("Pronto para fechar", "sim" if review_ready else "nao", "ok-green" if review_ready else "alert-yellow"),
+                    ],
+                ),
+                unsafe_allow_html=True,
+            )
+        with kpi_cols[2]:
+            st.markdown(
+                dq_kpi_card(
+                    "Confirmados",
+                    format_int(confirmed),
+                    "Marcados como unavailable",
+                    "#2f9e62",
+                    [
+                        dq_chip("Hoje", format_int(reviewed_today), "ok-green"),
+                        dq_chip("Auditoria", "preservada", "ok-green"),
+                    ],
+                ),
+                unsafe_allow_html=True,
+            )
+        with kpi_cols[3]:
+            st.markdown(
+                dq_kpi_card(
+                    "Acesso ao review",
+                    "RPC",
+                    "Confirmacao em lote via Supabase",
+                    "#ff8069",
+                    [
+                        dq_chip("Sem SQL solto", "sim", "ok-green"),
+                        dq_chip("Historico", "preservado", "ok-green"),
+                    ],
+                ),
+                unsafe_allow_html=True,
+            )
+    else:
+        st.warning("View v_dashboard_dead_post_validation_status indisponivel ou vazia.")
+
+    if not review_rows:
+        placeholder_card(
+            "Sem posts para revisar",
+            review_error or "A view v_dashboard_unavailable_video_review nao retornou candidatos neste momento.",
+        )
+        trace_startup("render_sanitizacao_operacional end: no rows")
+        return
+
+    review_df = pd.DataFrame(review_rows)
+    if review_df.empty:
+        placeholder_card(
+            "Sem posts para revisar",
+            "A view de revisao nao retornou linhas nesta consulta.",
+        )
+        trace_startup("render_sanitizacao_operacional end: empty df")
+        return
+
+    for column_name in [
+        "post_id",
+        "youtube_url",
+        "status",
+        "last_failure_reason",
+        "human_review_status",
+        "human_reviewed_by",
+        "human_review_notes",
+        "title",
+        "created_at",
+        "collected_at",
+    ]:
+        if column_name not in review_df.columns:
+            review_df[column_name] = ""
+
+    review_df["post_id"] = review_df["post_id"].fillna("").astype(str).str.strip()
+    review_df["youtube_url"] = review_df["youtube_url"].fillna("").astype(str).str.strip()
+    review_df["status"] = review_df["status"].fillna("").astype(str).str.strip()
+    review_df["last_failure_reason"] = review_df["last_failure_reason"].fillna("").astype(str).str.strip()
+    review_df["human_review_status"] = review_df["human_review_status"].fillna("").astype(str).str.strip()
+    review_df["human_reviewed_by"] = review_df["human_reviewed_by"].fillna("").astype(str).str.strip()
+    review_df["human_review_notes"] = review_df["human_review_notes"].fillna("").astype(str).str.strip()
+    review_df["title"] = review_df["title"].fillna("").astype(str).str.strip()
+    review_df["failure_count_num"] = pd.to_numeric(review_df.get("failure_count"), errors="coerce").fillna(0).astype(int)
+    review_df["last_failed_at_dt"] = pd.to_datetime(review_df.get("last_failed_at"), errors="coerce", utc=True)
+    review_df["first_failed_at_dt"] = pd.to_datetime(review_df.get("first_failed_at"), errors="coerce", utc=True)
+    review_df["last_success_at_dt"] = pd.to_datetime(review_df.get("last_success_at"), errors="coerce", utc=True)
+    review_df["human_reviewed_at_dt"] = pd.to_datetime(review_df.get("human_reviewed_at"), errors="coerce", utc=True)
+    review_df["created_at_dt"] = pd.to_datetime(review_df.get("created_at"), errors="coerce", utc=True)
+    review_df["collected_at_dt"] = pd.to_datetime(review_df.get("collected_at"), errors="coerce", utc=True)
+    review_df["last_failed_at_br"] = review_df["last_failed_at_dt"].apply(format_timestamp_br)
+    review_df["first_failed_at_br"] = review_df["first_failed_at_dt"].apply(format_timestamp_br)
+    review_df["last_success_at_br"] = review_df["last_success_at_dt"].apply(format_timestamp_br)
+    review_df["human_reviewed_at_br"] = review_df["human_reviewed_at_dt"].apply(format_timestamp_br)
+    review_df["created_at_br"] = review_df["created_at_dt"].apply(format_timestamp_br)
+    review_df["collected_at_br"] = review_df["collected_at_dt"].apply(format_timestamp_br)
+    review_df["selected"] = False
+
+    status_options = sorted(
+        {
+            str(value).strip()
+            for value in review_df["status"].tolist()
+            if str(value).strip()
+        }
+    ) or ["unavailable_candidate", "unavailable"]
+    max_failure_count = max(int(review_df["failure_count_num"].max()), 3)
+
+    filter_cols = st.columns([0.28, 0.22, 0.2, 0.3])
+    with filter_cols[0]:
+        status_filter = st.multiselect(
+            "Status",
+            options=status_options,
+            default=status_options,
+            key="dead_post_review_status_filter",
+        )
+    with filter_cols[1]:
+        min_failure_count = st.slider(
+            "Falhas minimas",
+            min_value=1,
+            max_value=max_failure_count,
+            value=min(3, max_failure_count),
+            key="dead_post_review_min_failures",
+        )
+    with filter_cols[2]:
+        only_pending = st.checkbox(
+            "Apenas pendentes",
+            value=True,
+            key="dead_post_review_only_pending",
+        )
+    with filter_cols[3]:
+        search_query = st.text_input(
+            "Busca por post_id",
+            placeholder="Ex: BH0gnUODKwI",
+            key="dead_post_review_search",
+        )
+
+    filtered_df = review_df.copy()
+    filtered_df = filtered_df[filtered_df["status"].isin(status_filter)]
+    filtered_df = filtered_df[filtered_df["failure_count_num"] >= int(min_failure_count)]
+    if only_pending:
+        filtered_df = filtered_df[filtered_df["human_review_status"].eq("")]
+    if search_query.strip():
+        normalized_search = search_query.strip().lower()
+        mask = (
+            filtered_df["post_id"].str.lower().str.contains(normalized_search, na=False)
+            | filtered_df["youtube_url"].str.lower().str.contains(normalized_search, na=False)
+            | filtered_df["last_failure_reason"].str.lower().str.contains(normalized_search, na=False)
+            | filtered_df["human_review_notes"].str.lower().str.contains(normalized_search, na=False)
+        )
+        filtered_df = filtered_df[mask]
+
+    filtered_df = filtered_df.sort_values(
+        ["failure_count_num", "last_failed_at_dt", "post_id"],
+        ascending=[False, False, True],
+        na_position="last",
+    ).reset_index(drop=True)
+
+    editor_state = st.session_state.get("dead_post_review_editor")
+    if isinstance(editor_state, pd.DataFrame) and "selected" in editor_state.columns:
+        selected_count = int(pd.to_numeric(editor_state["selected"], errors="coerce").fillna(False).astype(bool).sum())
+    else:
+        selected_count = int(filtered_df["selected"].sum()) if not filtered_df.empty else 0
+    reviewed_by = st.text_input(
+        "Revisado por",
+        value="",
+        placeholder="Seu nome ou apelido",
+        key="dead_post_reviewed_by",
+    )
+    human_review_notes = st.text_area(
+        "Notas da revisao",
+        value="Confirmado manualmente no YouTube: video indisponivel.",
+        height=90,
+        key="dead_post_review_notes",
+    )
+
+    action_col1, action_col2, action_col3 = st.columns([0.28, 0.28, 0.44])
+    with action_col1:
+        st.markdown(
+            dq_kpi_card(
+                "Selecionados",
+                format_int(selected_count),
+                "Itens marcados na tabela",
+                "#ff8069",
+                [
+                    dq_chip("Visiveis", format_int(len(filtered_df)), "neutral"),
+                    dq_chip("Pendentes", "sim" if only_pending else "nao", "ok-green" if only_pending else "neutral"),
+                ],
+            ),
+            unsafe_allow_html=True,
+        )
+    with action_col2:
+        st.markdown(
+            dq_kpi_card(
+                "Falhas minimas",
+                format_int(min_failure_count),
+                "Filtro de severidade",
+                "#f2c14e",
+                [
+                    dq_chip("Status ativos", format_int(len(status_filter)), "neutral"),
+                    dq_chip("Historico", "ligado" if not only_pending else "oculto", "neutral"),
+                ],
+            ),
+            unsafe_allow_html=True,
+        )
+    with action_col3:
+        st.markdown(
+            dq_kpi_card(
+                "Acao em lote",
+                "RPC",
+                "Confirmar selecionados como unavailable",
+                "#2f9e62",
+                [
+                    dq_chip("Selecao", format_int(selected_count), "ok-green"),
+                    dq_chip("Auditoria", "preservada", "ok-green"),
+                ],
+            ),
+            unsafe_allow_html=True,
+        )
+
+    if "dead_post_review_feedback" in st.session_state:
+        feedback = st.session_state["dead_post_review_feedback"]
+        feedback_kind = str(feedback.get("kind") or "info")
+        feedback_message = str(feedback.get("message") or "")
+        if feedback_message:
+            if feedback_kind == "success":
+                st.success(feedback_message)
+            elif feedback_kind == "warning":
+                st.warning(feedback_message)
+            else:
+                st.info(feedback_message)
+
+    editor_df = filtered_df[
+        [
+            "selected",
+            "post_id",
+            "youtube_url",
+            "status",
+            "failure_count_num",
+            "first_failed_at_br",
+            "last_failed_at_br",
+            "last_success_at_br",
+            "human_review_status",
+            "human_reviewed_at_br",
+            "human_reviewed_by",
+            "human_review_notes",
+            "last_failure_reason",
+            "created_at_br",
+            "collected_at_br",
+        ]
+    ].copy()
+    editor_df = editor_df.rename(
+        columns={
+            "failure_count_num": "failure_count",
+            "first_failed_at_br": "first_failed_at",
+            "last_failed_at_br": "last_failed_at",
+            "last_success_at_br": "last_success_at",
+            "human_reviewed_at_br": "human_reviewed_at",
+            "created_at_br": "created_at",
+            "collected_at_br": "collected_at",
+        }
+    )
+
+    edited_df = st.data_editor(
+        editor_df,
+        key="dead_post_review_editor",
+        use_container_width=True,
+        hide_index=True,
+        disabled=[
+            "post_id",
+            "youtube_url",
+            "status",
+            "failure_count",
+            "first_failed_at",
+            "last_failed_at",
+            "last_success_at",
+            "human_review_status",
+            "human_reviewed_at",
+            "human_reviewed_by",
+            "human_review_notes",
+            "last_failure_reason",
+            "created_at",
+            "collected_at",
+        ],
+        column_config={
+            "selected": st.column_config.CheckboxColumn("Selecionar", default=False),
+            "youtube_url": st.column_config.LinkColumn("YouTube"),
+            "post_id": st.column_config.TextColumn("post_id"),
+            "status": st.column_config.TextColumn("Status"),
+            "failure_count": st.column_config.NumberColumn("Falhas", format="%d"),
+            "first_failed_at": st.column_config.TextColumn("Primeira falha"),
+            "last_failed_at": st.column_config.TextColumn("Ultima falha"),
+            "last_success_at": st.column_config.TextColumn("Ultimo sucesso"),
+            "human_review_status": st.column_config.TextColumn("Revisao humana"),
+            "human_reviewed_at": st.column_config.TextColumn("Revisado em"),
+            "human_reviewed_by": st.column_config.TextColumn("Revisado por"),
+            "human_review_notes": st.column_config.TextColumn("Notas humanas"),
+            "last_failure_reason": st.column_config.TextColumn("Motivo"),
+            "created_at": st.column_config.TextColumn("Criado em"),
+            "collected_at": st.column_config.TextColumn("Coletado em"),
+        },
+        column_order=[
+            "selected",
+            "post_id",
+            "youtube_url",
+            "status",
+            "failure_count",
+            "first_failed_at",
+            "last_failed_at",
+            "last_success_at",
+            "human_review_status",
+            "human_reviewed_at",
+            "human_reviewed_by",
+            "human_review_notes",
+            "last_failure_reason",
+            "created_at",
+            "collected_at",
+        ],
+    )
+
+    selected_ids = (
+        edited_df.loc[edited_df["selected"].fillna(False), "post_id"]
+        .fillna("")
+        .astype(str)
+        .str.strip()
+        .tolist()
+    )
+
+    st.caption(
+        f"{format_int(len(selected_ids))} selecionados na tela. A confirmacao em lote grava auditoria humana sem apagar historico."
+    )
+
+    action_button_col1, action_button_col2 = st.columns([0.34, 0.66])
+    with action_button_col1:
+        confirm_clicked = st.button(
+            "Confirmar selecionados como unavailable",
+            type="primary",
+            use_container_width=True,
+            key="dead_post_review_confirm_button",
+        )
+    with action_button_col2:
+        st.caption("A RPC atualiza `post_collection_failures` e mantem os posts fora das estatisticas ativas.")
+
+    if confirm_clicked:
+        reviewed_by_value = reviewed_by.strip()
+        notes_value = human_review_notes.strip() or "Confirmado manualmente no YouTube: video indisponivel."
+        if not selected_ids:
+            st.session_state["dead_post_review_feedback"] = {
+                "kind": "warning",
+                "message": "Selecione ao menos um post antes de confirmar.",
+            }
+            st.rerun()
+        if not reviewed_by_value:
+            st.session_state["dead_post_review_feedback"] = {
+                "kind": "warning",
+                "message": "Informe o campo 'Revisado por' antes de confirmar em lote.",
+            }
+            st.rerun()
+
+        affected_count, rpc_data, rpc_error = rpc_confirm_unavailable_posts(
+            selected_ids,
+            reviewed_by_value,
+            notes_value,
+        )
+        if rpc_error:
+            st.session_state["dead_post_review_feedback"] = {
+                "kind": "warning",
+                "message": rpc_error,
+            }
+            st.rerun()
+
+        clear_dashboard_cache_for_unavailable_reviews()
+        st.session_state["dead_post_review_feedback"] = {
+            "kind": "success",
+            "message": (
+                f"{format_int(affected_count or len(selected_ids))} posts confirmados como unavailable "
+                f"e registrados com auditoria humana."
+            ),
+            "rpc_data": rpc_data,
+            "selected_ids": selected_ids,
+        }
+        st.rerun()
+
+    if selected_ids:
+        with st.expander("IDs selecionados", expanded=False):
+            st.code(", ".join(selected_ids))
+
+    st.write("")
+    st.markdown("### Critérios de leitura")
+    st.caption(
+        "Use o filtro de pendentes para a rotina recorrente. Desmarque-o quando quiser auditar o historico da mesma fila de indisponibilidade."
+    )
+
+    trace_startup("render_sanitizacao_operacional end")
 
 
 def format_int(value: Any) -> str:
@@ -7054,6 +7637,8 @@ elif page == "Data quality":
     render_data_quality_page()
 elif page == "Fenabrave":
     render_fenabrave_dashboard_page()
+elif page == "Sanitizacao operacional":
+    render_sanitizacao_operacional_page()
 elif page == "Cadastro":
     if cadastro_subpage == "Criadores":
         render_external_intake_page("Cadastro de Criadores")
