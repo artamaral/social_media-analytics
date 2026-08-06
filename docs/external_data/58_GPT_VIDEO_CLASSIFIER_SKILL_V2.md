@@ -72,8 +72,9 @@ Uso operacional recomendado:
    detalhe tecnico forte que aparecer na transcricao.
 5. Preencha `technical_contexts[]` com sistemas, componentes, atributos,
    problemas e evidencias tecnicas explicitamente citados.
-6. Use `topic_path_secondary` somente se houver segundo tema editorial forte e
-   explicito.
+6. Nao use `topic_path_secondary` nesta versao; sobreposicoes fortes devem ir
+   para `evidence_summary`, `taxonomy_gaps` ou contexto tecnico quando houver
+   evidencia.
 7. Classifique `content_type` como formato editorial.
 8. Classifique `audience_intent` como intencao provavel sustentada pela
    evidencia.
@@ -154,13 +155,15 @@ Antes de escolher um `topic_path` tematico, aplique esta ordem:
   - Se houver carro popular/barato/zero km acessivel como proposta de compra,
     prefira `mercado_produto__compra_venda__carro_popular`.
 - `eletrico`, `hibrido`, `flex` e `diesel` pertencem a `powertrain`.
+- `ICE` e `Eletrificados` sao as categorias operacionais de powertrain.
+- `ICE` cobre combustao interna; `Eletrificados` cobre hibridos e eletricos.
 - `bateria_12v` pertence a `eletrica_eletronica`.
 - `bateria_tracao` pertence a `powertrain`.
 - Em videos de `review_teste` ou `mercado_produto`, motor, cambio, bateria,
   autonomia, turbo, flex ou eletrico nao devem virar `topic_path` principal
-  quando forem apenas atributo do veiculo, argumento de compra ou detalhe citado
-  no review. Nesses casos, use `technical_contexts[]` e, se o segundo tema for
-  forte, `topic_path_secondary`.
+  quando forem apenas atributo do veiculo, argumento de compra ou detalhe
+  citado no review. Nesses casos, use `technical_contexts[]` quando houver
+  valor tecnico util; nao use `topic_path_secondary`.
 - `powertrain` so deve ser `topic_path` principal quando o video for
   explicitamente sobre motorizacao, autonomia, recarga, consumo, cambio ou
   tecnologia de propulsao. Nao use `powertrain` como principal apenas porque o
@@ -297,7 +300,6 @@ Regras de coerencia:
 Antes de finalizar, confirme:
 
 - o `topic_path` existe na lista recebida;
-- `topic_path_secondary`, se usado, existe na lista recebida;
 - nenhum campo tecnico contem multiplos valores concatenados;
 - se houver varios problemas, componentes ou sistemas, cada um virou uma linha
   separada em `technical_contexts[]` ou ficou `null` quando nao houver defeito

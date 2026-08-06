@@ -485,11 +485,13 @@ powertrain > transmissao > cvt
 
 Regras:
 
+- nesta leitura operacional, powertrain se consolida em `ICE` e
+  `Eletrificados`
 - `eletrico`, `hibrido`, `flex` e `diesel` sao powertrain
 - nao colocar eletrico/hibrido em `eletrica_eletronica`
 - se powertrain e apenas detalhe de um lancamento, manter
   `automotive_domain = mercado_produto` e registrar powertrain em
-  `automotive_system` ou `topic_path_secondary` futuro
+  `automotive_system` ou no contexto tecnico principal
 - bateria de tracao nao e bateria 12v
 
 ### 7. `pos_venda_reparacao`
@@ -861,10 +863,9 @@ sistemas e componentes sem reabrir termos soltos ou listas separadas por `;`.
 
 Esses CSVs tambem nao substituem retroativamente os CSVs v1 `31` e `32`.
 
-`topic_path_secondary` fica documentado como campo opcional para casos em que
-ha segundo tema forte e explicito, como `review_teste > review_veiculo` com
-`mercado_produto > compra_venda > carro_popular`. Ele nao substitui
-`topic_path` principal e nao reabre multi-nicho livre.
+Nesta revisao operacional, `topic_path_secondary` nao e usado. Quando houver
+segundo tema forte e explicito, ele deve ser tratado no contexto tecnico ou em
+`taxonomy_gaps`/`validation_issues`, sem criar uma rota paralela.
 
 ## Contrato Supabase e harness GPT
 

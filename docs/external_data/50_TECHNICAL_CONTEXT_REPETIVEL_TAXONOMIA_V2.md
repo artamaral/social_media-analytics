@@ -97,7 +97,6 @@ Colunas:
 - `source_lot`: lote de origem da rodada.
 - `context_order`: ordem do contexto dentro do video/lote.
 - `topic_path`: rota taxonomica usada para validar aquele contexto.
-- `topic_path_secondary`: rota secundaria quando ajuda a explicar a evidencia.
 - `automotive_system`: sistema tecnico.
 - `component`: componente tecnico.
 - `problem`: problema, sintoma ou atributo tecnico.
@@ -258,7 +257,7 @@ A validacao desta entrega deve confirmar:
 - todos os `20` registros da rodada aparecem no CSV `50`;
 - nenhum campo `automotive_system`, `component` ou `problem` usa multiplos
   valores separados por `;`;
-- todo `topic_path` e `topic_path_secondary` existe no CSV `42`;
+- todo `topic_path` existe no CSV `42`;
 - `barulho` nao aparece como `problem` canonico;
 - `fora_escopo` nao possui contexto `primary`;
 - o contrato de banco existe para classificacao GPT futura;
