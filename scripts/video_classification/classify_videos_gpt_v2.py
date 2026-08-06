@@ -25,7 +25,7 @@ TAXONOMY_VERSION = "taxonomia_video_v2"
 PROMPT_CONTRACT_VERSION = "video_taxonomy_v2_classifier_r2"
 OUTPUT_SCHEMA_VERSION = "video_taxonomy_v2_output_schema_r2"
 # Marcador operacional para confirmar se a copia local/VPS esta atualizada.
-SCRIPT_VERSION = "2026-08-04-r42-fallback-regression-guard"
+SCRIPT_VERSION = "2026-08-06-r2-no-secondary-merged-whisper"
 DEFAULT_TITLE_MODEL = "gpt-5-nano"
 DEFAULT_TRANSCRIPT_MODEL = "gpt-5-nano"
 DEFAULT_MAX_OUTPUT_TOKENS = 6000
@@ -189,7 +189,8 @@ Regras obrigatorias:
   inferir diagnostico, luz de painel, scanner, motor, cambio ou componente sem
   esses termos aparecerem no input.
 - Videos fora do escopo automotivo nao devem receber contexto tecnico primary.
-- topic_path e topic_path_secondary devem existir na lista recebida.
+- topic_path deve existir na lista recebida.
+- Nao use topic_path_secondary nesta versao.
 - topic_path representa a proposta principal do video, nao o primeiro detalhe
   tecnico citado na transcricao.
 - Se a proposta principal estiver clara em uma rota especifica da taxonomia,
@@ -199,11 +200,9 @@ Regras obrigatorias:
 - Se houver limpeza de varios componentes preventivos, prefira
   manutencao_reparo__manutencao_preventiva__limpeza_componentes em vez de
   manutencao_reparo__manutencao_preventiva.
-- topic_path_secondary so entra com segundo tema forte e explicito.
 - Em review_teste ou mercado_produto, motor, cambio, bateria, autonomia,
-  turbo, flex ou eletrico devem ir para technical_contexts[] ou
-  topic_path_secondary quando forem atributos do veiculo, nao topic_path
-  principal.
+  turbo, flex ou eletrico devem ir para technical_contexts[] quando forem
+  atributos do veiculo, nao topic_path principal.
 - powertrain so e topic_path principal quando o video for explicitamente sobre
   motorizacao, autonomia, recarga, consumo, cambio ou tecnologia de propulsao.
 - technical_contexts[] so entra com evidencia explicita.
@@ -232,6 +231,8 @@ Regras obrigatorias:
   evidencia textual; o modelo deve parar no modelo base util para pesquisa.
   Exemplos: Yaris Cross XR -> Yaris Cross; Dolphin SE -> Dolphin;
   Dolphin Mini GS -> Dolphin Mini.
+- Powertrain deve ser consolidado operacionalmente em `ICE` e `Eletrificados`:
+  `ICE` cobre combustao interna; `Eletrificados` cobre hibridos e eletricos.
 - Termos fora da taxonomia devem ir para taxonomy_gaps, nunca para campo canonico.
 - Se um veiculo explicito nao existir no catalogo Carros na Web usado pelo
   projeto, mantenha not_found/needs_review; nao tente cadastrar ou inferir
@@ -261,15 +262,16 @@ Ordem para transcript_90s:
 2. identifique a intencao central do video;
 3. escolha topic_path pela intencao central;
 4. coloque termos tecnicos explicitos em technical_contexts[];
-5. use topic_path_secondary so para segundo tema editorial forte.
+5. registre sobreposicoes fortes em evidence_summary/taxonomy_gaps, sem
+   preencher topic_path_secondary.
 
 Exemplos do Batch 1:
 - aXbFPJMVGKw: avaliacao Changan Uni-T 2026 com motor 1.5 turbo deve manter
   review_teste__review_veiculo como principal; powertrain__combustao__turbo
   entra como contexto tecnico ou secundario.
 - CjFrJg6VCjc: teste de autonomia deve preferir
-  review_teste__teste_autonomia como principal; powertrain__eletrico__autonomia
-  pode ser secundario/contexto.
+  review_teste__teste_autonomia como principal; autonomia/powertrain eletrico
+  deve aparecer como contexto tecnico ou evidencia.
 - z55GnDEg7_U: se a transcricao mostra desmontagem, diagnostico e reparo de
   motor, use manutencao_reparo__reparo_corretivo__reparo_motor.
 - RTZHxSE2t5M: gargalo de oficinas, pecas e reparacao deve usar
@@ -302,7 +304,6 @@ DEFAULT_SCHEMA = {
                 "automotive_domain",
                 "activity_type",
                 "topic_path",
-                "topic_path_secondary",
                 "content_type",
                 "audience_intent",
                 "confidence_score",
@@ -330,7 +331,6 @@ DEFAULT_SCHEMA = {
                 "automotive_domain": {"type": "string"},
                 "activity_type": {"type": "string"},
                 "topic_path": {"type": "string"},
-                "topic_path_secondary": {"type": ["string", "null"]},
                 "content_type": {"type": ["string", "null"]},
                 "audience_intent": {"type": ["string", "null"]},
                 "confidence_score": {"type": "number"},
@@ -382,7 +382,6 @@ DEFAULT_SCHEMA = {
                 "required": [
                     "context_order",
                     "topic_path",
-                    "topic_path_secondary",
                     "automotive_system",
                     "component",
                     "problem",
@@ -395,7 +394,6 @@ DEFAULT_SCHEMA = {
                 "properties": {
                     "context_order": {"type": "integer"},
                     "topic_path": {"type": "string"},
-                    "topic_path_secondary": {"type": ["string", "null"]},
                     "automotive_system": {"type": ["string", "null"]},
                     "component": {"type": ["string", "null"]},
                     "problem": {"type": ["string", "null"]},
@@ -1721,10 +1719,6 @@ def validate_classification(result, schema, taxonomy, stage, post_id):
     if classification["topic_path"] not in topic_codes:
         raise ValueError(f"topic_path inexistente: {classification['topic_path']}")
 
-    secondary = classification.get("topic_path_secondary")
-    if secondary and secondary not in topic_codes:
-        raise ValueError(f"topic_path_secondary inexistente: {secondary}")
-
     confidence = classification["confidence_score"]
     if confidence < 0 or confidence > 1:
         raise ValueError(f"confidence_score fora de 0..1: {confidence}")
@@ -1829,12 +1823,10 @@ def normalize_result_collections(result):
 
 def repair_topic_paths_for_validation(result, topic_codes):
     classification = result["classification_result"]
-    for field in ["topic_path", "topic_path_secondary"]:
-        classification[field] = repair_topic_path_code(classification.get(field), topic_codes)
+    classification["topic_path"] = repair_topic_path_code(classification.get("topic_path"), topic_codes)
 
     for context in result["technical_contexts"]:
-        for field in ["topic_path", "topic_path_secondary"]:
-            context[field] = repair_topic_path_code(context.get(field), topic_codes)
+        context["topic_path"] = repair_topic_path_code(context.get("topic_path"), topic_codes)
 
 
 def repair_topic_path_code(value, topic_codes):
@@ -2191,10 +2183,6 @@ def validate_context(context, topic_codes, compatibility_keys, primary_topic):
 
     if context["topic_path"] not in topic_codes:
         raise ValueError(f"context topic_path inexistente: {context['topic_path']}")
-
-    secondary = context.get("topic_path_secondary")
-    if secondary and secondary not in topic_codes:
-        raise ValueError(f"context topic_path_secondary inexistente: {secondary}")
 
     for field in ["automotive_system", "component", "problem"]:
         value = context.get(field)
@@ -3102,7 +3090,6 @@ def write_classification(base_url, headers, run_id, taxonomy_id, model, harness_
         "automotive_domain": classification["automotive_domain"],
         "activity_type": classification["activity_type"],
         "topic_path": classification["topic_path"],
-        "topic_path_secondary": classification["topic_path_secondary"],
         "content_type": classification["content_type"],
         "audience_intent": classification["audience_intent"],
         "confidence_score": classification["confidence_score"],
@@ -3135,7 +3122,6 @@ def write_classification(base_url, headers, run_id, taxonomy_id, model, harness_
             "taxonomy_version_id": taxonomy_id,
             "context_order": row["context_order"],
             "topic_path": row["topic_path"],
-            "topic_path_secondary": row["topic_path_secondary"],
             "automotive_system": row["automotive_system"],
             "component": row["component"],
             "problem": row["problem"],

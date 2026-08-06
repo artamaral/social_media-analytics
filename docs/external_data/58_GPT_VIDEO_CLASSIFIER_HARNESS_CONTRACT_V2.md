@@ -84,12 +84,11 @@ Ligacoes principais:
 
 Ligacoes taxonomicas:
 
-- `video_classification_results.topic_path` e
-  `topic_path_secondary` apontam para
+- `video_classification_results.topic_path` aponta para
   `video_taxonomy_topic_paths.topic_path_code` dentro da mesma
   `taxonomy_version_id`.
-- `video_classification_technical_contexts.topic_path` e
-  `topic_path_secondary` seguem a mesma regra.
+- `video_classification_technical_contexts.topic_path` segue a mesma regra.
+- `topic_path_secondary` nao faz parte desta revisao de contrato.
 
 Ligacao com Carros na Web:
 
@@ -190,7 +189,7 @@ A skill do classificador e o conjunto de instrucoes enviado na chamada da API.
 Ela deve ser referenciada pelo executor manual da VPS e versionada como
 contrato, nao como skill local do Codex.
 
-Versao inicial:
+Versao operacional r2:
 
 - `prompt_contract_version = video_taxonomy_v2_classifier_r2`
 - `output_schema_version = video_taxonomy_v2_output_schema_r2`
@@ -261,7 +260,6 @@ A resposta deve ser JSON estruturado e imputavel diretamente no banco:
     "automotive_domain": "review_teste",
     "activity_type": "review",
     "topic_path": "review_teste__review_veiculo",
-    "topic_path_secondary": null,
     "content_type": "review",
     "audience_intent": "decidir_compra",
     "confidence_score": 0.85,
@@ -308,14 +306,14 @@ Campos de saida:
   `manutencao_reparo`, `diagnostico__falha_motor` em vez de `diagnostico`, e
   `mercado_produto__compra_venda__carro_popular` em vez de
   `mercado_produto`.
-- `topic_path_secondary` so entra quando houver segundo tema forte e explicito.
 - Em videos de `review_teste` ou `mercado_produto`, motor, cambio, bateria,
-  autonomia, turbo, flex ou eletrico devem ficar em `technical_contexts[]` ou
-  `topic_path_secondary` quando forem atributos do veiculo ou argumentos dentro
-  do review/mercado.
+  autonomia, turbo, flex ou eletrico devem ficar em `technical_contexts[]`
+  quando forem atributos do veiculo ou argumentos dentro do review/mercado e
+  houver valor tecnico util.
 - `powertrain` so deve ser `topic_path` principal quando a proposta do video for
   explicitamente motorizacao, autonomia, recarga, consumo, cambio ou tecnologia
   de propulsao.
+- `topic_path_secondary` nao faz parte desta revisao de contrato.
 - Termo fora da Taxonomia V2 entra em `taxonomy_gaps`, nao em campo canonico.
 - `fora_escopo` tem precedencia quando houver evidencia textual de moto,
   nao-automotivo, transito/comportamento ou entretenimento sem tema tecnico,
@@ -520,10 +518,10 @@ os termos condicionais iniciais sao `100`, `tipo`, `bora` e `link`. Exemplos:
 `vehicle_entity`.
 
 O harness pode aplicar reparos conservadores antes da gravacao quando o erro
-for mecanico e nao semantico. `topic_path` e `topic_path_secondary` podem ser
-corrigidos apenas quando houver um unico codigo canonico compativel na
-Taxonomia V2; por exemplo, `mercado_procuto__lancamentos` pode ser reparado
-para `mercado_produto__lancamentos`. `vehicle_entities[].entity_order` pode ser
+for mecanico e nao semantico. `topic_path` pode ser corrigido apenas quando
+houver um unico codigo canonico compativel na Taxonomia V2; por exemplo,
+`mercado_procuto__lancamentos` pode ser reparado para
+`mercado_produto__lancamentos`. `vehicle_entities[].entity_order` pode ser
 reordenado pelo harness para garantir sequencia iniciando em `1`.
 
 Obrigacao de extracao:
@@ -574,7 +572,6 @@ Exemplo:
 {
   "context_order": 1,
   "topic_path": "manutencao_reparo__manutencao_preventiva__suspensao",
-  "topic_path_secondary": null,
   "automotive_system": "suspensao",
   "component": "amortecedor",
   "problem": "ruido",
@@ -592,7 +589,6 @@ A resposta deve ser rejeitada ou marcada para revisao quando:
 
 - nao validar contra o schema JSON;
 - retornar `topic_path` inexistente;
-- retornar `topic_path_secondary` inexistente;
 - retornar contexto tecnico incompatibilizado sem `needs_human_review`;
 - preencher marca/modelo/ano sem evidencia;
 - preencher contexto tecnico principal em video `fora_escopo`;
