@@ -1,7 +1,9 @@
 -- 023_create_v_video_classification_latest.sql
 
+DROP VIEW IF EXISTS public.v_video_classification_latest;
+
 -- Ultima classificacao disponivel por video e estagio.
-CREATE OR REPLACE VIEW public.v_video_classification_latest AS
+CREATE VIEW public.v_video_classification_latest AS
 WITH ranked_results AS (
   SELECT
     r.*,
@@ -33,6 +35,7 @@ SELECT
   automotive_domain,
   activity_type,
   topic_path,
+  topic_path_secondary,
   content_type,
   audience_intent,
   confidence_score,
