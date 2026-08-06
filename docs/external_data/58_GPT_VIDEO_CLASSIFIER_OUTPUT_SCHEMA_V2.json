@@ -1,5 +1,5 @@
 {
-  "$id": "video_taxonomy_v2_output_schema_r1",
+  "$id": "video_taxonomy_v2_output_schema_r2",
   "title": "Video Taxonomy V2 GPT Classification Output",
   "type": "object",
   "additionalProperties": false,
@@ -19,7 +19,6 @@
         "automotive_domain",
         "activity_type",
         "topic_path",
-        "topic_path_secondary",
         "content_type",
         "audience_intent",
         "confidence_score",
@@ -57,12 +56,6 @@
         },
         "topic_path": {
           "type": "string"
-        },
-        "topic_path_secondary": {
-          "type": [
-            "string",
-            "null"
-          ]
         },
         "content_type": {
           "type": [
@@ -110,7 +103,6 @@
         "required": [
           "context_order",
           "topic_path",
-          "topic_path_secondary",
           "automotive_system",
           "component",
           "problem",
@@ -126,12 +118,6 @@
           },
           "topic_path": {
             "type": "string"
-          },
-          "topic_path_secondary": {
-            "type": [
-              "string",
-              "null"
-            ]
           },
           "automotive_system": {
             "type": [

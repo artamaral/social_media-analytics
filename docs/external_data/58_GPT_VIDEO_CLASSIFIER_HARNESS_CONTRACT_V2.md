@@ -126,10 +126,10 @@ A skill do classificador e o conjunto de instrucoes enviado na chamada da API.
 Ela deve ser referenciada pelo executor futuro do Google Cloud e versionada como
 contrato, nao como skill local do Codex.
 
-Versao inicial:
+Versao operacional r2:
 
-- `prompt_contract_version = video_taxonomy_v2_classifier_r1`
-- `output_schema_version = video_taxonomy_v2_output_schema_r1`
+- `prompt_contract_version = video_taxonomy_v2_classifier_r2`
+- `output_schema_version = video_taxonomy_v2_output_schema_r2`
 - modelo de classificacao por titulo/metadados: `gpt-5-nano`
 - modelo de transcricao dos `90s`: `gpt-4o-mini-transcribe`
 - modelo de classificacao operacional com titulo/metadados/transcricao:
@@ -178,7 +178,6 @@ A resposta deve ser JSON estruturado e imputavel diretamente no banco:
     "automotive_domain": "review_teste",
     "activity_type": "review",
     "topic_path": "review_teste__review_veiculo",
-    "topic_path_secondary": null,
     "content_type": "review",
     "audience_intent": "decidir_compra",
     "confidence_score": 0.85,
@@ -208,7 +207,7 @@ Campos de saida:
 - Nao usar conhecimento externo para completar marca, modelo, ano, sistema,
   componente ou problema.
 - `topic_path` deve existir na Taxonomia V2.
-- `topic_path_secondary` so entra quando houver segundo tema forte e explicito.
+- `topic_path_secondary` nao faz parte desta revisao de contrato.
 - Termo fora da Taxonomia V2 entra em `taxonomy_gaps`, nao em campo canonico.
 - `fora_escopo` tem precedencia quando houver evidencia textual de moto,
   nao-automotivo, transito/comportamento ou entretenimento sem tema tecnico,
@@ -349,7 +348,6 @@ Exemplo:
 {
   "context_order": 1,
   "topic_path": "manutencao_reparo__manutencao_preventiva__suspensao",
-  "topic_path_secondary": null,
   "automotive_system": "suspensao",
   "component": "amortecedor",
   "problem": "ruido",
@@ -367,7 +365,6 @@ A resposta deve ser rejeitada ou marcada para revisao quando:
 
 - nao validar contra o schema JSON;
 - retornar `topic_path` inexistente;
-- retornar `topic_path_secondary` inexistente;
 - retornar contexto tecnico incompatibilizado sem `needs_human_review`;
 - preencher marca/modelo/ano sem evidencia;
 - preencher contexto tecnico principal em video `fora_escopo`;

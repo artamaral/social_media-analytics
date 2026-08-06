@@ -3,8 +3,8 @@
 ## Identificacao
 
 ```text
-prompt_contract_version = video_taxonomy_v2_classifier_r1
-output_schema_version = video_taxonomy_v2_output_schema_r1
+prompt_contract_version = video_taxonomy_v2_classifier_r2
+output_schema_version = video_taxonomy_v2_output_schema_r2
 taxonomy_version = taxonomia_video_v2
 ```
 
@@ -70,14 +70,13 @@ Uso operacional recomendado:
 2. Escolha o `automotive_domain` principal.
 3. Escolha o `activity_type` de acordo com a abordagem dominante.
 4. Escolha o `topic_path` mais especifico que tenha evidencia.
-5. Use `topic_path_secondary` somente se houver segundo tema forte e explicito.
-6. Classifique `content_type` como formato editorial.
-7. Classifique `audience_intent` como intencao provavel sustentada pela
+5. Classifique `content_type` como formato editorial.
+6. Classifique `audience_intent` como intencao provavel sustentada pela
    evidencia.
-8. Extraia entidades de veiculo somente quando explicitas.
-9. Preencha `technical_contexts[]` somente quando sistema, componente ou
+7. Extraia entidades de veiculo somente quando explicitas.
+8. Preencha `technical_contexts[]` somente quando sistema, componente ou
    problema estiverem explicitamente citados.
-10. Registre lacunas sem criar codigo canonico novo.
+9. Registre lacunas sem criar codigo canonico novo.
 
 ## Regra de decisao para escopo e match
 
@@ -110,7 +109,8 @@ Antes de escolher um `topic_path` tematico, aplique esta ordem:
 - `motor` e `cambio` nao podem ser rotulos soltos de tema.
 - `motor` e `cambio` podem aparecer como sistema, componente ou rota
   contextualizada quando houver evidencia.
-- `eletrico`, `hibrido`, `flex` e `diesel` pertencem a `powertrain`.
+- `ICE` e `Eletrificados` sao as categorias operacionais de powertrain.
+- `ICE` cobre combustao interna; `Eletrificados` cobre hibridos e eletricos.
 - `bateria_12v` pertence a `eletrica_eletronica`.
 - `bateria_tracao` pertence a `powertrain`.
 - `barulho` e sinal textual; o problema canonico e `ruido`.
@@ -121,7 +121,7 @@ Antes de escolher um `topic_path` tematico, aplique esta ordem:
 ## Saida obrigatoria
 
 Responda somente com JSON valido no schema
-`video_taxonomy_v2_output_schema_r1`.
+`video_taxonomy_v2_output_schema_r2`.
 
 Nao inclua explicacao fora do JSON.
 
@@ -185,7 +185,6 @@ Escala recomendada para avaliacao futura de transcript:
 Antes de finalizar, confirme:
 
 - o `topic_path` existe na lista recebida;
-- `topic_path_secondary`, se usado, existe na lista recebida;
 - nenhum campo tecnico contem multiplos valores concatenados;
 - cada contexto tecnico tem evidencia textual;
 - todo termo fora da taxonomia foi para `taxonomy_gaps`;

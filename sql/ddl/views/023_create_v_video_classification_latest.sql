@@ -33,7 +33,6 @@ SELECT
   automotive_domain,
   activity_type,
   topic_path,
-  topic_path_secondary,
   content_type,
   audience_intent,
   confidence_score,

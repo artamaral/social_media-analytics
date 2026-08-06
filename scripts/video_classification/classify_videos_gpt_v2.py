@@ -16,10 +16,10 @@ REPO_DIR = BASE_DIR.parent.parent
 DEFAULT_SKILL_PATH = REPO_DIR / "docs" / "external_data" / "58_GPT_VIDEO_CLASSIFIER_SKILL_V2.md"
 
 TAXONOMY_VERSION = "taxonomia_video_v2"
-PROMPT_CONTRACT_VERSION = "video_taxonomy_v2_classifier_r1"
-OUTPUT_SCHEMA_VERSION = "video_taxonomy_v2_output_schema_r1"
+PROMPT_CONTRACT_VERSION = "video_taxonomy_v2_classifier_r2"
+OUTPUT_SCHEMA_VERSION = "video_taxonomy_v2_output_schema_r2"
 # Marcador operacional para confirmar se a copia local/VPS esta atualizada.
-SCRIPT_VERSION = "2026-07-24-r6-sem-match-guardrail"
+SCRIPT_VERSION = "2026-08-06-r1-no-secondary-powertrain-buckets"
 DEFAULT_TITLE_MODEL = "gpt-5-nano"
 DEFAULT_TRANSCRIPT_MODEL = "gpt-5-nano"
 DEFAULT_MAX_OUTPUT_TOKENS = 6000
@@ -72,8 +72,8 @@ Regras obrigatorias:
   inferir diagnostico, luz de painel, scanner, motor, cambio ou componente sem
   esses termos aparecerem no input.
 - Videos fora do escopo automotivo nao devem receber contexto tecnico primary.
-- topic_path e topic_path_secondary devem existir na lista recebida.
-- topic_path_secondary so entra com segundo tema forte e explicito.
+- topic_path deve existir na lista recebida.
+- Nao use topic_path_secondary nesta versao.
 - technical_contexts[] so entra com evidencia explicita.
 - Cada technical_context representa uma unica combinacao de sistema, componente e problema.
 - Se houver apenas dominio/topico generico, nao crie technical_context.
@@ -83,6 +83,8 @@ Regras obrigatorias:
 - motor e cambio nao sao rotulos soltos de tema.
 - barulho e sinal textual; problem canonico deve ser ruido.
 - Marca, modelo, ano e geracao devem preservar o valor bruto encontrado no input.
+- Powertrain deve ser consolidado operacionalmente em `ICE` e `Eletrificados`:
+  `ICE` cobre combustao interna; `Eletrificados` cobre hibridos e eletricos.
 - Termos fora da taxonomia devem ir para taxonomy_gaps, nunca para campo canonico.
 - confidence_score deve medir a forca da evidencia disponivel:
   0.90-1.00 evidencia direta, clara e especifica;
@@ -95,7 +97,7 @@ Regras obrigatorias:
 - Para title_metadata, use no maximo 3 technical_contexts e 2 vehicle_entities.
 - Para transcript_90s, use no maximo 6 technical_contexts e 4 vehicle_entities.
 
-Responda somente com JSON valido no schema video_taxonomy_v2_output_schema_r1.
+Responda somente com JSON valido no schema video_taxonomy_v2_output_schema_r2.
 """
 
 DEFAULT_SCHEMA = {
@@ -115,7 +117,6 @@ DEFAULT_SCHEMA = {
                 "automotive_domain",
                 "activity_type",
                 "topic_path",
-                "topic_path_secondary",
                 "content_type",
                 "audience_intent",
                 "confidence_score",
@@ -143,7 +144,6 @@ DEFAULT_SCHEMA = {
                 "automotive_domain": {"type": "string"},
                 "activity_type": {"type": "string"},
                 "topic_path": {"type": "string"},
-                "topic_path_secondary": {"type": ["string", "null"]},
                 "content_type": {"type": ["string", "null"]},
                 "audience_intent": {"type": ["string", "null"]},
                 "confidence_score": {"type": "number"},
@@ -162,7 +162,6 @@ DEFAULT_SCHEMA = {
                 "required": [
                     "context_order",
                     "topic_path",
-                    "topic_path_secondary",
                     "automotive_system",
                     "component",
                     "problem",
@@ -175,7 +174,6 @@ DEFAULT_SCHEMA = {
                 "properties": {
                     "context_order": {"type": "integer"},
                     "topic_path": {"type": "string"},
-                    "topic_path_secondary": {"type": ["string", "null"]},
                     "automotive_system": {"type": ["string", "null"]},
                     "component": {"type": ["string", "null"]},
                     "problem": {"type": ["string", "null"]},
@@ -822,10 +820,6 @@ def validate_classification(result, schema, taxonomy, stage, post_id):
     if classification["topic_path"] not in topic_codes:
         raise ValueError(f"topic_path inexistente: {classification['topic_path']}")
 
-    secondary = classification.get("topic_path_secondary")
-    if secondary and secondary not in topic_codes:
-        raise ValueError(f"topic_path_secondary inexistente: {secondary}")
-
     confidence = classification["confidence_score"]
     if confidence < 0 or confidence > 1:
         raise ValueError(f"confidence_score fora de 0..1: {confidence}")
@@ -915,10 +909,6 @@ def validate_context(context, topic_codes, compatibility_keys, primary_topic):
     if context["topic_path"] not in topic_codes:
         raise ValueError(f"context topic_path inexistente: {context['topic_path']}")
 
-    secondary = context.get("topic_path_secondary")
-    if secondary and secondary not in topic_codes:
-        raise ValueError(f"context topic_path_secondary inexistente: {secondary}")
-
     for field in ["automotive_system", "component", "problem"]:
         value = context.get(field)
         if isinstance(value, str) and ";" in value:
@@ -1000,7 +990,6 @@ def write_classification(base_url, headers, run_id, taxonomy_id, model, harness_
         "automotive_domain": classification["automotive_domain"],
         "activity_type": classification["activity_type"],
         "topic_path": classification["topic_path"],
-        "topic_path_secondary": classification["topic_path_secondary"],
         "content_type": classification["content_type"],
         "audience_intent": classification["audience_intent"],
         "confidence_score": classification["confidence_score"],
@@ -1028,7 +1017,6 @@ def write_classification(base_url, headers, run_id, taxonomy_id, model, harness_
             "taxonomy_version_id": taxonomy_id,
             "context_order": row["context_order"],
             "topic_path": row["topic_path"],
-            "topic_path_secondary": row["topic_path_secondary"],
             "automotive_system": row["automotive_system"],
             "component": row["component"],
             "problem": row["problem"],
