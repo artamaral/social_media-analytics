@@ -26,8 +26,8 @@ Snapshot documentado:
 
 - topic paths: `106`
 - regras de compatibilidade tecnica: `112`
-- sha256 `42`: `8DF03111F435B11651EC4A0ED4278D97EA8A1C145F721B2FF70B8C87815ECA51`
-- sha256 `43`: `879A312E9A43A1C71776B04BCF8BD15ADDE37FC87A5B896C71F214664EB064FD`
+- sha256 `42`: `BD5520AC830A74D7E0F821AA86B4A31899CAE787D4E9A4C96F3DFC383FAF6C0B`
+- sha256 `43`: `B59E4E128FB2482D37327E451E4119621652489437CE32198E262C4442CD1952`
 
 ## Estrutura Supabase
 
@@ -313,6 +313,15 @@ Campos de saida:
 - `powertrain` so deve ser `topic_path` principal quando a proposta do video for
   explicitamente motorizacao, autonomia, recarga, consumo, cambio ou tecnologia
   de propulsao.
+- Para tipo de motorizacao, o classificador deve usar apenas os buckets
+  operacionais `powertrain__eletrificados` e `powertrain__ice`.
+- `powertrain__eletrificados` cobre eletricos, hibridos, plug-in, PHEV, MHEV,
+  bateria de tracao, recarga e autonomia quando o foco for powertrain.
+- `powertrain__ice` cobre combustao interna, flex, diesel, gasolina, etanol,
+  aspirado e turbo quando o foco for powertrain.
+- Rotas historicas mais profundas como `powertrain__eletrico`,
+  `powertrain__hibrido`, `powertrain__combustao__flex` ou
+  `powertrain__combustao__turbo` nao sao resposta operacional desta revisao.
 - `topic_path_secondary` nao faz parte desta revisao de contrato.
 - Termo fora da Taxonomia V2 entra em `taxonomy_gaps`, nao em campo canonico.
 - `fora_escopo` tem precedencia quando houver evidencia textual de moto,
@@ -338,8 +347,9 @@ Campos de saida:
 - Contexto tecnico deve ser enxuto. Em sensores, manter o componente pelo nome
   do sensor e remover `limpeza` como `problem`.
 - `autonomia` e atributo de produto/teste, nao `problem`.
-- Evitar pleonasmos como `sistema_hibrido` dentro de topic_path hibrido ou
-  `manual_cambio` quando o componente ja e `cambio_manual`.
+- Evitar pleonasmos como `sistema_hibrido` dentro do bucket
+  `powertrain__eletrificados` ou `manual_cambio` quando o componente ja e
+  `cambio_manual`.
 - Detalhes como `carbonizacao`, `borra`, `descarbonizacao` e `geometria` devem
   ficar como evidencia textual ou lacuna de auditoria, sem virar problem
   canonico nesta fase.

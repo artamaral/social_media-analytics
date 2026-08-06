@@ -3762,7 +3762,7 @@ Resultado:
 - `motorhome`, `carros_descartaveis` e `efeito_dolphin` permanecem fora da
   taxonomia canonica
 - foram adicionadas compatibilidades iniciais para suspensao, freios,
-  transmissao/CVT, motor, arrefecimento, pneus e powertrain hibrido plug-in
+  transmissao/CVT, motor, arrefecimento, pneus e powertrain eletrificado
 - banco, workbook e pipeline permanecem inalterados
 
 #### Enriquecimento da Taxonomia V2 por fonte Moura
@@ -4191,6 +4191,12 @@ Resultado:
 - a matriz de compatibilidade tecnica foi alinhada ao contrato de `turbo` como
   componente/feature, usando `component=turbo` e `problem=null` para review e
   powertrain
+- em 2026-08-06, a leitura operacional de motorizacao foi consolidada em
+  `powertrain__eletrificados` e `powertrain__ice`, para evitar profundidade
+  excessiva em eletrico, hibrido, flex, diesel, aspirado e turbo
+- os detalhes de motorizacao continuam como sinais/evidencias e contexto
+  tecnico quando forem importantes, mas nao como `topic_path` operacional
+  separado; transmissao permanece em arvore propria dentro de `powertrain`
 - o fallback `small -> medium` ganhou trava contra regressao semantica: se o
   `medium` perder contexto tecnico, cair em `sem_match_taxonomico`, gerar
   dominio/topico inconsistente ou reduzir muito a confianca, o resultado valido
@@ -4225,8 +4231,9 @@ Resultado:
   incluindo `amigo`, `picape`, `link`, `tipo`, `bora` e `100`
 - entidades duplicadas do mesmo modelo passam a manter o match mais especifico:
   `model_year` antes de `model`
-- banco, ingestao, cron, pipeline e Taxonomia V2 canonica permanecem
-  inalterados nesta etapa
+- banco de classificacao, ingestao, cron e pipeline permanecem inalterados
+  nesta etapa; a Taxonomia V2 canonica foi ajustada apenas nos artefatos
+  operacionais e no DML de atualizacao
 
 ## Item Sprint 6 - Rodada MVP de 40 videos do classificador V2
 

@@ -48,7 +48,7 @@ WHERE c.taxonomy_version_id = tv.id
 
 UPDATE public.video_taxonomy_versions
 SET
-  source_compatibility_sha256 = '879A312E9A43A1C71776B04BCF8BD15ADDE37FC87A5B896C71F214664EB064FD'
+  source_compatibility_sha256 = 'B59E4E128FB2482D37327E451E4119621652489437CE32198E262C4442CD1952'
 WHERE taxonomy_version = 'taxonomia_video_v2';
 
 COMMIT;

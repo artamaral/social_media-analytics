@@ -136,6 +136,7 @@ SQL operacional relacionado:
 - [011_test_video_taxonomy_classification.sql](/C:/social_media-analytics/sql/ddl/tests/011_test_video_taxonomy_classification.sql)
 - [seed_video_taxonomy_v2.sql](/C:/social_media-analytics/sql/dml/seed_video_taxonomy_v2.sql)
 - [update_video_taxonomy_v2_turbo_compatibility.sql](/C:/social_media-analytics/sql/dml/update_video_taxonomy_v2_turbo_compatibility.sql)
+- [update_video_taxonomy_v2_powertrain_buckets.sql](/C:/social_media-analytics/sql/dml/update_video_taxonomy_v2_powertrain_buckets.sql)
 
 ## 3. Dashboard
 

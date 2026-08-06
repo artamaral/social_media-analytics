@@ -2455,6 +2455,47 @@ Referencia:
 
 ---
 
+## Buckets operacionais de powertrain: Eletrificados vs ICE
+
+Data:
+
+- 2026-08-06
+
+Decisao:
+
+- a Taxonomia Video V2 passa a usar, para classificacao operacional de
+  motorizacao, apenas os buckets `powertrain__eletrificados` e
+  `powertrain__ice`
+- caminhos mais profundos de motorizacao, como eletrico, hibrido, plug-in,
+  flex, diesel, turbo e aspirado, deixam de ser resposta operacional de
+  `topic_path`
+- esses detalhes continuam permitidos como evidencia textual, contexto tecnico,
+  componente ou atributo quando forem relevantes
+- a arvore de transmissao permanece separada em `powertrain__transmissao`,
+  porque cambio manual, automatico, dupla embreagem e CVT sao atributos
+  importantes e ja foram aceitos como termos controlados
+- o script mantem aliases para reparar respostas legadas do GPT, mas o consumo
+  ativo da taxonomia deve retornar os buckets consolidados
+
+Motivo:
+
+- a analise de mercado precisa separar videos sobre eletrificados de videos ICE
+  sem explodir a profundidade de subnichos
+- versoes e detalhes de motorizacao geravam granularidade excessiva e
+  aumentavam `needs_human_review` sem melhorar a pergunta de negocio
+- a classificacao deve responder do que trata o video, qual tipo de produto ele
+  referencia e, quando possivel, qual veiculo/marca/modelo/ano aparece
+
+Referencia:
+
+- `docs/external_data/40_TAXONOMIA_VIDEO_V2_GUIA_CLASSIFICACAO.md`
+- `docs/external_data/42_TAXONOMIA_VIDEO_V2_TOPIC_PATHS.csv`
+- `docs/external_data/43_TAXONOMIA_VIDEO_V2_COMPATIBILIDADE_TECNICA.csv`
+- `docs/external_data/58_GPT_VIDEO_CLASSIFIER_HARNESS_CONTRACT_V2.md`
+- `sql/dml/update_video_taxonomy_v2_powertrain_buckets.sql`
+
+---
+
 ## Classificacao operacional combinada com titulo e transcricao
 
 Data:

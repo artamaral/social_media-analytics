@@ -154,9 +154,13 @@ Antes de escolher um `topic_path` tematico, aplique esta ordem:
     `manutencao_reparo__manutencao_preventiva__limpeza_componentes`.
   - Se houver carro popular/barato/zero km acessivel como proposta de compra,
     prefira `mercado_produto__compra_venda__carro_popular`.
-- `eletrico`, `hibrido`, `flex` e `diesel` pertencem a `powertrain`.
-- `ICE` e `Eletrificados` sao as categorias operacionais de powertrain.
-- `ICE` cobre combustao interna; `Eletrificados` cobre hibridos e eletricos.
+- `powertrain` usa buckets operacionais: `powertrain__eletrificados` e
+  `powertrain__ice`, alem de `powertrain__transmissao` quando o foco for
+  cambio/transmissao.
+- `powertrain__eletrificados` cobre eletricos, hibridos, plug-in, PHEV, MHEV e
+  demais eletrificados.
+- `powertrain__ice` cobre combustao interna, flex, diesel, gasolina, etanol,
+  aspirado e turbo.
 - `bateria_12v` pertence a `eletrica_eletronica`.
 - `bateria_tracao` pertence a `powertrain`.
 - Em videos de `review_teste` ou `mercado_produto`, motor, cambio, bateria,
@@ -170,7 +174,7 @@ Antes de escolher um `topic_path` tematico, aplique esta ordem:
   veiculo citado e eletrico, flex, turbo ou hibrido.
 - Em teste de autonomia com formato de avaliacao/teste, prefira
   `review_teste__teste_autonomia` como principal e registre
-  `powertrain__eletrico__autonomia` como secundario/contexto quando aplicavel.
+  eletrificacao/autonomia como contexto ou evidencia quando aplicavel.
 - Nao use `sem_match_taxonomico` quando houver rota evidente ja existente para
   autonomia/teste, lancamento/review ou manutencao/reparo de motor.
 - `barulho` e sinal textual; o problema canonico e `ruido`.
@@ -315,11 +319,11 @@ Antes de finalizar, confirme:
 
 - `aXbFPJMVGKw`: se o input mostra avaliacao do `Changan Uni-T 2026` e cita
   `motor 1.5 turbo`, use `review_teste__review_veiculo` como principal.
-  `powertrain__combustao__turbo` entra como contexto tecnico ou secundario se
-  houver segundo tema forte.
+  Turbo entra como contexto tecnico de `powertrain__ice` quando houver valor
+  analitico, nunca como `problem`.
 - `CjFrJg6VCjc`: se o video testa autonomia de um eletrico, prefira
-  `review_teste__teste_autonomia` como principal; `powertrain__eletrico__autonomia`
-  pode ser secundario/contexto.
+  `review_teste__teste_autonomia` como principal; use
+  `powertrain__eletrificados` apenas quando powertrain for o tema operacional.
 - `z55GnDEg7_U`: se a transcricao mostra desmontagem, diagnostico e reparo de
   motor, use uma rota especifica como
   `manutencao_reparo__reparo_corretivo__reparo_motor`,
@@ -329,7 +333,7 @@ Antes de finalizar, confirme:
 - `JGzj254Kgs4`: se a transcricao mostra discussao de compra de carro popular,
   barato ou zero km acessivel, use
   `mercado_produto__compra_venda__carro_popular`; se o veiculo for eletrico,
-  `powertrain__eletrico` pode entrar como secundario/contexto.
+  eletrificacao fica como evidencia/contexto, sem `topic_path_secondary`.
 - `RTZHxSE2t5M`: se a transcricao mostra gargalo de oficinas, pecas e
   reparacao, use `pos_venda_reparacao` como principal.
 - `6qSnrkGd70I`: se a evidencia fala de radiador, aditivo, agua

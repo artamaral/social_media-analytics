@@ -25,7 +25,7 @@ TAXONOMY_VERSION = "taxonomia_video_v2"
 PROMPT_CONTRACT_VERSION = "video_taxonomy_v2_classifier_r2"
 OUTPUT_SCHEMA_VERSION = "video_taxonomy_v2_output_schema_r2"
 # Marcador operacional para confirmar se a copia local/VPS esta atualizada.
-SCRIPT_VERSION = "2026-08-06-r2-no-secondary-merged-whisper"
+SCRIPT_VERSION = "2026-08-06-r3-powertrain-buckets"
 DEFAULT_TITLE_MODEL = "gpt-5-nano"
 DEFAULT_TRANSCRIPT_MODEL = "gpt-5-nano"
 DEFAULT_MAX_OUTPUT_TOKENS = 6000
@@ -76,6 +76,21 @@ TOPIC_PATH_ALIASES = {
     "powertrain__transmissao__tracao_dianteira": "review_teste__review_veiculo",
     "powertrain__transmissao__tracao_integral": "review_teste__review_veiculo",
     "powertrain__transmissao__tracao_traseira": "review_teste__review_veiculo",
+    "powertrain__eletrico": "powertrain__eletrificados",
+    "powertrain__eletrico__autonomia": "powertrain__eletrificados",
+    "powertrain__eletrico__bateria_tracao": "powertrain__eletrificados",
+    "powertrain__eletrico__garantia_bateria": "powertrain__eletrificados",
+    "powertrain__eletrico__recarga": "powertrain__eletrificados",
+    "powertrain__eletrico__regeneracao": "powertrain__eletrificados",
+    "powertrain__hibrido": "powertrain__eletrificados",
+    "powertrain__hibrido__hibrido_flex": "powertrain__eletrificados",
+    "powertrain__hibrido__plug_in": "powertrain__eletrificados",
+    "powertrain__hibrido__sistema_hibrido": "powertrain__eletrificados",
+    "powertrain__combustao": "powertrain__ice",
+    "powertrain__combustao__aspirado": "powertrain__ice",
+    "powertrain__combustao__diesel": "powertrain__ice",
+    "powertrain__combustao__flex": "powertrain__ice",
+    "powertrain__combustao__turbo": "powertrain__ice",
 }
 
 CONTEXT_PROBLEM_ALIASES = {
@@ -231,8 +246,10 @@ Regras obrigatorias:
   evidencia textual; o modelo deve parar no modelo base util para pesquisa.
   Exemplos: Yaris Cross XR -> Yaris Cross; Dolphin SE -> Dolphin;
   Dolphin Mini GS -> Dolphin Mini.
-- Powertrain deve ser consolidado operacionalmente em `ICE` e `Eletrificados`:
-  `ICE` cobre combustao interna; `Eletrificados` cobre hibridos e eletricos.
+- Powertrain deve ser classificado operacionalmente apenas nos buckets
+  `powertrain__eletrificados` e `powertrain__ice`, alem de transmissao quando
+  o foco for cambio/transmissao. `Eletrificados` cobre hibridos e eletricos;
+  `ICE` cobre combustao interna.
 - Termos fora da taxonomia devem ir para taxonomy_gaps, nunca para campo canonico.
 - Se um veiculo explicito nao existir no catalogo Carros na Web usado pelo
   projeto, mantenha not_found/needs_review; nao tente cadastrar ou inferir
@@ -267,11 +284,11 @@ Ordem para transcript_90s:
 
 Exemplos do Batch 1:
 - aXbFPJMVGKw: avaliacao Changan Uni-T 2026 com motor 1.5 turbo deve manter
-  review_teste__review_veiculo como principal; powertrain__combustao__turbo
-  entra como contexto tecnico ou secundario.
+  review_teste__review_veiculo como principal; turbo entra como contexto
+  tecnico de ICE quando houver valor analitico.
 - CjFrJg6VCjc: teste de autonomia deve preferir
-  review_teste__teste_autonomia como principal; autonomia/powertrain eletrico
-  deve aparecer como contexto tecnico ou evidencia.
+  review_teste__teste_autonomia como principal; eletrificacao deve aparecer no
+  bucket Eletrificados quando for o tema operacional de powertrain.
 - z55GnDEg7_U: se a transcricao mostra desmontagem, diagnostico e reparo de
   motor, use manutencao_reparo__reparo_corretivo__reparo_motor.
 - RTZHxSE2t5M: gargalo de oficinas, pecas e reparacao deve usar
@@ -1764,6 +1781,28 @@ def validate_classification(result, schema, taxonomy, stage, post_id):
         ):
             raise ValueError("vehicle_entity sem valor bruto extraido")
 
+    validation_step("propagate_child_review", lambda: propagate_child_review_to_result(result))
+
+
+def propagate_child_review_to_result(result):
+    classification = result["classification_result"]
+    reasons = []
+
+    if any(context.get("needs_human_review") for context in result["technical_contexts"]):
+        reasons.append("technical_context_needs_review")
+
+    if any(entity.get("entity_status") == "needs_review" for entity in result["vehicle_entities"]):
+        reasons.append("vehicle_entity_needs_review")
+
+    if not reasons:
+        return
+
+    classification["needs_human_review"] = True
+    classification["validation_issues"] = append_issue_text(
+        classification.get("validation_issues"),
+        "revisao humana exigida por filho: " + ", ".join(reasons),
+    )
+
 
 def validation_step(name, callback):
     try:
@@ -2126,14 +2165,11 @@ def evidence_backed_topic_for_sem_match(evidence, topic_codes):
         return None
 
     autonomy_topic = "review_teste__teste_autonomia"
-    electric_autonomy_topic = "powertrain__eletrico__autonomia"
     if "autonomia" in evidence and (
         "test" in evidence or "teste" in evidence or "testei" in evidence
     ):
         if autonomy_topic in topic_codes:
             return autonomy_topic
-        if electric_autonomy_topic in topic_codes:
-            return electric_autonomy_topic
 
     if "lancamento" in evidence or "novo" in evidence or "estreia" in evidence:
         launch_topic = "mercado_produto__lancamentos"

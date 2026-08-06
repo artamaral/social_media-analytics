@@ -375,7 +375,7 @@ class ClassifierContractTests(unittest.TestCase):
             },
             "technical_contexts": [
                 {
-                    "topic_path": "powertrain__combustao__turbo",
+                    "topic_path": "powertrain__ice",
                     "context_role": "primary",
                 },
             ],
@@ -408,7 +408,7 @@ class ClassifierContractTests(unittest.TestCase):
         topic_codes = {
             "sem_match_taxonomico",
             "review_teste__teste_autonomia",
-            "powertrain__eletrico__autonomia",
+            "powertrain__eletrificados",
         }
 
         CLASSIFIER.promote_topic_path_from_evidence(result, harness, topic_codes)
@@ -1265,7 +1265,7 @@ class ClassifierContractTests(unittest.TestCase):
         result = {
             "technical_contexts": [
                 {
-                    "topic_path": "powertrain__hibrido__sistema_hibrido",
+                    "topic_path": "powertrain__eletrificados",
                     "automotive_system": "powertrain",
                     "component": "sistema_hibrido",
                     "problem": None,
@@ -1313,7 +1313,7 @@ class ClassifierContractTests(unittest.TestCase):
         result = {
             "technical_contexts": [
                 {
-                    "topic_path": "powertrain__combustao__turbo",
+                    "topic_path": "powertrain__ice",
                     "automotive_system": "motor",
                     "component": "motor",
                     "problem": "turbo",
@@ -1325,7 +1325,7 @@ class ClassifierContractTests(unittest.TestCase):
         }
         compatibility_keys = {
             (
-                "powertrain__combustao__turbo",
+                "powertrain__ice",
                 "motor",
                 "turbo",
                 None,
@@ -1338,6 +1338,24 @@ class ClassifierContractTests(unittest.TestCase):
         self.assertEqual(context["component"], "turbo")
         self.assertIsNone(context["problem"])
         self.assertFalse(context["needs_human_review"])
+
+    def test_repair_topic_path_code_maps_historical_powertrain_to_operational_bucket(self):
+        topic_codes = {"powertrain__eletrificados", "powertrain__ice"}
+
+        self.assertEqual(
+            CLASSIFIER.repair_topic_path_code(
+                "powertrain__hibrido__sistema_hibrido",
+                topic_codes,
+            ),
+            "powertrain__eletrificados",
+        )
+        self.assertEqual(
+            CLASSIFIER.repair_topic_path_code(
+                "powertrain__combustao__turbo",
+                topic_codes,
+            ),
+            "powertrain__ice",
+        )
 
     def test_normalize_technical_contexts_simplifies_internal_engine_component(self):
         result = {

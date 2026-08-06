@@ -420,8 +420,9 @@ Regras:
 
 - se o video testa autonomia de eletrico, usar
   `review_teste > teste_autonomia` como `topic_path`
-- powertrain eletrico fica em `automotive_system = powertrain` e componente
-  `bateria_tracao`, quando houver evidencia
+- eletrificacao/autonomia fica como contexto tecnico ou evidencia quando houver
+  valor analitico; nao usar rotas antigas de `powertrain > eletrico >
+  autonomia`
 - se o video e review com comparacao retorica no titulo, nao usar
   `comparativo` a menos que compare alternativas de fato
 
@@ -450,8 +451,9 @@ Regras:
 - se a promessa e chegada de modelo/marca, usar `lancamentos` ou
   `estreia_marca`
 - se a promessa e "vale a pena comprar", usar `compra_venda`
-- eletrico, hibrido, flex e diesel devem ficar em `powertrain` como contexto,
-  nao dentro de `eletrica_eletronica`
+- eletrico e hibrido devem subir para o bucket operacional
+  `powertrain > eletrificados` quando powertrain for relevante; flex, diesel e
+  combustao devem subir para `powertrain > ICE`
 - preco pode ser `preco_posicionamento` quando e parte central do argumento
 
 ### 6. `powertrain`
@@ -461,21 +463,8 @@ tracao, autonomia, combustivel ou transmissao.
 
 ```text
 powertrain
-powertrain > eletrico
-powertrain > eletrico > bateria_tracao
-powertrain > eletrico > autonomia
-powertrain > eletrico > recarga
-powertrain > eletrico > regeneracao
-powertrain > eletrico > garantia_bateria
-powertrain > hibrido
-powertrain > hibrido > sistema_hibrido
-powertrain > hibrido > hibrido_flex
-powertrain > hibrido > plug_in
-powertrain > combustao
-powertrain > combustao > aspirado
-powertrain > combustao > turbo
-powertrain > combustao > flex
-powertrain > combustao > diesel
+powertrain > eletrificados
+powertrain > ICE
 powertrain > transmissao
 powertrain > transmissao > cambio_manual
 powertrain > transmissao > cambio_automatico
@@ -485,9 +474,15 @@ powertrain > transmissao > cvt
 
 Regras:
 
-- nesta leitura operacional, powertrain se consolida em `ICE` e
-  `Eletrificados`
-- `eletrico`, `hibrido`, `flex` e `diesel` sao powertrain
+- a classificacao operacional deve usar somente `Eletrificados` ou `ICE` para
+  tipo de motorizacao
+- `Eletrificados` cobre eletricos, hibridos, plug-in, PHEV, MHEV e demais
+  eletrificados
+- `ICE` cobre combustao interna, gasolina, etanol, flex, diesel, aspirado e
+  turbo
+- detalhes como bateria de tracao, autonomia, recarga, sistema hibrido, flex,
+  diesel ou turbo ficam como evidencia/contexto tecnico, nao como
+  `topic_path` mais profundo
 - nao colocar eletrico/hibrido em `eletrica_eletronica`
 - se powertrain e apenas detalhe de um lancamento, manter
   `automotive_domain = mercado_produto` e registrar powertrain em
