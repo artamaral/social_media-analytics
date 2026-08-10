@@ -533,6 +533,26 @@ houver um unico codigo canonico compativel na Taxonomia V2; por exemplo,
 `mercado_procuto__lancamentos` pode ser reparado para
 `mercado_produto__lancamentos`. `vehicle_entities[].entity_order` pode ser
 reordenado pelo harness para garantir sequencia iniciando em `1`.
+Entidades de veiculo completamente vazias devem ser descartadas antes da
+validacao, porque ausencia de marca/modelo/ano e diferente de erro semantico.
+O harness tambem pode normalizar notas em escala percentual ou fracionaria,
+como `85`, `85%` ou `85/100`, para o intervalo canonico `0..1`.
+
+Promocoes conservadoras de `topic_path` pai para filho sao permitidas quando a
+evidencia textual sustenta claramente a rota especifica e ela ja existe na
+Taxonomia V2. Exemplos:
+
+- `review_teste` pode virar `review_teste__review_veiculo` quando titulo ou
+  transcript mencionarem avaliacao/review/test drive de veiculo.
+- `fora_escopo` pode virar `fora_escopo__nao_automotivo` quando houver moto,
+  hospital, nobreak ou outro tema explicitamente nao automotivo.
+- `fora_escopo` pode virar `fora_escopo__transito_comportamento` quando o foco
+  for dirigir, transito, comportamento ou alerta sem tema tecnico de veiculo.
+- `off_road` pode virar `off_road__preparacao_off_road` quando houver projeto,
+  preparacao, trilha, suspensao ou caminhonete como evidencia.
+
+Essas promocoes nao autorizam inferencia livre nem criacao de novos codigos; se
+a evidencia nao for clara, manter o pai generico ou `needs_human_review`.
 
 Obrigacao de extracao:
 

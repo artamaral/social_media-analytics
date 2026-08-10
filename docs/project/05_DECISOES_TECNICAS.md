@@ -2496,6 +2496,43 @@ Referencia:
 
 ---
 
+## Reparos conservadores pos-rodada MVP40 no harness V2
+
+Data:
+
+- 2026-08-10
+
+Decisao:
+
+- o harness V2 pode descartar `vehicle_entities[]` completamente vazios antes
+  da validacao, porque ausencia de entidade nao deve derrubar um video
+- `confidence_score` e `transcript_quality.quality_score` podem ser
+  normalizados de escala percentual ou fracionaria para `0..1` quando o valor
+  for mecanicamente claro, como `85`, `85%` ou `85/100`
+- `topic_path` pai generico pode ser promovido para filho existente quando
+  houver evidencia textual forte e nao ambigua, cobrindo inicialmente:
+  `review_teste`, `fora_escopo` e `off_road`
+- esses reparos nao criam codigos novos, nao expandem a taxonomia e nao usam
+  inferencia externa
+
+Motivo:
+
+- a rodada MVP40 com buckets de powertrain teve `30/40` sucessos e falhou no
+  criterio operacional de MVP
+- parte das falhas era bloqueio mecanico evitavel, como entidade de veiculo sem
+  valor bruto ou score em escala fora de `0..1`
+- alguns casos regrediram para pais genericos apesar de haver evidencia textual
+  para filho especifico ja existente
+
+Referencia:
+
+- `docs/external_data/63_COMPARACAO_POS_REPROCESSAMENTO_MVP40_POWERTRAIN_BUCKETS_20260806.md`
+- `docs/external_data/58_GPT_VIDEO_CLASSIFIER_HARNESS_CONTRACT_V2.md`
+- `docs/external_data/58_GPT_VIDEO_CLASSIFIER_SKILL_V2.md`
+- `scripts/video_classification/classify_videos_gpt_v2.py`
+
+---
+
 ## Classificacao operacional combinada com titulo e transcricao
 
 Data:

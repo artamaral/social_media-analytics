@@ -154,6 +154,12 @@ Antes de escolher um `topic_path` tematico, aplique esta ordem:
     `manutencao_reparo__manutencao_preventiva__limpeza_componentes`.
   - Se houver carro popular/barato/zero km acessivel como proposta de compra,
     prefira `mercado_produto__compra_venda__carro_popular`.
+  - Se houver avaliacao, review ou test drive de um veiculo, use
+    `review_teste__review_veiculo` em vez de `review_teste`.
+  - Se houver moto, hospital, nobreak ou outro tema claramente nao automotivo,
+    use o filho especifico de `fora_escopo` quando existir.
+  - Se houver projeto/preparacao/trilha/suspensao off-road, use
+    `off_road__preparacao_off_road` quando essa for a proposta principal.
 - `powertrain` usa buckets operacionais: `powertrain__eletrificados` e
   `powertrain__ice`, alem de `powertrain__transmissao` quando o foco for
   cambio/transmissao.
@@ -286,6 +292,8 @@ Escala recomendada para avaliacao futura de transcript:
 
 Regras de coerencia:
 
+- se pensar em nota percentual, converta antes de responder: `85%` deve virar
+  `0.85`, nao `85`;
 - `usable` exige `quality_score >= 0.70`;
 - `partially_usable` exige `0.50 <= quality_score < 0.70`;
 - `poor` exige `quality_score < 0.50`;

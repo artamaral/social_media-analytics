@@ -29,7 +29,12 @@ Script minimo para classificar videos com GPT usando a Taxonomia Video V2.
   `market`, `motor/motor` e `powertrain/motor`
 - promove `topic_path` generico ou `sem_match_taxonomico` para rota V2
   especifica quando titulo/transcript sustentam claramente autonomia,
-  lancamento ou reparo de motor
+  lancamento, reparo de motor, review de veiculo, fora de escopo especifico ou
+  preparacao off-road
+- descarta `vehicle_entities[]` completamente vazios antes da validacao, sem
+  derrubar o video
+- normaliza scores retornados como percentual ou fracao, como `85`, `85%` ou
+  `85/100`, para o intervalo canonico `0..1`
 - bloqueia falsos positivos de veiculo por palavras comuns e deduplica
   entidades canonicas mantendo `model_year` antes de `model`
 - usa `docs/external_data/58_GPT_VIDEO_CLASSIFIER_SKILL_V2.md` como skill

@@ -4237,7 +4237,7 @@ Resultado:
 
 ## Item Sprint 6 - Rodada MVP de 40 videos do classificador V2
 
-Status: preparado para execucao manual em 2026-08-04.
+Status: rodada executada e ajustes sistemicos implementados em 2026-08-10.
 
 Objetivo:
 
@@ -4282,6 +4282,32 @@ Fora do escopo:
 - alterar dashboard;
 - expandir taxonomia por versao/acabamento;
 - corrigir videos individualmente durante a rodada, salvo bloqueio sistemico.
+
+Resultado da rodada `v2_transcript_90s_mvp40_powertrain_buckets_20260806`:
+
+- `30/40` videos gravados com sucesso;
+- `10/40` falharam;
+- a taxa de sucesso operacional foi `75%`, abaixo do criterio MVP de `85%`;
+- nos `30` videos comparaveis contra o baseline `62`, `needs_human_review`
+  ficou praticamente estavel: `16/30` no baseline e `17/30` na nova rodada;
+- a consolidacao de powertrain funcionou no caso validado:
+  `powertrain__hibrido__sistema_hibrido` passou para
+  `powertrain__eletrificados`;
+- foram gerados os artefatos `63_*` com resultados, contextos tecnicos,
+  entidades de veiculo e comparacao linha a linha.
+
+Ajustes sistemicos implementados apos a rodada:
+
+- `vehicle_entities[]` completamente vazios passam a ser descartados antes da
+  validacao, em vez de derrubar o video;
+- `confidence_score` e `transcript_quality.quality_score` aceitam reparo
+  conservador de escala percentual/fracionaria, como `85`, `85%` ou `85/100`,
+  para o intervalo canonico `0..1`;
+- `review_teste`, `fora_escopo` e `off_road` podem ser promovidos para filhos
+  especificos existentes quando houver evidencia textual clara;
+- a recomendacao antes de nova rodada completa e reprocessar os `10` falhos e
+  uma amostra pequena de pais genericos, confirmando que os reparos reduziram
+  falhas bloqueantes sem aumentar falso positivo.
 
 ### Criterio de saida do planejamento
 

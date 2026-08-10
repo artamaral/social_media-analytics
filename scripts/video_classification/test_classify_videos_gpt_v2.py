@@ -1506,6 +1506,17 @@ class ClassifierContractTests(unittest.TestCase):
         self.assertEqual(result["classification_result"]["confidence_score"], 0.92)
         self.assertEqual(result["transcript_quality"]["quality_score"], 0.85)
 
+    def test_normalize_score_scales_repairs_fraction_strings(self):
+        result = {
+            "classification_result": {"confidence_score": "92/100"},
+            "transcript_quality": {"quality_score": "85/100"},
+        }
+
+        CLASSIFIER.normalize_score_scales_for_validation(result)
+
+        self.assertEqual(result["classification_result"]["confidence_score"], 0.92)
+        self.assertEqual(result["transcript_quality"]["quality_score"], 0.85)
+
     def test_normalize_score_scales_keeps_null_quality_score(self):
         result = {
             "classification_result": {"confidence_score": 0.72},
@@ -1516,6 +1527,114 @@ class ClassifierContractTests(unittest.TestCase):
 
         self.assertEqual(result["classification_result"]["confidence_score"], 0.72)
         self.assertIsNone(result["transcript_quality"]["quality_score"])
+
+    def test_normalize_vehicle_entities_drops_empty_entity(self):
+        result = {
+            "vehicle_entities": [
+                {
+                    "entity_order": 1,
+                    "vehicle_brand_raw": None,
+                    "vehicle_model_raw": None,
+                    "vehicle_year": None,
+                    "vehicle_generation": None,
+                    "evidence_text": None,
+                    "entity_status": "extracted",
+                },
+                {
+                    "entity_order": 2,
+                    "vehicle_brand_raw": "Toyota",
+                    "vehicle_model_raw": "Yaris Cross XR",
+                    "vehicle_year": 2026,
+                    "vehicle_generation": None,
+                    "evidence_text": "Toyota Yaris Cross XR 2026",
+                    "entity_status": "extracted",
+                },
+            ]
+        }
+
+        CLASSIFIER.normalize_vehicle_entities_for_validation(result)
+
+        self.assertEqual(len(result["vehicle_entities"]), 1)
+        self.assertEqual(result["vehicle_entities"][0]["entity_order"], 1)
+        self.assertEqual(result["vehicle_entities"][0]["vehicle_model_raw"], "Yaris Cross")
+
+    def test_promote_generic_review_from_evidence(self):
+        result = {
+            "classification_result": {
+                "topic_path": "review_teste",
+                "confidence_score": 0.78,
+                "needs_human_review": False,
+                "validation_issues": None,
+            },
+            "technical_contexts": [],
+        }
+        harness = {
+            "video": {
+                "title": "Avaliacao GM Cruze Hatch Turbo",
+                "description": None,
+                "transcript_90s": "Review do carro com pontos positivos e negativos.",
+            }
+        }
+        topic_codes = {"review_teste", "review_teste__review_veiculo"}
+
+        CLASSIFIER.promote_topic_path_from_evidence(result, harness, topic_codes)
+
+        self.assertEqual(
+            result["classification_result"]["topic_path"],
+            "review_teste__review_veiculo",
+        )
+
+    def test_promote_generic_out_of_scope_from_evidence(self):
+        result = {
+            "classification_result": {
+                "topic_path": "fora_escopo",
+                "confidence_score": 0.82,
+                "needs_human_review": False,
+                "validation_issues": None,
+            },
+            "technical_contexts": [],
+        }
+        harness = {
+            "video": {
+                "title": "MOTOS CLASSICAS EM SOCORRO",
+                "description": None,
+                "transcript_90s": "Centro Cultural Movimento e garagem moto.",
+            }
+        }
+        topic_codes = {"fora_escopo", "fora_escopo__nao_automotivo"}
+
+        CLASSIFIER.promote_topic_path_from_evidence(result, harness, topic_codes)
+
+        self.assertEqual(
+            result["classification_result"]["topic_path"],
+            "fora_escopo__nao_automotivo",
+        )
+
+    def test_promote_generic_off_road_from_evidence(self):
+        result = {
+            "classification_result": {
+                "topic_path": "off_road",
+                "confidence_score": 0.80,
+                "needs_human_review": False,
+                "validation_issues": None,
+            },
+            "technical_contexts": [],
+        }
+        harness = {
+            "video": {
+                "title": "Melhores projetos de caminhonete",
+                "description": None,
+                "transcript_90s": "Preparacao off road com suspensao e trilha.",
+            }
+        }
+        topic_codes = {"off_road", "off_road__preparacao_off_road"}
+
+        CLASSIFIER.promote_topic_path_from_evidence(result, harness, topic_codes)
+
+        self.assertEqual(
+            result["classification_result"]["topic_path"],
+            "off_road__preparacao_off_road",
+        )
 
     def test_normalize_transcript_quality_status_uses_score_as_source(self):
         result = {

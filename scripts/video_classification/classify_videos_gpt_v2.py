@@ -25,7 +25,7 @@ TAXONOMY_VERSION = "taxonomia_video_v2"
 PROMPT_CONTRACT_VERSION = "video_taxonomy_v2_classifier_r2"
 OUTPUT_SCHEMA_VERSION = "video_taxonomy_v2_output_schema_r2"
 # Marcador operacional para confirmar se a copia local/VPS esta atualizada.
-SCRIPT_VERSION = "2026-08-06-r3-powertrain-buckets"
+SCRIPT_VERSION = "2026-08-10-r1-mvp40-systemic-fixes"
 DEFAULT_TITLE_MODEL = "gpt-5-nano"
 DEFAULT_TRANSCRIPT_MODEL = "gpt-5-nano"
 DEFAULT_MAX_OUTPUT_TOKENS = 6000
@@ -1891,11 +1891,25 @@ def repair_topic_path_code(value, topic_codes):
 
 def normalize_vehicle_entities_for_validation(result):
     normalized_entities = []
-    for index, entity in enumerate(result["vehicle_entities"], start=1):
+    for entity in result["vehicle_entities"]:
         entity = normalize_vehicle_entity_granularity(entity)
-        entity["entity_order"] = index
+        if is_empty_vehicle_entity(entity):
+            continue
+        entity["entity_order"] = len(normalized_entities) + 1
         normalized_entities.append(entity)
     result["vehicle_entities"] = normalized_entities
+
+
+def is_empty_vehicle_entity(entity):
+    return not any(
+        normalize_nullable(entity.get(key)) if key != "vehicle_year" else entity.get(key)
+        for key in [
+            "vehicle_brand_raw",
+            "vehicle_model_raw",
+            "vehicle_year",
+            "vehicle_generation",
+        ]
+    )
 
 
 def normalize_score_scales_for_validation(result):
@@ -1944,6 +1958,14 @@ def normalize_unit_score(value):
         value = value.strip().replace(",", ".")
         if value.endswith("%"):
             value = value[:-1].strip()
+        if "/" in value:
+            numerator, denominator = value.split("/", 1)
+            numerator = numerator.strip()
+            denominator = denominator.strip()
+            if numerator and denominator:
+                denominator_value = float(denominator)
+                if denominator_value > 0:
+                    return round(float(numerator) / denominator_value, 4)
         if not value:
             return None
         value = float(value)
@@ -2104,7 +2126,7 @@ def normalize_redundant_context_system(context):
 def promote_specific_topic_path_from_contexts(result):
     classification = result["classification_result"]
     current_topic = classification.get("topic_path")
-    if not current_topic or current_topic.startswith("fora_escopo") or current_topic == "sem_match_taxonomico":
+    if not current_topic or current_topic == "sem_match_taxonomico":
         return
 
     candidates = []
@@ -2128,7 +2150,7 @@ def promote_specific_topic_path_from_contexts(result):
 def promote_topic_path_from_evidence(result, harness_input, topic_codes):
     classification = result["classification_result"]
     current_topic = classification.get("topic_path")
-    if not current_topic or current_topic.startswith("fora_escopo"):
+    if not current_topic:
         return
 
     evidence = normalized_harness_evidence(harness_input)
@@ -2138,6 +2160,12 @@ def promote_topic_path_from_evidence(result, harness_input, topic_codes):
         promoted_topic = evidence_backed_topic_for_sem_match(evidence, topic_codes)
     elif current_topic == "manutencao_reparo":
         promoted_topic = evidence_backed_maintenance_topic(evidence, topic_codes)
+    elif current_topic == "review_teste":
+        promoted_topic = evidence_backed_review_topic(evidence, topic_codes)
+    elif current_topic == "fora_escopo":
+        promoted_topic = evidence_backed_out_of_scope_topic(evidence, topic_codes)
+    elif current_topic == "off_road":
+        promoted_topic = evidence_backed_off_road_topic(evidence, topic_codes)
 
     if not promoted_topic or promoted_topic == current_topic:
         return
@@ -2177,6 +2205,72 @@ def evidence_backed_topic_for_sem_match(evidence, topic_codes):
             return launch_topic
 
     return evidence_backed_maintenance_topic(evidence, topic_codes)
+
+
+def evidence_backed_review_topic(evidence, topic_codes):
+    if not evidence:
+        return None
+
+    review_topic = "review_teste__review_veiculo"
+    has_review_signal = any(
+        token in evidence
+        for token in [
+            "avaliacao",
+            "avaliar",
+            "review",
+            "test drive",
+            "testdrive",
+            "pontos positivos",
+            "pontos negativos",
+            "vale a pena",
+        ]
+    )
+    has_vehicle_product_signal = any(
+        token in evidence
+        for token in ["carro", "suv", "picape", "hatch", "sedan", "versao", "modelo"]
+    )
+    if has_review_signal and has_vehicle_product_signal and review_topic in topic_codes:
+        return review_topic
+
+    return None
+
+
+def evidence_backed_out_of_scope_topic(evidence, topic_codes):
+    if not evidence:
+        return None
+
+    non_automotive_topic = "fora_escopo__nao_automotivo"
+    if any(
+        token in evidence
+        for token in ["moto", "motos", "hospital", "uti", "torre de voo", "nobreak"]
+    ):
+        if non_automotive_topic in topic_codes:
+            return non_automotive_topic
+
+    traffic_topic = "fora_escopo__transito_comportamento"
+    if any(
+        token in evidence
+        for token in ["dirigir", "transito", "motorista", "cuidado ao dirigir", "acidente"]
+    ):
+        if traffic_topic in topic_codes:
+            return traffic_topic
+
+    return None
+
+
+def evidence_backed_off_road_topic(evidence, topic_codes):
+    if not evidence:
+        return None
+
+    preparation_topic = "off_road__preparacao_off_road"
+    if any(
+        token in evidence
+        for token in ["projeto", "preparacao", "preparado", "caminhonete", "suspensao", "trilha"]
+    ):
+        if preparation_topic in topic_codes:
+            return preparation_topic
+
+    return None
 
 
 def evidence_backed_maintenance_topic(evidence, topic_codes):
