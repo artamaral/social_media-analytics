@@ -34,6 +34,7 @@ Documentacao:
 
 - `docs/external_data/23_FENABRAVE_PHASE1_INGESTION_SPEC.md`
 - `scripts/fenabrave_ingestion/README.md`
+- `docs/external_data/64_FENABRAVE_CARGA_COMPLETA_CHECKLIST_VALIDACAO.md`
 
 Etapas:
 
@@ -45,7 +46,9 @@ Etapas:
 6. Quando a tabela normalizada estiver disponivel, rodar em `--write`.
 7. Na caixa de dialogo, conferir o PDF aberto e marcar `OK` ou `NOK`.
 8. Conferir validacoes.
-9. Fechar o `ingestion_run` logico do mes verificando:
+9. Rodar `sql/dml/audit_fenabrave_full_monthly_load.sql` para o
+   `reference_period` carregado.
+10. Fechar o `ingestion_run` logico do mes verificando:
    - um unico registro canonico em `market_source_files` para o periodo;
    - PDF preservado em `market-source-files/fenabrave/{ano}/{mes}/`;
    - fase 1 validada;

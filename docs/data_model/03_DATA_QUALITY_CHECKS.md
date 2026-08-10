@@ -164,6 +164,42 @@ Regra:
   modelo e ano extraidos de descricao/transcricao, sem alterar `topic_path`
   nem contexto tecnico
 
+## Fenabrave - carga mensal completa
+
+Status:
+
+- checklist consolidado definido em 2026-08-10 para o primeiro carregamento
+  completo apos a implementacao de todas as paginas ativas do PDF
+
+Antes de considerar um novo mes da Fenabrave como validado, executar:
+
+- `sql/dml/audit_fenabrave_full_monthly_load.sql`
+
+Documento operacional de referencia:
+
+- `docs/external_data/64_FENABRAVE_CARGA_COMPLETA_CHECKLIST_VALIDACAO.md`
+
+Validar obrigatoriamente:
+
+- existencia de um unico `market_source_files` canonico para o periodo;
+- metadados minimos do PDF preservado no Storage;
+- fase 1 de segmentos consistente;
+- itens ativos `1..8` e `11..22` presentes em
+  `market_fenabrave_extraction_items`;
+- `status` final por item em `validated` ou `warning_accepted`;
+- `row_count` do controle igual ao volume real gravado na tabela fisica;
+- coerencia mensal x acumulado entre os pares de itens relacionados;
+- totals de share dentro da tolerancia esperada;
+- coerencia do bloco de eletrificados entre `hybrid`, `electric` e
+  `total_electrified`.
+
+Regra:
+
+- `failed` bloqueia aprovacao do mes;
+- `warning` so pode ser aceito com justificativa objetiva;
+- carga sem cobertura completa dos itens ativos nao deve ser tratada como
+  fechamento mensal valido.
+
 ## Classificacao GPT - Taxonomia Video V2
 
 Status:

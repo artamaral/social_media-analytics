@@ -409,6 +409,41 @@ Proxima avaliacao:
 - avaliar futuramente se a rotina precisa evoluir para automacao de agenda,
   alerta ou tabela fisica de runs quando houver operacao recorrente suficiente
 
+#### Validacao real mais recente da carga completa
+
+- data da validacao: `2026-08-10`
+- periodo validado: `reference_period = 2026-07-01`
+- arquivo canonico: `market_source_files.id = 31`
+- documento de evidencia:
+  - `docs/external_data/65_FENABRAVE_PRIMEIRA_CARGA_COMPLETA_VALIDACAO_2026_07.md`
+
+Resultado observado:
+
+- `market_source_files.extraction_status = validated`
+- todos os itens ativos `1..8` e `11..22` ficaram com:
+  - `status = validated`
+  - `validation_status = passed`
+- os itens graficos `13..18` nao ficaram falhados no estado final persistido
+- fase 1 passou nos checks criticos de soma:
+  - `autos + comerciais_leves = autos_comerciais_leves`
+  - `caminhoes + onibus = caminhoes_onibus`
+- itens `11` e `12` fecharam `100%` por categoria
+- item `5` ficou em faixa coerente de arredondamento:
+  - `100.01`
+  - `99.99`
+  - `99.99`
+- item `6` bateu exatamente `hybrid + electric = total_electrified` nas duas
+  categorias
+- os pares mensal x acumulado permaneceram coerentes, sem evidencia de
+  acumulado menor que mensal
+
+Leitura operacional:
+
+- o primeiro carregamento completo apos a implementacao de todas as paginas
+  ativas do PDF foi aprovado
+- a frente Fenabrave deixa de manter pendencia aberta de carga e validacao de
+  dados no backlog atual
+
 ### 2.2 Carros na Web
 
 - Status: CSVs de catalogo seguem como frente estruturada a modelar; scraping

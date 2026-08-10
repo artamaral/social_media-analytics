@@ -1498,6 +1498,45 @@ Impacto esperado:
 
 ---
 
+## Fenabrave: primeira carga completa validada em execucao real
+
+Data:
+
+- 2026-08-10
+
+Decisao:
+
+- considerar a carga de `reference_period = 2026-07-01`, registrada em
+  `market_source_files.id = 31`, como a primeira validacao completa da rotina
+  mensal Fenabrave apos a implementacao de todas as paginas ativas do PDF
+- adotar `sql/dml/audit_fenabrave_full_monthly_load.sql` + o checklist de
+  `docs/external_data/64_FENABRAVE_CARGA_COMPLETA_CHECKLIST_VALIDACAO.md` como
+  contrato oficial de fechamento mensal
+- tratar a frente Fenabrave como sem pendencia aberta de carga ou validacao de
+  dados no backlog atual, salvo regressao futura, mudanca real no PDF publicado
+  ou necessidade nova de automacao
+
+Motivo:
+
+- a execucao real de `07/2026` confirmou arquivo canonico unico, metadados de
+  Storage, fase 1 consistente, itens `1..8` e `11..22` validados e coerencia
+  entre mensal, acumulado, shares e eletrificados
+- os itens graficos `13..18`, que eram o principal risco percebido, ficaram
+  `validated/passed` no estado final persistido
+- o contrato de governanca definido em `2026-07-15` deixou de ser apenas
+  desenho documental e passou a ter evidencia operacional no banco
+
+Impacto esperado:
+
+- a rotina mensal da Fenabrave passa a operar com criterio de aceite testado em
+  execucao real
+- a frente de fontes externas pode priorizar Carros na Web e
+  SENATRAN/RENAVAM sem manter open point estrutural de Fenabrave
+- a reabertura da frente Fenabrave passa a depender de mudanca real no layout
+  do PDF, falha nova de parser ou demanda futura de automacao operacional
+
+---
+
 ## Carros na Web: CSV recorrente no banco e fichas tecnicas em on hold
 
 Data:
