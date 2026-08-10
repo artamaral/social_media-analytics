@@ -1591,8 +1591,21 @@ def load_view_rows(view_name: str) -> list[dict[str, Any]]:
 
     started_at = time.perf_counter()
     trace_startup(f"load_view_rows start: {view_name}")
-    response = client.table(view_name).select("*").execute()
-    rows = response.data or []
+    page_size = 1000
+    offset = 0
+    rows: list[dict[str, Any]] = []
+    while True:
+        response = (
+            client.table(view_name)
+            .select("*")
+            .range(offset, offset + page_size - 1)
+            .execute()
+        )
+        batch = response.data or []
+        rows.extend(batch)
+        if len(batch) < page_size:
+            break
+        offset += page_size
     trace_startup(f"load_view_rows end: {view_name} rows={len(rows)} elapsed={time.perf_counter() - started_at:.2f}s")
     return rows
 
@@ -1615,18 +1628,32 @@ def load_filtered_rows(
     trace_startup(
         f"load_filtered_rows start: {source_name} filters={len(filters)} order_by={order_by} limit={limit}"
     )
-    query = client.table(source_name).select("*")
-    for column_name, column_value in filters:
-        query = query.eq(column_name, column_value)
-    if order_by:
-        order_kwargs: dict[str, Any] = {"desc": order_desc}
-        if order_nulls_first is not None:
-            order_kwargs["nullsfirst"] = order_nulls_first
-        query = query.order(order_by, **order_kwargs)
+
+    def build_query():
+        query = client.table(source_name).select("*")
+        for column_name, column_value in filters:
+            query = query.eq(column_name, column_value)
+        if order_by:
+            order_kwargs: dict[str, Any] = {"desc": order_desc}
+            if order_nulls_first is not None:
+                order_kwargs["nullsfirst"] = order_nulls_first
+            query = query.order(order_by, **order_kwargs)
+        return query
+
     if limit is not None:
-        query = query.limit(limit)
-    response = query.execute()
-    rows = response.data or []
+        response = build_query().limit(limit).execute()
+        rows = response.data or []
+    else:
+        page_size = 1000
+        offset = 0
+        rows: list[dict[str, Any]] = []
+        while True:
+            response = build_query().range(offset, offset + page_size - 1).execute()
+            batch = response.data or []
+            rows.extend(batch)
+            if len(batch) < page_size:
+                break
+            offset += page_size
     trace_startup(f"load_filtered_rows end: {source_name} rows={len(rows)} elapsed={time.perf_counter() - started_at:.2f}s")
     return rows
 
@@ -4187,6 +4214,15 @@ def format_month_label(period: pd.Timestamp) -> str:
     return f"{month_names[int(period.month)]}/{int(period.year)}"
 
 
+def normalize_fenabrave_period_timestamp(value: Any) -> pd.Timestamp | None:
+    if value in (None, ""):
+        return None
+    timestamp = pd.to_datetime(value, errors="coerce")
+    if pd.isna(timestamp):
+        return None
+    return pd.Timestamp(timestamp).to_period("M").to_timestamp()
+
+
 def summarize_overview_creator_base(rows: list[dict[str, Any]]) -> dict[str, Any]:
     if not rows:
         return {
@@ -4510,7 +4546,7 @@ def summarize_overview_fenabrave(rows: list[dict[str, Any]]) -> dict[str, Any]:
         }
 
     df = pd.DataFrame(rows)
-    df["reference_period"] = pd.to_datetime(df.get("reference_period"), errors="coerce")
+    df["reference_period"] = df.get("reference_period").apply(normalize_fenabrave_period_timestamp)
     if "segment_code" in df.columns:
         df["segment_code"] = df["segment_code"].astype(str)
     else:
@@ -4604,13 +4640,10 @@ def fenabrave_period_options(view_rows: dict[str, list[dict[str, Any]]]) -> list
     periods: set[pd.Timestamp] = set()
     for rows in view_rows.values():
         for row in rows:
-            reference_period = row.get("reference_period")
-            if reference_period in (None, ""):
+            timestamp = normalize_fenabrave_period_timestamp(row.get("reference_period"))
+            if timestamp is None:
                 continue
-            timestamp = pd.to_datetime(reference_period, errors="coerce")
-            if pd.isna(timestamp):
-                continue
-            periods.add(pd.Timestamp(timestamp))
+            periods.add(timestamp)
     return sorted(periods)
 
 
@@ -4793,7 +4826,8 @@ def render_fenabrave_dashboard_page_v2() -> None:
         return
 
     df = pd.DataFrame(normalize_fenabrave_segment_rows(rows))
-    df["reference_period"] = pd.to_datetime(df["reference_period"])
+    df["reference_period"] = df["reference_period"].apply(normalize_fenabrave_period_timestamp)
+    df = df[df["reference_period"].notna()].copy()
     df["month_display"] = df["reference_period"].apply(format_month_label)
     month_order = (
         df.sort_values("reference_period")
@@ -4888,7 +4922,7 @@ def render_fenabrave_dashboard_page_v2() -> None:
 
     coverage_rows = [
         row for row in view_rows.get("coverage", [])
-        if pd.to_datetime(row.get("reference_period"), errors="coerce") == selected_period
+        if normalize_fenabrave_period_timestamp(row.get("reference_period")) == selected_period
     ]
     if coverage_rows:
         st.write("")
@@ -4922,7 +4956,7 @@ def render_fenabrave_dashboard_page_v2() -> None:
 
     model_rows = [
         row for row in view_rows.get("model_rankings", [])
-        if pd.to_datetime(row.get("reference_period"), errors="coerce") == selected_period
+        if normalize_fenabrave_period_timestamp(row.get("reference_period")) == selected_period
     ]
     if model_rows:
         st.write("")
@@ -4951,7 +4985,7 @@ def render_fenabrave_dashboard_page_v2() -> None:
 
     brand_rows = [
         row for row in view_rows.get("brand_rankings", [])
-        if pd.to_datetime(row.get("reference_period"), errors="coerce") == selected_period
+        if normalize_fenabrave_period_timestamp(row.get("reference_period")) == selected_period
     ]
     if brand_rows:
         st.write("")
@@ -4979,7 +5013,7 @@ def render_fenabrave_dashboard_page_v2() -> None:
 
     subsegment_rows = [
         row for row in view_rows.get("subsegments", [])
-        if pd.to_datetime(row.get("reference_period"), errors="coerce") == selected_period
+        if normalize_fenabrave_period_timestamp(row.get("reference_period")) == selected_period
     ]
     if subsegment_rows:
         st.write("")
@@ -5003,7 +5037,7 @@ def render_fenabrave_dashboard_page_v2() -> None:
 
     channel_rows = [
         row for row in view_rows.get("channel_mix", [])
-        if pd.to_datetime(row.get("reference_period"), errors="coerce") == selected_period
+        if normalize_fenabrave_period_timestamp(row.get("reference_period")) == selected_period
     ]
     if channel_rows:
         st.write("")
@@ -5027,7 +5061,7 @@ def render_fenabrave_dashboard_page_v2() -> None:
 
     electrified_rows = [
         row for row in view_rows.get("electrified", [])
-        if pd.to_datetime(row.get("reference_period"), errors="coerce") == selected_period
+        if normalize_fenabrave_period_timestamp(row.get("reference_period")) == selected_period
     ]
     if electrified_rows:
         st.write("")
