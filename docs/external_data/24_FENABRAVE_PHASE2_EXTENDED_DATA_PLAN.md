@@ -714,10 +714,8 @@ As views devem ser criadas somente depois das tabelas e validacoes de cada bloco
 Views propostas:
 
 ```text
-v_market_registration_segment_summary
 v_market_fenabrave_brand_rankings
 v_market_fenabrave_model_rankings
-v_market_fenabrave_subsegment_shares
 v_market_fenabrave_sales_channel_mix
 v_market_fenabrave_electrified_registrations
 v_market_fenabrave_extraction_coverage

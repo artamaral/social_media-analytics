@@ -1030,52 +1030,6 @@ FENABRAVE_PICTOS = {
 }
 
 
-FENABRAVE_SEGMENT_META = {
-    "autos": {
-        "segment_label": "Autos",
-        "segment_short_label": "Autos",
-        "picto_code": "CAR",
-        "color_hex": "#4f6fd7",
-        "segment_sort": 1,
-    },
-    "comerciais_leves": {
-        "segment_label": "Comerciais leves",
-        "segment_short_label": "Com. leves",
-        "picto_code": "VAN",
-        "color_hex": "#9b3f72",
-        "segment_sort": 2,
-    },
-    "caminhoes": {
-        "segment_label": "Caminhoes",
-        "segment_short_label": "Caminhoes",
-        "picto_code": "TRK",
-        "color_hex": "#77b95f",
-        "segment_sort": 3,
-    },
-    "onibus": {
-        "segment_label": "Onibus",
-        "segment_short_label": "Onibus",
-        "picto_code": "BUS",
-        "color_hex": "#3d8aa3",
-        "segment_sort": 4,
-    },
-    "motos": {
-        "segment_label": "Motos",
-        "segment_short_label": "Motos",
-        "picto_code": "MOTO",
-        "color_hex": "#de4b45",
-        "segment_sort": 5,
-    },
-    "implementos_rodoviarios": {
-        "segment_label": "Implementos rodoviarios",
-        "segment_short_label": "Impl. rod.",
-        "picto_code": "TRL",
-        "color_hex": "#f0b51f",
-        "segment_sort": 6,
-    },
-}
-
-
 def page_header(title: str, subtitle: str | None = None, badge: str | None = None) -> None:
     badge_html = f'<span class="status-pill">{escape(badge)}</span>' if badge else ""
     subtitle_html = f"<small>{escape(subtitle)}</small>" if subtitle else ""
@@ -2504,7 +2458,7 @@ def render_overview() -> None:
         "v_dashboard_creator_weekly_activity",
         filters=(("video_type", "todos"),),
     )
-    fenabrave_rows, fenabrave_error, _ = get_fenabrave_segment_rows()
+    fenabrave_rows, fenabrave_error = get_view_rows("v_dashboard_fenabrave_monthly_segments")
     errors = [error for error in [creator_error, weekly_error, fenabrave_error] if error]
     base_summary = summarize_overview_creator_base(creator_rows)
     recent_summary = summarize_overview_recent_activity(creator_rows, weekly_rows)
@@ -2661,7 +2615,7 @@ def render_overview() -> None:
     else:
         placeholder_card(
             "Fenabrave",
-            "Aguardando a view de segmentos Fenabrave retornar dados validos.",
+            "Aguardando a view v_dashboard_fenabrave_monthly_segments retornar dados validos.",
         )
 
     st.caption(
@@ -3890,36 +3844,7 @@ def build_overview_recent_activity_chart(chart_df: pd.DataFrame) -> Any:
     return fig
 
 
-def normalize_fenabrave_segment_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    if not rows:
-        return []
-    normalized_rows: list[dict[str, Any]] = []
-    for row in rows:
-        normalized = dict(row)
-        segment_code = str(normalized.get("segment_code") or "").lower()
-        meta = FENABRAVE_SEGMENT_META.get(segment_code, {})
-        normalized["segment_label"] = normalized.get("segment_label") or normalized.get("segmento") or meta.get("segment_label") or segment_code
-        normalized["segment_short_label"] = normalized.get("segment_short_label") or meta.get("segment_short_label") or normalized["segment_label"]
-        normalized["picto_code"] = normalized.get("picto_code") or meta.get("picto_code") or "CAR"
-        normalized["color_hex"] = normalized.get("color_hex") or meta.get("color_hex") or "#ff8069"
-        normalized["segment_sort"] = normalized.get("segment_sort") or meta.get("segment_sort") or 999
-        if normalized.get("monthly_units") is None:
-            normalized["monthly_units"] = normalized.get("mes_atual")
-        normalized_rows.append(normalized)
-    return normalized_rows
-
-
-def get_fenabrave_segment_rows() -> tuple[list[dict[str, Any]], str | None, str]:
-    rows, error = get_view_rows("v_market_registration_segment_summary")
-    if rows:
-        return normalize_fenabrave_segment_rows(rows), error, "v_market_registration_segment_summary"
-    fallback_rows, fallback_error = get_view_rows("v_dashboard_fenabrave_monthly_segments")
-    combined_error = error or fallback_error
-    return normalize_fenabrave_segment_rows(fallback_rows), combined_error, "v_dashboard_fenabrave_monthly_segments"
-
-
 def summarize_overview_fenabrave(rows: list[dict[str, Any]]) -> dict[str, Any]:
-    rows = normalize_fenabrave_segment_rows(rows)
     if not rows:
         return {
             "periodo": "Fenabrave sem dados carregados",
@@ -3988,103 +3913,6 @@ def format_overview_date(value: Any) -> str:
     if timestamp.tzinfo is None:
         timestamp = timestamp.tz_localize("UTC")
     return timestamp.tz_convert("America/Sao_Paulo").strftime("%d/%m/%Y")
-
-
-def load_fenabrave_market_views() -> tuple[dict[str, list[dict[str, Any]]], list[str]]:
-    view_rows: dict[str, list[dict[str, Any]]] = {}
-    errors: list[str] = []
-
-    segment_rows, segment_error, _ = get_fenabrave_segment_rows()
-    if segment_rows:
-        view_rows["segments"] = segment_rows
-    if segment_error:
-        errors.append(segment_error)
-
-    for key, view_name in [
-        ("coverage", "v_market_fenabrave_extraction_coverage"),
-        ("model_rankings", "v_market_fenabrave_model_rankings"),
-        ("brand_rankings", "v_market_fenabrave_brand_rankings"),
-        ("subsegments", "v_market_fenabrave_subsegment_shares"),
-        ("channel_mix", "v_market_fenabrave_sales_channel_mix"),
-        ("electrified", "v_market_fenabrave_electrified_registrations"),
-    ]:
-        rows, error = get_view_rows(view_name)
-        if rows:
-            view_rows[key] = rows
-        if error:
-            errors.append(error)
-
-    return view_rows, errors
-
-
-def fenabrave_period_options(view_rows: dict[str, list[dict[str, Any]]]) -> list[pd.Timestamp]:
-    periods: set[pd.Timestamp] = set()
-    for rows in view_rows.values():
-        for row in rows:
-            reference_period = row.get("reference_period")
-            if reference_period in (None, ""):
-                continue
-            timestamp = pd.to_datetime(reference_period, errors="coerce")
-            if pd.isna(timestamp):
-                continue
-            periods.add(pd.Timestamp(timestamp))
-    return sorted(periods)
-
-
-def humanize_fenabrave_category(value: Any) -> str:
-    mapping = {
-        "automoveis": "Automoveis",
-        "comerciais_leves": "Comerciais leves",
-        "autos_comerciais_leves": "Autos + comerciais leves",
-    }
-    key = str(value or "").lower()
-    return mapping.get(key, str(value or "--").replace("_", " ").title())
-
-
-def humanize_fenabrave_powertrain(value: Any) -> str:
-    mapping = {
-        "hibridos": "Hibridos",
-        "eletricos": "Eletricos",
-    }
-    key = str(value or "").lower()
-    return mapping.get(key, str(value or "--").replace("_", " ").title())
-
-
-def humanize_fenabrave_aggregation(value: Any) -> str:
-    mapping = {
-        "market_total": "Mercado total",
-        "brand_total": "Total por marca",
-    }
-    key = str(value or "").lower()
-    return mapping.get(key, str(value or "--").replace("_", " ").title())
-
-
-def humanize_fenabrave_sales_channel(value: Any) -> str:
-    mapping = {
-        "varejo": "Varejo",
-        "venda_direta": "Venda direta",
-        "total": "Total",
-    }
-    key = str(value or "").lower()
-    return mapping.get(key, str(value or "--").replace("_", " ").title())
-
-
-def render_fenabrave_dataframe(
-    title: str,
-    rows: list[dict[str, Any]],
-    column_order: list[str],
-    column_labels: dict[str, str],
-) -> None:
-    st.markdown(f"#### {title}")
-    if not rows:
-        st.caption("Sem linhas para o periodo selecionado.")
-        return
-
-    df = pd.DataFrame(rows).copy()
-    visible_columns = [column for column in column_order if column in df.columns]
-    rename_map = {column: label for column, label in column_labels.items() if column in df.columns}
-    df = df.rename(columns=rename_map)
-    st.dataframe(df[[rename_map.get(column, column) for column in visible_columns]], width="stretch", hide_index=True)
 
 
 def render_fenabrave_dashboard_page() -> None:
@@ -4193,296 +4021,6 @@ def render_fenabrave_dashboard_page() -> None:
     trace_startup("render_fenabrave_monthly line_chart before")
     st.plotly_chart(line_fig, width="stretch")
     trace_startup("render_fenabrave_monthly line_chart after")
-
-
-def render_fenabrave_dashboard_page_v2() -> None:
-    view_rows, errors = load_fenabrave_market_views()
-    rows = view_rows.get("segments", [])
-    page_header("Fenabrave")
-    page_subtitle("Leitura mensal das tabelas Fenabrave no mesmo formato operacional do PDF.")
-    render_connection_notice(" | ".join(errors) if errors else None)
-
-    if not rows:
-        placeholder_card(
-            "Fenabrave",
-            "Aguardando a view de segmentos Fenabrave retornar dados.",
-        )
-        return
-
-    df = pd.DataFrame(normalize_fenabrave_segment_rows(rows))
-    df["reference_period"] = pd.to_datetime(df["reference_period"])
-    df["month_display"] = df["reference_period"].apply(format_month_label)
-    month_order = (
-        df.sort_values("reference_period")
-        .drop_duplicates("reference_period")["month_display"]
-        .tolist()
-    )
-    latest_period = df["reference_period"].max()
-    latest_df = df[df["reference_period"] == latest_period].sort_values("segment_sort")
-    period_options = fenabrave_period_options(view_rows)
-    selected_period = st.selectbox(
-        "Mes de referencia",
-        period_options,
-        index=len(period_options) - 1,
-        format_func=format_month_label,
-    )
-    selected_df = df[df["reference_period"] == selected_period].sort_values("segment_sort")
-    latest_accumulated_by_segment = latest_df.set_index("segment_code")[
-        "current_year_accumulated_units"
-    ].to_dict()
-
-    st.caption(f"Mes de referencia mais recente: {format_month_label(latest_period)}")
-
-    cards = []
-    for _, row in selected_df.iterrows():
-        picto = FENABRAVE_PICTOS.get(str(row["picto_code"]), str(row["picto_code"]))
-        accumulated_units = latest_accumulated_by_segment.get(
-            row["segment_code"],
-            row["current_year_accumulated_units"],
-        )
-        cards.append(
-            metric_card_html(
-                str(row["segment_label"]),
-                format_int(row["monthly_units"]),
-                f"Acumulado ano: {format_int(accumulated_units)}",
-                picto,
-                str(row["color_hex"]),
-            )
-        )
-
-    metric_card_grid(cards)
-
-    st.write("")
-    st.markdown("### Resultados mensais por categoria")
-
-    chart_df = df.sort_values(["reference_period", "segment_sort"])
-    category_colors = {
-        row["segment_label"]: row["color_hex"]
-        for _, row in df.drop_duplicates("segment_label").iterrows()
-    }
-
-    fig = px.bar(
-        chart_df,
-        x="month_display",
-        y="monthly_units",
-        color="segment_label",
-        barmode="group",
-        category_orders={"month_display": month_order},
-        color_discrete_map=category_colors,
-        labels={
-            "month_display": "Mes",
-            "monthly_units": "Emplacamentos",
-            "segment_label": "Categoria",
-        },
-    )
-    apply_plotly_theme(fig)
-    trace_startup("render_fenabrave_monthly_v2 bar_chart before")
-    st.plotly_chart(fig, width="stretch")
-    trace_startup("render_fenabrave_monthly_v2 bar_chart after")
-
-    st.write("")
-    st.markdown("### Evolucao mensal por categoria")
-
-    line_fig = px.line(
-        chart_df,
-        x="month_display",
-        y="monthly_units",
-        color="segment_label",
-        markers=True,
-        category_orders={"month_display": month_order},
-        color_discrete_map=category_colors,
-        labels={
-            "month_display": "Mes",
-            "monthly_units": "Emplacamentos",
-            "segment_label": "Categoria",
-        },
-    )
-    apply_plotly_theme(line_fig)
-    line_fig.update_traces(line_width=3, marker_size=8)
-    trace_startup("render_fenabrave_monthly_v2 line_chart before")
-    st.plotly_chart(line_fig, width="stretch")
-    trace_startup("render_fenabrave_monthly_v2 line_chart after")
-
-    coverage_rows = [
-        row for row in view_rows.get("coverage", [])
-        if pd.to_datetime(row.get("reference_period"), errors="coerce") == selected_period
-    ]
-    if coverage_rows:
-        st.write("")
-        st.markdown("### Cobertura da carga")
-        render_fenabrave_dataframe(
-            "Itens monitorados",
-            coverage_rows,
-            [
-                "pdf_page",
-                "item_code",
-                "item_label",
-                "published_period_type",
-                "item_status",
-                "control_row_count",
-                "actual_row_count",
-                "coverage_status",
-                "validation_status",
-            ],
-            {
-                "pdf_page": "Pagina",
-                "item_code": "Item",
-                "item_label": "Descricao",
-                "published_period_type": "Periodo",
-                "item_status": "Status item",
-                "control_row_count": "Linhas controle",
-                "actual_row_count": "Linhas view",
-                "coverage_status": "Cobertura",
-                "validation_status": "Validacao",
-            },
-        )
-
-    model_rows = [
-        row for row in view_rows.get("model_rankings", [])
-        if pd.to_datetime(row.get("reference_period"), errors="coerce") == selected_period
-    ]
-    if model_rows:
-        st.write("")
-        st.markdown("### Rankings por modelo")
-        model_df = pd.DataFrame(model_rows).copy()
-        for item_code in model_df["item_code"].drop_duplicates().tolist():
-            item_df = model_df[model_df["item_code"] == item_code].copy()
-            item_label = str(item_df["item_label"].iloc[0])
-            st.markdown(f"#### {item_label}")
-            for category in item_df["vehicle_category"].drop_duplicates().tolist():
-                category_rows = item_df[item_df["vehicle_category"] == category].sort_values("rank_position").to_dict("records")
-                render_fenabrave_dataframe(
-                    humanize_fenabrave_category(category),
-                    category_rows,
-                    ["rank_position", "brand_name_raw", "model_name_raw", "model_label_raw", "monthly_units", "market_share_pct"],
-                    {
-                        "rank_position": "Posicao",
-                        "brand_name_raw": "Marca",
-                        "model_name_raw": "Modelo",
-                        "model_label_raw": "Rotulo PDF",
-                        "monthly_units": "Unidades",
-                        "market_share_pct": "Share %",
-                    },
-                )
-            st.write("")
-
-    brand_rows = [
-        row for row in view_rows.get("brand_rankings", [])
-        if pd.to_datetime(row.get("reference_period"), errors="coerce") == selected_period
-    ]
-    if brand_rows:
-        st.write("")
-        st.markdown("### Rankings por marca")
-        brand_df = pd.DataFrame(brand_rows).copy()
-        for item_code in brand_df["item_code"].drop_duplicates().tolist():
-            item_df = brand_df[brand_df["item_code"] == item_code].copy()
-            item_label = str(item_df["item_label"].iloc[0])
-            st.markdown(f"#### {item_label}")
-            for category in item_df["vehicle_category"].drop_duplicates().tolist():
-                category_rows = item_df[item_df["vehicle_category"] == category].sort_values("rank_position").to_dict("records")
-                render_fenabrave_dataframe(
-                    humanize_fenabrave_category(category),
-                    category_rows,
-                    ["rank_position", "brand_name_raw", "units", "market_share_pct", "sales_channel"],
-                    {
-                        "rank_position": "Posicao",
-                        "brand_name_raw": "Marca",
-                        "units": "Unidades",
-                        "market_share_pct": "Share %",
-                        "sales_channel": "Canal",
-                    },
-                )
-            st.write("")
-
-    subsegment_rows = [
-        row for row in view_rows.get("subsegments", [])
-        if pd.to_datetime(row.get("reference_period"), errors="coerce") == selected_period
-    ]
-    if subsegment_rows:
-        st.write("")
-        st.markdown("### Participacao por sub segmento")
-        render_fenabrave_dataframe(
-            "Automoveis",
-            subsegment_rows,
-            [
-                "subsegment_name",
-                "current_month_share_pct",
-                "current_year_accum_share_pct",
-                "prior_year_accum_share_pct",
-            ],
-            {
-                "subsegment_name": "Sub segmento",
-                "current_month_share_pct": "Mes %",
-                "current_year_accum_share_pct": "Acum ano %",
-                "prior_year_accum_share_pct": "Acum ano ant. %",
-            },
-        )
-
-    channel_rows = [
-        row for row in view_rows.get("channel_mix", [])
-        if pd.to_datetime(row.get("reference_period"), errors="coerce") == selected_period
-    ]
-    if channel_rows:
-        st.write("")
-        st.markdown("### Mix de canal")
-        channel_df = pd.DataFrame(channel_rows).copy()
-        channel_df["category_label"] = channel_df["vehicle_category"].apply(humanize_fenabrave_category)
-        channel_df["sales_channel_label"] = channel_df["sales_channel"].apply(humanize_fenabrave_sales_channel)
-        for item_code in channel_df["item_code"].drop_duplicates().tolist():
-            item_df = channel_df[channel_df["item_code"] == item_code].copy()
-            item_label = str(item_df["item_label"].iloc[0])
-            render_fenabrave_dataframe(
-                item_label,
-                item_df.sort_values(["category_label", "sales_channel_label"]).to_dict("records"),
-                ["category_label", "sales_channel_label", "share_pct"],
-                {
-                    "category_label": "Categoria",
-                    "sales_channel_label": "Canal",
-                    "share_pct": "Share %",
-                },
-            )
-
-    electrified_rows = [
-        row for row in view_rows.get("electrified", [])
-        if pd.to_datetime(row.get("reference_period"), errors="coerce") == selected_period
-    ]
-    if electrified_rows:
-        st.write("")
-        st.markdown("### Eletrificados")
-        electrified_df = pd.DataFrame(electrified_rows).copy()
-        electrified_df["vehicle_category_label"] = electrified_df["vehicle_category"].apply(humanize_fenabrave_category)
-        electrified_df["aggregation_label"] = electrified_df["aggregation_level"].apply(humanize_fenabrave_aggregation)
-        electrified_df["powertrain_label"] = electrified_df["powertrain_type"].apply(humanize_fenabrave_powertrain)
-        for item_code in electrified_df["item_code"].drop_duplicates().tolist():
-            item_df = electrified_df[electrified_df["item_code"] == item_code].copy()
-            item_label = str(item_df["item_label"].iloc[0])
-            render_fenabrave_dataframe(
-                item_label,
-                item_df.sort_values(
-                    ["vehicle_category_label", "aggregation_label", "powertrain_label", "rank_position"],
-                    na_position="first",
-                ).to_dict("records"),
-                [
-                    "vehicle_category_label",
-                    "aggregation_label",
-                    "powertrain_label",
-                    "rank_position",
-                    "brand_name_raw",
-                    "model_name_raw",
-                    "units",
-                    "market_share_pct",
-                ],
-                {
-                    "vehicle_category_label": "Categoria",
-                    "aggregation_label": "Bloco",
-                    "powertrain_label": "Motorizacao",
-                    "rank_position": "Posicao",
-                    "brand_name_raw": "Marca",
-                    "model_name_raw": "Modelo",
-                    "units": "Unidades",
-                    "market_share_pct": "Share %",
-                },
-            )
 
 
 def render_collection_integrity_section() -> None:
@@ -7515,7 +7053,7 @@ elif page == "Creators":
 elif page == "Data quality":
     render_data_quality_page()
 elif page == "Fenabrave":
-    render_fenabrave_dashboard_page_v2()
+    render_fenabrave_dashboard_page()
 elif page == "Cadastro":
     if cadastro_subpage == "Criadores":
         render_external_intake_page("Cadastro de Criadores")
