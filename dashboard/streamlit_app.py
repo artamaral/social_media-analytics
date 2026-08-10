@@ -1075,6 +1075,15 @@ FENABRAVE_SEGMENT_META = {
     },
 }
 
+FENABRAVE_LEGACY_SEGMENT_CODES = {
+    "autos",
+    "comerciais_leves",
+    "caminhoes",
+    "onibus",
+    "motos",
+    "implementos_rodoviarios",
+}
+
 
 def page_header(title: str, subtitle: str | None = None, badge: str | None = None) -> None:
     badge_html = f'<span class="status-pill">{escape(badge)}</span>' if badge else ""
@@ -4828,6 +4837,8 @@ def render_fenabrave_dashboard_page_v2() -> None:
     df = pd.DataFrame(normalize_fenabrave_segment_rows(rows))
     df["reference_period"] = df["reference_period"].apply(normalize_fenabrave_period_timestamp)
     df = df[df["reference_period"].notna()].copy()
+    df["segment_code"] = df["segment_code"].astype(str).str.lower()
+    df = df[df["segment_code"].isin(FENABRAVE_LEGACY_SEGMENT_CODES)].copy()
     df["month_display"] = df["reference_period"].apply(format_month_label)
     month_order = (
         df.sort_values("reference_period")
