@@ -1,4 +1,4 @@
 interface:
   display_name: "Fenabrave Monthly LinkedIn"
   short_description: "Analise mensal Fenabrave e post automotivo para LinkedIn"
-  default_prompt: "Consulte o packet mensal Fenabrave no Supabase, valide os dados e gere uma analise executiva e um post para LinkedIn conforme a persona automotiva do projeto."
+  default_prompt: "Use $fenabrave-monthly-linkedin to consultar o packet mensal Fenabrave no Supabase, validar os dados e gerar uma analise executiva e um post para LinkedIn conforme a persona automotiva do projeto."

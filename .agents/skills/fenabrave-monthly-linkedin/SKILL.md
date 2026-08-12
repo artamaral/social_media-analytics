@@ -26,10 +26,10 @@ Use esta skill como coordenadora e carregue as skills componentes apenas nos mom
 
 - `fenabrave-monthly-source`
   - usar para confirmar proveniencia, escopo aceito, contrato minimo da RPC e criterios de bloqueio
-  - consultar `references/monthly-packet-runbook.md` quando precisar do fluxo packet-first
+  - consultar `fenabrave-monthly-source/references/monthly-packet-runbook.md` quando precisar do fluxo packet-first
 - `linkedin-automotive-posts`
   - usar para persona, tom, estrutura e limites editoriais
-  - consultar `references/persona-e-estilo.md` quando a redacao depender de regras detalhadas de estilo
+  - consultar `linkedin-automotive-posts/references/persona-e-estilo.md` quando a redacao depender de regras detalhadas de estilo
 
 Nao duplique essas skills. Use-as como fonte das regras especificas de origem dos dados e de redacao.
 
