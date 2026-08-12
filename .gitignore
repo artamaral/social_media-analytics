@@ -3,3 +3,5 @@ __pycache__/
 *.py[cod]
 scripts/offline_backfill/logs/*.log
 scripts/carrosnaweb_ingestion/data/debug_html/
+.vscode/
+tmp/
