@@ -54,11 +54,15 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 
 ### Prioridade media - definicao de escopo
 
-- [ ] Definir plano de dados externos automotivos com ingestao estruturada apenas de Fenabrave e SENATRAN/RENAVAM. Usar `22_EXTERNAL_MARKET_DATA_STUDY_PLAN.md` como referencia antes de criar tabelas definitivas no Supabase; demais fontes ficam apenas como contexto para textos e interpretacao.
+- [x] Delimitar Fenabrave e SENATRAN/RENAVAM como fontes estruturadas prioritarias no Supabase, deixando as demais fontes apenas como contexto textual.
+- [x] Consolidar a governanca final de Fenabrave apos a expansao da fase 2 ja operada em `segmento`, `marca`, `modelo`, `subsegmento`, `eletrificados` e `canais de venda`, definindo o contrato restante de `market_source_files` + `market_fenabrave_extraction_items` para a rotina mensal.
+- [ ] Definir a modelagem final de SENATRAN/RENAVAM, incluindo dataset real, granularidade util, rotulagem correta de frota e tabela normalizada final.
 
 ### Prioridade operacional - rotina de fonte
 
-- [ ] Open point: avaliar como gerar lembrete futuro e/ou incluir em uma agenda a rotina mensal da Fenabrave descrita em `00_OFFLINE_OPERATIONS_CALENDAR.md`.
+- [x] Open point: avaliar como gerar lembrete futuro e/ou incluir em uma agenda a rotina mensal da Fenabrave descrita em `00_OFFLINE_OPERATIONS_CALENDAR.md`. Fechado como rotina operacional mensal documentada no calendario offline: executar apos o 5o dia util, processar o mes anterior e registrar a auditoria pelo contrato de `market_source_files` + `market_fenabrave_extraction_items`.
+- [x] Expor um packet mensal canonico da Fenabrave para clientes GPT via RPC do Supabase, sem SQL bruto no cliente e sem Hermes como intermediario. A RPC `public.get_fenabrave_monthly_packet(...)` ja esta aplicada no projeto `Proj_mktDigital`, com validacao de leitura para `2026-07`.
+- [ ] Consolidar o fluxo Fenabrave GPT no repositorio com skills repo-specific em `.agents/skills/`, skill coordenadora mensal e contrato de uso somente leitura sobre a RPC canonica.
 
 ## Frente 3. Dashboard
 

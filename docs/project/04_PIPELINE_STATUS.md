@@ -351,7 +351,7 @@ Proxima avaliacao:
 
 ### 2.1 Fenabrave
 
-- Status: implementacao inicial pronta para uso local controlado
+- Status: rotina mensal estruturada, historico validado no banco e packet RPC canonico aplicado no Supabase
 - Implementacao principal: `scripts/fenabrave_ingestion/ingest_fenabrave_phase1.py`
 - Documento operacional principal: `scripts/fenabrave_ingestion/README.md`
 - Papel na arquitetura: ingestao estruturada de emplacamentos e leitura mensal
@@ -359,17 +359,57 @@ Proxima avaliacao:
 
 #### Escopo operacional atual
 
-- o PDF fonte ja deve estar salvo no Supabase Storage
-- o registro inicial em `market_source_files` continua manual nesta fase
-- o script executa leitura do PDF, extracao da primeira tabela, normalizacao e
-  validacao dos totais
+- o PDF fonte e preservado no bucket privado `market-source-files`
+- o registro mensal continua rastreado por `market_source_files`
+- o status granular da extracao fica em `market_fenabrave_extraction_items`
+- o script executa leitura do PDF, extracao por item, normalizacao,
+  validacoes por bloco e persistencia nas tabelas analiticas da frente
 - o fluxo suporta `dry-run`, `write`, `replace` e revisao interativa
+- o consumo GPT usa somente a RPC canonica
+  `public.get_fenabrave_monthly_packet(reference_period, scope)`
 
 #### Estado atual
 
-- a frente ja possui script, setup local e runbook de execucao mensal
-- o processo ainda e local e controlado, nao um pipeline automatico completo
-- a estrutura minima de ingestao e validacao ja esta desenhada
+- a frente ja possui rotina mensal guiada por UI, script versionado, setup
+  local, runbook e historico validado da fase 2 ativa
+- a fase 2 ativa foi consolidada para o historico `12/2025` a `07/2026`,
+  cobrindo os itens `1..8` e `11..22`
+- a governanca operacional mensal foi fechada em torno de:
+  - `market_source_files`
+  - `market_fenabrave_extraction_items`
+  - auditoria apos o 5o dia util
+- a RPC `public.get_fenabrave_monthly_packet(...)` ja esta aplicada no projeto
+  `Proj_mktDigital` e respondeu `status = ok` em leitura real para
+  `2026-07-01` nos escopos:
+  - `autos`
+  - `comerciais_leves`
+  - `autos_comerciais_leves`
+- o fluxo editorial GPT deixa de depender de Hermes, VPS ou SQL bruto no
+  cliente
+- a fonte oficial das skills deste fluxo passa a ser o proprio GitHub do
+  projeto, no diretorio `.agents/skills/`
+
+#### Packet RPC para GPT
+
+- Status: aplicada no Supabase e validada em leitura real; organizacao
+  repo-specific das skills em andamento
+- DDL versionada: `sql/ddl/functions/009_create_fenabrave_monthly_packet_rpc.sql`
+- Teste estrutural versionado:
+  `sql/ddl/tests/012_test_fenabrave_monthly_packet_rpc.sql`
+- Contrato editorial:
+  - um unico ponto de leitura para GPT
+  - `jsonb` canonico por periodo e escopo
+  - sem DDL, DML ou SQL bruto no cliente
+  - sem credenciais no repositorio ou nas skills
+
+#### O que ainda falta nesta frente
+
+- consolidar a skill coordenadora mensal de Fenabrave + LinkedIn em
+  `.agents/skills/`
+- validar o fluxo repo-specific completo de descoberta das skills e handoff
+  editorial
+- manter a automacao mensal como etapa posterior, depois da validacao do uso
+  manual/assistido
 
 ### 2.2 Carros na Web
 
@@ -421,7 +461,8 @@ Proxima avaliacao:
 
 ### 2.4 Proximos checkpoints desta frente
 
-- consolidar Fenabrave como rotina mensal repetivel
+- consolidar o fluxo manual/assistido Fenabrave GPT no repositorio, usando
+  GitHub como fonte de verdade das skills e Supabase como fonte de dados
 - iniciar a base Carros na Web em formato local controlado
 - fechar a avaliacao de granularidade util para SENATRAN / RENAVAM
 - harmonizar futuramente marcas e modelos entre social media, Fenabrave,

@@ -966,3 +966,95 @@ Documentos relacionados:
 - `docs/dashboard/16_ONLINE_DASHBOARD_SUPABASE_SPEC.md`
 - `docs/dashboard/33_CREATOR_VIEW_STREAMLIT_SPEC.md`
 - `docs/dashboard/34_CREATOR_WEEKLY_TIMESERIES_CONTRACT.md`
+
+---
+
+## Fenabrave: packet RPC canonico para analise GPT
+
+Data:
+
+- 2026-08-12
+
+Decisao:
+
+- expor um unico ponto de entrada analitico da Fenabrave para clientes GPT por
+  meio da RPC `public.get_fenabrave_monthly_packet(date, text)`
+- devolver o packet em `jsonb`, pronto para leitura editorial e sem exigir SQL
+  bruto no cliente
+- manter Hermes fora de qualquer etapa de geracao, transporte, orquestracao ou
+  analise desse fluxo
+- limitar o cliente GPT a chamar a RPC, e nao tabelas Fenabrave brutas
+- suportar os escopos:
+  - `autos`
+  - `comerciais_leves`
+  - `autos_comerciais_leves`
+
+Contrato minimo:
+
+- o cliente GPT deve validar `status`, `reference_period`, `scope`,
+  `source_page_url`, `source_url`, `totals`, `channel_mix` e `model_leaders`
+- se `status != ok` ou faltar bloco essencial, o fluxo deve interromper antes
+  da redacao definitiva
+- a skill editorial pode usar somente os campos do packet retornado
+
+Validacao observada:
+
+- a RPC foi aplicada no projeto Supabase `Proj_mktDigital`
+- leitura real executada em 2026-08-12 confirmou `status = ok` para
+  `2026-07-01` nos tres escopos aceitos
+- o erro de `jsonb_object_agg` por chave nula nos blocos de eletrificados foi
+  corrigido na DDL versionada
+
+Impacto esperado:
+
+- `ChatGPT Work` ou outro cliente GPT passa a depender apenas da RPC para ler o
+  fechamento mensal
+- a analise mensal ganha contrato estavel, auditavel e com baixo risco de
+  montagem inconsistente
+- o repositorio fica desacoplado de Hermes para esse fluxo
+
+Referencia:
+
+- `docs/external_data/60_FENABRAVE_PACKET_RPC_GPT_ANALYSIS.md`
+- `sql/ddl/functions/009_create_fenabrave_monthly_packet_rpc.sql`
+- `sql/ddl/tests/012_test_fenabrave_monthly_packet_rpc.sql`
+
+---
+
+## Skills repo-specific do fluxo Fenabrave em `.agents/skills`
+
+Data:
+
+- 2026-08-12
+
+Decisao:
+
+- tratar o GitHub do projeto como fonte oficial das skills do fluxo Fenabrave
+  GPT
+- usar `.agents/skills/` como local repo-specific para:
+  - `fenabrave-monthly-source`
+  - `linkedin-automotive-posts`
+  - `fenabrave-monthly-linkedin`
+- nao manter copias duplicadas em `codex/skills/` neste repositorio para esse
+  fluxo
+- manter `agents/openai.yaml` sem dependencias ficticias quando o identificador
+  real do plugin/conector nao estiver disponivel de forma confiavel no ambiente
+
+Regras operacionais:
+
+- skill nao pode pedir ou expor `service_role`
+- skill nao pode armazenar credenciais, tokens ou segredos no Git
+- leitura de dados deve acontecer apenas pela RPC canonica do Supabase
+- a skill coordenadora deve parar quando o packet estiver indisponivel,
+  invalido ou incompleto
+
+Motivo:
+
+- separar a frente Fenabrave GPT da branch de dashboard
+- preservar descoberta repo-specific coerente com o fluxo real
+- reduzir risco de conflito entre automacao antiga baseada em Hermes e o fluxo
+  atual `packet-first`
+
+Referencia:
+
+- `docs/external_data/60_FENABRAVE_PACKET_RPC_GPT_ANALYSIS.md`

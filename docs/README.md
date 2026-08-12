@@ -85,6 +85,7 @@ Status recente:
 ### Fenabrave
 
 - [23_FENABRAVE_PHASE1_INGESTION_SPEC.md](/C:/social_media-analytics/docs/external_data/23_FENABRAVE_PHASE1_INGESTION_SPEC.md)
+- [60_FENABRAVE_PACKET_RPC_GPT_ANALYSIS.md](/C:/social_media-analytics/docs/external_data/60_FENABRAVE_PACKET_RPC_GPT_ANALYSIS.md)
 
 ### Carros na Web
 

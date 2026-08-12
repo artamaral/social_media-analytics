@@ -1,0 +1,4 @@
+interface:
+  display_name: "LinkedIn Automotive Posts"
+  short_description: "Posts LinkedIn para mercado automotivo"
+  default_prompt: "Use $linkedin-automotive-posts to escrever um post de LinkedIn com tom de analista de mercado automotivo."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Fenabrave Monthly Source"
+  short_description: "Fonte mensal Fenabrave e contrato do packet"
+  default_prompt: "Use $fenabrave-monthly-source to confirmar periodo, escopo, fonte e contrato do packet mensal Fenabrave."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Fenabrave Monthly LinkedIn"
+  short_description: "Analise Fenabrave e post automotivo"
+  default_prompt: "Use $fenabrave-monthly-linkedin to consultar o packet mensal Fenabrave, validar os dados e gerar a analise executiva com post para LinkedIn."
