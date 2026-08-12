@@ -79,6 +79,7 @@ considerada incompleta.
 - [24_FENABRAVE_PHASE2_EXTENDED_DATA_PLAN.md](/C:/social_media-analytics/docs/external_data/24_FENABRAVE_PHASE2_EXTENDED_DATA_PLAN.md)
 - [25_FENABRAVE_PHASE2_ITEM1_RANKING_EMPLACAMENTOS_MES_PLAN.md](/C:/social_media-analytics/docs/external_data/25_FENABRAVE_PHASE2_ITEM1_RANKING_EMPLACAMENTOS_MES_PLAN.md)
 - [26_FENABRAVE_PHASE2_ITEMS13_18_TECHNICAL_PLAN.md](/C:/social_media-analytics/docs/external_data/26_FENABRAVE_PHASE2_ITEMS13_18_TECHNICAL_PLAN.md)
+- [60_FENABRAVE_PACKET_RPC_GPT_ANALYSIS.md](/C:/social_media-analytics/docs/external_data/60_FENABRAVE_PACKET_RPC_GPT_ANALYSIS.md)
 
 ### Carros na Web
 

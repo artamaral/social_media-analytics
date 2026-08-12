@@ -1,3 +1,3 @@
 display_name: Fenabrave Monthly Source
-short_description: Fonte mensal Fenabrave para Hermes
-default_prompt: Localize a fonte oficial mensal da Fenabrave, confirme o periodo, prepare o pacote autos + LCV para o post LinkedIn e, se solicitado, entregue o resultado ao Telegram.
+short_description: Fonte mensal Fenabrave e contrato do packet RPC
+default_prompt: Confirme o periodo e o escopo, use o contrato do packet mensal Fenabrave via RPC do Supabase e entregue a base estruturada para analise ou redacao.

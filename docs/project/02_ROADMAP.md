@@ -78,6 +78,7 @@ Ha tambem um bloco transversal para documentacao, validacoes operacionais e deci
 ### Prioridade operacional - rotina de fonte
 
 - [x] Open point: avaliar como gerar lembrete futuro e/ou incluir em uma agenda a rotina mensal da Fenabrave descrita em `00_OFFLINE_OPERATIONS_CALENDAR.md`. Fechado como rotina operacional mensal documentada no calendario offline: executar apos o 5o dia util, processar o mes anterior e registrar a auditoria pelo contrato de `market_source_files` + `market_fenabrave_extraction_items`.
+- [ ] Expor um packet mensal canonico da Fenabrave para clientes GPT via RPC do Supabase, sem SQL bruto no cliente e sem Hermes como intermediario. A DDL local e os testes estruturais foram preparados em 2026-08-12, mas a aplicacao no Supabase e a validacao viva ainda estao pendentes.
 
 ### Itens concluidos nesta frente
 

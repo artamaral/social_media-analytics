@@ -1418,6 +1418,58 @@ Impacto esperado:
 
 ---
 
+## Fenabrave: packet RPC canonico para analise GPT
+
+Data:
+
+- 2026-08-12
+
+Decisao:
+
+- expor um unico ponto de entrada analitico da Fenabrave para clientes GPT por
+  meio da RPC `public.get_fenabrave_monthly_packet(date, text)`
+- devolver o packet em `jsonb`, pronto para leitura editorial e sem exigir SQL
+  bruto no cliente
+- manter Hermes fora de qualquer etapa de geracao, transporte, orquestracao ou
+  analise desse fluxo
+- limitar o cliente GPT a chamar a RPC, e nao tabelas Fenabrave brutas
+- suportar os escopos:
+  - `autos`
+  - `comerciais_leves`
+  - `autos_comerciais_leves`
+- incluir no packet:
+  - total do mes e do mes anterior
+  - mix `varejo` vs `venda_direta`
+  - share por marca no total, varejo e direta
+  - top `5` veiculos por categoria/canal relevante
+  - bloco de eletrificados quando a camada validada suportar
+
+Motivo:
+
+- a analise online/mobile nao pode depender de Codex ativo nem de uma VPS
+  intermediaria
+- o cliente GPT precisa consumir um contrato estavel, auditavel e com baixo
+  risco de montagem analitica inconsistente
+- a camada Fenabrave ja possui dados validados por views; o proximo passo
+  natural e expor um packet canonico de leitura
+
+Impacto esperado:
+
+- `ChatGPT Work` ou outro cliente GPT passa a depender apenas da RPC para ler o
+  fechamento mensal
+- skills editoriais deixam de depender de runbook com Hermes e passam a operar
+  em fluxo `packet-first`
+- o repositorio fica pronto para deploy controlado da RPC e validacao viva no
+  Supabase
+
+Estado desta decisao:
+
+- implementada localmente no repositorio em 2026-08-12
+- ainda pendente de aplicacao e validacao no banco real antes de ser tratada
+  como operacional
+
+---
+
 ## Carros na Web: CSV recorrente no banco e fichas tecnicas em on hold
 
 Data:

@@ -56,21 +56,22 @@ Preferir paragrafos curtos. Bullets devem ser usados com cautela e apenas quando
 Tabelas sao permitidas quando houver dados estruturados. Manter tabelas com poucas colunas e poucas linhas para preservar legibilidade no LinkedIn.
 
 
-## Automacao mensal com Hermes
+## Automacao mensal com packet RPC
 
-Quando Hermes executar o post mensal com dados Fenabrave, exigir antes um pacote vindo da skill `fenabrave-monthly-source` com fonte, periodo, URL oficial, URL do PDF/download e dados principais. O pacote deve estar limitado a autos + LCV, com foco no varejo, marcas no mes, modelos mais vendidos, acumulado anual e mix venda direta/varejo. O texto final deve parecer escrito por um analista acompanhando o fechamento mensal do mercado, nao por uma automacao.
+Quando o post mensal usar dados Fenabrave, exigir antes um pacote vindo da skill `fenabrave-monthly-source` com fonte, periodo, URL oficial, URL do PDF/download, escopo e dados principais. O pacote deve vir da RPC canonica `get_fenabrave_monthly_packet(...)`. O texto final deve parecer escrito por um analista acompanhando o fechamento mensal do mercado, nao por uma automacao.
 
 Estrutura recomendada para o post mensal:
 
-1. Sinal principal do mes em autos + LCV, priorizando varejo.
-2. Comparacao mes vs mes -1 e acumulado do ano vs acumulado equivalente anterior.
-3. Analise das marcas no varejo e dos carros/modelos mais vendidos.
-4. Relacao percentual entre venda direta e varejo.
-5. Comparacao mes/ano vs mesmo mes do ano anterior quando houver discrepancia da ordem de 10% ou mais.
-6. Implicacao para marca, rede, aftermarket, produto ou conteudo.
-7. Fechamento curto com pergunta analitica ou takeaway.
+1. Sinal principal do mes no escopo do packet, priorizando varejo.
+2. Comparacao mes vs mes -1.
+3. Analise das marcas no mercado total, no varejo e na venda direta quando o packet trouxer esses blocos.
+4. Analise dos 5 primeiros veiculos de cada categoria relevante no packet.
+5. Relacao percentual entre venda direta e varejo.
+6. Destaque de eletrificados apenas quando o packet trouxer o bloco dedicado.
+7. Implicacao para marca, rede, aftermarket, produto ou conteudo.
+8. Fechamento curto com pergunta analitica ou takeaway.
 
-Evitar transformar a rotina mensal em template rigido. Manter consistencia editorial, mas variar hooks e interpretacoes conforme o dado do mes. Nao mencionar eletricos ou hibridos a nao ser que eles aparecam na lista de modelos/marcas top do periodo analisado.
+Evitar transformar a rotina mensal em template rigido. Manter consistencia editorial, mas variar hooks e interpretacoes conforme o dado do mes. Nao mencionar eletricos ou hibridos fora do que o packet efetivamente trouxer.
 
 ## Tom humano
 

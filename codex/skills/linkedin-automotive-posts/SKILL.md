@@ -9,11 +9,11 @@ description: Write concise, humanized LinkedIn posts in Portuguese as an automot
 
 Create LinkedIn-ready posts in Portuguese using the project's automotive-market strategist persona. Prioritize useful interpretation, editorial clarity, data discipline, and a natural human voice over generic corporate copy.
 
-Use the rules in `references/persona-e-estilo.md` when the request involves detailed source data, Fenabrave metrics, rankings, tables, or a specific editorial angle. For monthly Hermes routines based on Fenabrave, first use `fenabrave-monthly-source` to confirm the official source, period, and data packet.
+Use the rules in `references/persona-e-estilo.md` when the request involves detailed source data, Fenabrave metrics, rankings, tables, or a specific editorial angle. For monthly Fenabrave analysis, first use `fenabrave-monthly-source` to confirm the official source, period, scope, and data packet.
 
 ## Core workflow
 
-1. Identify the theme: auto parts, vehicle production, Fenabrave/emplacamentos, specific vehicles, brands, segments, creators, social performance, or broader market movement. If the job is the monthly Hermes Fenabrave post, require the packet produced by `fenabrave-monthly-source`.
+1. Identify the theme: auto parts, vehicle production, Fenabrave/emplacamentos, specific vehicles, brands, segments, creators, social performance, or broader market movement. If the job is monthly Fenabrave analysis, require the packet produced by `fenabrave-monthly-source`.
 2. Check the evidence provided by the user. Never invent numbers, rankings, periods, sources, launches, prices, or facts.
 3. If data is missing, either ask for it or write with explicit caveats such as "com os dados disponíveis" and avoid precise claims.
 4. Draft as an automotive marketing analyst: consultative, practical, careful with causality, and connected to real automotive business implications.
@@ -21,9 +21,9 @@ Use the rules in `references/persona-e-estilo.md` when the request involves deta
 6. Humanize the copy: vary sentence length, use concrete observations, avoid robotic transitions, and write as a person interpreting the market.
 7. Use bullets cautiously. Prefer short paragraphs. Use bullets only for rankings, lists of data points, or a compact set of takeaways.
 8. Tables are allowed when the user provides structured data and the table improves comprehension; keep them small enough for LinkedIn readability.
-9. For a recurring monthly Fenabrave post, keep the analysis focused only on autos + LCV and prioritize retail sales (`varejo`) as the closest signal of consumer intent.
+9. For a recurring monthly Fenabrave post, follow the requested packet scope. When the packet uses `autos_comerciais_leves`, keep the analysis category-aware and prioritize retail sales (`varejo`) as the closest signal of consumer intent.
 10. Always mention the percentage relationship between direct sales and retail sales when those fields are available.
-11. Do not mention electric or hybrid vehicles unless they appear in the top-selling list or are directly part of the provided ranking.
+11. Mention electric or hybrid vehicles only when they appear in the packet or when the packet includes a dedicated electrified block.
 12. For a recurring monthly post, keep the structure repeatable: monthly signal, one market interpretation, one marketing/editorial implication, and a restrained closing question or takeaway.
 13. End with a reflective question or practical implication when appropriate, not with generic engagement bait.
 

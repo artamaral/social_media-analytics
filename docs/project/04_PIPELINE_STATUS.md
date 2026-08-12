@@ -408,6 +408,20 @@ Proxima avaliacao:
 - manter a execucao mensal conforme calendario offline, apos o 5o dia util
 - avaliar futuramente se a rotina precisa evoluir para automacao de agenda,
   alerta ou tabela fisica de runs quando houver operacao recorrente suficiente
+- aplicar e validar no Supabase a RPC canonica
+  `public.get_fenabrave_monthly_packet(reference_period, scope)` preparada no
+  repositorio em 2026-08-12 para consumo direto por GPT online/mobile
+
+#### Packet RPC para GPT
+
+- Status: implementacao local preparada no repositorio; ainda nao aplicada nem
+  validada no banco real
+- DDL principal: `sql/ddl/functions/009_create_fenabrave_monthly_packet_rpc.sql`
+- Teste estrutural: `sql/ddl/tests/012_test_fenabrave_monthly_packet_rpc.sql`
+- Papel na arquitetura:
+  - devolver um `jsonb` canonico para analise editorial
+  - evitar SQL bruto no cliente GPT
+  - manter Hermes fora do fluxo de analise
 
 ### 2.2 Carros na Web
 

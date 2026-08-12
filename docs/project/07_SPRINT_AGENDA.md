@@ -3248,6 +3248,9 @@ Consolidar dados externos sem comprometer governanca, rastreabilidade ou qualida
   - `ingestion_runs`
   - persistencia adicional de validacoes
   - lembrete operacional mensal
+- [ ] Expor uma RPC canonica `get_fenabrave_monthly_packet(...)` para consumo
+  direto por GPT, com packet `jsonb`, top `5` por categoria/canal e bloco de
+  eletrificados, sem Hermes no fluxo de analise.
 
 Status em 2026-07-15:
 
@@ -3261,6 +3264,18 @@ Status em 2026-07-15:
 - uma tabela formal de `ingestion_runs` fica fora do escopo imediato e so deve
   ser retomada se a automacao futura exigir historico independente de execucao,
   retries ou multiplas fontes no mesmo contrato de monitoramento
+
+Atualizacao de 2026-08-12:
+
+- por solicitacao explicita do usuario, a frente Fenabrave ganhou um
+  desdobramento direto de consumo analitico para GPT online/mobile
+- a entrega local desta rodada prepara no repositorio:
+  - a DDL `sql/ddl/functions/009_create_fenabrave_monthly_packet_rpc.sql`
+  - a bateria `sql/ddl/tests/012_test_fenabrave_monthly_packet_rpc.sql`
+  - o alinhamento das skills `fenabrave-monthly-source` e
+    `linkedin-automotive-posts` para fluxo `packet-first`
+- esta frente ainda nao pode ser tratada como concluida operacionalmente,
+  porque a RPC precisa ser aplicada e validada no Supabase antes do uso real
 
 Observacao fora do Sprint 5:
 
@@ -3301,6 +3316,7 @@ Status em 2026-07-15:
 - [00_OFFLINE_OPERATIONS_CALENDAR.md](../external_data/00_OFFLINE_OPERATIONS_CALENDAR.md)
 - [27_CARROSNAWEB_VEHICLE_SPECS_INGESTION_PLAN.md](../external_data/27_CARROSNAWEB_VEHICLE_SPECS_INGESTION_PLAN.md)
 - [22_EXTERNAL_MARKET_DATA_STUDY_PLAN.md](../external_data/22_EXTERNAL_MARKET_DATA_STUDY_PLAN.md)
+- [60_FENABRAVE_PACKET_RPC_GPT_ANALYSIS.md](../external_data/60_FENABRAVE_PACKET_RPC_GPT_ANALYSIS.md)
 
 ### Entregas
 
