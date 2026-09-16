@@ -74,6 +74,7 @@ python dashboard/preview_youtube_best_7d.py --input C:\caminho\youtube_best_7d.c
 - Nao usar `SUPABASE_SERVICE_ROLE_KEY` no app.
 - Guardar credenciais em `.streamlit/secrets.toml` localmente ou em Secrets no Streamlit Community Cloud.
 - A primeira conexao real deve carregar `v_dashboard_data_quality_status` antes dos rankings.
+- O role `anon` do Supabase deve manter `statement_timeout = 30s` para dar margem as views semanais consumidas pelo Streamlit.
 
 ## Secrets esperados
 
