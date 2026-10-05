@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">
+<rect width="1080" height="1350" fill="#FBF8F2"/>
+<text x="70" y="70" font-family="Arial" font-size="20" letter-spacing="5" fill="#0B2E59">GUIA VISUAL</text>
+<line x1="230" y1="64" x2="470" y2="64" stroke="#0B2E59" stroke-width="2"/>
+<text x="70" y="150" font-family="Georgia" font-size="58" font-weight="700" fill="#071A33">Padrão editorial —</text>
+<text x="70" y="215" font-family="Georgia" font-size="58" font-weight="700" fill="#071A33">gráficos para LinkedIn</text>
+<text x="70" y="260" font-family="Georgia" font-size="30" fill="#29445F">Guia visual para gráficos em estilo revista</text>
+
+<rect x="60" y="315" width="300" height="180" rx="18" fill="#F6EFE4"/>
+<text x="85" y="355" font-family="Georgia" font-size="26" font-weight="700" fill="#0B2E59">1. Objetivo</text>
+<text x="85" y="395" font-family="Arial" font-size="19" fill="#29445F">Visual editorial para LinkedIn,</text>
+<text x="85" y="423" font-family="Arial" font-size="19" fill="#29445F">com um insight principal,</text>
+<text x="85" y="451" font-family="Arial" font-size="19" fill="#29445F">clareza e leitura rápida.</text>
+
+<rect x="385" y="315" width="300" height="180" rx="18" fill="#F6EFE4"/>
+<text x="410" y="355" font-family="Georgia" font-size="26" font-weight="700" fill="#0B2E59">2. Formato</text>
+<text x="410" y="400" font-family="Arial" font-size="21" font-weight="700" fill="#071A33">4:5 vertical</text>
+<text x="410" y="432" font-family="Arial" font-size="21" font-weight="700" fill="#071A33">1080 × 1350 px</text>
+<text x="410" y="462" font-family="Arial" font-size="17" fill="#29445F">Alta resolução · PNG/JPG</text>
+
+<rect x="710" y="315" width="310" height="510" rx="18" fill="#FFFFFF" stroke="#D9DDE3"/>
+<text x="740" y="355" font-family="Georgia" font-size="26" font-weight="700" fill="#0B2E59">Exemplo aplicado</text>
+<text x="740" y="392" font-family="Arial" font-size="14" letter-spacing="3" fill="#0B2E59">MERCADO AUTOMOTIVO</text>
+<text x="740" y="442" font-family="Georgia" font-size="35" font-weight="700" fill="#071A33">Varejo perde</text>
+<text x="740" y="482" font-family="Georgia" font-size="35" font-weight="700" fill="#071A33">espaço em 2026</text>
+<rect x="740" y="515" width="250" height="82" rx="12" fill="#F6EFE4"/>
+<text x="758" y="545" font-family="Arial" font-size="15" font-weight="700" fill="#071A33">Gap: 14,2 p.p. → 7,4 p.p.</text>
+<text x="758" y="572" font-family="Arial" font-size="13" fill="#29445F">Pico: 20,2 p.p. em jun/26</text>
+<line x1="760" y1="680" x2="965" y2="680" stroke="#D9DDE3"/>
+<polyline points="760,645 790,630 820,636 850,628 880,620 910,590 940,606 965,635" fill="none" stroke="#0B2E59" stroke-width="5"/>
+<polyline points="760,730 790,742 820,736 850,740 880,744 910,770 940,752 965,720" fill="none" stroke="#F26B21" stroke-width="5"/>
+<circle cx="965" cy="635" r="6" fill="#0B2E59"/><circle cx="965" cy="720" r="6" fill="#F26B21"/>
+<text x="740" y="795" font-family="Arial" font-size="14" fill="#29445F">Fonte | Recorte | Período</text>
+
+<rect x="60" y="530" width="625" height="295" rx="18" fill="#FFFFFF" stroke="#E5DED3"/>
+<text x="85" y="570" font-family="Georgia" font-size="27" font-weight="700" fill="#0B2E59">3. Anatomia do layout</text>
+<text x="95" y="615" font-family="Arial" font-size="18" fill="#071A33">1  Topo editorial + headline + imagem contextual</text>
+<text x="95" y="655" font-family="Arial" font-size="18" fill="#071A33">2  Card de insight com principal dado</text>
+<text x="95" y="695" font-family="Arial" font-size="18" fill="#071A33">3  Gráfico principal limpo e anotado</text>
+<text x="95" y="735" font-family="Arial" font-size="18" fill="#071A33">4  Faixa de KPIs</text>
+<text x="95" y="775" font-family="Arial" font-size="18" fill="#071A33">5  Rodapé: Fonte | Recorte | Período</text>
+
+<rect x="60" y="855" width="300" height="215" rx="18" fill="#FFFFFF" stroke="#E5DED3"/>
+<text x="85" y="895" font-family="Georgia" font-size="26" font-weight="700" fill="#0B2E59">4. Tipografia</text>
+<text x="85" y="947" font-family="Georgia" font-size="42" font-weight="700" fill="#071A33">Aa</text>
+<text x="145" y="943" font-family="Arial" font-size="17" fill="#29445F">Serif bold</text>
+<text x="145" y="968" font-family="Arial" font-size="14" fill="#29445F">headlines editoriais</text>
+<text x="85" y="1015" font-family="Arial" font-size="38" fill="#071A33">Aa</text>
+<text x="145" y="1012" font-family="Arial" font-size="17" fill="#29445F">Sans-serif</text>
+<text x="145" y="1037" font-family="Arial" font-size="14" fill="#29445F">dados e rótulos</text>
+
+<rect x="385" y="855" width="300" height="215" rx="18" fill="#FFFFFF" stroke="#E5DED3"/>
+<text x="410" y="895" font-family="Georgia" font-size="26" font-weight="700" fill="#0B2E59">5. Paleta</text>
+<circle cx="440" cy="950" r="28" fill="#0B2E59"/><circle cx="505" cy="950" r="28" fill="#F26B21"/><circle cx="570" cy="950" r="28" fill="#F6EFE4" stroke="#DDD3C4"/><circle cx="635" cy="950" r="28" fill="#D9DDE3"/>
+<text x="417" y="1000" font-family="Arial" font-size="13" fill="#29445F">Azul</text>
+<text x="478" y="1000" font-family="Arial" font-size="13" fill="#29445F">Laranja</text>
+<text x="548" y="1000" font-family="Arial" font-size="13" fill="#29445F">Bege</text>
+<text x="615" y="1000" font-family="Arial" font-size="13" fill="#29445F">Cinza</text>
+
+<rect x="710" y="855" width="310" height="215" rx="18" fill="#FFFFFF" stroke="#E5DED3"/>
+<text x="735" y="895" font-family="Georgia" font-size="26" font-weight="700" fill="#0B2E59">6. Regras do gráfico</text>
+<text x="735" y="935" font-family="Arial" font-size="16" fill="#29445F">✓ até 2 séries principais</text>
+<text x="735" y="968" font-family="Arial" font-size="16" fill="#29445F">✓ rótulos diretos</text>
+<text x="735" y="1001" font-family="Arial" font-size="16" fill="#29445F">✓ grade discreta</text>
+<text x="735" y="1034" font-family="Arial" font-size="16" fill="#29445F">✓ destacar pico e fechamento</text>
+
+<rect x="60" y="1100" width="455" height="175" rx="18" fill="#F6EFE4"/>
+<text x="85" y="1142" font-family="Georgia" font-size="25" font-weight="700" fill="#0B2E59">7. Rodapé</text>
+<text x="85" y="1182" font-family="Arial" font-size="18" font-weight="700" fill="#071A33">Fonte | Recorte | Período</text>
+<text x="85" y="1222" font-family="Arial" font-size="16" fill="#8A3B2D">Não incluir assinatura de elaboração por IA.</text>
+
+<rect x="540" y="1100" width="480" height="175" rx="18" fill="#EEF5EC"/>
+<text x="565" y="1142" font-family="Georgia" font-size="25" font-weight="700" fill="#0B2E59">8. Boas práticas</text>
+<text x="565" y="1180" font-family="Arial" font-size="16" fill="#29445F">✓ uma mensagem principal  ✓ alto contraste</text>
+<text x="565" y="1212" font-family="Arial" font-size="16" fill="#29445F">✓ números legíveis  ✓ espaço em branco</text>
+<text x="565" y="1244" font-family="Arial" font-size="16" fill="#29445F">✓ evitar aparência de Excel/dashboard</text>
+
+<text x="70" y="1320" font-family="Arial" font-size="14" fill="#6F7D89">Padrão editorial de gráficos · social_media-analytics</text>
+</svg>
