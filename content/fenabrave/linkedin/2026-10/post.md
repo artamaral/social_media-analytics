@@ -5,23 +5,24 @@ escopo: automoveis
 fonte: Fenabrave
 ---
 
-# Venda direta encurta a distância em outubro
+# A venda direta encurtou a distância — mas não cresceu em volume
 
-Em setembro, o varejo ainda tinha uma vantagem de 7,4 pontos percentuais sobre a venda direta. Em outubro, essa distância caiu para 3,8 p.p.
+Em setembro, o varejo tinha uma vantagem de 7,4 pontos percentuais sobre a venda direta. Em outubro, essa distância caiu para 3,8 p.p.
 
-Os automóveis somaram 205.964 emplacamentos no mês, queda de 4,8% em relação a setembro. Mas, dentro desse mercado menor, a composição dos canais mudou novamente.
+A primeira impressão poderia ser de avanço da venda direta. Os dados absolutos mostram outra coisa.
 
-Em volumes absolutos derivados do total mensal e das participações publicadas:
+Os automóveis somaram 205.964 emplacamentos em outubro, queda de 4,8% em relação a setembro. Os dois canais recuaram:
 
 - Varejo: aproximadamente 116.189 → 106.895 unidades (-8,0%);
-- Venda direta: aproximadamente 100.177 → 99.069 unidades (-1,1%);
-- Gap entre os canais: 7,4 p.p. → 3,8 p.p.
+- Venda direta: aproximadamente 100.177 → 99.069 unidades (-1,1%).
 
-Os dois canais caíram, mas o varejo caiu muito mais. É isso que explica a mudança na proporção: não foi um crescimento da venda direta em volume absoluto, e sim uma retração bem menor do que a observada no varejo.
+A diferença entre os canais diminuiu porque o varejo perdeu cerca de 9,3 mil unidades, enquanto a venda direta perdeu aproximadamente 1,1 mil.
 
-O ranking do varejo também ficou diferente.
+Portanto, a venda direta ganhou participação relativa não porque cresceu em volume, mas porque caiu muito menos que o varejo.
 
-Em setembro, três dos cinco modelos mais emplacados pertenciam a marcas chinesas. Em outubro, foram dois:
+Esse é um ponto importante para a leitura do mercado. Em junho, o gap entre os canais havia chegado a 20,2 pontos percentuais. Em outubro, a distância está em 3,8 p.p. O movimento parece reforçar uma normalização da composição, mas ainda não significa uma expansão absoluta da venda direta.
+
+O ranking do varejo também ficou diferente. Em setembro, três dos cinco modelos mais emplacados pertenciam a marcas chinesas. Em outubro, foram dois:
 
 1. BYD Dolphin Mini — 5.841
 2. GWM Haval H6 — 5.741
@@ -31,7 +32,7 @@ Em setembro, três dos cinco modelos mais emplacados pertenciam a marcas chinesa
 
 As marcas chinesas continuam relevantes, mas sua participação nas unidades do Top 5 caiu de aproximadamente 66,3% para 49,9%. Isso não representa uma reversão da presença chinesa. Representa, por enquanto, uma disputa mais equilibrada dentro do varejo.
 
-A pergunta agora é: a venda direta continuará se aproximando do varejo nos próximos meses ou outubro foi apenas uma oscilação na composição dos canais?
+A pergunta agora é: a venda direta continuará se aproximando do varejo ou outubro apenas mostrou uma retração desigual entre os canais?
 
 Fonte: Fenabrave | Outubro/2026. Os volumes por canal são derivados e arredondados a partir do total de automóveis e das participações do packet.
 
