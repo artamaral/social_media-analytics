@@ -4,22 +4,36 @@
 
 `rascunho`
 
+## Conceito
+
+A arte deve mostrar que a venda direta ganhou participação relativa por causa da queda mais intensa do varejo, e não por crescimento absoluto da venda direta.
+
 ## Direção visual
 
-Reutilizar a estrutura editorial de setembro, mantendo a mesma identidade visual e alterando título, período, dados, anotação e destaque do ranking.
+Reutilizar a identidade visual de setembro: fundo claro, tipografia serifada de alto contraste, azul-marinho para varejo, laranja para venda direta e bege para o gap entre os canais.
 
 ## Prompt
 
-Criar uma arte editorial para LinkedIn sobre o fechamento de outubro de 2026 do mercado automotivo brasileiro, seguindo a linguagem visual da arte de setembro: fundo claro, tipografia serifada de alto contraste, azul-marinho para varejo, laranja para venda direta e bege para o gap entre os canais.
+Criar uma arte editorial para LinkedIn sobre o fechamento de outubro de 2026 do mercado automotivo brasileiro.
 
-No topo, inserir `MERCADO AUTOMOTIVO`. Usar o título `Venda direta encurta a distância em outubro` e o subtítulo `Os dois canais caíram, mas o varejo caiu muito mais.`
+No topo, inserir `MERCADO AUTOMOTIVO`. Usar o título `A venda direta encurtou a distância` e o subtítulo `Mas os dois canais caíram — o varejo caiu muito mais.`
 
-Adicionar um card central com `Gap entre os canais: 7,4 p.p. em set/26 para 3,8 p.p. em out/26` e destacar o pico da série: `20,2 p.p. em jun/26`.
+Adicionar um card central com o insight: `O varejo perdeu 9,3 mil unidades; a venda direta perdeu 1,1 mil.`
 
-Incluir gráfico de linhas de janeiro a outubro de 2026 com a participação do varejo e da venda direta nos emplacamentos de automóveis. Destacar outubro como último ponto e preservar a anotação do pico de junho.
+A composição deve ter duas leituras complementares:
 
-No rodapé, resumir: varejo `53,7% → 51,9% (-1,8 p.p.)`; venda direta `46,3% → 48,1% (+1,8 p.p.)`; gap `7,4 p.p. → 3,8 p.p. (-3,6 p.p.)`.
+1. um gráfico de linhas de janeiro a outubro de 2026 mostrando a participação do varejo e da venda direta, com o gap reduzindo de 7,4 p.p. em setembro para 3,8 p.p. em outubro e anotação do pico de 20,2 p.p. em junho;
+2. um gráfico de barras agrupadas comparando setembro e outubro em volumes absolutos derivados:
+   - varejo: 116.189 → 106.895 (-8,0%);
+   - venda direta: 100.177 → 99.069 (-1,1%).
 
-Adicionar um bloco curto com os volumes derivados: varejo `116.189 → 106.895 (-8,0%)`; venda direta `100.177 → 99.069 (-1,1%)`. Informar `Fenabrave | Recorte: automóveis | Jan–Out/2026`.
+No resumo inferior, apresentar:
 
-Não incluir comerciais leves, não usar logos de marcas, não inventar dados históricos e não reduzir a legibilidade do gráfico para acomodar texto excessivo. Os volumes por canal devem ser identificados como derivados/arredondados.
+- participação: varejo `53,7% → 51,9%`;
+- participação: venda direta `46,3% → 48,1%`;
+- gap: `7,4 p.p. → 3,8 p.p.`;
+- causa da mudança: `queda maior do varejo em volume absoluto`.
+
+Usar azul-marinho no varejo, laranja na venda direta e bege no destaque do gap. Informar `Fenabrave | Recorte: automóveis | Jan–Out/2026`.
+
+Identificar os volumes como `derivados e arredondados`, pois foram calculados a partir do total mensal e das participações publicadas. Não incluir comerciais leves, não usar logos de marcas e não inventar dados históricos.
